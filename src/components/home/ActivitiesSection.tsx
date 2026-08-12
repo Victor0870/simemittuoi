@@ -15,7 +15,7 @@ export function ActivitiesSection({ activities }: ActivitiesSectionProps) {
           Hoạt động nổi bật
         </h3>
         <button
-          className="text-sm font-bold text-primary hover:underline"
+          className="text-sm font-bold text-on-tertiary-container hover:underline"
           type="button"
         >
           Khám phá

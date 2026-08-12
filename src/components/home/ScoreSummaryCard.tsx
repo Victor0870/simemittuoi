@@ -37,7 +37,7 @@ export function ScoreSummaryCard() {
           <span className="font-semibold text-on-surface">Xếp hạng</span>
         </div>
         <Link
-          className="flex items-center text-sm font-bold text-primary hover:underline"
+          className="flex items-center text-sm font-bold text-on-tertiary-container hover:underline"
           href="/profile"
         >
           Chi tiết

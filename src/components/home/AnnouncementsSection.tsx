@@ -17,7 +17,7 @@ export function AnnouncementsSection({
           Thông báo quan trọng
         </h3>
         <button
-          className="text-sm font-bold text-primary hover:underline"
+          className="text-sm font-bold text-on-tertiary-container hover:underline"
           type="button"
         >
           Xem tất cả

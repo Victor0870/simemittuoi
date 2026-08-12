@@ -54,7 +54,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             </div>
           </div>
           <button
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-on-primary transition-shadow hover:shadow-md"
+            className="rounded-lg bg-tertiary px-4 py-2 text-sm font-bold text-on-tertiary transition-shadow hover:shadow-md"
             type="button"
           >
             Đăng ký

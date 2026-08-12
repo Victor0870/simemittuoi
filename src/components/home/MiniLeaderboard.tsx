@@ -21,7 +21,7 @@ export function MiniLeaderboard({ entries }: MiniLeaderboardProps) {
       </div>
 
       <button
-        className="mt-6 w-full rounded-xl border-2 border-primary py-3 font-bold text-primary transition-all hover:bg-primary hover:text-white active:scale-95"
+        className="mt-6 w-full rounded-xl border-2 border-tertiary py-3 font-bold text-on-tertiary-container transition-all hover:bg-tertiary hover:text-on-tertiary active:scale-95"
         type="button"
       >
         Xem bảng xếp hạng đầy đủ
