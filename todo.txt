@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>UnionConnect - Trung Tâm Gắn Kết Đoàn Viên</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container": "#f1f4f5",
+                    "tertiary-container": "#e8edeb",
+                    "secondary": "#5a635e",
+                    "inverse-primary": "#ffccbc",
+                    "surface-tint": "#ff9a76",
+                    "primary-fixed": "#ffeddf",
+                    "inverse-surface": "#2d312f",
+                    "surface": "#fbfaf7",
+                    "on-background": "#2c2e2d",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-tertiary-container": "#1d2320",
+                    "outline": "#7e8380",
+                    "background": "#fbfaf7",
+                    "surface-variant": "#f4f1ec",
+                    "surface-container-low": "#f8f6f2",
+                    "surface-container-high": "#f1eee9",
+                    "on-primary-container": "#3a1300",
+                    "secondary-container": "#e1e9e3",
+                    "tertiary-fixed": "#e8edeb",
+                    "primary": "#ff9a76",
+                    "secondary-fixed": "#e1e9e3",
+                    "on-secondary-fixed-variant": "#434b46",
+                    "on-primary-fixed-variant": "#843011",
+                    "surface-dim": "#e4e1dc",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-highest": "#e9e6e1",
+                    "on-surface": "#2c2e2d",
+                    "on-tertiary-fixed-variant": "#49504d",
+                    "on-primary-fixed": "#3a1300",
+                    "on-secondary-fixed": "#181e1b",
+                    "inverse-on-surface": "#f1f1ef",
+                    "on-surface-variant": "#4d4e4c",
+                    "outline-variant": "#ced2d0",
+                    "error": "#ba1a1a",
+                    "secondary-fixed-dim": "#c5cdc7",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#cbd2cf",
+                    "on-tertiary-fixed": "#1d2320",
+                    "tertiary": "#80cbc4",
+                    "surface-bright": "#fbfaf7",
+                    "primary-container": "#ffeddf",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-container": "#181e1b",
+                    "primary-fixed-dim": "#ffccbc",
+                    "on-error-container": "#410002"
+            },
+            "borderRadius": {
+                    "DEFAULT": "8px",
+                    "lg": "12px",
+                    "xl": "16px",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-desktop": "40px",
+                    "container-max": "1200px",
+                    "gutter": "24px",
+                    "margin-mobile": "16px",
+                    "base": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": ["Manrope"],
+                    "body-md": ["Manrope"],
+                    "headline-xl": ["Manrope"],
+                    "body-lg": ["Manrope"],
+                    "label-md": ["Manrope"],
+                    "headline-md": ["Manrope"],
+                    "headline-lg-mobile": ["Manrope"],
+                    "headline-lg": ["Manrope"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-xl": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "34px", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "800"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-elevation-1 {
+            box-shadow: 0 1px 3px rgba(255, 154, 118, 0.08);
+            border: 1px solid #ced2d0;
+        }
+        .tonal-elevation-2 {
+            box-shadow: 0 4px 12px rgba(255, 154, 118, 0.12);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface">
+<!-- Top Navigation Bar -->
+<nav class="bg-surface-container-lowest shadow-sm flex justify-between items-center w-full px-margin-desktop h-16 fixed top-0 z-50 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<img alt="UnionConnect Logo" class="w-10 h-10 rounded-lg" src="https://lh3.googleusercontent.com/aida/AP1WRLtcdh_jX3PUwkcmg3KywgQi-bUt3RuOKJay8F7aERPrQrImDZM7Cs9U23a2NrNOvpg396nKazeBhsgW3dk3RP3Lfb9eTuNGUgdQKcgEfGqTCfvVW8c-hzh1kQBpieeWxK-kXohCN9svVlmEISRp4y8HeJAXXoZarqdGqHnVfTrShyPCagrfoSOdmZFQ49y3CHbKG6tsTgdOflfj8CNSv5hgleSgtC50XQpr5GwORDk7go8f6cmplcaX-nk"/>
+<span class="text-headline-md font-headline-md font-extrabold text-primary">UnionConnect</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-primary border-b-2 border-primary pb-1 font-label-md text-label-md" href="#">Dashboard</a>
+<a class="text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md px-2 py-1 rounded" href="#">Bảng xếp hạng</a>
+<a class="text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md px-2 py-1 rounded" href="#">Hoạt động</a>
+<a class="text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md text-label-md px-2 py-1 rounded" href="#">Quy định</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center bg-primary-fixed px-3 py-1 rounded-full text-on-primary-fixed font-bold">
+<span class="material-symbols-outlined text-sm mr-1">stars</span>
+<span class="font-label-md text-label-md">1,250 Điểm</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer p-2 hover:bg-surface-container-high rounded-full">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer p-2 hover:bg-surface-container-high rounded-full">help</span>
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-primary font-bold overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a friendly Vietnamese employee in a modern office setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEaiLRt-cAPMpsPxxe4CCjbdrPG0C-is3c0monqBvEdm4UsWU_h_9ySDm4yWKsmmlA6KA570SO3Ngrj_IhbCJ6IqJmM_2h4_GX0K_Youq-AWxDJOjCG3ih9XhRSXBq8s5N4MGnKscoSC9oDWbMYZRbQ3URwMhKrB6MSjRg5Ig1JCCVY6x3CIFwWpQqi7lIvv3tFamspSVryR1tZFlJttMN_fAyl1sXqlVDvv56QQKKzDkdVLbKPvsqCVD82nTZTp8SRnKVCYv1Vo4"/>
+</div>
+</div>
+</nav>
+<!-- Side Navigation (Desktop) -->
+<aside class="hidden md:flex flex-col p-base gap-2 w-64 fixed left-0 top-16 h-[calc(100vh-64px)] bg-surface-container-low border-r border-outline-variant">
+<div class="px-4 py-6 mb-4">
+<h2 class="font-headline-md text-headline-md font-extrabold text-primary">Activity Hub</h2>
+<p class="text-on-surface-variant text-label-sm font-label-sm">Hỗ trợ Đoàn viên</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 bg-primary-container text-on-primary-container rounded-lg font-bold transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span class="font-label-md text-label-md">Bảng xếp hạng</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="explore">explore</span>
+<span class="font-label-md text-label-md">Hoạt động</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="rule">rule</span>
+<span class="font-label-md text-label-md">Quy định</span>
+</a>
+</nav>
+<button class="mt-4 mx-2 bg-primary text-on-primary py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 active:scale-95 hover:shadow-lg transition-all">
+<span class="material-symbols-outlined">campaign</span>
+            Tham gia Chiến dịch
+        </button>
+<div class="mt-auto border-t border-outline-variant pt-4 pb-2">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Cài đặt</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="contact_support">contact_support</span>
+<span class="font-label-md text-label-md">Hỗ trợ</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:ml-64 pt-24 px-margin-mobile md:px-margin-desktop pb-16 min-h-screen">
+<div class="max-w-container-max mx-auto">
+<!-- Hero Welcome Section -->
+<section class="mb-10 grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="lg:col-span-2 relative overflow-hidden rounded-3xl bg-primary-container p-8 text-on-primary-container shadow-lg h-64 flex flex-col justify-center">
+<div class="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none">
+<div class="absolute inset-0 bg-gradient-to-l from-primary to-transparent"></div>
+</div>
+<h1 class="font-headline-xl text-headline-xl mb-2 text-on-primary-container">Chào mừng, Minh Anh!</h1>
+<p class="font-body-lg text-body-lg opacity-90 max-w-md text-on-primary-container/80">Hôm nay bạn có 2 hoạt động mới để tích lũy điểm thưởng. Cùng nhau xây dựng cộng đồng vững mạnh.</p>
+</div>
+<div class="tonal-elevation-1 bg-surface-container-lowest rounded-3xl p-8 flex flex-col justify-between border border-outline-variant relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-5">
+<span class="material-symbols-outlined text-8xl text-primary" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-label-md text-label-md uppercase tracking-wider mb-4">Thành tích của bạn</p>
+<div class="flex items-end gap-2 mb-2">
+<span class="text-5xl font-extrabold text-primary">1,250</span>
+<span class="text-xl font-medium text-on-surface-variant mb-1">điểm</span>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-outline-variant">
+<div class="flex items-center gap-2">
+<div class="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="text-secondary font-bold text-lg">#12</span>
+</div>
+<span class="text-on-surface font-semibold">Xếp hạng</span>
+</div>
+<a class="text-primary font-bold text-sm flex items-center hover:underline" href="#">
+                            Chi tiết <span class="material-symbols-outlined text-sm">chevron_right</span>
+</a>
+</div>
+</div>
+</section>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Announcements & Activities -->
+<div class="lg:col-span-8 space-y-10">
+<!-- Announcements Section -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-error">campaign</span>
+                                Thông báo quan trọng
+                            </h3>
+<button class="text-primary font-bold text-sm hover:underline">Xem tất cả</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="tonal-elevation-1 bg-surface-container-lowest p-6 rounded-2xl hover:tonal-elevation-2 transition-all border-l-4 border-error">
+<div class="flex justify-between items-start mb-3">
+<span class="bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded font-bold uppercase">Khẩn cấp</span>
+<span class="text-on-surface-variant text-label-sm">2 giờ trước</span>
+</div>
+<h4 class="font-bold text-on-surface mb-2">Cập nhật Quy định Bảo hiểm 2024</h4>
+<p class="text-on-surface-variant text-body-md line-clamp-2">Các thay đổi quan trọng về mức đóng bảo hiểm y tế đã được thông qua bởi Công đoàn...</p>
+</div>
+<div class="tonal-elevation-1 bg-surface-container-lowest p-6 rounded-2xl hover:tonal-elevation-2 transition-all border-l-4 border-primary">
+<div class="flex justify-between items-start mb-3">
+<span class="bg-primary-fixed text-on-primary-fixed text-[10px] px-2 py-0.5 rounded font-bold uppercase">Bầu cử</span>
+<span class="text-on-surface-variant text-label-sm">Hôm qua</span>
+</div>
+<h4 class="font-bold text-on-surface mb-2">Đề cử Đại diện Công đoàn cơ sở</h4>
+<p class="text-on-surface-variant text-body-md line-clamp-2">Hãy tham gia đề cử những gương mặt ưu tú cho nhiệm kỳ 2024-2026 ngay hôm nay.</p>
+</div>
+</div>
+</section>
+<!-- Featured Activities Section -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-headline-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined">event_note</span>
+                                Hoạt động nổi bật
+                            </h3>
+<button class="text-primary font-bold text-sm hover:underline">Khám phá</button>
+</div>
+<div class="space-y-4">
+<!-- Activity Card 1 -->
+<div class="tonal-elevation-1 bg-surface-container-lowest overflow-hidden rounded-2xl flex flex-col sm:flex-row group cursor-pointer hover:tonal-elevation-2 transition-all border border-outline-variant">
+<div class="sm:w-48 h-32 sm:h-auto overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A group of smiling office workers participating in an outdoor charity run." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA1wtWPeBzDu-EUS2f282aGUtU1Cs8yvh_CmoJxECbnLCW4Y60CrP6n6A9D7GWDr1Iz4OvYwKg_b42Drz3wftnkmOejNefM93xMzUrx5lFypDcM6liWObAw1UpOqV9IqdPuaZ6NwFDTW8Pgh-Fsev91XsXzi-gYjUeinSUip3DMwyla0ljB-jfwJg-mRSqiMox6PvNQTuTa63f7kIKHsEQ3bxzCJcbfOMGEzXW1gsRwxd9HACCmlX56pUEWicYzQuT1s5VMzJw_RHQ"/>
+</div>
+<div class="flex-1 p-6 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-bold text-lg text-primary">Chạy bộ từ thiện 2024</h4>
+<p class="text-on-surface-variant text-sm flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-sm">calendar_month</span> 15/10/2024 • Công viên Thống Nhất
+                                            </p>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold">+200 Điểm</span>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcxxkVUxDRwD_QQyBNa114LRp2ZtFbKY9RJhBWjPcbNbWpRhF0NdwwhlMQACCqQD4w_lXrMR0I237sTlao7XHrzdYT3YU4DC2DQPT1qaJUosdCTo7_r9serDX1UZmYFnGG4RjrnrO0hjT1aB1wGBoqXw0AX3HQCnH6eJARgzrS6UR3qxgszExJpJbA-hORA0hLffy2Mqb1FBj3XdcuyV6fNmaBFlq8GT0bq_qrAS49w6T-IuPtAwI4nxBJNEcNOP4ZjxP-6ljTWhk"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-gray-300 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0HpjsqB7nIgOqQ2o7_uCgidE2Q1OxST3m5IB21ltcZbXq0UfS11KMzwqm5Tb6V9ZHy_JcIDTN1DYsQ17OLfFi4-FX4ttypJpmlqQzk1qYnQPpmps8PXgjCqOl1nYvThrZ9AGnluxEK4trYI_4fS7HGTs3nvTvJKP4KkvV2LXdsuSEzy2riewgjk2zGfIot4IWXHvS6SRBwOKb0Ug3RBob21cZXocE-EzQzzPOgDWIMr0r7NnBIDp9FyPUIKW0fJxJ2Eu2dboLPtw"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-primary flex items-center justify-center text-[10px] text-white font-bold">+45</div>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm font-bold hover:shadow-md transition-shadow">Đăng ký</button>
+</div>
+</div>
+</div>
+<!-- Activity Card 2 -->
+<div class="tonal-elevation-1 bg-surface-container-lowest overflow-hidden rounded-2xl flex flex-col sm:flex-row group cursor-pointer hover:tonal-elevation-2 transition-all border border-outline-variant">
+<div class="sm:w-48 h-32 sm:h-auto overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A professional skill-building workshop in a high-tech conference room." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2-cOA603njhNtLLpGRfNnqnFQcJ56DxXnfjC4mW6S7l4wBQW125L_qE08TDTSpCSBJYSMBf7YcrKQxHze-fOCzUn2OdkUaNq4BlTEKgxh4nF7KKDqZ4TdpAjL5dT68notDgK-dISYhIqB1pF0808xrlXmXmkjeaXBw8deTTd3KCtNPX9xE1Qu-5CgDAxWjRk9nsF7r2ECgVfXiE4mds67_clREFSVGslTNgMc_XZlIWr17nitcJ1Wjb7c4QSoj8fMeokS8RKFLPA"/>
+</div>
+<div class="flex-1 p-6 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<h4 class="font-bold text-lg text-primary">Hội thảo Kỹ năng Đàm phán</h4>
+<p class="text-on-surface-variant text-sm flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-sm">calendar_month</span> 20/10/2024 • Phòng họp lớn 2
+                                            </p>
+</div>
+<div class="flex flex-col items-end">
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-bold">+150 Điểm</span>
+</div>
+</div>
+<div class="mt-4 flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-gray-200 overflow-hidden"><img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDggcG2Y7SGL6TbdxENsWpIFPSyZ_aWnsOCah0YXK2UxHeFUgKdktaXVlu-6u_JxRtXWtiLl1IMQVptx32o2K-RivftAqwECgjZzsvi5UyGcGg3b_iDkz5NNt8dN0iGXxqMAhK5KVhokIuWWhvJTw4k0Nj0v1T3udb-ZlINhA8P77r5usbwmVj1FoCCZU5DK-C_95SddQD1-1ZB7w0oxhUsXw_k00RTq2DhZ_dDkttv3nPv6ZcVoZoYKDBkDB8zisnfm-85bfOUrgE"/></div>
+<div class="w-8 h-8 rounded-full border-2 border-surface bg-primary flex items-center justify-center text-[10px] text-white font-bold">+12</div>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg text-sm font-bold hover:shadow-md transition-shadow">Đăng ký</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Mini Leaderboard & Stats -->
+<div class="lg:col-span-4 space-y-8">
+<!-- Mini Leaderboard -->
+<section class="tonal-elevation-1 bg-surface-container-lowest rounded-3xl p-6 border border-outline-variant">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-headline-md text-headline-md text-primary">Bảng vàng</h3>
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">trophy</span>
+</div>
+<div class="space-y-4">
+<!-- Rank 1 -->
+<div class="flex items-center gap-4 p-3 rounded-xl bg-surface-container hover:bg-surface-container-high transition-colors">
+<div class="relative">
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-dOPsCyoGOOJB3mRGZcPYbTyxQY1cjL57mpE5uTt-c6AKONJRVU4pRKzpWDJOQhjG6bo4Y_dvEQ_SYVfH3s3zML6Ci9mNT8cpMhX-OlfzkowpMoB0Jcui4aCcKoe5llaXVxxNrGLnYyT6b5YU90iKuNgbblMIz_VY9s7yHp0j5YVtH9hJqMeNIddtozs9dguf36wZjWOvhmnz9HOJsmHBCseA3-8TW6tAb4aTF7-8IVVEO5gzssEc-SxpGK6QiNod1e91B6lHT28"/>
+</div>
+<span class="absolute -bottom-1 -right-1 bg-primary text-on-primary w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold">1</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Trần Thanh Tùng</p>
+<p class="text-xs text-on-surface-variant">Khối Công nghệ</p>
+</div>
+<p class="font-extrabold text-primary">2,840</p>
+</div>
+<!-- Rank 2 -->
+<div class="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-high transition-colors">
+<div class="relative">
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-outline-variant">
+<img class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkqQkfCBfiuaTD5QSM4zQ0vjDElsAo1KHcEfr8CUo6Pse37lAE84OBQUFn2wUPKnVg7FDSXIrH8wmR-7WVoYW5Gsj9r0YQ28F59BOGVT9VrIVbIEQjIi1pI0h6tmrJpZf8F-Xwlq_-GwkDAfkaEbiC-Eio1hz2pcGFZyAbooSryEL7YgNVsxNKnpjZxZs2aSZ1nNVH4QONUmdTNoRSu703rfXBh50ukWkHI1q2QsaRSQVDT4OaTw1XJzjS-GyCmFGQlgTwFyjwRO0"/>
+</div>
+<span class="absolute -bottom-1 -right-1 bg-outline text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold">2</span>
+</div>
+<div class="flex-1">
+<p class="font-bold text-on-surface">Lê Thị Mai</p>
+<p class="text-xs text-on-surface-variant">Khối Tài chính</p>
+</div>
+<p class="font-extrabold text-primary">2,150</p>
+</div>
+</div>
+<button class="w-full mt-6 py-3 text-primary font-bold border-2 border-primary rounded-xl hover:bg-primary hover:text-white transition-all active:scale-95">Xem bảng xếp hạng đầy đủ</button>
+</section>
+<!-- Score Progress Mini Card -->
+<section class="tonal-elevation-1 bg-primary text-on-primary rounded-3xl p-6">
+<div class="flex items-center gap-3 mb-4">
+<span class="material-symbols-outlined text-primary-fixed">trending_up</span>
+<h4 class="font-bold">Mục tiêu Đoàn viên</h4>
+</div>
+<div class="mb-2 flex justify-between text-sm">
+<span class="text-on-primary/90">Sát hạch quý 4</span>
+<span class="font-bold">85%</span>
+</div>
+<div class="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+<div class="h-full bg-white w-[85%]"></div>
+</div>
+<p class="text-xs mt-4 opacity-80 italic">Chỉ còn 150 điểm nữa để đạt hạng Kim cương.</p>
+</section>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-inverse-surface text-inverse-on-surface w-full py-8">
+<div class="w-full flex flex-col md:flex-row justify-between items-center px-margin-desktop py-8 gap-8">
+<div class="flex flex-col items-center md:items-start gap-4">
+<div class="flex items-center gap-2">
+<img alt="Logo" class="w-10 h-10 brightness-200" src="https://lh3.googleusercontent.com/aida/AP1WRLtcdh_jX3PUwkcmg3KywgQi-bUt3RuOKJay8F7aERPrQrImDZM7Cs9U23a2NrNOvpg396nKazeBhsgW3dk3RP3Lfb9eTuNGUgdQKcgEfGqTCfvVW8c-hzh1kQBpieeWxK-kXohCN9svVlmEISRp4y8HeJAXXoZarqdGqHnVfTrShyPCagrfoSOdmZFQ49y3CHbKG6tsTgdOflfj8CNSv5hgleSgtC50XQpr5GwORDk7go8f6cmplcaX-nk"/>
+<span class="font-headline-md text-headline-md font-extrabold text-white">UnionConnect</span>
+</div>
+<p class="font-body-md text-body-md opacity-80 text-center md:text-left">© 2024 UnionConnect. Nâng tầm sức mạnh tập thể.</p>
+</div>
+<div class="flex flex-wrap justify-center gap-6">
+<a class="text-white opacity-80 hover:opacity-100 transition-colors font-label-sm text-label-sm" href="#">Chính sách bảo mật</a>
+<a class="text-white opacity-80 hover:opacity-100 transition-colors font-label-sm text-label-sm" href="#">Điều khoản dịch vụ</a>
+<a class="text-white opacity-80 hover:opacity-100 transition-colors font-label-sm text-label-sm" href="#">Liên hệ Đại diện</a>
+</div>
+</div>
+</footer>
+<!-- Mobile Bottom Nav -->
+<div class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-surface-container-lowest shadow-lg border-t border-outline-variant flex justify-around items-center z-50">
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="text-[10px] font-bold">Trang chủ</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="text-[10px]">Xếp hạng</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">explore</span>
+<span class="text-[10px]">Hoạt động</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px]">Cài đặt</span>
+</button>
+</div>
+<script>
+        document.querySelectorAll('.active\\:scale-95').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.transform = 'scale(0.95)';
+            });
+            ['mouseup', 'mouseleave'].forEach(evt => {
+                button.addEventListener(evt, () => {
+                    button.style.transform = 'scale(1)';
+                });
+            });
+        });
+    </script>
+</body></html>
