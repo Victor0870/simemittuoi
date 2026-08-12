@@ -10,7 +10,7 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
   return (
     <aside className="fixed top-16 left-0 hidden h-[calc(100vh-64px)] w-64 flex-col gap-2 border-r border-outline-variant bg-surface-container-low p-base md:flex">
       <div className="mb-4 px-4 py-6">
-        <h2 className="text-headline-md font-extrabold text-primary">
+        <h2 className="text-headline-md font-extrabold text-tertiary">
           Activity Hub
         </h2>
         <p className="text-label-sm text-on-surface-variant">Hỗ trợ Đoàn viên</p>

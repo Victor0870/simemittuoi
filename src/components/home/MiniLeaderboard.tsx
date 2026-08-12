@@ -11,7 +11,7 @@ export function MiniLeaderboard({ entries }: MiniLeaderboardProps) {
     <section className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6">
       <div className="mb-6 flex items-center justify-between">
         <h3 className="text-headline-md text-primary">Bảng vàng</h3>
-        <MaterialIcon className="text-primary material-symbols-filled" filled name="trophy" />
+        <MaterialIcon className="text-tertiary material-symbols-filled" filled name="trophy" />
       </div>
 
       <div className="space-y-4">

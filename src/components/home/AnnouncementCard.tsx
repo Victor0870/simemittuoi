@@ -6,11 +6,11 @@ type AnnouncementCardProps = {
 
 export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   const borderClass =
-    announcement.tagTone === "error" ? "border-error" : "border-primary";
+    announcement.tagTone === "error" ? "border-error" : "border-tertiary";
   const tagClass =
     announcement.tagTone === "error"
       ? "bg-error-container text-on-error-container"
-      : "bg-primary-fixed text-on-primary-fixed";
+      : "bg-tertiary-container text-on-tertiary-container";
 
   return (
     <article
