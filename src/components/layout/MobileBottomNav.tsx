@@ -15,8 +15,10 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
         return (
           <Link
             key={item.href}
-            className={`flex flex-col items-center gap-1 ${
-              isActive ? "text-primary" : "text-on-surface-variant"
+            className={`flex flex-col items-center gap-1 rounded-lg px-3 py-1 ${
+              isActive
+                ? "bg-tertiary-container text-on-tertiary-container"
+                : "text-on-surface-variant"
             }`}
             href={item.href}
           >

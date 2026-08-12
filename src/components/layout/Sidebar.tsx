@@ -25,7 +25,7 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
               key={item.href}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-all ${
                 isActive
-                  ? "bg-primary-container font-bold text-on-primary-container"
+                  ? "bg-tertiary-container font-bold text-on-tertiary-container"
                   : "text-on-surface-variant hover:bg-surface-container-high"
               }`}
               href={item.href}
@@ -38,7 +38,7 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
       </nav>
 
       <button
-        className="mx-2 mt-4 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-bold text-on-primary transition-all hover:shadow-lg active:scale-95"
+        className="mx-2 mt-4 flex items-center justify-center gap-2 rounded-xl bg-tertiary px-4 py-3 font-bold text-on-tertiary transition-all hover:shadow-lg active:scale-95"
         type="button"
       >
         <MaterialIcon name="campaign" />
