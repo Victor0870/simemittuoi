@@ -4,7 +4,7 @@ import { LOGO_URL } from "@/lib/constants";
 
 export function Footer() {
   return (
-    <footer className="w-full bg-tertiary py-8 text-on-tertiary">
+    <footer className="w-full bg-tertiary py-8 text-on-tertiary md:ml-64 md:w-[calc(100%-16rem)]">
       <div className="flex w-full flex-col items-center justify-between gap-8 px-margin-mobile py-8 md:flex-row md:px-margin-desktop">
         <div className="flex flex-col items-center gap-4 md:items-start">
           <div className="flex items-center gap-2">
