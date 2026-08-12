@@ -30,7 +30,7 @@ export function ScoreSummaryCard() {
       <div className="flex items-center justify-between border-t border-outline-variant pt-4">
         <div className="flex items-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary-container">
-            <span className="text-lg font-bold text-secondary">
+            <span className="text-lg font-bold text-on-secondary-container">
               #{MOCK_USER.rank}
             </span>
           </div>
