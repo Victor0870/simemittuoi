@@ -26,6 +26,8 @@ export type HomePageData = {
   leaderboard: LeaderboardEntry[];
   goal: typeof MOCK_GOAL;
   dataSource: "supabase" | "mock";
+  /** true = chưa đăng nhập (khách) */
+  isGuest: boolean;
 };
 
 function formatTimeAgo(isoDate: string): string {
@@ -44,6 +46,18 @@ function formatDate(date: string | null): string {
   if (!date) return "";
   const parsed = new Date(date);
   return parsed.toLocaleDateString("vi-VN");
+}
+
+function fallbackData(isGuest: boolean): HomePageData {
+  return {
+    user: MOCK_USER,
+    announcements: MOCK_ANNOUNCEMENTS,
+    activities: MOCK_ACTIVITIES,
+    leaderboard: MOCK_LEADERBOARD,
+    goal: MOCK_GOAL,
+    dataSource: "mock",
+    isGuest,
+  };
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
@@ -72,6 +86,8 @@ export async function getHomePageData(): Promise<HomePageData> {
         supabase.auth.getUser(),
       ]);
 
+    const isGuest = !authResult.data.user;
+
     const hasDbError =
       postsResult.error || activitiesResult.error || leaderboardResult.error;
 
@@ -80,14 +96,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     const leaderboardRows = leaderboardResult.data ?? [];
 
     if (hasDbError || (posts.length === 0 && activities.length === 0)) {
-      return {
-        user: MOCK_USER,
-        announcements: MOCK_ANNOUNCEMENTS,
-        activities: MOCK_ACTIVITIES,
-        leaderboard: MOCK_LEADERBOARD,
-        goal: MOCK_GOAL,
-        dataSource: "mock",
-      };
+      return fallbackData(isGuest);
     }
 
     const announcements: Announcement[] = posts.map((post) => ({
@@ -132,7 +141,7 @@ export async function getHomePageData(): Promise<HomePageData> {
         .from("profiles")
         .select("full_name")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
       const myRank = leaderboardRows.find((row) => row.id === userId);
 
@@ -152,15 +161,9 @@ export async function getHomePageData(): Promise<HomePageData> {
       leaderboard,
       goal: MOCK_GOAL,
       dataSource: "supabase",
+      isGuest,
     };
   } catch {
-    return {
-      user: MOCK_USER,
-      announcements: MOCK_ANNOUNCEMENTS,
-      activities: MOCK_ACTIVITIES,
-      leaderboard: MOCK_LEADERBOARD,
-      goal: MOCK_GOAL,
-      dataSource: "mock",
-    };
+    return fallbackData(true);
   }
 }

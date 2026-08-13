@@ -9,12 +9,17 @@ import { getHomePageData } from "@/lib/data/home";
 
 export default async function HomePage() {
   const data = await getHomePageData();
+  const { isGuest } = data;
 
   return (
     <AppShell activeHref="/">
-      <section className="mb-10 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <HeroWelcome user={data.user} />
-        <ScoreSummaryCard user={data.user} />
+      <section
+        className={`mb-10 grid grid-cols-1 gap-6 ${
+          isGuest ? "lg:grid-cols-1" : "lg:grid-cols-3"
+        }`}
+      >
+        <HeroWelcome isGuest={isGuest} user={data.user} />
+        {!isGuest ? <ScoreSummaryCard user={data.user} /> : null}
       </section>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
@@ -24,12 +29,17 @@ export default async function HomePage() {
         </div>
 
         <div className="space-y-8 lg:col-span-4">
-          <MiniLeaderboard entries={data.leaderboard} />
-          <GoalProgressCard
-            note={data.goal.note}
-            progress={data.goal.progress}
-            title={data.goal.title}
+          <MiniLeaderboard
+            entries={data.leaderboard}
+            maskIdentity={isGuest}
           />
+          {!isGuest ? (
+            <GoalProgressCard
+              note={data.goal.note}
+              progress={data.goal.progress}
+              title={data.goal.title}
+            />
+          ) : null}
         </div>
       </div>
     </AppShell>
