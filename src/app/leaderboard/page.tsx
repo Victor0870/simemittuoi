@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
+import { LeaderboardPodium } from "@/components/leaderboard/LeaderboardPodium";
 import {
   LeaderboardViewTabs,
   type LeaderboardTab,
@@ -24,6 +25,7 @@ export default async function LeaderboardPage({
   const limit = tab === "45" ? 45 : 10;
   const data = await getLeaderboardPageData(45);
   const visible = data.entries.slice(0, limit);
+  const rest = visible.filter((entry) => entry.rank > 3);
 
   const highlightId =
     data.currentUserId &&
@@ -40,8 +42,8 @@ export default async function LeaderboardPage({
             Bảng xếp hạng
           </h1>
           <p className="mt-2 max-w-xl text-body-md text-on-surface-variant">
-            Xem Top {limit} theo tổng điểm. Điểm cộng từ giải thưởng và hoạt
-            động công đoàn.
+            Bục vinh danh Top 3, tiếp theo là bảng từ hạng 4 trở xuống (Top{" "}
+            {limit}).
           </p>
         </div>
         <LeaderboardViewTabs active={tab} />
@@ -83,20 +85,27 @@ export default async function LeaderboardPage({
         </p>
       ) : null}
 
+      <LeaderboardPodium entries={visible} maskIdentity={data.isGuest} />
+
       <section className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-headline-md text-primary">
-            {tab === "45" ? "Top 45" : "Top 10"}
-          </h2>
+          <div>
+            <h2 className="text-headline-md text-primary">
+              {tab === "45" ? "Hạng 4 – 45" : "Hạng 4 – 10"}
+            </h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              Danh sách tiếp theo sau bục trao huy chương
+            </p>
+          </div>
           <MaterialIcon
             className="text-[#173A67] material-symbols-filled"
             filled
-            name="trophy"
+            name="format_list_numbered"
           />
         </div>
 
         <LeaderboardList
-          entries={visible}
+          entries={rest}
           highlightId={highlightId || null}
           maskIdentity={data.isGuest}
         />
