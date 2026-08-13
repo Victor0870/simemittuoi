@@ -127,24 +127,36 @@ export function LeaderboardPodium({
         }}
       />
 
-      {!isHome ? (
-        <div className="relative mb-6 text-center">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-surface-container-lowest/80 px-3 py-1 text-xs font-bold tracking-wide text-[#173A67] uppercase">
-            <MaterialIcon
-              className="text-base text-primary"
-              filled
-              name="trophy"
-            />
-            Bục vinh danh
-          </div>
-          <h2 className="text-headline-md font-extrabold text-[#173A67] md:text-3xl">
-            Top 3 xuất sắc
-          </h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Giải Nhất · Nhì · Ba theo tổng điểm thi đua
-          </p>
+      <div
+        className={`relative text-center ${isHome ? "mb-8 md:mb-10" : "mb-6"}`}
+      >
+        <div
+          className={`inline-flex items-center gap-2 rounded-full bg-surface-container-lowest/80 font-bold tracking-wide text-[#173A67] uppercase ${
+            isHome
+              ? "gap-3 px-5 py-2.5 text-base md:px-6 md:py-3 md:text-lg"
+              : "mb-2 px-3 py-1 text-xs"
+          }`}
+        >
+          <MaterialIcon
+            className={
+              isHome ? "text-2xl text-primary md:text-3xl" : "text-base text-primary"
+            }
+            filled
+            name="trophy"
+          />
+          Bục vinh danh
         </div>
-      ) : null}
+        {!isHome ? (
+          <>
+            <h2 className="text-headline-md font-extrabold text-[#173A67] md:text-3xl">
+              Top 3 xuất sắc
+            </h2>
+            <p className="mt-1 text-sm text-on-surface-variant">
+              Giải Nhất · Nhì · Ba theo tổng điểm thi đua
+            </p>
+          </>
+        ) : null}
+      </div>
 
       <div
         className={`relative mx-auto flex items-end justify-center ${
