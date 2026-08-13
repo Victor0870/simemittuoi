@@ -13,13 +13,8 @@ export default async function HomePage() {
 
   return (
     <AppShell activeHref="/">
-      <section
-        className={`mb-10 grid grid-cols-1 gap-6 ${
-          isGuest ? "lg:grid-cols-1" : "lg:grid-cols-3"
-        }`}
-      >
+      <section className="mb-10">
         <HeroWelcome isGuest={isGuest} user={data.user} />
-        {!isGuest ? <ScoreSummaryCard user={data.user} /> : null}
       </section>
 
       <HomeLeaderboardSection
@@ -28,7 +23,7 @@ export default async function HomePage() {
       />
 
       <div
-        className={`grid grid-cols-1 gap-8 ${
+        className={`mt-10 grid grid-cols-1 gap-8 ${
           isGuest ? "" : "lg:grid-cols-12"
         }`}
       >
@@ -39,6 +34,7 @@ export default async function HomePage() {
 
         {!isGuest ? (
           <div className="space-y-8 lg:col-span-4">
+            <ScoreSummaryCard user={data.user} />
             <GoalProgressCard
               note={data.goal.note}
               progress={data.goal.progress}
