@@ -1,15 +1,41 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { ApprovalGate } from "@/components/auth/ApprovalGate";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TopNav } from "@/components/layout/TopNav";
+import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "@/lib/constants";
 
-type AppShellProps = {
-  children: ReactNode;
-  activeHref?: string;
-};
+function resolveActiveHref(pathname: string): string {
+  const candidates = [
+    ...NAV_ITEMS.map((item) => item.href),
+    ...MOBILE_NAV_ITEMS.map((item) => item.href),
+    "/settings",
+    "/score-history",
+    "/campaigns",
+    "/login",
+    "/register",
+    "/pending",
+    "/admin/users",
+  ];
 
-export function AppShell({ children, activeHref = "/" }: AppShellProps) {
+  const unique = [...new Set(candidates)];
+  const exact = unique.find((href) => href === pathname);
+  if (exact) return exact;
+
+  const prefix = unique
+    .filter((href) => href !== "/" && pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return prefix ?? pathname;
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname() || "/";
+  const activeHref = resolveActiveHref(pathname);
+
   return (
     <ApprovalGate>
       <div className="min-h-screen bg-surface text-on-surface">

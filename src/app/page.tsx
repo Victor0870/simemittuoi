@@ -1,4 +1,3 @@
-import { AppShell } from "@/components/layout/AppShell";
 import { ActivitiesSection } from "@/components/home/ActivitiesSection";
 import { AnnouncementsSection } from "@/components/home/AnnouncementsSection";
 import { GoalProgressCard } from "@/components/home/GoalProgressCard";
@@ -12,7 +11,7 @@ export default async function HomePage() {
   const { isGuest } = data;
 
   return (
-    <AppShell activeHref="/">
+    <>
       <section className="mb-10">
         <HeroWelcome isGuest={isGuest} user={data.user} />
       </section>
@@ -43,6 +42,6 @@ export default async function HomePage() {
           </div>
         ) : null}
       </div>
-    </AppShell>
+    </>
   );
 }

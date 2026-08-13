@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AppShell } from "@/components/layout/AppShell";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { LeaderboardPodium } from "@/components/leaderboard/LeaderboardPodium";
 import { MyRankSummary } from "@/components/leaderboard/MyRankSummary";
@@ -60,7 +59,7 @@ export default async function LeaderboardPage({
     !data.isGuest && data.currentRank > 0 && !userInView;
 
   return (
-    <AppShell activeHref="/leaderboard">
+    <>
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-label-md tracking-wider text-on-surface-variant uppercase">
@@ -116,6 +115,6 @@ export default async function LeaderboardPage({
       {showMyRank ? (
         <MyRankSummary rank={data.currentRank} score={data.currentScore} />
       ) : null}
-    </AppShell>
+    </>
   );
 }

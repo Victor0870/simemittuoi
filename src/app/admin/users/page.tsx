@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { AppShell } from "@/components/layout/AppShell";
 import {
   AdminUsersTable,
   type AdminUserRow,
@@ -35,7 +34,7 @@ export default async function AdminUsersPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <AppShell activeHref="/admin/users">
+    <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-headline-md text-[#173A67]">Quản lý đoàn viên</h1>
@@ -56,6 +55,6 @@ export default async function AdminUsersPage() {
       ) : null}
 
       <AdminUsersTable users={(users ?? []) as AdminUserRow[]} />
-    </AppShell>
+    </>
   );
 }

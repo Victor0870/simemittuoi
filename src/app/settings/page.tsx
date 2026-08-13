@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AppShell } from "@/components/layout/AppShell";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 
@@ -129,102 +128,92 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return (
-      <AppShell activeHref="/settings">
-        <div className="h-40 animate-pulse rounded-3xl bg-surface-container" />
-      </AppShell>
-    );
+    return <div className="h-40 animate-pulse rounded-3xl bg-surface-container" />;
   }
 
   if (!userId) {
     return (
-      <AppShell activeHref="/settings">
-        <div className="mx-auto max-w-lg rounded-3xl border border-outline-variant bg-surface-container-lowest p-8 text-center">
-          <h1 className="mb-2 text-headline-md text-[#173A67]">Cài đặt</h1>
-          <p className="mb-6 text-on-surface-variant">
-            Đăng nhập để cập nhật ảnh đại diện và nhận điểm thưởng.
-          </p>
-          <Link
-            className="inline-flex rounded-xl bg-tertiary px-5 py-3 font-bold text-on-tertiary"
-            href="/login"
-          >
-            Đăng nhập
-          </Link>
-        </div>
-      </AppShell>
+      <div className="mx-auto max-w-lg rounded-3xl border border-outline-variant bg-surface-container-lowest p-8 text-center">
+        <h1 className="mb-2 text-headline-md text-[#173A67]">Cài đặt</h1>
+        <p className="mb-6 text-on-surface-variant">
+          Đăng nhập để cập nhật ảnh đại diện và nhận điểm thưởng.
+        </p>
+        <Link
+          className="inline-flex rounded-xl bg-tertiary px-5 py-3 font-bold text-on-tertiary"
+          href="/login"
+        >
+          Đăng nhập
+        </Link>
+      </div>
     );
   }
 
   return (
-    <AppShell activeHref="/settings">
-      <div className="mx-auto max-w-lg space-y-6">
-        <div>
-          <h1 className="text-headline-xl font-extrabold text-[#173A67]">
-            Cài đặt
-          </h1>
-          <p className="mt-2 text-body-md text-on-surface-variant">
-            Cập nhật ảnh đại diện để nhận thưởng điểm (một lần).
-          </p>
-        </div>
-
-        <section className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-primary-fixed bg-primary-fixed text-3xl font-extrabold text-[#173A67]">
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  alt={fullName || "Avatar"}
-                  className="h-full w-full object-cover"
-                  src={avatarUrl}
-                />
-              ) : (
-                (fullName || "?").slice(0, 1)
-              )}
-            </div>
-            <div>
-              <p className="font-bold text-on-surface">{fullName || "Đoàn viên"}</p>
-              <p className="text-sm text-on-surface-variant">
-                {hasAvatarBonus
-                  ? "Bạn đã nhận thưởng cập nhật avatar."
-                  : "Lần đầu cập nhật avatar: +10 điểm."}
-              </p>
-            </div>
-          </div>
-
-          <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low px-4 py-8 transition-colors hover:border-tertiary hover:bg-tertiary-container/40">
-            <MaterialIcon className="text-3xl text-[#173A67]" name="add_a_photo" />
-            <span className="font-bold text-on-surface">
-              {saving ? "Đang tải lên..." : "Chọn ảnh đại diện"}
-            </span>
-            <span className="text-xs text-on-surface-variant">
-              JPG, PNG, WEBP, GIF · tối đa 2MB
-            </span>
-            <input
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              disabled={saving}
-              type="file"
-              onChange={handleAvatarChange}
-            />
-          </label>
-
-          {error ? (
-            <p className="mt-4 rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container">
-              {error}
-            </p>
-          ) : null}
-          {message ? (
-            <p className="mt-4 rounded-xl bg-tertiary-container px-4 py-3 text-sm text-on-tertiary-container">
-              {message}
-            </p>
-          ) : null}
-        </section>
-
-        <p className="text-sm text-on-surface-variant">
-          Thưởng đăng ký tài khoản (+10) được cộng tự động khi bạn đăng ký thành
-          công.
+    <div className="mx-auto max-w-lg space-y-6">
+      <div>
+        <h1 className="text-headline-xl font-extrabold text-[#173A67]">Cài đặt</h1>
+        <p className="mt-2 text-body-md text-on-surface-variant">
+          Cập nhật ảnh đại diện để nhận thưởng điểm (một lần).
         </p>
       </div>
-    </AppShell>
+
+      <section className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-primary-fixed bg-primary-fixed text-3xl font-extrabold text-[#173A67]">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt={fullName || "Avatar"}
+                className="h-full w-full object-cover"
+                src={avatarUrl}
+              />
+            ) : (
+              (fullName || "?").slice(0, 1)
+            )}
+          </div>
+          <div>
+            <p className="font-bold text-on-surface">{fullName || "Đoàn viên"}</p>
+            <p className="text-sm text-on-surface-variant">
+              {hasAvatarBonus
+                ? "Bạn đã nhận thưởng cập nhật avatar."
+                : "Lần đầu cập nhật avatar: +10 điểm."}
+            </p>
+          </div>
+        </div>
+
+        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low px-4 py-8 transition-colors hover:border-tertiary hover:bg-tertiary-container/40">
+          <MaterialIcon className="text-3xl text-[#173A67]" name="add_a_photo" />
+          <span className="font-bold text-on-surface">
+            {saving ? "Đang tải lên..." : "Chọn ảnh đại diện"}
+          </span>
+          <span className="text-xs text-on-surface-variant">
+            JPG, PNG, WEBP, GIF · tối đa 2MB
+          </span>
+          <input
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            disabled={saving}
+            type="file"
+            onChange={handleAvatarChange}
+          />
+        </label>
+
+        {error ? (
+          <p className="mt-4 rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container">
+            {error}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="mt-4 rounded-xl bg-tertiary-container px-4 py-3 text-sm text-on-tertiary-container">
+            {message}
+          </p>
+        ) : null}
+      </section>
+
+      <p className="text-sm text-on-surface-variant">
+        Thưởng đăng ký tài khoản (+10) được cộng tự động khi bạn đăng ký thành
+        công.
+      </p>
+    </div>
   );
 }
