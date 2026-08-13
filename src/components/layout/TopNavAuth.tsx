@@ -8,7 +8,6 @@ import { createClient } from "@/lib/supabase/client";
 type AuthState = {
   loading: boolean;
   isGuest: boolean;
-  score: number;
   avatarUrl: string | null;
   initial: string;
 };
@@ -17,7 +16,6 @@ export function TopNavAuth() {
   const [state, setState] = useState<AuthState>({
     loading: true,
     isGuest: true,
-    score: 0,
     avatarUrl: null,
     initial: "?",
   });
@@ -37,7 +35,6 @@ export function TopNavAuth() {
         setState({
           loading: false,
           isGuest: true,
-          score: 0,
           avatarUrl: null,
           initial: "?",
         });
@@ -56,25 +53,15 @@ export function TopNavAuth() {
         setState({
           loading: false,
           isGuest: true,
-          score: 0,
           avatarUrl: null,
           initial: "?",
         });
         return;
       }
 
-      const { data: rankRow } = await supabase
-        .from("leaderboard")
-        .select("total_score")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-
       setState({
         loading: false,
         isGuest: false,
-        score: rankRow?.total_score ?? 0,
         avatarUrl: profile.avatar_url ?? null,
         initial: (profile.full_name || "?").slice(0, 1),
       });
@@ -87,7 +74,7 @@ export function TopNavAuth() {
   }, []);
 
   if (state.loading) {
-    return <div className="h-8 w-24 animate-pulse rounded-xl bg-surface-container" />;
+    return <div className="h-8 w-8 animate-pulse rounded-full bg-surface-container" />;
   }
 
   if (state.isGuest) {
@@ -103,12 +90,6 @@ export function TopNavAuth() {
 
   return (
     <>
-      <div className="hidden items-center rounded-full bg-primary-fixed px-3 py-1 font-bold text-on-primary-fixed sm:flex">
-        <MaterialIcon className="mr-1 text-sm" name="stars" />
-        <span className="text-label-md">
-          {state.score.toLocaleString("vi-VN")} Điểm
-        </span>
-      </div>
       <button
         aria-label="Thông báo"
         className="cursor-pointer rounded-full p-2 text-on-surface-variant hover:bg-surface-container-high"

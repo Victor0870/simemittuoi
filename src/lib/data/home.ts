@@ -167,19 +167,38 @@ export async function getHomePageData(): Promise<HomePageData> {
         .eq("id", userId)
         .maybeSingle();
 
-      const myRank = leaderboardRows.find(
-        (row) =>
-          row.id === userId ||
-          (profile?.employee_code &&
-            row.employee_code &&
-            String(row.employee_code).toUpperCase() ===
-              String(profile.employee_code).toUpperCase()),
-      );
+      // Lấy hạng/điểm riêng — không phụ thuộc top 10 mini leaderboard
+      const { data: byId } = await supabase
+        .from("leaderboard")
+        .select("total_score, rank, id, employee_code")
+        .eq("id", userId)
+        .maybeSingle();
+
+      let myRank = byId;
+      if (!myRank && profile?.employee_code) {
+        const { data: byCode } = await supabase
+          .from("leaderboard")
+          .select("total_score, rank, id, employee_code")
+          .eq("employee_code", profile.employee_code)
+          .maybeSingle();
+        myRank = byCode;
+      }
+
+      // Fallback: tổng trực tiếp từ score_events nếu chưa vào view
+      let score = myRank?.total_score ?? 0;
+      let rank = myRank ? Number(myRank.rank) : 0;
+      if (!myRank) {
+        const { data: sumRow } = await supabase
+          .from("score_events")
+          .select("points")
+          .eq("user_id", userId);
+        score = (sumRow ?? []).reduce((acc, row) => acc + (row.points ?? 0), 0);
+      }
 
       user = {
         name: profile?.full_name ?? MOCK_USER.name,
-        score: myRank?.total_score ?? 0,
-        rank: myRank ? Number(myRank.rank) : 0,
+        score,
+        rank,
         newActivitiesCount: activityItems.length,
       };
     }

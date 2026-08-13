@@ -9,7 +9,6 @@ export const NAV_ITEMS = [
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: "leaderboard" },
   { href: "/rewards", label: "Giải thưởng", icon: "emoji_events" },
   { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
-  { href: "/activities", label: "Hoạt động", icon: "explore" },
 ] as const;
 
 export const MOBILE_NAV_ITEMS = [
