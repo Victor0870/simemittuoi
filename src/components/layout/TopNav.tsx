@@ -23,7 +23,7 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
         </span>
       </div>
 
-      <div className="hidden items-center gap-8 md:flex">
+      <div className="hidden items-center gap-4 lg:gap-8 md:flex">
         {NAV_ITEMS.map((item) => {
           const isActive = item.href === activeHref;
 

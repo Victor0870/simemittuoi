@@ -5,7 +5,7 @@ import { LOGO_URL } from "@/lib/constants";
 export function Footer() {
   return (
     <footer
-      className="w-full border-t border-[#A8DDD1]/40 py-8 shadow-[0_-1px_3px_rgba(23,58,103,0.06)] md:ml-64 md:w-[calc(100%-16rem)]"
+      className="w-full border-t border-[#A8DDD1]/40 py-8 shadow-[0_-1px_3px_rgba(23,58,103,0.06)]"
       style={{ backgroundColor: "#D9F2EC" }}
     >
       <div className="flex w-full flex-col items-center justify-between gap-8 px-margin-mobile py-8 md:flex-row md:px-margin-desktop">
