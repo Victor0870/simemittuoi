@@ -37,13 +37,13 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
         })}
       </nav>
 
-      <button
+      <Link
         className="mx-2 mt-4 flex items-center justify-center gap-2 rounded-xl bg-tertiary px-4 py-3 font-bold text-on-tertiary transition-all hover:shadow-lg active:scale-95"
-        type="button"
+        href="/campaigns"
       >
         <MaterialIcon name="campaign" />
         Tham gia Chiến dịch
-      </button>
+      </Link>
 
       <div className="mt-auto border-t border-outline-variant pt-4 pb-2">
         <Link

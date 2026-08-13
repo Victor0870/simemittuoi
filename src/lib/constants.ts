@@ -5,15 +5,16 @@ export const USER_AVATAR_URL =
   "https://lh3.googleusercontent.com/aida-public/AB6AXuCEaiLRt-cAPMpsPxxe4CCjbdrPG0C-is3c0monqBvEdm4UsWU_h_9ySDm4yWKsmmlA6KA570SO3Ngrj_IhbCJ6IqJmM_2h4_GX0K_Youq-AWxDJOjCG3ih9XhRSXBq8s5N4MGnKscoSC9oDWbMYZRbQ3URwMhKrB6MSjRg5Ig1JCCVY6x3CIFwWpQqi7lIvv3tFamspSVryR1tZFlJttMN_fAyl1sXqlVDvv56QQKKzDkdVLbKPvsqCVD82nTZTp8SRnKVCYv1Vo4";
 
 export const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: "dashboard" },
+  { href: "/", label: "Trang chủ", icon: "home" },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: "leaderboard" },
+  { href: "/rewards", label: "Giải thưởng", icon: "emoji_events" },
+  { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
   { href: "/activities", label: "Hoạt động", icon: "explore" },
-  { href: "/login", label: "Đăng nhập", icon: "login" },
 ] as const;
 
 export const MOBILE_NAV_ITEMS = [
-  { href: "/", label: "Trang chủ", icon: "dashboard" },
+  { href: "/", label: "Trang chủ", icon: "home" },
   { href: "/leaderboard", label: "Xếp hạng", icon: "leaderboard" },
-  { href: "/activities", label: "Hoạt động", icon: "explore" },
-  { href: "/settings", label: "Cài đặt", icon: "settings" },
+  { href: "/rewards", label: "Giải thưởng", icon: "emoji_events" },
+  { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
 ] as const;
