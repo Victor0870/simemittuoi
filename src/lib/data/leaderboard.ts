@@ -77,18 +77,34 @@ export async function getLeaderboardPageData(
 
       currentEmployeeCode = profile?.employee_code ?? null;
 
-      const mine = rows.find(
-        (row) =>
-          row.id === user.id ||
-          (currentEmployeeCode &&
-            row.employee_code &&
-            String(row.employee_code).toUpperCase() ===
-              String(currentEmployeeCode).toUpperCase()),
-      );
+      const { data: byId } = await supabase
+        .from("leaderboard")
+        .select("total_score, rank, id, employee_code")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      let mine = byId;
+      if (!mine && currentEmployeeCode) {
+        const { data: byCode } = await supabase
+          .from("leaderboard")
+          .select("total_score, rank, id, employee_code")
+          .eq("employee_code", currentEmployeeCode)
+          .maybeSingle();
+        mine = byCode;
+      }
 
       if (mine) {
         currentRank = Number(mine.rank);
         currentScore = mine.total_score;
+      } else {
+        const { data: sumRow } = await supabase
+          .from("score_events")
+          .select("points")
+          .eq("user_id", user.id);
+        currentScore = (sumRow ?? []).reduce(
+          (acc, row) => acc + (row.points ?? 0),
+          0,
+        );
       }
     }
 

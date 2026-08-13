@@ -2,12 +2,17 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
 import { LeaderboardPodium } from "@/components/leaderboard/LeaderboardPodium";
+import { MyRankSummary } from "@/components/leaderboard/MyRankSummary";
 import {
   LeaderboardViewTabs,
   type LeaderboardTab,
 } from "@/components/leaderboard/LeaderboardViewTabs";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { getLeaderboardPageData } from "@/lib/data/leaderboard";
+import type { LeaderboardEntry } from "@/lib/mock-data";
+import {
+  getLeaderboardPageData,
+  type LeaderboardPageData,
+} from "@/lib/data/leaderboard";
 
 type LeaderboardPageProps = {
   searchParams?: Promise<{ tab?: string }>;
@@ -15,6 +20,29 @@ type LeaderboardPageProps = {
 
 function parseTab(raw: string | undefined): LeaderboardTab {
   return raw === "45" ? "45" : "10";
+}
+
+function isCurrentUserEntry(
+  entry: LeaderboardEntry,
+  data: LeaderboardPageData,
+): boolean {
+  if (data.currentUserId && entry.id === data.currentUserId) return true;
+  if (
+    data.currentEmployeeCode &&
+    (entry.id === data.currentEmployeeCode ||
+      entry.id.toUpperCase() === data.currentEmployeeCode.toUpperCase())
+  ) {
+    return true;
+  }
+  return data.currentRank > 0 && entry.rank === data.currentRank;
+}
+
+function resolveHighlightId(
+  entries: LeaderboardEntry[],
+  data: LeaderboardPageData,
+): string | null {
+  const mine = entries.find((entry) => isCurrentUserEntry(entry, data));
+  return mine?.id ?? null;
 }
 
 export default async function LeaderboardPage({
@@ -26,10 +54,10 @@ export default async function LeaderboardPage({
   const data = await getLeaderboardPageData(45);
   const visible = data.entries.slice(0, limit);
   const rest = visible.filter((entry) => entry.rank > 3);
-
-  const highlightId =
-    data.currentUserId &&
-    data.entries.find((e) => e.id === data.currentUserId)?.id;
+  const highlightId = resolveHighlightId(visible, data);
+  const userInView = visible.some((entry) => isCurrentUserEntry(entry, data));
+  const showMyRank =
+    !data.isGuest && data.currentRank > 0 && !userInView;
 
   return (
     <AppShell activeHref="/leaderboard">
@@ -48,32 +76,6 @@ export default async function LeaderboardPage({
         </div>
         <LeaderboardViewTabs active={tab} />
       </div>
-
-      {!data.isGuest && data.currentRank > 0 ? (
-        <div className="tonal-elevation-1 mb-8 flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-tertiary-container">
-              <MaterialIcon
-                className="text-2xl text-on-tertiary-container"
-                filled
-                name="military_tech"
-              />
-            </div>
-            <div>
-              <p className="text-sm text-on-surface-variant">Hạng của bạn</p>
-              <p className="text-2xl font-extrabold text-primary">
-                #{data.currentRank}
-              </p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-on-surface-variant">Tổng điểm</p>
-            <p className="text-2xl font-extrabold text-[#173A67]">
-              {data.currentScore.toLocaleString("vi-VN")}
-            </p>
-          </div>
-        </div>
-      ) : null}
 
       {data.isGuest ? (
         <p className="mb-4 text-sm text-on-surface-variant">
@@ -106,10 +108,14 @@ export default async function LeaderboardPage({
 
         <LeaderboardList
           entries={rest}
-          highlightId={highlightId || null}
+          highlightId={highlightId}
           maskIdentity={data.isGuest}
         />
       </section>
+
+      {showMyRank ? (
+        <MyRankSummary rank={data.currentRank} score={data.currentScore} />
+      ) : null}
     </AppShell>
   );
 }
