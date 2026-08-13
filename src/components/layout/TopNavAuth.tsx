@@ -1,16 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { USER_AVATAR_URL } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 
 type AuthState = {
   loading: boolean;
   isGuest: boolean;
   score: number;
+  avatarUrl: string | null;
+  initial: string;
 };
 
 export function TopNavAuth() {
@@ -18,6 +18,8 @@ export function TopNavAuth() {
     loading: true,
     isGuest: true,
     score: 0,
+    avatarUrl: null,
+    initial: "?",
   });
 
   useEffect(() => {
@@ -32,20 +34,32 @@ export function TopNavAuth() {
       if (cancelled) return;
 
       if (!user) {
-        setState({ loading: false, isGuest: true, score: 0 });
+        setState({
+          loading: false,
+          isGuest: true,
+          score: 0,
+          avatarUrl: null,
+          initial: "?",
+        });
         return;
       }
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("approval_status")
+        .select("approval_status, full_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();
 
       if (cancelled) return;
 
       if (profile?.approval_status !== "approved") {
-        setState({ loading: false, isGuest: true, score: 0 });
+        setState({
+          loading: false,
+          isGuest: true,
+          score: 0,
+          avatarUrl: null,
+          initial: "?",
+        });
         return;
       }
 
@@ -61,6 +75,8 @@ export function TopNavAuth() {
         loading: false,
         isGuest: false,
         score: rankRow?.total_score ?? 0,
+        avatarUrl: profile.avatar_url ?? null,
+        initial: (profile.full_name || "?").slice(0, 1),
       });
     }
 
@@ -100,15 +116,23 @@ export function TopNavAuth() {
       >
         <MaterialIcon name="notifications" />
       </button>
-      <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary-fixed font-bold text-primary">
-        <Image
-          alt="Ảnh đại diện đoàn viên"
-          className="h-full w-full object-cover"
-          height={32}
-          src={USER_AVATAR_URL}
-          width={32}
-        />
-      </div>
+      <Link
+        aria-label="Cài đặt hồ sơ"
+        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-primary-fixed font-bold text-primary"
+        href="/settings"
+        title="Cài đặt / Avatar"
+      >
+        {state.avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt="Ảnh đại diện"
+            className="h-full w-full object-cover"
+            src={state.avatarUrl}
+          />
+        ) : (
+          state.initial
+        )}
+      </Link>
     </>
   );
 }
