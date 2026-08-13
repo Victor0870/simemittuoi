@@ -1,18 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = new Set([
-  "/",
-  "/login",
-  "/register",
-  "/pending",
-  "/auth/callback",
-]);
-
-function isPublicPath(pathname: string) {
-  if (PUBLIC_PATHS.has(pathname)) return true;
-  if (pathname.startsWith("/auth/")) return true;
-  return false;
+function isAuthExemptPath(pathname: string) {
+  return (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/pending" ||
+    pathname.startsWith("/auth/")
+  );
 }
 
 export async function updateSession(request: NextRequest) {
@@ -67,31 +62,34 @@ export async function updateSession(request: NextRequest) {
     const status = profile?.approval_status ?? "pending";
     const role = profile?.role ?? "user";
 
-    if (pathname.startsWith("/admin")) {
-      if (role !== "admin" || status !== "approved") {
+    // Chưa duyệt / bị từ chối: chỉ được ở login/register/pending/auth
+    if (status !== "approved") {
+      if (!isAuthExemptPath(pathname)) {
         const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = status === "approved" ? "/" : "/pending";
+        redirectUrl.pathname = "/pending";
+        redirectUrl.search = "";
+        if (status === "rejected") {
+          redirectUrl.searchParams.set("status", "rejected");
+        }
         return NextResponse.redirect(redirectUrl);
       }
       return supabaseResponse;
     }
 
-    if (status === "approved") {
-      if (pathname === "/pending" || pathname === "/login" || pathname === "/register") {
-        const redirectUrl = request.nextUrl.clone();
-        redirectUrl.pathname = "/";
-        return NextResponse.redirect(redirectUrl);
-      }
-      return supabaseResponse;
-    }
-
-    // pending / rejected: chỉ cho phép vài trang công khai + pending
-    if (!isPublicPath(pathname) || pathname === "/") {
+    // Đã duyệt
+    if (pathname.startsWith("/admin") && role !== "admin") {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/pending";
-      if (status === "rejected") {
-        redirectUrl.searchParams.set("status", "rejected");
-      }
+      redirectUrl.pathname = "/";
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    if (
+      pathname === "/pending" ||
+      pathname === "/login" ||
+      pathname === "/register"
+    ) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = role === "admin" ? "/admin/users" : "/";
       return NextResponse.redirect(redirectUrl);
     }
 
