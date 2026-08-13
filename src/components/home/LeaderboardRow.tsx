@@ -12,7 +12,7 @@ export function LeaderboardRow({
   maskIdentity = false,
 }: LeaderboardRowProps) {
   const displayName = maskIdentity
-    ? maskDisplayName(entry.name, 10)
+    ? maskDisplayName(entry.name, 7)
     : entry.name;
 
   return (
