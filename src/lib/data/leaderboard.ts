@@ -71,40 +71,36 @@ export async function getLeaderboardPageData(
       currentUserId = user.id;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("employee_code")
+        .select("employee_code, total_score, rank")
         .eq("id", user.id)
         .maybeSingle();
 
       currentEmployeeCode = profile?.employee_code ?? null;
 
-      const { data: byId } = await supabase
-        .from("leaderboard")
-        .select("total_score, rank, id, employee_code")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      let mine = byId;
-      if (!mine && currentEmployeeCode) {
-        const { data: byCode } = await supabase
+      if (profile?.rank && (profile.total_score ?? 0) > 0) {
+        currentRank = Number(profile.rank);
+        currentScore = profile.total_score ?? 0;
+      } else {
+        const { data: byId } = await supabase
           .from("leaderboard")
           .select("total_score, rank, id, employee_code")
-          .eq("employee_code", currentEmployeeCode)
+          .eq("id", user.id)
           .maybeSingle();
-        mine = byCode;
-      }
 
-      if (mine) {
-        currentRank = Number(mine.rank);
-        currentScore = mine.total_score;
-      } else {
-        const { data: sumRow } = await supabase
-          .from("score_events")
-          .select("points")
-          .eq("user_id", user.id);
-        currentScore = (sumRow ?? []).reduce(
-          (acc, row) => acc + (row.points ?? 0),
-          0,
-        );
+        let mine = byId;
+        if (!mine && currentEmployeeCode) {
+          const { data: byCode } = await supabase
+            .from("leaderboard")
+            .select("total_score, rank, id, employee_code")
+            .eq("employee_code", currentEmployeeCode)
+            .maybeSingle();
+          mine = byCode;
+        }
+
+        if (mine) {
+          currentRank = Number(mine.rank);
+          currentScore = mine.total_score;
+        }
       }
     }
 

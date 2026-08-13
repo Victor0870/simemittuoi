@@ -10,7 +10,8 @@
     "db:setup": "node scripts/apply-schema.mjs",
     "db:import-whitelist": "node scripts/import-whitelist.mjs",
     "db:import-scores": "node scripts/import-contest-scores.mjs",
-    "db:apply-bonus": "node scripts/apply-bonus-scores.mjs"
+    "db:apply-bonus": "node scripts/apply-bonus-scores.mjs",
+    "db:apply-leaderboard-cache": "node scripts/apply-leaderboard-cache.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

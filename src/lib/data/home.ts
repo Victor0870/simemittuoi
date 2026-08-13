@@ -163,36 +163,35 @@ export async function getHomePageData(): Promise<HomePageData> {
       const userId = authResult.data.user.id;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name, employee_code")
+        .select("full_name, employee_code, total_score, rank")
         .eq("id", userId)
         .maybeSingle();
 
-      // Lấy hạng/điểm riêng — không phụ thuộc top 10 mini leaderboard
-      const { data: byId } = await supabase
-        .from("leaderboard")
-        .select("total_score, rank, id, employee_code")
-        .eq("id", userId)
-        .maybeSingle();
+      // Ưu tiên biến sẵn trên profiles (đã cache khi điểm đổi)
+      let score = profile?.total_score ?? 0;
+      let rank = profile?.rank ? Number(profile.rank) : 0;
 
-      let myRank = byId;
-      if (!myRank && profile?.employee_code) {
-        const { data: byCode } = await supabase
+      if (!rank && score === 0) {
+        const { data: byId } = await supabase
           .from("leaderboard")
-          .select("total_score, rank, id, employee_code")
-          .eq("employee_code", profile.employee_code)
+          .select("total_score, rank")
+          .eq("id", userId)
           .maybeSingle();
-        myRank = byCode;
-      }
 
-      // Fallback: tổng trực tiếp từ score_events nếu chưa vào view
-      let score = myRank?.total_score ?? 0;
-      let rank = myRank ? Number(myRank.rank) : 0;
-      if (!myRank) {
-        const { data: sumRow } = await supabase
-          .from("score_events")
-          .select("points")
-          .eq("user_id", userId);
-        score = (sumRow ?? []).reduce((acc, row) => acc + (row.points ?? 0), 0);
+        let myRank = byId;
+        if (!myRank && profile?.employee_code) {
+          const { data: byCode } = await supabase
+            .from("leaderboard")
+            .select("total_score, rank")
+            .eq("employee_code", profile.employee_code)
+            .maybeSingle();
+          myRank = byCode;
+        }
+
+        if (myRank) {
+          score = myRank.total_score ?? 0;
+          rank = myRank.rank ? Number(myRank.rank) : 0;
+        }
       }
 
       user = {
