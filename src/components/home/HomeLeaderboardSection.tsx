@@ -19,7 +19,11 @@ export function HomeLeaderboardSection({
 
   return (
     <section className="mb-10 space-y-6">
-      <LeaderboardPodium entries={entries} maskIdentity={maskIdentity} />
+      <LeaderboardPodium
+        entries={entries}
+        maskIdentity={maskIdentity}
+        variant="home"
+      />
 
       <div className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6">
         <div className="mb-4 flex items-center justify-between">
