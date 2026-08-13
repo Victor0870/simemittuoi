@@ -78,9 +78,29 @@ async function main() {
   const password = readDbPassword();
   const excelPath = findScoreExcel();
   const workbook = XLSX.readFile(excelPath);
-  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {
+  const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {
     defval: "",
   });
+
+  // Mỗi mã NV chỉ giữ 1 dòng — ưu tiên xếp hạng thành phố tốt hơn (số nhỏ hơn)
+  const rankKey = "Xếp hạng cá nhân theo thành phố";
+  const bestByCode = new Map();
+  for (const row of rawRows) {
+    const code = String(row["Mã Nhân Viên"] || "").trim();
+    if (!code) continue;
+    const rank = Number(row[rankKey]);
+    const rankNum = Number.isFinite(rank) ? rank : Number.POSITIVE_INFINITY;
+    const prev = bestByCode.get(code);
+    if (!prev || rankNum < prev.rankNum) {
+      bestByCode.set(code, { row, rankNum });
+    }
+  }
+  const rows = [...bestByCode.values()].map((x) => x.row);
+  if (rawRows.length !== rows.length) {
+    console.log(
+      `Deduped excel rows: ${rawRows.length} → ${rows.length} (kept best city rank per mã NV)`,
+    );
+  }
 
   const client = new pg.Client({
     host: `db.${PROJECT_REF}.supabase.co`,
