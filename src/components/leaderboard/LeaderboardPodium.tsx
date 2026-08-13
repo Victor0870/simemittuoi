@@ -128,18 +128,20 @@ export function LeaderboardPodium({
       />
 
       <div
-        className={`relative text-center ${isHome ? "mb-8 md:mb-10" : "mb-6"}`}
+        className={`relative text-center ${isHome ? "mb-10 md:mb-12" : "mb-6"}`}
       >
         <div
-          className={`inline-flex items-center gap-2 rounded-full bg-surface-container-lowest/80 font-bold tracking-wide text-[#173A67] uppercase ${
+          className={`inline-flex items-center font-bold tracking-wide uppercase ${
             isHome
-              ? "gap-3 px-5 py-2.5 text-base md:px-6 md:py-3 md:text-lg"
-              : "mb-2 px-3 py-1 text-xs"
+              ? "gap-3 rounded-2xl border-2 border-primary bg-white px-7 py-3.5 text-xl text-[#173A67] shadow-[0_8px_24px_rgba(255,154,118,0.35)] md:gap-4 md:px-10 md:py-4 md:text-3xl"
+              : "mb-2 gap-2 rounded-full bg-surface-container-lowest/80 px-3 py-1 text-xs text-[#173A67]"
           }`}
         >
           <MaterialIcon
             className={
-              isHome ? "text-2xl text-primary md:text-3xl" : "text-base text-primary"
+              isHome
+                ? "text-4xl text-primary md:text-5xl"
+                : "text-base text-primary"
             }
             filled
             name="trophy"
