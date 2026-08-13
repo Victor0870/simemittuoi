@@ -7,7 +7,6 @@ import {
   MOCK_ACTIVITIES,
   MOCK_ANNOUNCEMENTS,
   MOCK_GOAL,
-  MOCK_LEADERBOARD,
   MOCK_USER,
 } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +52,7 @@ function fallbackData(isGuest: boolean): HomePageData {
     user: MOCK_USER,
     announcements: MOCK_ANNOUNCEMENTS,
     activities: MOCK_ACTIVITIES,
-    leaderboard: MOCK_LEADERBOARD,
+    leaderboard: [],
     goal: MOCK_GOAL,
     dataSource: "mock",
     isGuest,
@@ -80,7 +79,9 @@ export async function getHomePageData(): Promise<HomePageData> {
           .limit(10),
         supabase
           .from("leaderboard")
-          .select("id, full_name, department, avatar_url, total_score, rank")
+          .select(
+            "id, full_name, department, avatar_url, employee_code, total_score, rank",
+          )
           .order("rank", { ascending: true })
           .limit(10),
         supabase.auth.getUser(),
@@ -95,35 +96,49 @@ export async function getHomePageData(): Promise<HomePageData> {
     const activities = activitiesResult.data ?? [];
     const leaderboardRows = leaderboardResult.data ?? [];
 
-    if (hasDbError || (posts.length === 0 && activities.length === 0)) {
+    const hasContent =
+      posts.length > 0 || activities.length > 0 || leaderboardRows.length > 0;
+
+    if (hasDbError && !hasContent) {
       return fallbackData(isGuest);
     }
 
-    const announcements: Announcement[] = posts.map((post) => ({
-      id: post.id,
-      tag: post.tag ?? "Thông báo",
-      tagTone: post.tag_tone === "error" ? "error" : "primary",
-      timeAgo: formatTimeAgo(post.published_at),
-      title: post.title,
-      excerpt: post.content,
-    }));
+    // Nếu DB lỗi một phần nhưng còn leaderboard thì vẫn dùng leaderboard thật
+    if (!hasContent) {
+      return fallbackData(isGuest);
+    }
 
-    const activityItems: Activity[] = activities.map((item) => ({
-      id: item.id,
-      title: item.title,
-      date: formatDate(item.event_date),
-      location: item.location ?? "",
-      points: item.points,
-      imageUrl: item.image_url ?? "",
-      imageAlt: item.image_alt ?? item.title,
-      participantAvatars: [],
-      extraParticipants: 0,
-    }));
+    const announcements: Announcement[] =
+      posts.length > 0
+        ? posts.map((post) => ({
+            id: post.id,
+            tag: post.tag ?? "Thông báo",
+            tagTone: post.tag_tone === "error" ? "error" : "primary",
+            timeAgo: formatTimeAgo(post.published_at),
+            title: post.title,
+            excerpt: post.content,
+          }))
+        : MOCK_ANNOUNCEMENTS;
+
+    const activityItems: Activity[] =
+      activities.length > 0
+        ? activities.map((item) => ({
+            id: item.id,
+            title: item.title,
+            date: formatDate(item.event_date),
+            location: item.location ?? "",
+            points: item.points,
+            imageUrl: item.image_url ?? "",
+            imageAlt: item.image_alt ?? item.title,
+            participantAvatars: [],
+            extraParticipants: 0,
+          }))
+        : MOCK_ACTIVITIES;
 
     const leaderboard: LeaderboardEntry[] =
       leaderboardRows.length > 0
-        ? leaderboardRows.slice(0, 2).map((row, index) => ({
-            id: row.id,
+        ? leaderboardRows.slice(0, 10).map((row, index) => ({
+            id: row.id ?? row.employee_code ?? `rank-${row.rank}`,
             rank: Number(row.rank),
             name: row.full_name,
             department: row.department ?? "",
@@ -131,34 +146,49 @@ export async function getHomePageData(): Promise<HomePageData> {
             avatarUrl: row.avatar_url ?? "",
             isTop: index === 0,
           }))
-        : MOCK_LEADERBOARD;
+        : [];
 
-    let user = { ...MOCK_USER };
+    // Không còn dùng MOCK_LEADERBOARD khi đã có dữ liệu điểm thật
+    const miniLeaderboard =
+      leaderboard.length > 0 ? leaderboard.slice(0, 5) : [];
+
+    let user = {
+      name: isGuest ? "Khách" : MOCK_USER.name,
+      score: 0,
+      rank: 0,
+      newActivitiesCount: activityItems.length,
+    };
 
     if (authResult.data.user) {
       const userId = authResult.data.user.id;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("full_name")
+        .select("full_name, employee_code")
         .eq("id", userId)
         .maybeSingle();
 
-      const myRank = leaderboardRows.find((row) => row.id === userId);
+      const myRank = leaderboardRows.find(
+        (row) =>
+          row.id === userId ||
+          (profile?.employee_code &&
+            row.employee_code &&
+            String(row.employee_code).toUpperCase() ===
+              String(profile.employee_code).toUpperCase()),
+      );
 
       user = {
         name: profile?.full_name ?? MOCK_USER.name,
         score: myRank?.total_score ?? 0,
         rank: myRank ? Number(myRank.rank) : 0,
-        newActivitiesCount: activities.length,
+        newActivitiesCount: activityItems.length,
       };
     }
 
     return {
       user,
-      announcements:
-        announcements.length > 0 ? announcements : MOCK_ANNOUNCEMENTS,
-      activities: activityItems.length > 0 ? activityItems : MOCK_ACTIVITIES,
-      leaderboard,
+      announcements,
+      activities: activityItems,
+      leaderboard: miniLeaderboard,
       goal: MOCK_GOAL,
       dataSource: "supabase",
       isGuest,
