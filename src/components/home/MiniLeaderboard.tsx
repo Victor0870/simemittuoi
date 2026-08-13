@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LeaderboardRow } from "@/components/home/LeaderboardRow";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
@@ -38,12 +39,12 @@ export function MiniLeaderboard({
         ))}
       </div>
 
-      <button
-        className="mt-6 w-full rounded-xl border-2 border-tertiary py-3 font-bold text-on-tertiary-container transition-all hover:bg-tertiary hover:text-on-tertiary active:scale-95"
-        type="button"
+      <Link
+        className="mt-6 flex w-full items-center justify-center rounded-xl border-2 border-tertiary py-3 font-bold text-on-tertiary-container transition-all hover:bg-tertiary hover:text-on-tertiary active:scale-95"
+        href="/leaderboard"
       >
         Xem bảng xếp hạng đầy đủ
-      </button>
+      </Link>
     </section>
   );
 }

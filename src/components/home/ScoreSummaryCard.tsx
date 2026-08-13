@@ -42,7 +42,7 @@ export function ScoreSummaryCard({ user }: ScoreSummaryCardProps) {
         </div>
         <Link
           className="flex items-center text-sm font-bold text-on-tertiary-container hover:underline"
-          href="/login"
+          href="/leaderboard"
         >
           Chi tiết
           <MaterialIcon className="text-sm" name="chevron_right" />
