@@ -10,7 +10,7 @@ export function HeroWelcome({ user, isGuest = false }: HeroWelcomeProps) {
   return (
     <div
       className={`relative flex flex-col justify-center overflow-hidden rounded-3xl bg-primary-container p-8 text-on-primary-container shadow-lg ${
-        isGuest ? "min-h-64 lg:col-span-3" : "h-64 lg:col-span-2"
+        isGuest ? "min-h-64" : "h-64"
       }`}
     >
       {isGuest ? (
