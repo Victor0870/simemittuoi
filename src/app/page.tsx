@@ -3,7 +3,7 @@ import { ActivitiesSection } from "@/components/home/ActivitiesSection";
 import { AnnouncementsSection } from "@/components/home/AnnouncementsSection";
 import { GoalProgressCard } from "@/components/home/GoalProgressCard";
 import { HeroWelcome } from "@/components/home/HeroWelcome";
-import { MiniLeaderboard } from "@/components/home/MiniLeaderboard";
+import { HomeLeaderboardSection } from "@/components/home/HomeLeaderboardSection";
 import { ScoreSummaryCard } from "@/components/home/ScoreSummaryCard";
 import { getHomePageData } from "@/lib/data/home";
 
@@ -22,25 +22,30 @@ export default async function HomePage() {
         {!isGuest ? <ScoreSummaryCard user={data.user} /> : null}
       </section>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        <div className="space-y-10 lg:col-span-8">
+      <HomeLeaderboardSection
+        entries={data.leaderboard}
+        maskIdentity={isGuest}
+      />
+
+      <div
+        className={`grid grid-cols-1 gap-8 ${
+          isGuest ? "" : "lg:grid-cols-12"
+        }`}
+      >
+        <div className={`space-y-10 ${isGuest ? "" : "lg:col-span-8"}`}>
           <AnnouncementsSection announcements={data.announcements} />
           <ActivitiesSection activities={data.activities} />
         </div>
 
-        <div className="space-y-8 lg:col-span-4">
-          <MiniLeaderboard
-            entries={data.leaderboard}
-            maskIdentity={isGuest}
-          />
-          {!isGuest ? (
+        {!isGuest ? (
+          <div className="space-y-8 lg:col-span-4">
             <GoalProgressCard
               note={data.goal.note}
               progress={data.goal.progress}
               title={data.goal.title}
             />
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </AppShell>
   );

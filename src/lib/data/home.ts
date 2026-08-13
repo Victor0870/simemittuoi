@@ -148,9 +148,9 @@ export async function getHomePageData(): Promise<HomePageData> {
           }))
         : [];
 
-    // Không còn dùng MOCK_LEADERBOARD khi đã có dữ liệu điểm thật
+    // Top 6: podium 1–3 + danh sách 3 người (hạng 4–6) trên trang chủ
     const miniLeaderboard =
-      leaderboard.length > 0 ? leaderboard.slice(0, 5) : [];
+      leaderboard.length > 0 ? leaderboard.slice(0, 6) : [];
 
     let user = {
       name: isGuest ? "Khách" : MOCK_USER.name,
