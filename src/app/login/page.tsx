@@ -19,19 +19,39 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
     if (signInError) {
+      setLoading(false);
       setError(signInError.message);
       return;
     }
 
-    router.push("/");
+    const userId = data.user?.id;
+    let nextPath = "/";
+
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("approval_status, role")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (profile?.approval_status !== "approved") {
+        nextPath =
+          profile?.approval_status === "rejected"
+            ? "/pending?status=rejected"
+            : "/pending";
+      } else if (profile.role === "admin") {
+        nextPath = "/admin/users";
+      }
+    }
+
+    setLoading(false);
+    router.push(nextPath);
     router.refresh();
   }
 
@@ -96,6 +116,12 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-on-surface-variant">
+          Chưa có tài khoản?{" "}
+          <Link className="font-bold text-[#173A67] hover:underline" href="/register">
+            Đăng ký bằng mã nhân viên
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-on-surface-variant">
           <Link className="text-[#173A67] hover:underline" href="/">
             ← Về trang chủ
           </Link>

@@ -8,7 +8,7 @@ export const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: "leaderboard" },
   { href: "/activities", label: "Hoạt động", icon: "explore" },
-  { href: "/rules", label: "Quy định", icon: "rule" },
+  { href: "/login", label: "Đăng nhập", icon: "login" },
 ] as const;
 
 export const MOBILE_NAV_ITEMS = [
