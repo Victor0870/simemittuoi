@@ -1,7 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { TopNavAuth } from "@/components/layout/TopNavAuth";
-import { LOGO_URL, NAV_ITEMS } from "@/lib/constants";
+import { NAV_ITEMS } from "@/lib/constants";
 
 type TopNavProps = {
   activeHref?: string;
@@ -10,18 +9,12 @@ type TopNavProps = {
 export function TopNav({ activeHref = "/" }: TopNavProps) {
   return (
     <nav className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-margin-mobile shadow-sm md:px-margin-desktop">
-      <div className="flex items-center gap-3">
-        <Image
-          alt="Logo Si Mê Mít Tươi"
-          className="rounded-lg"
-          height={40}
-          src={LOGO_URL}
-          width={40}
-        />
-        <span className="text-headline-md font-extrabold text-primary">
-          Si Mê Mít Tươi
-        </span>
-      </div>
+      <Link
+        className="shrink-0 text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+        href="/"
+      >
+        logo
+      </Link>
 
       <div className="hidden items-center gap-4 lg:gap-8 md:flex">
         {NAV_ITEMS.map((item) => {
