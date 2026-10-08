@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 const EXEMPT = new Set(["/login", "/register", "/pending"]);
 const CACHE_KEY = "smm_approval_ok";
@@ -46,7 +47,7 @@ export function ApprovalGate({ children }: { children: React.ReactNode }) {
       }
 
       const { data: profile } = await supabase
-        .from("profiles")
+        .from(CDILV_TABLE.profiles)
         .select("approval_status, role")
         .eq("id", user.id)
         .maybeSingle();

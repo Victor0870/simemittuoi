@@ -3,13 +3,10 @@ import type {
   Announcement,
   LeaderboardEntry,
 } from "@/lib/mock-data";
-import {
-  MOCK_ACTIVITIES,
-  MOCK_ANNOUNCEMENTS,
-  MOCK_GOAL,
-  MOCK_USER,
-} from "@/lib/mock-data";
+import { MOCK_GOAL } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type DashboardUser = {
   name: string;
@@ -24,9 +21,10 @@ export type HomePageData = {
   activities: Activity[];
   leaderboard: LeaderboardEntry[];
   goal: typeof MOCK_GOAL;
-  dataSource: "supabase" | "mock";
+  dataSource: "supabase" | "empty" | "error";
   /** true = chưa đăng nhập (khách) */
   isGuest: boolean;
+  errorMessage?: string;
 };
 
 function formatTimeAgo(isoDate: string): string {
@@ -47,171 +45,185 @@ function formatDate(date: string | null): string {
   return parsed.toLocaleDateString("vi-VN");
 }
 
-function fallbackData(isGuest: boolean): HomePageData {
+function emptyUser(isGuest: boolean): DashboardUser {
   return {
-    user: MOCK_USER,
-    announcements: MOCK_ANNOUNCEMENTS,
-    activities: MOCK_ACTIVITIES,
-    leaderboard: [],
-    goal: MOCK_GOAL,
-    dataSource: "mock",
-    isGuest,
+    name: isGuest ? "Khách" : "Đoàn viên",
+    score: 0,
+    rank: 0,
+    newActivitiesCount: 0,
   };
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
   try {
-    const supabase = await createClient();
+    const publicDb = createPublicClient();
 
-    const [postsResult, activitiesResult, leaderboardResult, authResult] =
+    const [postsResult, activitiesResult, leaderboardResult] =
       await Promise.all([
-        supabase
-          .from("posts")
+        publicDb
+          .from(CDILV_TABLE.posts)
           .select("id, title, content, tag, tag_tone, published_at")
           .order("published_at", { ascending: false })
           .limit(10),
-        supabase
-          .from("activities")
+        publicDb
+          .from(CDILV_TABLE.activities)
           .select(
             "id, title, location, event_date, points, image_url, image_alt",
           )
           .order("event_date", { ascending: false })
           .limit(10),
-        supabase
-          .from("leaderboard")
+        publicDb
+          .from(CDILV_TABLE.leaderboard)
           .select(
             "id, full_name, department, avatar_url, employee_code, total_score, rank",
           )
           .order("rank", { ascending: true })
           .limit(10),
-        supabase.auth.getUser(),
       ]);
 
-    const isGuest = !authResult.data.user;
+    const errors = [
+      postsResult.error?.message,
+      activitiesResult.error?.message,
+      leaderboardResult.error?.message,
+    ].filter(Boolean);
 
-    const hasDbError =
-      postsResult.error || activitiesResult.error || leaderboardResult.error;
+    if (errors.length) {
+      console.error("[home] supabase errors:", errors.join(" | "));
+    }
 
     const posts = postsResult.data ?? [];
     const activities = activitiesResult.data ?? [];
-    const leaderboardRows = leaderboardResult.data ?? [];
+    let leaderboardRows = leaderboardResult.data ?? [];
 
-    const hasContent =
-      posts.length > 0 || activities.length > 0 || leaderboardRows.length > 0;
-
-    if (hasDbError && !hasContent) {
-      return fallbackData(isGuest);
+    // Fallback cache nếu view lỗi
+    if (leaderboardResult.error || leaderboardRows.length === 0) {
+      const cache = await publicDb
+        .from(CDILV_TABLE.leaderboardCache)
+        .select(
+          "id, full_name, department, avatar_url, employee_code, total_score, rank",
+        )
+        .gt("total_score", 0)
+        .order("rank", { ascending: true })
+        .limit(10);
+      if (!cache.error && cache.data?.length) {
+        leaderboardRows = cache.data;
+      }
     }
 
-    // Nếu DB lỗi một phần nhưng còn leaderboard thì vẫn dùng leaderboard thật
-    if (!hasContent) {
-      return fallbackData(isGuest);
-    }
+    const announcements: Announcement[] = posts.map((post) => ({
+      id: post.id,
+      tag: post.tag ?? "Thông báo",
+      tagTone: post.tag_tone === "error" ? "error" : "primary",
+      timeAgo: formatTimeAgo(post.published_at),
+      title: post.title,
+      excerpt: post.content,
+    }));
 
-    const announcements: Announcement[] =
-      posts.length > 0
-        ? posts.map((post) => ({
-            id: post.id,
-            tag: post.tag ?? "Thông báo",
-            tagTone: post.tag_tone === "error" ? "error" : "primary",
-            timeAgo: formatTimeAgo(post.published_at),
-            title: post.title,
-            excerpt: post.content,
-          }))
-        : MOCK_ANNOUNCEMENTS;
+    const activityItems: Activity[] = activities.map((item) => ({
+      id: item.id,
+      title: item.title,
+      date: formatDate(item.event_date),
+      location: item.location ?? "",
+      points: item.points,
+      imageUrl: item.image_url ?? "",
+      imageAlt: item.image_alt ?? item.title,
+      participantAvatars: [],
+      extraParticipants: 0,
+    }));
 
-    const activityItems: Activity[] =
-      activities.length > 0
-        ? activities.map((item) => ({
-            id: item.id,
-            title: item.title,
-            date: formatDate(item.event_date),
-            location: item.location ?? "",
-            points: item.points,
-            imageUrl: item.image_url ?? "",
-            imageAlt: item.image_alt ?? item.title,
-            participantAvatars: [],
-            extraParticipants: 0,
-          }))
-        : MOCK_ACTIVITIES;
+    const leaderboard: LeaderboardEntry[] = leaderboardRows
+      .slice(0, 6)
+      .map((row, index) => ({
+        id: row.id ?? row.employee_code ?? `rank-${row.rank}`,
+        rank: Number(row.rank),
+        name: row.full_name,
+        department: row.department ?? "",
+        score: Number(row.total_score) || 0,
+        avatarUrl: row.avatar_url ?? "",
+        isTop: index === 0 || Number(row.rank) === 1,
+      }));
 
-    const leaderboard: LeaderboardEntry[] =
-      leaderboardRows.length > 0
-        ? leaderboardRows.slice(0, 10).map((row, index) => ({
-            id: row.id ?? row.employee_code ?? `rank-${row.rank}`,
-            rank: Number(row.rank),
-            name: row.full_name,
-            department: row.department ?? "",
-            score: row.total_score,
-            avatarUrl: row.avatar_url ?? "",
-            isTop: index === 0,
-          }))
-        : [];
+    let isGuest = true;
+    let user = emptyUser(true);
 
-    // Top 6: podium 1–3 + danh sách 3 người (hạng 4–6) trên trang chủ
-    const miniLeaderboard =
-      leaderboard.length > 0 ? leaderboard.slice(0, 6) : [];
+    try {
+      const supabase = await createClient();
+      const authResult = await supabase.auth.getUser();
+      const authUser = authResult.data.user;
+      isGuest = !authUser;
+      user = emptyUser(isGuest);
 
-    let user = {
-      name: isGuest ? "Khách" : MOCK_USER.name,
-      score: 0,
-      rank: 0,
-      newActivitiesCount: activityItems.length,
-    };
-
-    if (authResult.data.user) {
-      const userId = authResult.data.user.id;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, employee_code, total_score, rank")
-        .eq("id", userId)
-        .maybeSingle();
-
-      // Ưu tiên biến sẵn trên profiles (đã cache khi điểm đổi)
-      let score = profile?.total_score ?? 0;
-      let rank = profile?.rank ? Number(profile.rank) : 0;
-
-      if (!rank && score === 0) {
-        const { data: byId } = await supabase
-          .from("leaderboard")
-          .select("total_score, rank")
-          .eq("id", userId)
+      if (authUser) {
+        const { data: profile } = await supabase
+          .from(CDILV_TABLE.profiles)
+          .select("full_name, employee_code, total_score, rank")
+          .eq("id", authUser.id)
           .maybeSingle();
 
-        let myRank = byId;
-        if (!myRank && profile?.employee_code) {
-          const { data: byCode } = await supabase
-            .from("leaderboard")
+        let score = profile?.total_score ?? 0;
+        let rank = profile?.rank ? Number(profile.rank) : 0;
+
+        if (!rank && score === 0) {
+          const { data: byId } = await publicDb
+            .from(CDILV_TABLE.leaderboard)
             .select("total_score, rank")
-            .eq("employee_code", profile.employee_code)
+            .eq("id", authUser.id)
             .maybeSingle();
-          myRank = byCode;
+
+          let myRank = byId;
+          if (!myRank && profile?.employee_code) {
+            const { data: byCode } = await publicDb
+              .from(CDILV_TABLE.leaderboard)
+              .select("total_score, rank")
+              .eq("employee_code", profile.employee_code)
+              .maybeSingle();
+            myRank = byCode;
+          }
+
+          if (myRank) {
+            score = myRank.total_score ?? 0;
+            rank = myRank.rank ? Number(myRank.rank) : 0;
+          }
         }
 
-        if (myRank) {
-          score = myRank.total_score ?? 0;
-          rank = myRank.rank ? Number(myRank.rank) : 0;
-        }
+        user = {
+          name: profile?.full_name ?? "Đoàn viên",
+          score,
+          rank,
+          newActivitiesCount: activityItems.length,
+        };
       }
-
-      user = {
-        name: profile?.full_name ?? MOCK_USER.name,
-        score,
-        rank,
-        newActivitiesCount: activityItems.length,
-      };
+    } catch (authErr) {
+      console.warn("[home] auth session skipped:", authErr);
     }
+
+    const hasContent =
+      announcements.length > 0 ||
+      activityItems.length > 0 ||
+      leaderboard.length > 0;
 
     return {
       user,
       announcements,
       activities: activityItems,
-      leaderboard: miniLeaderboard,
+      leaderboard,
       goal: MOCK_GOAL,
-      dataSource: "supabase",
+      dataSource: hasContent ? "supabase" : errors.length ? "error" : "empty",
       isGuest,
+      errorMessage: errors.length ? errors.join(" | ") : undefined,
     };
-  } catch {
-    return fallbackData(true);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[home] fatal:", message);
+    return {
+      user: emptyUser(true),
+      announcements: [],
+      activities: [],
+      leaderboard: [],
+      goal: MOCK_GOAL,
+      dataSource: "error",
+      isGuest: true,
+      errorMessage: message,
+    };
   }
 }

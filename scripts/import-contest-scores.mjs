@@ -124,7 +124,7 @@ async function main() {
 
   // Xóa seed cũ cùng source (cho phép chạy lại)
   await client.query(
-    `delete from public.employee_score_events where source = $1 and transferred_to is null`,
+    `delete from public.cdilv_employee_score_events where source = $1 and transferred_to is null`,
     [SOURCE],
   );
 
@@ -144,17 +144,17 @@ async function main() {
 
     // Bổ sung whitelist nếu thiếu
     await client.query(
-      `insert into public.employee_whitelist (employee_code, full_name, department, is_active)
+      `insert into public.cdilv_employee_whitelist (employee_code, full_name, department, is_active)
        values ($1, $2, null, true)
        on conflict (employee_code) do update set
-         full_name = coalesce(nullif(excluded.full_name, ''), public.employee_whitelist.full_name),
+         full_name = coalesce(nullif(excluded.full_name, ''), public.cdilv_employee_whitelist.full_name),
          is_active = true`,
       [code, name || code],
     );
 
     for (const award of awards) {
       await client.query(
-        `insert into public.employee_score_events
+        `insert into public.cdilv_employee_score_events
           (employee_code, points, note, award_label, source)
          values ($1, $2, $3, $4, $5)`,
         [code, award.points, award.note, award.award_label, SOURCE],
@@ -165,11 +165,11 @@ async function main() {
 
     // Nếu đã có profile cùng mã NV → transfer ngay
     const profile = await client.query(
-      `select id from public.profiles where upper(employee_code) = upper($1) limit 1`,
+      `select id from public.cdilv_profiles where upper(employee_code) = upper($1) limit 1`,
       [code],
     );
     if (profile.rows[0]) {
-      await client.query(`select public.transfer_employee_scores($1, $2)`, [
+      await client.query(`select public.cdilv_transfer_employee_scores($1, $2)`, [
         profile.rows[0].id,
         code,
       ]);
@@ -178,7 +178,7 @@ async function main() {
 
   const lb = await client.query(
     `select full_name, employee_code, total_score, rank
-     from public.leaderboard
+     from public.cdilv_leaderboard
      order by rank asc
      limit 10`,
   );

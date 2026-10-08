@@ -1,84 +1,108 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Manrope", sans-serif;
+  --font-sans: var(--font-be-vietnam), "Be Vietnam Pro", sans-serif;
 
-  --color-surface-container: #eef5f4;
-  --color-tertiary-container: #e5fbf6;
-  --color-secondary: #4a6b66;
-  --color-inverse-primary: #f0b8a4;
-  --color-surface-tint: #e8875c;
-  --color-primary-fixed: #f5dcc8;
-  --color-inverse-surface: #1e2f2c;
-  --color-surface: #f8fcfb;
-  --color-on-background: #2c2e2d;
+  /* CDILV Premium Civic Minimalism — dusty slate (trangchuCDILV) */
+  --color-surface-bg: #f4f7f9;
+  --color-surface: #f4f7f9;
+  --color-surface-muted: #edf2f6;
+  --color-surface-bright: #f7f9ff;
+  --color-surface-dim: #d0dbe8;
   --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #ecf4ff;
+  --color-surface-container: #e4effc;
+  --color-surface-container-high: #dee9f6;
+  --color-surface-container-highest: #d8e4f1;
+  --color-surface-variant: #d8e4f1;
+  --color-background: #f4f7f9;
+  --color-on-background: #121d26;
+  --color-on-surface: #1e2832;
+  --color-on-surface-variant: #4d5c68;
+
+  --color-primary: #4a6b82;
+  --color-dusty-primary: #4a6b82;
+  --color-dusty-dark: #365165;
+  --color-dusty-deep: #2c3e50;
+  --color-dusty-light: #e8eff4;
+  --color-dusty-border: #d2dfe9;
+  --color-dusty-slate: #5b7b94;
   --color-on-primary: #ffffff;
-  --color-on-tertiary-container: #173a67;
-  --color-outline: #7e8380;
-  --color-background: #f8fcfb;
-  --color-surface-variant: #eef4f2;
-  --color-surface-container-low: #f3f8f7;
-  --color-surface-container-high: #e7f1ee;
-  --color-on-primary-container: #340f00;
-  --color-secondary-container: #d5efe9;
-  --color-tertiary-fixed: #e5fbf6;
-  --color-primary: #e8875c;
-  --color-secondary-fixed: #d5efe9;
-  --color-on-secondary-fixed-variant: #434b46;
-  --color-on-primary-fixed-variant: #772b0f;
-  --color-surface-dim: #e4e1dc;
-  --color-error-container: #ffdad6;
-  --color-on-tertiary: #173a67;
-  --color-surface-container-highest: #e9e6e1;
-  --color-on-surface: #2c2e2d;
-  --color-on-tertiary-fixed-variant: #27496d;
-  --color-on-primary-fixed: #340f00;
-  --color-on-secondary-fixed: #181e1b;
-  --color-inverse-on-surface: #f1f1ef;
-  --color-on-surface-variant: #4d4e4c;
-  --color-outline-variant: #c5d6d2;
-  --color-error: #ba1a1a;
-  --color-secondary-fixed-dim: #b4ddd4;
-  --color-on-error: #ffffff;
-  --color-tertiary-fixed-dim: #b6efe4;
-  --color-on-tertiary-fixed: #173a67;
-  --color-tertiary: #7ee8d4;
-  --color-surface-bright: #f8fcfb;
-  --color-primary-container: #f5dcc8;
+  --color-primary-container: #4a6b82;
+  --color-on-primary-container: #d0eaff;
+  --color-surface-tint: #416279;
+  --color-inverse-primary: #a9cbe5;
+  --color-primary-fixed: #c8e6ff;
+  --color-primary-fixed-dim: #a9cbe5;
+  --color-on-primary-fixed: #001e2e;
+  --color-on-primary-fixed-variant: #284a60;
+
+  --color-secondary: #486173;
   --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #27496d;
-  --color-primary-fixed-dim: #f0b8a4;
-  --color-on-error-container: #410002;
+  --color-secondary-container: #c9e3f8;
+  --color-on-secondary-container: #4d6677;
+  --color-secondary-fixed: #cbe6fa;
+  --color-secondary-fixed-dim: #b0cade;
+  --color-on-secondary-fixed: #011e2d;
+  --color-on-secondary-fixed-variant: #304a5a;
 
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --color-tertiary: #d4a359;
+  --color-amber-honor: #f59e0b;
+  --color-amber-light: #fef3c7;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #88601c;
+  --color-on-tertiary-container: #315369;
+  --color-tertiary-fixed: #ffddb1;
+  --color-tertiary-fixed-dim: #f2be71;
+  --color-on-tertiary-fixed: #291800;
+  --color-on-tertiary-fixed-variant: #614000;
 
-  --spacing-margin-desktop: 40px;
-  --spacing-margin-mobile: 16px;
+  --color-outline: #72787d;
+  --color-outline-variant: #c2c7cd;
+  --color-border-subtle: #e2e8f0;
+  --color-inverse-surface: #27323b;
+  --color-inverse-on-surface: #e7f2ff;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  --spacing-margin-desktop: 2rem;
+  --spacing-margin-mobile: 1.25rem;
   --spacing-base: 8px;
-  --spacing-gutter: 24px;
+  --spacing-gutter: 1.5rem;
 
-  --max-width-container-max: 1200px;
+  --max-width-container-max: 1440px;
 
-  --text-label-sm: 12px;
-  --text-label-sm--line-height: 16px;
-  --text-body-md: 16px;
-  --text-body-md--line-height: 24px;
-  --text-headline-xl: 48px;
-  --text-headline-xl--line-height: 56px;
-  --text-headline-xl--letter-spacing: -0.02em;
-  --text-body-lg: 18px;
-  --text-body-lg--line-height: 28px;
-  --text-label-md: 14px;
-  --text-label-md--line-height: 20px;
-  --text-headline-md: 24px;
-  --text-headline-md--line-height: 32px;
-  --text-headline-lg-mobile: 28px;
-  --text-headline-lg-mobile--line-height: 34px;
-  --text-headline-lg: 32px;
-  --text-headline-lg--line-height: 40px;
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 20px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+  --text-body-md: 14px;
+  --text-body-md--line-height: 22px;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 26px;
+  --text-headline-sm: 18px;
+  --text-headline-sm--line-height: 26px;
+  --text-headline-md: 22px;
+  --text-headline-md--line-height: 30px;
+  --text-headline-lg: 28px;
+  --text-headline-lg--line-height: 36px;
   --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg-mobile: 22px;
+  --text-headline-lg-mobile--line-height: 30px;
+  --text-headline-xl: 36px;
+  --text-headline-xl--line-height: 44px;
+  --text-headline-xl--letter-spacing: -0.02em;
 }
 
 @layer base {
@@ -89,16 +113,20 @@
 
 @layer utilities {
   .tonal-elevation-1 {
-        box-shadow: 0 1px 3px rgba(94, 200, 184, 0.08);
-    border: 1px solid #c5d6d2;
+    box-shadow:
+      0 1px 3px rgba(74, 107, 130, 0.05),
+      0 4px 12px rgba(74, 107, 130, 0.03);
+    border: 1px solid #dce4ec;
   }
 
   .tonal-elevation-2 {
-    box-shadow: 0 4px 12px rgba(255, 154, 118, 0.12);
+    box-shadow:
+      0 8px 24px rgba(74, 107, 130, 0.08),
+      0 2px 6px rgba(74, 107, 130, 0.04);
   }
 
   .glass-card {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(12px);
   }
 

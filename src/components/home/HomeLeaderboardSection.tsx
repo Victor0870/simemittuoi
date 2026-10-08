@@ -13,61 +13,102 @@ export function HomeLeaderboardSection({
   entries,
   maskIdentity = false,
 }: HomeLeaderboardSectionProps) {
-  const nextThree = entries
-    .filter((entry) => entry.rank > 3)
-    .slice(0, 3);
+  const nextThree = entries.filter((entry) => entry.rank > 3).slice(0, 3);
 
   return (
-    <section className="mb-10 space-y-6">
-      <LeaderboardPodium
-        entries={entries}
-        maskIdentity={maskIdentity}
-        variant="home"
-      />
-
-      <div className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6">
-        <div className="mb-4 flex items-center justify-between">
+    <section className="space-y-6" id="vinh-danh">
+      <div className="flex flex-col justify-between gap-3 border-b border-dusty-border/70 pb-4 sm:flex-row sm:items-end">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-lg bg-amber-light p-2 font-bold text-amber-800">
+            <MaterialIcon
+              className="text-[24px] text-amber-honor"
+              filled
+              name="military_tech"
+            />
+          </div>
           <div>
-            <h3 className="text-headline-md text-primary">Tiếp theo trên bảng</h3>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Ba vị trí ngay sau bục vinh danh
+            <h2 className="text-headline-lg tracking-tight text-on-surface">
+              BỤC VINH DANH PHONG TRÀO
+            </h2>
+            <p className="text-body-sm text-on-surface-variant">
+              Tuyên dương gương điển hình tiên tiến &amp; sáng kiến xuất sắc
             </p>
           </div>
-          <MaterialIcon
-            className="text-[#173A67] material-symbols-filled"
-            filled
-            name="format_list_numbered"
+        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-dusty-border bg-white px-3 py-1 text-label-md text-primary">
+          <MaterialIcon className="text-[16px]" name="schedule" />
+          Cập nhật realtime
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-gutter lg:grid-cols-12">
+        <div className="lg:col-span-7 xl:col-span-8">
+          <LeaderboardPodium
+            entries={entries}
+            maskIdentity={maskIdentity}
+            variant="home"
           />
         </div>
 
-        {maskIdentity ? (
-          <p className="mb-4 text-xs text-on-surface-variant">
-            Khách chỉ xem điểm. Tên đã được che một phần. Đăng nhập để xem đầy đủ.
-          </p>
-        ) : null}
-
-        {nextThree.length > 0 ? (
-          <div className="space-y-3">
-            {nextThree.map((entry) => (
-              <LeaderboardRow
-                key={entry.id}
-                entry={entry}
-                maskIdentity={maskIdentity}
+        <div className="flex flex-col justify-between rounded-2xl border border-dusty-border/80 bg-surface-container-lowest p-6 shadow-sm lg:col-span-5 xl:col-span-4">
+          <div>
+            <div className="flex items-center justify-between border-b border-dusty-border/70 pb-4">
+              <div>
+                <h3 className="text-headline-sm font-bold text-on-surface">
+                  Tiếp theo trên bảng
+                </h3>
+                <p className="text-body-sm text-on-surface-variant">
+                  Vị trí kế tiếp sau bục vinh danh
+                </p>
+              </div>
+              <MaterialIcon
+                className="text-[24px] text-primary"
+                name="format_list_numbered"
               />
-            ))}
-          </div>
-        ) : (
-          <p className="rounded-xl bg-surface-container-low px-4 py-6 text-center text-sm text-on-surface-variant">
-            Chưa có thêm người trong bảng xếp hạng.
-          </p>
-        )}
+            </div>
 
-        <Link
-          className="mt-6 flex w-full items-center justify-center rounded-xl border-2 border-tertiary py-3 font-bold text-on-tertiary-container transition-all hover:bg-tertiary hover:text-on-tertiary active:scale-95"
-          href="/leaderboard"
-        >
-          Xem bảng xếp hạng đầy đủ
-        </Link>
+            {maskIdentity ? (
+              <div className="my-4 flex items-start gap-2 rounded-lg border border-dusty-border/70 bg-surface-muted p-2.5 text-body-sm text-on-surface-variant">
+                <MaterialIcon
+                  className="mt-0.5 shrink-0 text-[18px] text-primary"
+                  name="info"
+                />
+                <span>
+                  Khách chỉ xem điểm tóm tắt. Đăng nhập đoàn viên để xem thống kê
+                  minh chứng chi tiết.
+                </span>
+              </div>
+            ) : (
+              <div className="my-4" />
+            )}
+
+            {nextThree.length > 0 ? (
+              <div className="space-y-3">
+                {nextThree.map((entry) => (
+                  <LeaderboardRow
+                    key={entry.id}
+                    entry={entry}
+                    maskIdentity={maskIdentity}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-xl bg-surface-muted px-4 py-6 text-center text-sm text-on-surface-variant">
+                Chưa có thêm người trong bảng xếp hạng.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-6 border-t border-dusty-border/70 pt-4">
+            <Link
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary py-2.5 px-4 text-label-lg font-bold text-primary shadow-xs transition-all hover:bg-primary hover:text-white active:scale-[0.98]"
+              href="/leaderboard"
+            >
+              <MaterialIcon className="text-[18px]" name="visibility" />
+              Xem bảng xếp hạng đầy đủ
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
   );

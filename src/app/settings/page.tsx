@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
+import {
+  CDILV_RPC,
+  CDILV_STORAGE,
+  CDILV_TABLE,
+} from "@/lib/supabase/tables";
 
 type AvatarRpcResult = {
   ok: boolean;
@@ -39,12 +44,12 @@ export default function SettingsPage() {
 
       const [{ data: profile }, { data: bonus }] = await Promise.all([
         supabase
-          .from("profiles")
+          .from(CDILV_TABLE.profiles)
           .select("full_name, avatar_url")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
-          .from("score_events")
+          .from(CDILV_TABLE.scoreEvents)
           .select("id")
           .eq("user_id", user.id)
           .eq("award_label", "avatar_bonus")
@@ -89,7 +94,7 @@ export default function SettingsPage() {
     const path = `${userId}/avatar.${ext}`;
 
     const { error: uploadError } = await supabase.storage
-      .from("avatars")
+      .from(CDILV_STORAGE.avatars)
       .upload(path, file, { upsert: true, contentType: file.type });
 
     if (uploadError) {
@@ -98,12 +103,17 @@ export default function SettingsPage() {
       return;
     }
 
-    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+    const { data: pub } = supabase.storage
+      .from(CDILV_STORAGE.avatars)
+      .getPublicUrl(path);
     const publicUrl = `${pub.publicUrl}?t=${Date.now()}`;
 
-    const { data, error: rpcError } = await supabase.rpc("update_my_avatar", {
-      p_avatar_url: publicUrl,
-    });
+    const { data, error: rpcError } = await supabase.rpc(
+      CDILV_RPC.updateMyAvatar,
+      {
+        p_avatar_url: publicUrl,
+      },
+    );
 
     setSaving(false);
 

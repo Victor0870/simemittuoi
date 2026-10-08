@@ -24,7 +24,7 @@ async function main() {
 
   const list = await client.query(`
     select p.id, p.full_name, p.employee_code, p.role, p.approval_status, p.created_at, u.email
-    from public.profiles p
+    from public.cdilv_profiles p
     left join auth.users u on u.id = p.id
     order by p.created_at desc
     limit 10
@@ -52,7 +52,7 @@ async function main() {
 
   const upd = await client.query(
     `
-    update public.profiles
+    update public.cdilv_profiles
     set role = 'admin',
         approval_status = 'approved',
         approved_at = now()

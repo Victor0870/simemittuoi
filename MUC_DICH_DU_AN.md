@@ -1,8 +1,11 @@
-# Mục đích dự án website công đoàn
+# Mục đích dự án website công đoàn (CDILV)
+
+Thương hiệu: **CDILV** · Tên miền dự kiến: **cdilv.vn** (đang mua).  
+Nguồn cấu hình brand trong code: `src/lib/brand.ts`.
 
 ## 1. Mục đích
 
-Dự án nhằm triển khai một website cho công đoàn để:
+Dự án nhằm triển khai một website cho công đoàn (CDILV) để:
 
 - Báo cáo và công bố các hoạt động của công đoàn.
 - Quản lý bảng điểm tương ứng với từng hoạt động công đoàn.

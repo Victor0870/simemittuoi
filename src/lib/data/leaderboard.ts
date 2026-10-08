@@ -1,5 +1,7 @@
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type LeaderboardPageData = {
   entries: LeaderboardEntry[];
@@ -26,7 +28,7 @@ function mapRows(
     rank: Number(row.rank),
     name: row.full_name,
     department: row.department ?? "",
-    score: row.total_score,
+    score: Number(row.total_score) || 0,
     avatarUrl: row.avatar_url ?? "",
     isTop: index === 0 || Number(row.rank) === 1,
   }));
@@ -45,63 +47,84 @@ export async function getLeaderboardPageData(
   };
 
   try {
-    const supabase = await createClient();
-    const [leaderboardResult, authResult] = await Promise.all([
-      supabase
-        .from("leaderboard")
+    const publicDb = createPublicClient();
+    let { data: rows, error } = await publicDb
+      .from(CDILV_TABLE.leaderboard)
+      .select(
+        "id, full_name, department, avatar_url, employee_code, total_score, rank",
+      )
+      .order("rank", { ascending: true })
+      .limit(limit);
+
+    if (error || !rows?.length) {
+      const cache = await publicDb
+        .from(CDILV_TABLE.leaderboardCache)
         .select(
           "id, full_name, department, avatar_url, employee_code, total_score, rank",
         )
+        .gt("total_score", 0)
         .order("rank", { ascending: true })
-        .limit(limit),
-      supabase.auth.getUser(),
-    ]);
+        .limit(limit);
+      if (!cache.error && cache.data?.length) {
+        rows = cache.data;
+      } else if (error) {
+        console.error("[leaderboard]", error.message);
+      }
+    }
 
-    const user = authResult.data.user;
-    const isGuest = !user;
-    const rows = leaderboardResult.data ?? [];
-    const entries = mapRows(rows);
+    const entries = mapRows(rows ?? []);
 
+    let isGuest = true;
     let currentUserId: string | null = null;
     let currentEmployeeCode: string | null = null;
     let currentRank = 0;
     let currentScore = 0;
 
-    if (user) {
-      currentUserId = user.id;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("employee_code, total_score, rank")
-        .eq("id", user.id)
-        .maybeSingle();
+    try {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      isGuest = !user;
 
-      currentEmployeeCode = profile?.employee_code ?? null;
-
-      if (profile?.rank && (profile.total_score ?? 0) > 0) {
-        currentRank = Number(profile.rank);
-        currentScore = profile.total_score ?? 0;
-      } else {
-        const { data: byId } = await supabase
-          .from("leaderboard")
-          .select("total_score, rank, id, employee_code")
+      if (user) {
+        currentUserId = user.id;
+        const { data: profile } = await supabase
+          .from(CDILV_TABLE.profiles)
+          .select("employee_code, total_score, rank")
           .eq("id", user.id)
           .maybeSingle();
 
-        let mine = byId;
-        if (!mine && currentEmployeeCode) {
-          const { data: byCode } = await supabase
-            .from("leaderboard")
-            .select("total_score, rank, id, employee_code")
-            .eq("employee_code", currentEmployeeCode)
-            .maybeSingle();
-          mine = byCode;
-        }
+        currentEmployeeCode = profile?.employee_code ?? null;
 
-        if (mine) {
-          currentRank = Number(mine.rank);
-          currentScore = mine.total_score;
+        if (profile?.rank && (profile.total_score ?? 0) > 0) {
+          currentRank = Number(profile.rank);
+          currentScore = profile.total_score ?? 0;
+        } else {
+          const { data: byId } = await publicDb
+            .from(CDILV_TABLE.leaderboard)
+            .select("total_score, rank, id, employee_code")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          let mine = byId;
+          if (!mine && currentEmployeeCode) {
+            const { data: byCode } = await publicDb
+              .from(CDILV_TABLE.leaderboard)
+              .select("total_score, rank, id, employee_code")
+              .eq("employee_code", currentEmployeeCode)
+              .maybeSingle();
+            mine = byCode;
+          }
+
+          if (mine) {
+            currentRank = Number(mine.rank);
+            currentScore = mine.total_score;
+          }
         }
       }
+    } catch (authErr) {
+      console.warn("[leaderboard] auth skipped:", authErr);
     }
 
     return {
@@ -112,7 +135,8 @@ export async function getLeaderboardPageData(
       currentRank,
       currentScore,
     };
-  } catch {
+  } catch (err) {
+    console.error("[leaderboard] fatal:", err);
     return empty;
   }
 }

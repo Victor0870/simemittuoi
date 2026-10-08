@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "qpaoucyjitbmfcahxrqu.supabase.co",
       },
+      {
+        // BizMate shared project (khi gộp CDILV)
+        protocol: "https",
+        hostname: "pzcwwylxrojvcoihtxep.supabase.co",
+      },
     ],
   },
 };

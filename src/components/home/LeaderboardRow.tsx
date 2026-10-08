@@ -16,55 +16,30 @@ export function LeaderboardRow({
     : entry.name;
 
   return (
-    <div
-      className={`flex items-center gap-4 rounded-xl p-3 transition-colors ${
-        entry.isTop
-          ? "bg-surface-container hover:bg-surface-container-high"
-          : "hover:bg-surface-container-high"
-      }`}
-    >
-      <div className="relative">
-        <div
-          className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 text-sm font-bold text-[#173A67] ${
-            entry.isTop
-              ? "border-primary bg-primary-fixed"
-              : "border-outline-variant bg-surface-container"
-          }`}
-        >
-          {maskIdentity ? `#${entry.rank}` : null}
-          {!maskIdentity && entry.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt={entry.name}
-              className="h-full w-full object-cover"
-              src={entry.avatarUrl}
-            />
-          ) : null}
-          {!maskIdentity && !entry.avatarUrl ? entry.name.slice(0, 1) : null}
+    <div className="group flex items-center justify-between rounded-xl border border-dusty-border/60 bg-surface-muted/60 p-3 transition-all hover:border-primary hover:bg-white hover:shadow-xs">
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-dusty-light text-label-md font-bold text-primary">
+          #{entry.rank}
         </div>
-        {!maskIdentity ? (
-          <span
-            className={`absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
-              entry.isTop
-                ? "bg-primary text-on-primary"
-                : "bg-outline text-white"
-            }`}
-          >
-            {entry.rank}
-          </span>
-        ) : null}
+        <div>
+          <h4 className="text-body-md font-bold text-on-surface transition-colors group-hover:text-primary">
+            {displayName}
+          </h4>
+          {!maskIdentity && entry.department ? (
+            <span className="text-[11px] text-on-surface-variant">
+              {entry.department}
+            </span>
+          ) : null}
+        </div>
       </div>
-
-      <div className="flex-1">
-        <p className="font-bold text-on-surface">{displayName}</p>
-        {!maskIdentity && entry.department ? (
-          <p className="text-xs text-on-surface-variant">{entry.department}</p>
-        ) : null}
+      <div className="text-right">
+        <span className="text-headline-sm font-bold text-primary">
+          {entry.score.toLocaleString("vi-VN")}
+        </span>
+        <span className="-mt-1 block text-body-sm font-medium text-on-surface-variant">
+          điểm
+        </span>
       </div>
-
-      <p className="font-extrabold text-primary">
-        {entry.score.toLocaleString("vi-VN")}
-      </p>
     </div>
   );
 }

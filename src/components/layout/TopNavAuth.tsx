@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 type AuthState = {
   loading: boolean;
@@ -42,7 +43,7 @@ export function TopNavAuth() {
       }
 
       const { data: profile } = await supabase
-        .from("profiles")
+        .from(CDILV_TABLE.profiles)
         .select("approval_status, full_name, avatar_url")
         .eq("id", user.id)
         .maybeSingle();

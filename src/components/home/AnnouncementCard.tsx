@@ -1,3 +1,4 @@
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { Announcement } from "@/lib/mock-data";
 
 type AnnouncementCardProps = {
@@ -5,31 +6,36 @@ type AnnouncementCardProps = {
 };
 
 export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
-  const borderClass =
-    announcement.tagTone === "error" ? "border-error" : "border-tertiary";
-  const tagClass =
-    announcement.tagTone === "error"
-      ? "bg-error-container text-on-error-container"
-      : "bg-tertiary-container text-on-tertiary-container";
+  const isUrgent = announcement.tagTone === "error";
 
   return (
-    <article
-      className={`tonal-elevation-1 rounded-2xl border-l-4 bg-surface-container-lowest p-6 transition-all hover:tonal-elevation-2 ${borderClass}`}
-    >
-      <div className="mb-3 flex items-start justify-between">
-        <span
-          className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${tagClass}`}
-        >
+    <article className="group relative overflow-hidden rounded-2xl border border-y border-r border-dusty-border/80 border-l-4 border-l-primary bg-surface-container-lowest p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-dusty-light px-2.5 py-0.5 text-label-sm font-bold text-primary">
+          {isUrgent ? (
+            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
+          ) : (
+            <MaterialIcon className="text-[14px]" name="how_to_vote" />
+          )}
           {announcement.tag}
         </span>
-        <span className="text-label-sm text-on-surface-variant">
+        <span className="flex items-center gap-1 text-body-sm text-on-surface-variant">
+          <MaterialIcon className="text-[14px]" name="calendar_today" />
           {announcement.timeAgo}
         </span>
       </div>
-      <h4 className="mb-2 font-bold text-on-surface">{announcement.title}</h4>
-      <p className="line-clamp-2 text-body-md text-on-surface-variant">
+      <h3 className="mb-2 text-headline-sm font-bold text-on-surface transition-colors group-hover:text-primary">
+        {announcement.title}
+      </h3>
+      <p className="mb-4 line-clamp-2 text-body-md text-on-surface-variant">
         {announcement.excerpt}
       </p>
+      <div className="flex items-center justify-end border-t border-dusty-border/70 pt-3">
+        <span className="inline-flex items-center gap-1 text-label-md font-bold text-primary">
+          Đọc thêm
+          <MaterialIcon className="text-[16px]" name="chevron_right" />
+        </span>
+      </div>
     </article>
   );
 }

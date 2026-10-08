@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TopNavAuth } from "@/components/layout/TopNavAuth";
+import { BRAND } from "@/lib/brand";
 import { NAV_ITEMS } from "@/lib/constants";
 
 type TopNavProps = {
@@ -10,10 +11,10 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
   return (
     <nav className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-margin-mobile shadow-sm md:px-margin-desktop">
       <Link
-        className="shrink-0 text-xs font-semibold uppercase tracking-wide text-on-surface-variant"
+        className="shrink-0 text-sm font-extrabold tracking-wide text-[#173A67]"
         href="/"
       >
-        logo
+        {BRAND.name}
       </Link>
 
       <div className="hidden items-center gap-4 lg:gap-8 md:flex">

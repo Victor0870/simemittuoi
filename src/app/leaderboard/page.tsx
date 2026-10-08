@@ -13,6 +13,9 @@ import {
   type LeaderboardPageData,
 } from "@/lib/data/leaderboard";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type LeaderboardPageProps = {
   searchParams?: Promise<{ tab?: string }>;
 };

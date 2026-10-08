@@ -80,7 +80,7 @@ async function main() {
   let upserted = 0;
   for (const emp of employees) {
     await client.query(
-      `insert into public.employee_whitelist (employee_code, full_name, department, is_active)
+      `insert into public.cdilv_employee_whitelist (employee_code, full_name, department, is_active)
        values ($1, $2, $3, true)
        on conflict (employee_code) do update set
          full_name = excluded.full_name,
@@ -92,7 +92,7 @@ async function main() {
   }
 
   const { rows } = await client.query(
-    "select count(*)::int as c from public.employee_whitelist where is_active = true",
+    "select count(*)::int as c from public.cdilv_employee_whitelist where is_active = true",
   );
   console.log("Upsert xong:", upserted);
   console.log("Whitelist active:", rows[0].c);

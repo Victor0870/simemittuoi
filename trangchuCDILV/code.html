@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cổng Thông Tin Đoàn Viên - Công Đoàn Cơ Sở CDILV</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with custom theme -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "dusty-primary": "#4A6B82",
+            "dusty-dark": "#365165",
+            "dusty-deep": "#2C3E50",
+            "dusty-light": "#E8EFF4",
+            "dusty-border": "#D2DFE9",
+            "dusty-slate": "#5B7B94",
+            "surface-bg": "#F4F7F9",
+            "surface-muted": "#EDF2F6",
+            "surface-card": "#ffffff",
+            "border-subtle": "#E2E8F0",
+            "on-surface": "#1E293B",
+            "on-surface-variant": "#5B6B79",
+            "amber-honor": "#f59e0b",
+            "amber-light": "#fef3c7"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin": "2rem",
+            "space-sm": "0.5rem",
+            "space-xl": "2.5rem",
+            "space-xs": "0.25rem",
+            "gutter": "1.5rem",
+            "space-lg": "1.5rem",
+            "space-md": "1rem"
+          },
+          "fontFamily": {
+            "body-md": ["Be Vietnam Pro"],
+            "headline-xl-mobile": ["Be Vietnam Pro"],
+            "label-sm": ["Be Vietnam Pro"],
+            "label-md": ["Be Vietnam Pro"],
+            "body-sm": ["Be Vietnam Pro"],
+            "headline-xl": ["Be Vietnam Pro"],
+            "headline-sm": ["Be Vietnam Pro"],
+            "headline-md": ["Be Vietnam Pro"],
+            "body-lg": ["Be Vietnam Pro"],
+            "label-lg": ["Be Vietnam Pro"],
+            "headline-lg-mobile": ["Be Vietnam Pro"],
+            "headline-lg": ["Be Vietnam Pro"]
+          },
+          "fontSize": {
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "headline-xl-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "700" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "700" }],
+            "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+            "body-sm": ["12px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "headline-xl": ["36px", { "lineHeight": "44px", "fontWeight": "700" }],
+            "headline-sm": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "label-lg": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-lg-mobile": ["22px", { "lineHeight": "30px", "fontWeight": "700" }],
+            "headline-lg": ["28px", { "lineHeight": "36px", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+</head>
+<body class="bg-surface-bg text-on-surface font-body-md antialiased selection:bg-dusty-light selection:text-dusty-primary min-h-screen flex flex-col">
+<!-- TOP APP BAR -->
+<header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md shadow-xs border-b border-dusty-border/80 transition-all">
+<div class="w-full max-w-[1440px] mx-auto px-margin flex items-center justify-between h-16">
+<!-- Brand Logo / Identity -->
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-dusty-primary to-dusty-dark flex items-center justify-center text-white shadow-md shadow-dusty-primary/20 ring-2 ring-dusty-light">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<div><div class="text-headline-sm font-headline-sm font-bold text-dusty-primary tracking-tight leading-none">CDILV</div></div>
+</div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex items-center gap-6 lg:gap-8"><a class="text-label-lg font-label-lg text-dusty-primary font-bold border-b-2 border-dusty-primary pb-1 flex items-center gap-1.5" href="#trang-chu"><span class="material-symbols-outlined text-[18px]">home</span>Trang chủ</a><a class="text-label-lg font-label-lg text-on-surface hover:text-dusty-primary transition-colors flex items-center gap-1.5" href="#vinh-danh"><span class="material-symbols-outlined text-[18px]">leaderboard</span>Bảng xếp hạng</a><a class="text-label-lg font-label-lg text-on-surface hover:text-dusty-primary transition-colors flex items-center gap-1.5" href="#nhiem-vu"><span class="material-symbols-outlined text-[18px]">task_alt</span>Nhiệm vụ</a><a class="text-label-lg font-label-lg text-on-surface hover:text-dusty-primary transition-colors flex items-center gap-1.5" href="#hoat-dong"><span class="material-symbols-outlined text-[18px]">event</span>Hoạt động</a><a class="text-label-lg font-label-lg text-on-surface hover:text-dusty-primary transition-colors flex items-center gap-1.5" href="#van-ban"><span class="material-symbols-outlined text-[18px]">menu_book</span>Văn bản</a></nav>
+<!-- Trailing Action Clustered with Guest Auth -->
+<div class="flex items-center gap-3">
+<!-- Auth CTAs -->
+<div class="flex items-center gap-2">
+<button class="px-3.5 py-1.5 rounded-lg border border-dusty-primary text-dusty-primary hover:bg-dusty-primary/10 font-label-md text-label-md transition-all active:scale-95 font-medium">
+            Đăng nhập
+          </button>
+<button class="px-4 py-1.5 rounded-lg bg-dusty-primary text-white hover:bg-dusty-dark font-label-md text-label-md transition-all shadow-sm shadow-dusty-primary/20 active:scale-95 flex items-center gap-1.5 font-bold">
+<span class="material-symbols-outlined text-[16px]">how_to_reg</span>
+            Đăng ký
+          </button>
+</div>
+</div>
+</div>
+</header>
+<!-- MAIN CANVAS -->
+<main class="flex-grow w-full max-w-[1440px] mx-auto px-margin py-8 space-y-10">
+<!-- HERO WELCOME BANNER (Soft dusty blue tint gradient) -->
+<section class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-dusty-light/90 via-surface-muted to-white border border-dusty-border/80 shadow-sm p-6 sm:p-8">
+<div class="absolute -right-12 -top-12 w-64 h-64 bg-dusty-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute right-32 -bottom-10 w-48 h-48 bg-amber-honor/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+<div class="space-y-3 max-w-2xl">
+<h1 class="text-headline-lg font-headline-lg text-on-surface font-extrabold tracking-tight">
+            Xin chào <span class="text-dusty-primary underline decoration-dusty-slate/60 decoration-wavy decoration-2">Khách vãng lai</span>!
+          </h1>
+<p class="text-body-md font-body-md text-on-surface-variant max-w-xl">
+            Đăng nhập hoặc đăng ký tài khoản đoàn viên để mở khóa bảng quyền lợi CDILV, tích lũy điểm phong trào, nộp sáng kiến lao động và bình chọn danh hiệu thi đua.
+          </p>
+</div>
+<div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+<button class="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-dusty-primary text-white hover:bg-dusty-dark font-label-lg text-label-lg font-bold shadow-md shadow-dusty-primary/25 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">login</span>
+            Đăng nhập ngay
+          </button>
+</div>
+</div>
+</section>
+<!-- SECTION: BỤC VINH DANH & TOP LEADERBOARD -->
+<section class="space-y-6" id="vinh-danh">
+<!-- Section Header -->
+<div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-dusty-border/70 pb-4">
+<div>
+<div class="flex items-center gap-2.5">
+<div class="p-2 rounded-lg bg-amber-light text-amber-800 font-bold">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<div>
+<h2 class="text-headline-lg font-headline-lg text-on-surface tracking-tight">BỤC VINH DANH PHONG TRÀO</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Tuyên dương gương điển hình tiên tiến &amp; sáng kiến xuất sắc quý IV</p>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white text-dusty-primary text-label-md font-label-md border border-dusty-border">
+<span class="material-symbols-outlined text-[16px]">schedule</span> Cập nhật: Hôm nay, 10:30
+          </span>
+<button class="p-1.5 rounded-lg border border-dusty-border text-on-surface-variant hover:bg-white hover:text-dusty-primary transition-colors" title="Bộ lọc thời gian">
+<span class="material-symbols-outlined text-[20px]">filter_list</span>
+</button>
+</div>
+</div>
+<!-- BENTO / PODIUM CONTAINER -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- 3D-STYLED PODIUM CARD (8 columns) -->
+<div class="lg:col-span-7 xl:col-span-8 bg-surface-card rounded-2xl p-6 sm:p-8 border border-dusty-border/80 shadow-sm flex flex-col justify-between relative overflow-hidden">
+<!-- Decorative Background Elements -->
+<div class="absolute inset-0 bg-radial from-amber-200/20 via-transparent to-transparent opacity-60 pointer-events-none"></div>
+<!-- Top Tag -->
+<div class="flex items-center justify-between mb-8 relative z-10">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800 font-bold text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-amber-honor" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+              TOP 3 CHIẾN SĨ THI ĐUA
+            </div>
+<span class="text-body-sm font-body-sm text-on-surface-variant italic">Điểm phong trào tích lũy đợt 1</span>
+</div>
+<!-- THE 3-STEP PODIUM STRUCTURE -->
+<div class="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-12 pb-2 relative z-10">
+<!-- RANK 2: Á QUÂN (Vũ Thị Txxx) -->
+<div class="flex flex-col items-center text-center group">
+<!-- Avatar Cluster -->
+<div class="relative mb-3 transition-transform duration-200 group-hover:-translate-y-1">
+<div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full ring-4 ring-slate-300 shadow-md bg-slate-100 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[36px] sm:text-[44px] text-slate-500" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</div>
+<!-- Badge Position -->
+<div class="absolute -bottom-2 inset-x-0 flex justify-center">
+<span class="px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 text-label-sm font-label-sm font-bold border border-slate-300 shadow-xs flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span> #2
+                  </span>
+</div>
+</div>
+<!-- Info -->
+<h3 class="text-body-md font-body-md font-bold text-on-surface line-clamp-1 mt-2">Vũ Thị Txxx</h3>
+<div class="inline-flex items-center gap-1 my-1">
+<span class="text-headline-sm font-headline-sm font-extrabold text-dusty-primary">60</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant font-medium">điểm</span>
+</div>
+<div class="text-[11px] font-semibold text-dusty-primary px-2 py-0.5 rounded bg-dusty-light mb-3 border border-dusty-border">
+                Á Quân
+              </div>
+<!-- Podium Pillar #2 -->
+<div class="w-full h-32 sm:h-40 rounded-t-xl bg-gradient-to-b from-slate-200 via-slate-100 to-slate-200 border-t-4 border-slate-400 flex flex-col items-center justify-center shadow-inner">
+<span class="text-headline-xl font-headline-xl font-black text-slate-400/80">2</span>
+<span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">BẠC</span>
+</div>
+</div>
+<!-- RANK 1: QUÁN QUÂN (Nguyễn Txxxx xxxxx) -->
+<div class="flex flex-col items-center text-center group -mt-8">
+<!-- Laurel Wreath & Crown Accent -->
+<div class="relative mb-3 transition-transform duration-200 group-hover:-translate-y-2">
+<div class="absolute -top-6 inset-x-0 flex justify-center">
+<span class="material-symbols-outlined text-[28px] text-amber-500 animate-bounce" style="font-variation-settings: 'FILL' 1;">crown</span>
+</div>
+<div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full ring-4 ring-amber-400 ring-offset-2 shadow-xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[44px] sm:text-[56px] text-amber-800" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<!-- Badge #1 Gold -->
+<div class="absolute -bottom-2 inset-x-0 flex justify-center">
+<span class="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-white font-label-sm text-label-sm font-extrabold shadow-md flex items-center gap-0.5 border border-amber-300">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">star</span> #1
+                  </span>
+</div>
+</div>
+<!-- Info -->
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface line-clamp-1 mt-2">Nguyễn Txxxx xxxxx</h3>
+<div class="inline-flex items-center gap-1 my-1">
+<span class="text-headline-md font-headline-md font-black text-dusty-primary">70</span>
+<span class="text-body-md font-body-md text-dusty-primary font-bold">điểm</span>
+</div>
+<div class="text-[11px] font-bold text-amber-900 px-2.5 py-0.5 rounded-full bg-amber-light mb-3 shadow-xs flex items-center gap-1 border border-amber-300">
+<span class="material-symbols-outlined text-[12px] text-amber-600" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+                Dẫn đầu bảng
+              </div>
+<!-- Podium Pillar #1 (Taller, Gold-hued) -->
+<div class="w-full h-44 sm:h-52 rounded-t-xl bg-gradient-to-b from-amber-300 via-amber-200 to-amber-300 border-t-4 border-amber-500 flex flex-col items-center justify-center shadow-lg relative overflow-hidden">
+<div class="absolute inset-x-0 top-0 h-1 bg-white/60"></div>
+<span class="text-headline-xl font-headline-xl font-black text-amber-700/80">1</span>
+<span class="text-label-sm font-label-sm font-extrabold text-amber-900 tracking-wider">QUÁN QUÂN</span>
+<span class="text-[10px] text-amber-800/80 mt-1 font-medium">+10đ từ Sáng kiến số</span>
+</div>
+</div>
+<!-- RANK 3: QUÝ QUÂN (Hoàng THx xx xxxx) -->
+<div class="flex flex-col items-center text-center group">
+<!-- Avatar Cluster -->
+<div class="relative mb-3 transition-transform duration-200 group-hover:-translate-y-1">
+<div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full ring-4 ring-amber-700/40 shadow-md bg-amber-50 flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-[36px] sm:text-[44px] text-amber-800" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+</div>
+<!-- Badge #3 Bronze -->
+<div class="absolute -bottom-2 inset-x-0 flex justify-center">
+<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-label-sm font-label-sm font-bold border border-amber-300 shadow-xs flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">military_tech</span> #3
+                  </span>
+</div>
+</div>
+<!-- Info -->
+<h3 class="text-body-md font-body-md font-bold text-on-surface line-clamp-1 mt-2">Hoàng THx xx xxxx</h3>
+<div class="inline-flex items-center gap-1 my-1">
+<span class="text-headline-sm font-headline-sm font-extrabold text-dusty-primary">60</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant font-medium">điểm</span>
+</div>
+<div class="text-[11px] font-semibold text-amber-900 px-2 py-0.5 rounded bg-amber-50 mb-3 border border-amber-200">
+                Quý Quân
+              </div>
+<!-- Podium Pillar #3 -->
+<div class="w-full h-24 sm:h-32 rounded-t-xl bg-gradient-to-b from-amber-600/30 via-amber-700/20 to-amber-600/30 border-t-4 border-amber-700 flex flex-col items-center justify-center shadow-inner">
+<span class="text-headline-xl font-headline-xl font-black text-amber-800/60">3</span>
+<span class="text-[11px] font-bold text-amber-900 uppercase tracking-widest">ĐỒNG</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT LEADERBOARD LIST ('Tiếp theo trên bảng xếp hạng') (4 or 5 columns) -->
+<div class="lg:col-span-5 xl:col-span-4 bg-surface-card rounded-2xl p-6 border border-dusty-border/80 shadow-sm flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-4 border-b border-dusty-border/70">
+<div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface">Tiếp theo trên bảng</h3>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Vị trí kế tiếp sau bục vinh danh</p>
+</div>
+<span class="material-symbols-outlined text-dusty-primary text-[24px]">format_list_numbered</span>
+</div>
+<!-- Notice bar -->
+<div class="my-4 p-2.5 rounded-lg bg-surface-muted border border-dusty-border/70 text-body-sm font-body-sm text-on-surface-variant flex items-start gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[18px] shrink-0 mt-0.5">info</span>
+<span class="">Khách chỉ xem điểm tóm tắt. Đăng nhập đoàn viên để xem thống kê minh chứng chi tiết.</span>
+</div>
+<!-- List Rows -->
+<div class="space-y-3">
+<!-- Item #4 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-muted/60 border border-dusty-border/60 hover:border-dusty-primary hover:bg-white transition-all hover:shadow-xs group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-dusty-light text-dusty-primary flex items-center justify-center font-bold text-label-md">
+                    #4
+                  </div>
+<div>
+<h4 class="text-body-md font-body-md font-bold text-on-surface group-hover:text-dusty-primary transition-colors">Nguyễn Txxx xxx</h4>
+<span class="text-[11px] text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-dusty-slate">trending_up</span> Tăng 1 bậc tuần qua
+                    </span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-headline-sm font-headline-sm font-bold text-dusty-primary">50</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant font-medium block -mt-1">điểm</span>
+</div>
+</div>
+<!-- Item #5 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-muted/60 border border-dusty-border/60 hover:border-dusty-primary hover:bg-white transition-all hover:shadow-xs group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-dusty-light text-dusty-primary flex items-center justify-center font-bold text-label-md">
+                    #5
+                  </div>
+<div>
+<h4 class="text-body-md font-body-md font-bold text-on-surface group-hover:text-dusty-primary transition-colors">Vương THx xxxx</h4>
+<span class="text-[11px] text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-slate-400">horizontal_rule</span> Ổn định vị trí
+                    </span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-headline-sm font-headline-sm font-bold text-dusty-primary">50</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant font-medium block -mt-1">điểm</span>
+</div>
+</div>
+<!-- Item #6 -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-muted/60 border border-dusty-border/60 hover:border-dusty-primary hover:bg-white transition-all hover:shadow-xs group">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-dusty-light text-dusty-primary flex items-center justify-center font-bold text-label-md">
+                    #6
+                  </div>
+<div>
+<h4 class="text-body-md font-body-md font-bold text-on-surface group-hover:text-dusty-primary transition-colors">Đào Thị Nxx</h4>
+<span class="text-[11px] text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-dusty-slate">trending_up</span> Mới vào Top 10
+                    </span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-headline-sm font-headline-sm font-bold text-dusty-primary">50</span>
+<span class="text-body-sm font-body-sm text-on-surface-variant font-medium block -mt-1">điểm</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Action -->
+<div class="mt-6 pt-4 border-t border-dusty-border/70">
+<button class="w-full py-2.5 px-4 rounded-xl border border-dusty-primary text-dusty-primary hover:bg-dusty-primary hover:text-white font-label-lg text-label-lg font-bold transition-all flex items-center justify-center gap-2 active:scale-98 shadow-xs">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+              Xem bảng xếp hạng đầy đủ
+            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION: THÔNG BÁO QUAN TRỌNG (Critical Dispatches) -->
+<section class="space-y-4" id="thong-bao">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[24px]">campaign</span>
+<h2 class="text-headline-md font-headline-md text-on-surface font-bold">Thông báo quan trọng</h2>
+</div>
+<a class="text-label-md font-label-md text-dusty-primary hover:text-dusty-dark transition-colors flex items-center gap-1 font-semibold" href="#xem-tat-ca-thong-bao">
+          Xem tất cả <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- CARD 1: KHẨN CẤP / BẢO HIỂM -->
+<article class="p-5 rounded-2xl bg-surface-card border-l-4 border-l-dusty-primary border-y border-r border-dusty-border/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="flex items-center justify-between mb-3">
+<span class="px-2.5 py-0.5 rounded-full bg-dusty-light text-dusty-primary font-label-sm text-label-sm font-bold flex items-center gap-1 border border-dusty-border">
+<span class="w-1.5 h-1.5 rounded-full bg-dusty-primary animate-ping"></span>
+              KHẨN CẤP
+            </span>
+<span class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> 18 ngày trước
+            </span>
+</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface group-hover:text-dusty-primary transition-colors mb-2">
+            Cập nhật Quy định Bảo hiểm 2024
+          </h3>
+<p class="text-body-md font-body-md text-on-surface-variant line-clamp-2 mb-4">
+            Các thay đổi quan trọng về mức đóng bảo hiểm y tế và bảo hiểm thất nghiệp đã được thông qua bởi Công đoàn cơ sở theo quyết định mới nhất.
+          </p>
+<div class="flex items-center justify-between pt-3 border-t border-dusty-border/70">
+<span class="text-[12px] text-dusty-slate font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">attach_file</span> Đính kèm 02 phụ lục
+            </span>
+<a class="text-label-md font-label-md text-dusty-primary font-bold hover:underline flex items-center gap-1" href="#">
+              Đọc toàn văn <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</article>
+<!-- CARD 2: ĐỀ CỬ ĐẠI DIỆN -->
+<article class="p-5 rounded-2xl bg-surface-card border-l-4 border-l-dusty-slate border-y border-r border-dusty-border/80 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+<div class="flex items-center justify-between mb-3">
+<span class="px-2.5 py-0.5 rounded-full bg-dusty-light text-dusty-primary font-label-sm text-label-sm font-bold flex items-center gap-1 border border-dusty-border">
+<span class="material-symbols-outlined text-[14px]">how_to_vote</span>
+              BẦU CỬ &amp; ĐỀ CỬ
+            </span>
+<span class="text-body-sm font-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span> 17 ngày trước
+            </span>
+</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface group-hover:text-dusty-primary transition-colors mb-2">
+            Đề cử Đại diện Công đoàn cơ sở nhiệm kỳ 2024 - 2026
+          </h3>
+<p class="text-body-md font-body-md text-on-surface-variant line-clamp-2 mb-4">
+            Hãy tham gia đề cử những gương mặt ưu tú cho nhiệm kỳ 2024-2026 ngay hôm nay nhằm bảo vệ quyền và lợi ích hợp pháp của người lao động.
+          </p>
+<div class="flex items-center justify-between pt-3 border-t border-dusty-border/70">
+<span class="text-[12px] text-on-surface-variant font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">group</span> 142 đoàn viên đã gửi biểu quyết
+            </span>
+<a class="text-label-md font-label-md text-dusty-primary font-bold hover:underline flex items-center gap-1" href="#">
+              Tham gia đề cử <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</a>
+</div>
+</article>
+</div>
+</section>
+<!-- SECTION: HOẠT ĐỘNG NỔI BẬT & NHIỆM VỤ TÍCH ĐIỂM -->
+<section class="space-y-4" id="nhiem-vu">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[24px]">event_available</span>
+<h2 class="text-headline-md font-headline-md text-on-surface font-bold">Hoạt động nổi bật</h2>
+</div>
+<a class="text-label-md font-label-md text-dusty-primary hover:text-dusty-dark transition-colors flex items-center gap-1 font-semibold" href="#kham-pha-hoat-dong">
+          Khám phá tất cả <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<!-- ACTIVITY CARDS GRID -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- ACTIVITY 1: HỘI THẢO KỸ NĂNG ĐÀM PHÁN -->
+<div class="bg-surface-card rounded-2xl border border-dusty-border/80 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col sm:flex-row group">
+<div class="sm:w-2/5 h-48 sm:h-auto relative overflow-hidden bg-slate-100">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A professional conference room scene inside an institutional corporate hall with workers and union representatives attending an engaging collective bargaining seminar. Warm overhead lighting illuminates modern timber tables, digital presentation screens, and focused professionals engaging in dialogue. The clean modern atmosphere emphasizes teamwork and empowerment, rendered in vibrant, crisp natural colors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5SBWttO4x_7G8irz6o2u6BshHB3EgYR2el_klm9ebiQX8amvxEKqSAzTtcogg0HA9bzOBbuFn5KpvNvBfTacXgXW83PQuMFsesTLxBmkhHdKpcm-CFPxFdsmeJEp8M7WwC_3GaB4L3Az5CfZljKd9yRGGBJNcAoq4BxXtY5hGuERa-J40ROYjusLrFJfl171FDYuG0WM6u3R2D--lXq2_e08g39IHJqqyjuhDEDJE"/>
+<div class="absolute top-3 left-3">
+<span class="px-2.5 py-1 rounded-md bg-dusty-deep/90 backdrop-blur-xs text-white text-label-sm font-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">school</span> Đào tạo
+              </span>
+</div>
+</div>
+<div class="p-5 sm:w-3/5 flex flex-col justify-between space-y-4">
+<div>
+<div class="flex items-center justify-between gap-2 mb-2">
+<span class="px-2.5 py-0.5 rounded-full bg-amber-light text-amber-800 font-label-md text-label-md font-bold flex items-center gap-1 border border-amber-300">
+<span class="material-symbols-outlined text-[14px] text-amber-600" style="font-variation-settings: 'FILL' 1;">stars</span>
+                  +150 Điểm
+                </span>
+<span class="text-[12px] text-dusty-primary font-bold bg-dusty-light px-2 py-0.5 rounded border border-dusty-border">Còn 12 suất</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface group-hover:text-dusty-primary transition-colors">
+                Hội thảo Kỹ năng Đàm phán
+              </h3>
+<div class="mt-3 space-y-1.5 text-body-sm font-body-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[16px]">calendar_month</span>
+<span class="">25/10/2024 • 08:30 - 11:30</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[16px]">location_on</span>
+<span class="">Phòng hội nghị 2 - Tầng 4 Trụ sở CDILV</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-dusty-border/70">
+<div class="flex -space-x-2 overflow-hidden">
+<span class="inline-block h-7 w-7 rounded-full ring-2 ring-white bg-dusty-light text-dusty-primary flex items-center justify-center text-[10px] font-bold">+18</span>
+<span class="inline-block h-7 w-7 rounded-full ring-2 ring-white bg-slate-100 text-on-surface flex items-center justify-center text-[10px]">Đoàn</span>
+</div>
+<button class="px-4 py-2 rounded-xl bg-dusty-primary text-white hover:bg-dusty-dark font-label-md text-label-md font-bold transition-all shadow-xs active:scale-95 flex items-center gap-1">
+                Đăng ký
+                <span class="material-symbols-outlined text-[16px]">send</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ACTIVITY 2: CHẠY BỘ TỪ THIỆN 2024 -->
+<div class="bg-surface-card rounded-2xl border border-dusty-border/80 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col sm:flex-row group">
+<div class="sm:w-2/5 h-48 sm:h-auto relative overflow-hidden bg-slate-100">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="A dynamic outdoor charity marathon organized by the labor union with energetic employees in matching royal blue running jerseys jogging joyfully through an urban city park. Sunlight filters through green tree canopies onto a paved avenue lined with banners and cheerful volunteers. The scene radiates active vitality, community solidarity, and modern civic spirit." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXy0HxYtLZ2aJP1mSfdD3njvr4wNrUAauyARHbyC-7ReGNzy4zH4xlrl-50_4E0az36FFIKFRNm9ZPvFXmrDXK3FEDhww_iq6-6_0X1S5xL6eWTjRFhfFXlzbRmeV-bITiIpwh6k4kliX0aBnaelEZRdKy1zMW1c8Ga13VyqJF8Wmg0lDD1dK77lCoec7bc5QFJ3EhN_aLpBzxl_r_kJJwDBLF0ttF4ueEkgEvU0-f"/>
+<div class="absolute top-3 left-3">
+<span class="px-2.5 py-1 rounded-md bg-dusty-deep/90 backdrop-blur-xs text-white text-label-sm font-label-sm font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">directions_run</span> Thể thao
+              </span>
+</div>
+</div>
+<div class="p-5 sm:w-3/5 flex flex-col justify-between space-y-4">
+<div>
+<div class="flex items-center justify-between gap-2 mb-2">
+<span class="px-2.5 py-0.5 rounded-full bg-amber-light text-amber-800 font-label-md text-label-md font-bold flex items-center gap-1 border border-amber-300">
+<span class="material-symbols-outlined text-[14px] text-amber-600" style="font-variation-settings: 'FILL' 1;">stars</span>
+                  +200 Điểm
+                </span>
+<span class="text-[12px] text-dusty-primary font-bold bg-dusty-light px-2 py-0.5 rounded border border-dusty-border">Đang mở đăng ký</span>
+</div>
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface group-hover:text-dusty-primary transition-colors">
+                Chạy bộ từ thiện CDILV 2024
+              </h3>
+<div class="mt-3 space-y-1.5 text-body-sm font-body-sm text-on-surface-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[16px]">calendar_month</span>
+<span class="">15/10/2024 • 06:00 Sáng</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-dusty-primary text-[16px]">location_on</span>
+<span class="">Công viên Thống Nhất, Hà Nội</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-3 border-t border-dusty-border/70">
+<div class="flex -space-x-2 overflow-hidden">
+<span class="inline-block h-7 w-7 rounded-full ring-2 ring-white bg-dusty-light text-dusty-primary flex items-center justify-center text-[10px] font-bold">+85</span>
+<span class="inline-block h-7 w-7 rounded-full ring-2 ring-white bg-slate-100 text-on-surface flex items-center justify-center text-[10px]">VĐV</span>
+</div>
+<button class="px-4 py-2 rounded-xl bg-dusty-primary text-white hover:bg-dusty-dark font-label-md text-label-md font-bold transition-all shadow-xs active:scale-95 flex items-center gap-1">
+                Đăng ký
+                <span class="material-symbols-outlined text-[16px]">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- FOOTER (Deep Slate Blue #2C3E50) -->
+<footer class="mt-16 bg-dusty-deep border-t border-slate-700/60 text-slate-300">
+<div class="w-full max-w-[1440px] mx-auto px-margin py-10 flex flex-col space-y-6">
+<!-- Top footer brand row -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-slate-700/60">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-dusty-primary flex items-center justify-center text-white ring-1 ring-white/20">
+<span class="material-symbols-outlined text-[20px]">account_balance</span>
+</div>
+<div>
+<div class="text-headline-sm font-headline-sm font-bold text-white">CÔNG ĐOÀN CƠ SỞ CDILV</div>
+<div class="text-[11px] text-slate-300">Hệ thống Thi đua &amp; Quản trị Đoàn viên Kỹ thuật số</div>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-label-md font-label-md">
+<a class="text-slate-300 hover:text-white transition-colors" href="#">Quy chế Thi đua Khen thưởng</a>
+<a class="text-slate-300 hover:text-white transition-colors" href="#">Điều lệ Công đoàn</a>
+<a class="text-slate-300 hover:text-white transition-colors" href="#">Hướng dẫn tích điểm</a>
+<a class="text-slate-300 hover:text-white transition-colors" href="#">Chính sách Bảo mật</a>
+<a class="text-slate-300 hover:text-white transition-colors" href="#">Liên hệ Hỗ trợ Đoàn viên</a>
+</div>
+</div>
+<!-- Bottom copyright row -->
+<div class="flex flex-col md:flex-row justify-between items-center gap-4 text-body-sm font-body-sm text-slate-400">
+<p class="">© 2024 Tổng Liên đoàn Lao động Việt Nam - Cổng Thông tin Công đoàn Điện tử. Bản quyền thuộc về Công đoàn Việt Nam.</p>
+<div class="flex items-center gap-4">
+<span class="inline-flex items-center gap-1.5 text-[12px] text-slate-300">
+<span class="w-2 h-2 rounded-full bg-dusty-light"></span> Máy chủ Nội bộ: Đang hoạt động
+          </span>
+<span class="text-[12px] text-slate-400">Phiên bản v2.4.0-civic</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND, BRAND_COPYRIGHT } from "@/lib/brand";
 
 export function Footer() {
   return (
@@ -9,10 +10,13 @@ export function Footer() {
       <div className="flex w-full flex-col items-center justify-between gap-8 px-margin-mobile py-8 md:flex-row md:px-margin-desktop">
         <div className="flex flex-col items-center gap-4 md:items-start">
           <span className="text-xs font-semibold uppercase tracking-wide text-[#27496D]">
-            logo
+            {BRAND.name}
           </span>
           <p className="text-center text-body-md text-[#27496D] md:text-left">
-            © 2026 Si Mê Mít Tươi. Nâng tầm sức mạnh tập thể.
+            {BRAND_COPYRIGHT}
+          </p>
+          <p className="text-center text-label-sm text-[#27496D]/80 md:text-left">
+            {BRAND.domain}
           </p>
         </div>
 

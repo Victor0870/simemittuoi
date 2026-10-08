@@ -1,5 +1,5 @@
 {
-  "name": "cdcs",
+  "name": "cdilv",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:setup": "node scripts/apply-schema.mjs",
+    "db:setup-shared": "node scripts/apply-cdilv-shared.mjs",
+    "db:migrate-shared": "node scripts/migrate-to-shared.mjs",
     "db:import-whitelist": "node scripts/import-whitelist.mjs",
     "db:import-scores": "node scripts/import-contest-scores.mjs",
     "db:apply-bonus": "node scripts/apply-bonus-scores.mjs",

@@ -5,6 +5,7 @@ import {
   type AdminUserRow,
 } from "@/components/admin/AdminUsersTable";
 import { createClient } from "@/lib/supabase/server";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export default async function AdminUsersPage() {
   const supabase = await createClient();
@@ -17,7 +18,7 @@ export default async function AdminUsersPage() {
   }
 
   const { data: me } = await supabase
-    .from("profiles")
+    .from(CDILV_TABLE.profiles)
     .select("role, approval_status")
     .eq("id", user.id)
     .maybeSingle();
@@ -27,7 +28,7 @@ export default async function AdminUsersPage() {
   }
 
   const { data: users, error } = await supabase
-    .from("profiles")
+    .from(CDILV_TABLE.profiles)
     .select(
       "id, full_name, employee_code, department, role, approval_status, created_at",
     )

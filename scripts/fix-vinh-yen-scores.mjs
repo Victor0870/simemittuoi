@@ -72,14 +72,14 @@ async function main() {
 
   // Xóa 1 dòng KK trùng của Vinh (giữ 1)
   const dup = await client.query(
-    `select id from public.employee_score_events
+    `select id from public.cdilv_employee_score_events
      where employee_code = '0387' and award_label = 'Giải ILV Khuyến khích'
      order by created_at asc, id asc`,
   );
   if (dup.rows.length > 1) {
     const dropIds = dup.rows.slice(1).map((r) => r.id);
     await client.query(
-      `delete from public.employee_score_events where id = any($1::uuid[])`,
+      `delete from public.cdilv_employee_score_events where id = any($1::uuid[])`,
       [dropIds],
     );
     console.log("Deleted duplicate Vinh KK events:", dropIds.length);
@@ -90,15 +90,15 @@ async function main() {
   // Nếu Vinh đã transfer KK trùng sang score_events thì dọn luôn
   const seDup = await client.query(
     `select se.id
-     from public.score_events se
-     join public.profiles p on p.id = se.user_id
+     from public.cdilv_score_events se
+     join public.cdilv_profiles p on p.id = se.user_id
      where upper(p.employee_code) = '0387'
        and se.award_label = 'Giải ILV Khuyến khích'
      order by se.created_at asc, se.id asc`,
   );
   if (seDup.rows.length > 1) {
     const dropIds = seDup.rows.slice(1).map((r) => r.id);
-    await client.query(`delete from public.score_events where id = any($1::uuid[])`, [
+    await client.query(`delete from public.cdilv_score_events where id = any($1::uuid[])`, [
       dropIds,
     ]);
     console.log("Deleted duplicate transferred Vinh KK score_events:", dropIds.length);
@@ -107,7 +107,7 @@ async function main() {
   // Yến: Cống hiến công ty → Khuyến khích
   const yenNote = `${NOTE_BASE} — Giải nội bộ Khuyến khích (+20)`;
   const yenUp = await client.query(
-    `update public.employee_score_events
+    `update public.cdilv_employee_score_events
      set points = 20,
          award_label = 'Giải ILV Khuyến khích',
          note = $1
@@ -120,11 +120,11 @@ async function main() {
 
   // Nếu đã transfer cho Yến thì cập nhật score_events tương ứng
   const yenSe = await client.query(
-    `update public.score_events se
+    `update public.cdilv_score_events se
      set points = 20,
          award_label = 'Giải ILV Khuyến khích',
          note = $1
-     from public.profiles p
+     from public.cdilv_profiles p
      where se.user_id = p.id
        and upper(p.employee_code) = '0234'
        and (se.award_label = 'Giải Cống hiến công ty' or se.points = 10 and se.note ilike '%cống hiến công ty%')
@@ -135,7 +135,7 @@ async function main() {
 
   const lb = await client.query(
     `select rank, full_name, employee_code, total_score
-     from public.leaderboard
+     from public.cdilv_leaderboard
      where employee_code in ('0387', '0234')
      order by rank`,
   );
@@ -143,7 +143,7 @@ async function main() {
   for (const r of lb.rows) console.log(JSON.stringify(r));
 
   const vinhEvents = await client.query(
-    `select points, award_label from public.employee_score_events where employee_code = '0387' order by award_label`,
+    `select points, award_label from public.cdilv_employee_score_events where employee_code = '0387' order by award_label`,
   );
   console.log("Vinh events now:", vinhEvents.rows);
 

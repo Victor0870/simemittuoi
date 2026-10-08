@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BRAND } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/client";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,7 +36,7 @@ export default function LoginPage() {
 
     if (userId) {
       const { data: profile } = await supabase
-        .from("profiles")
+        .from(CDILV_TABLE.profiles)
         .select("approval_status, role")
         .eq("id", userId)
         .maybeSingle();
@@ -69,7 +71,7 @@ export default function LoginPage() {
     <div className="mx-auto max-w-md rounded-3xl border border-outline-variant bg-surface-container-lowest p-8 shadow-sm">
       <h1 className="mb-2 text-headline-md text-[#173A67]">Đăng nhập</h1>
       <p className="mb-6 text-body-md text-on-surface-variant">
-        Đoàn viên Si Mê Mít Tươi đăng nhập để xem điểm và hạng.
+        Đoàn viên {BRAND.name} đăng nhập để xem điểm và hạng.
       </p>
 
       <form className="space-y-4" onSubmit={handleLogin}>

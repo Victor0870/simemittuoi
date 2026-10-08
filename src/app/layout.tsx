@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
 import { AppShell } from "@/components/layout/AppShell";
+import { BRAND, BRAND_TITLE } from "@/lib/brand";
 import "./globals.css";
 
-const manrope = Manrope({
+const beVietnam = Be_Vietnam_Pro({
   subsets: ["latin", "vietnamese"],
-  variable: "--font-manrope",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  variable: "--font-be-vietnam",
 });
 
 export const metadata: Metadata = {
-  title: "Si Mê Mít Tươi - Trung Tâm Gắn Kết Đoàn Viên",
-  description:
-    "Website công đoàn báo cáo hoạt động, quản lý điểm và bảng xếp hạng đoàn viên.",
+  metadataBase: new URL(BRAND.siteUrl),
+  title: BRAND_TITLE,
+  description: BRAND.description,
+  applicationName: BRAND.name,
 };
 
 export default function RootLayout({
@@ -27,7 +30,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${manrope.variable} antialiased`}>
+      <body className={`${beVietnam.variable} font-sans antialiased`}>
         <AppShell>{children}</AppShell>
       </body>
     </html>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { BRAND } from "@/lib/brand";
 import { NAV_ITEMS } from "@/lib/constants";
 
 type SidebarProps = {
@@ -11,9 +12,11 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
     <aside className="fixed top-16 left-0 hidden h-[calc(100vh-64px)] w-64 flex-col gap-2 border-r border-outline-variant bg-surface-container-low p-base md:flex">
       <div className="mb-4 px-4 py-6">
         <h2 className="text-headline-md font-extrabold text-[#173A67]">
-          Activity Hub
+          {BRAND.name}
         </h2>
-        <p className="text-label-sm text-on-surface-variant">Hỗ trợ Đoàn viên</p>
+        <p className="text-label-sm text-on-surface-variant">
+          {BRAND.productLine}
+        </p>
       </div>
 
       <nav className="flex-1 space-y-1">

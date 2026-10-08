@@ -75,13 +75,13 @@ export const MOCK_ACTIVITIES: Activity[] = [
   },
   {
     id: "2",
-    title: "Hội thảo Kỹ năng Đàm phán",
+    title: "Hội thi cắm hoa 20-10",
     date: "20/10/2024",
     location: "Phòng họp lớn 2",
     points: 150,
     imageUrl:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuA2-cOA603njhNtLLpGRfNnqnFQcJ56DxXnfjC4mW6S7l4wBQW125L_qE08TDTSpCSBJYSMBf7YcrKQxHze-fOCzUn2OdkUaNq4BlTEKgxh4nF7KKDqZ4TdpAjL5dT68notDgK-dISYhIqB1pF0808xrlXmXmkjeaXBw8deTTd3KCtNPX9xE1Qu-5CgDAxWjRk9nsF7r2ECgVfXiE4mds67_clREFSVGslTNgMc_XZlIWr17nitcJ1Wjb7c4QSoj8fMeokS8RKFLPA",
-    imageAlt: "Hội thảo kỹ năng trong phòng họp hiện đại",
+    imageAlt: "Hội thi cắm hoa chào mừng ngày 20-10",
     participantAvatars: [
       "https://lh3.googleusercontent.com/aida-public/AB6AXuDggcG2Y7SGL6TbdxENsWpIFPSyZ_aWnsOCah0YXK2UxHeFUgKdktaXVlu-6u_JxRtXWtiLl1IMQVptx32o2K-RivftAqwECgjZzsvi5UyGcGg3b_iDkz5NNt8dN0iGXxqMAhK5KVhokIuWWhvJTw4k0Nj0v1T3udb-ZlINhA8P77r5usbwmVj1FoCCZU5DK-C_95SddQD1-1ZB7w0oxhUsXw_k00RTq2DhZ_dDkttv3nPv6ZcVoZoYKDBkDB8zisnfm-85bfOUrgE",
     ],

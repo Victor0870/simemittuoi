@@ -32,17 +32,17 @@ async function main() {
   await client.query(sql);
 
   const top = await client.query(
-    `select rank, full_name, total_score from leaderboard order by rank limit 5`,
+    `select rank, full_name, total_score from cdilv_leaderboard order by rank limit 5`,
   );
   console.log("TOP5 from cache view:");
   for (const r of top.rows) console.log(JSON.stringify(r));
 
   const me = await client.query(
-    `select full_name, total_score, rank from profiles where employee_code = '0370'`,
+    `select full_name, total_score, rank from cdilv_profiles where employee_code = '0370'`,
   );
   console.log("Profile cached rank:", me.rows[0]);
 
-  const cnt = await client.query(`select count(*)::int as n from leaderboard_cache`);
+  const cnt = await client.query(`select count(*)::int as n from cdilv_leaderboard_cache`);
   console.log("cache rows:", cnt.rows[0].n);
 
   await client.end();

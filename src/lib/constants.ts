@@ -1,3 +1,5 @@
+export { BRAND, BRAND_TITLE, BRAND_COPYRIGHT } from "@/lib/brand";
+
 export const LOGO_URL =
   "https://lh3.googleusercontent.com/aida/AP1WRLtcdh_jX3PUwkcmg3KywgQi-bUt3RuOKJay8F7aERPrQrImDZM7Cs9U23a2NrNOvpg396nKazeBhsgW3dk3RP3Lfb9eTuNGUgdQKcgEfGqTCfvVW8c-hzh1kQBpieeWxK-kXohCN9svVlmEISRp4y8HeJAXXoZarqdGqHnVfTrShyPCagrfoSOdmZFQ49y3CHbKG6tsTgdOflfj8CNSv5hgleSgtC50XQpr5GwORDk7go8f6cmplcaX-nk";
 

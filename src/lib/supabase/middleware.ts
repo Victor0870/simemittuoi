@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 function isAuthExemptPath(pathname: string) {
   return (
@@ -54,7 +55,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     const { data: profile } = await supabase
-      .from("profiles")
+      .from(CDILV_TABLE.profiles)
       .select("role, approval_status")
       .eq("id", user.id)
       .maybeSingle();

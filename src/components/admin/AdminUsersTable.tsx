@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type AdminUserRow = {
   id: string;
@@ -39,7 +40,7 @@ export function AdminUsersTable({ users }: Props) {
     }
 
     const { error: updateError } = await supabase
-      .from("profiles")
+      .from(CDILV_TABLE.profiles)
       .update({
         approval_status,
         approved_at: approval_status === "approved" ? new Date().toISOString() : null,

@@ -1,5 +1,7 @@
--- Si Mê Mít Tươi — schema Phase B
--- Chạy trong Supabase SQL Editor hoặc: node scripts/apply-schema.mjs
+-- CDILV (cdilv.vn) — schema Phase B (project RIÊNG, bảng public.* cũ)
+-- Khi dùng chung project BizMate: chạy supabase/cdilv_on_shared_project.sql
+--   (npm run db:setup-shared) — bảng prefix cdilv_*, không đụng POS/web BizMate.
+-- Chạy project riêng: node scripts/apply-schema.mjs
 
 create extension if not exists "pgcrypto";
 
@@ -150,12 +152,12 @@ select * from (values
     'Nhóm nhân viên tham gia chạy bộ từ thiện ngoài trời'
   ),
   (
-    'Hội thảo Kỹ năng Đàm phán',
+    'Hội thi cắm hoa 20-10',
     'Phòng họp lớn 2',
     '2024-10-20'::date,
     150,
     'https://lh3.googleusercontent.com/aida-public/AB6AXuA2-cOA603njhNtLLpGRfNnqnFQcJ56DxXnfjC4mW6S7l4wBQW125L_qE08TDTSpCSBJYSMBf7YcrKQxHze-fOCzUn2OdkUaNq4BlTEKgxh4nF7KKDqZ4TdpAjL5dT68notDgK-dISYhIqB1pF0808xrlXmXmkjeaXBw8deTTd3KCtNPX9xE1Qu-5CgDAxWjRk9nsF7r2ECgVfXiE4mds67_clREFSVGslTNgMc_XZlIWr17nitcJ1Wjb7c4QSoj8fMeokS8RKFLPA',
-    'Hội thảo kỹ năng trong phòng họp hiện đại'
+    'Hội thi cắm hoa chào mừng ngày 20-10'
   )
 ) as v(title, location, event_date, points, image_url, image_alt)
 where not exists (select 1 from public.activities limit 1);

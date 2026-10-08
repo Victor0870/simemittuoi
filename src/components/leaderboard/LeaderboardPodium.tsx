@@ -26,42 +26,46 @@ type PlaceConfig = {
 const PLACES: PlaceConfig[] = [
   {
     place: 2,
-    label: "Nhì",
-    medal: "military_tech",
+    label: "Á Quân",
+    medal: "workspace_premium",
     barHeight: "h-24 md:h-28",
-    barHeightHome: "h-20 md:h-36",
-    barClass: "bg-[#C0C7D1] text-[#173A67]",
-    ringClass: "border-[#A8B0BC] bg-surface-container-lowest",
-    badgeClass: "bg-[#A8B0BC] text-white",
+    barHeightHome: "h-32 sm:h-40",
+    barClass:
+      "bg-gradient-to-b from-slate-200 via-slate-100 to-slate-200 border-t-4 border-slate-400 text-slate-500",
+    ringClass: "ring-4 ring-slate-300 bg-slate-100",
+    badgeClass: "bg-slate-200 text-slate-700 border border-slate-300",
     orderClass: "order-1",
     avatarDefault: "h-16 w-16 md:h-20 md:w-20",
-    avatarHome: "h-14 w-14 md:h-28 md:w-28",
+    avatarHome: "h-16 w-16 sm:h-20 sm:w-20",
   },
   {
     place: 1,
-    label: "Nhất",
-    medal: "emoji_events",
+    label: "Quán quân",
+    medal: "crown",
     barHeight: "h-32 md:h-40",
-    barHeightHome: "h-28 md:h-48",
-    barClass: "bg-primary text-on-primary",
-    ringClass: "border-primary bg-primary-fixed",
-    badgeClass: "bg-primary text-on-primary",
+    barHeightHome: "h-44 sm:h-52",
+    barClass:
+      "bg-gradient-to-b from-amber-300 via-amber-200 to-amber-300 border-t-4 border-amber-500 text-amber-800 shadow-lg",
+    ringClass: "ring-4 ring-amber-400 ring-offset-2 bg-gradient-to-br from-amber-100 to-amber-200",
+    badgeClass:
+      "bg-gradient-to-r from-amber-400 to-amber-500 text-white border border-amber-300 shadow-md",
     orderClass: "order-2",
     avatarDefault: "h-20 w-20 md:h-24 md:w-24",
-    avatarHome: "h-16 w-16 md:h-32 md:w-32",
+    avatarHome: "h-20 w-20 sm:h-24 sm:w-24",
   },
   {
     place: 3,
-    label: "Ba",
-    medal: "workspace_premium",
+    label: "Quý Quân",
+    medal: "military_tech",
     barHeight: "h-20 md:h-24",
-    barHeightHome: "h-16 md:h-32",
-    barClass: "bg-[#C47B4A] text-white",
-    ringClass: "border-[#C47B4A] bg-[#FFE8D6]",
-    badgeClass: "bg-[#C47B4A] text-white",
+    barHeightHome: "h-24 sm:h-32",
+    barClass:
+      "bg-gradient-to-b from-amber-600/30 via-amber-700/20 to-amber-600/30 border-t-4 border-amber-700 text-amber-800",
+    ringClass: "ring-4 ring-amber-700/40 bg-amber-50",
+    badgeClass: "bg-amber-100 text-amber-900 border border-amber-300",
     orderClass: "order-3",
     avatarDefault: "h-16 w-16 md:h-20 md:w-20",
-    avatarHome: "h-14 w-14 md:h-28 md:w-28",
+    avatarHome: "h-16 w-16 sm:h-20 sm:w-20",
   },
 ];
 
@@ -80,7 +84,7 @@ function Avatar({
 
   return (
     <div
-      className={`flex items-center justify-center overflow-hidden rounded-full border-4 ${ringClass} ${sizeClass}`}
+      className={`flex items-center justify-center overflow-hidden rounded-full shadow-md ${ringClass} ${sizeClass}`}
     >
       {!maskIdentity && entry.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -90,7 +94,7 @@ function Avatar({
           src={entry.avatarUrl}
         />
       ) : (
-        <span className="text-xl font-extrabold text-[#173A67] md:text-2xl">
+        <span className="text-xl font-extrabold text-primary md:text-2xl">
           {maskIdentity ? `#${entry.rank}` : initial}
         </span>
       )}
@@ -113,64 +117,54 @@ export function LeaderboardPodium({
 
   return (
     <section
-      className={`relative overflow-hidden rounded-3xl border border-outline-variant bg-gradient-to-b from-primary-fixed via-surface-container-lowest to-surface-container-low pb-0 ${
-        isHome
-          ? "mb-6 px-3 pt-6 md:px-12 md:pt-12"
-          : "mb-8 px-4 pt-8 md:px-8"
+      className={`relative overflow-hidden rounded-2xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm ${
+        isHome ? "mb-0 px-6 pt-6 pb-2 sm:px-8 sm:pt-8" : "mb-8 px-4 pt-8 md:px-8"
       }`}
     >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 20% 20%, rgba(255,154,118,0.35), transparent 45%), radial-gradient(circle at 80% 10%, rgba(128,203,196,0.3), transparent 40%)",
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(251,191,36,0.18),transparent_55%)] opacity-70" />
 
       <div
-        className={`relative text-center ${isHome ? "mb-6 md:mb-12" : "mb-6"}`}
+        className={`relative z-10 ${isHome ? "mb-8 flex items-center justify-between" : "mb-6 text-center"}`}
       >
         <div
-          className={`inline-flex items-center font-bold tracking-wide uppercase ${
+          className={`inline-flex items-center gap-1.5 font-bold tracking-wide uppercase ${
             isHome
-              ? "gap-2 rounded-xl border-2 border-primary bg-white px-3.5 py-1.5 text-sm text-[#173A67] shadow-[0_6px_16px_rgba(255,154,118,0.3)] md:gap-4 md:rounded-2xl md:px-10 md:py-4 md:text-3xl"
-              : "mb-2 gap-2 rounded-full bg-surface-container-lowest/80 px-3 py-1 text-xs text-[#173A67]"
+              ? "rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-label-sm text-amber-800"
+              : "mb-2 gap-2 rounded-full bg-white/80 px-3 py-1 text-xs text-primary"
           }`}
         >
           <MaterialIcon
-            className={
-              isHome
-                ? "text-xl text-primary md:text-5xl"
-                : "text-base text-primary"
-            }
+            className={isHome ? "text-[16px] text-amber-honor" : "text-base text-primary"}
             filled
-            name="trophy"
+            name="emoji_events"
           />
-          Bục vinh danh
+          {isHome ? "TOP 3 CHIẾN SĨ THI ĐUA" : "Bục vinh danh"}
         </div>
-        {!isHome ? (
+        {isHome ? (
+          <span className="hidden text-body-sm text-on-surface-variant italic sm:inline">
+            Điểm phong trào tích lũy
+          </span>
+        ) : (
           <>
-            <h2 className="text-headline-md font-extrabold text-[#173A67] md:text-3xl">
+            <h2 className="text-headline-md font-extrabold text-primary md:text-3xl">
               Top 3 xuất sắc
             </h2>
             <p className="mt-1 text-sm text-on-surface-variant">
               Giải Nhất · Nhì · Ba theo tổng điểm thi đua
             </p>
           </>
-        ) : null}
+        )}
       </div>
 
       <div
-        className={`relative mx-auto flex items-end justify-center ${
-          isHome
-            ? "max-w-5xl gap-1.5 md:gap-10"
-            : "max-w-3xl gap-2 md:gap-6"
+        className={`relative z-10 mx-auto grid grid-cols-3 items-end ${
+          isHome ? "gap-2 pt-8 sm:gap-4 sm:pt-12" : "max-w-3xl gap-2 md:gap-6"
         }`}
       >
         {PLACES.map((cfg) => {
           const entry = byRank.get(cfg.place);
           if (!entry) {
-            return <div key={cfg.place} className={`flex-1 ${cfg.orderClass}`} />;
+            return <div key={cfg.place} className={cfg.orderClass} />;
           }
 
           const displayName = maskIdentity
@@ -181,110 +175,87 @@ export function LeaderboardPodium({
           return (
             <div
               key={cfg.place}
-              className={`flex flex-1 flex-col items-center ${cfg.orderClass}`}
+              className={`group flex flex-col items-center text-center ${cfg.orderClass} ${
+                isFirst && isHome ? "-mt-8" : ""
+              }`}
             >
-              <div
-                className={`mb-3 flex flex-col items-center ${
-                  isFirst
-                    ? isHome
-                      ? "-translate-y-3 md:-translate-y-6"
-                      : "-translate-y-2 md:-translate-y-4"
-                    : ""
-                }`}
-              >
-                <div className="relative mb-2">
+              <div className="mb-3 flex flex-col items-center">
+                <div
+                  className={`relative mb-3 transition-transform duration-200 ${
+                    isFirst ? "group-hover:-translate-y-2" : "group-hover:-translate-y-1"
+                  }`}
+                >
+                  {isFirst && isHome ? (
+                    <div className="absolute -top-6 inset-x-0 flex justify-center">
+                      <MaterialIcon
+                        className="animate-bounce text-[28px] text-amber-500"
+                        filled
+                        name="crown"
+                      />
+                    </div>
+                  ) : null}
                   <Avatar
                     entry={entry}
                     maskIdentity={maskIdentity}
                     ringClass={cfg.ringClass}
                     sizeClass={isHome ? cfg.avatarHome : cfg.avatarDefault}
                   />
-                  <span
-                    className={`absolute -right-1 -bottom-1 flex items-center justify-center rounded-full font-extrabold shadow ${cfg.badgeClass} ${
-                      isHome
-                        ? "h-6 w-6 text-[10px] md:h-8 md:w-8 md:text-sm"
-                        : "h-7 w-7 text-xs"
-                    }`}
-                  >
-                    {cfg.place}
-                  </span>
+                  <div className="absolute -bottom-2 inset-x-0 flex justify-center">
+                    <span
+                      className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-label-sm font-bold shadow-xs ${cfg.badgeClass}`}
+                    >
+                      #{cfg.place}
+                    </span>
+                  </div>
                 </div>
 
-                <MaterialIcon
-                  className={`mb-1 ${
-                    isFirst
-                      ? isHome
-                        ? "text-2xl text-primary md:text-5xl"
-                        : "text-3xl text-primary"
-                      : isHome
-                        ? "text-xl text-[#173A67] md:text-4xl"
-                        : "text-2xl text-[#173A67]"
-                  }`}
-                  filled
-                  name={cfg.medal}
-                />
-
-                <p
-                  className={`max-w-[5.5rem] text-center font-extrabold leading-tight text-on-surface md:max-w-[13rem] ${
-                    isFirst
-                      ? isHome
-                        ? "text-xs md:text-xl"
-                        : "text-base md:text-lg"
-                      : isHome
-                        ? "text-[11px] md:text-lg"
-                        : "text-sm md:text-base"
+                <h3
+                  className={`mt-2 line-clamp-1 font-bold text-on-surface ${
+                    isFirst ? "text-headline-sm" : "text-body-md"
                   }`}
                   title={entry.name}
                 >
                   {displayName}
-                </p>
-                {!maskIdentity && entry.department ? (
-                  <p
-                    className={`mt-0.5 truncate text-center text-on-surface-variant ${
-                      isHome
-                        ? "max-w-[5.5rem] text-[10px] md:max-w-[13rem] md:text-xs"
-                        : "max-w-[9rem] text-[11px] md:max-w-[13rem] md:text-xs"
+                </h3>
+                <div className="my-1 inline-flex items-center gap-1">
+                  <span
+                    className={`font-extrabold text-primary ${
+                      isFirst ? "text-headline-md" : "text-headline-sm"
                     }`}
                   >
-                    {entry.department}
-                  </p>
-                ) : null}
-                <p
-                  className={`mt-1 font-extrabold text-primary ${
-                    isFirst
-                      ? isHome
-                        ? "text-base md:text-3xl"
-                        : "text-xl md:text-2xl"
-                      : isHome
-                        ? "text-sm md:text-2xl"
-                        : "text-lg"
-                  }`}
-                >
-                  {entry.score.toLocaleString("vi-VN")}
-                  <span className="ml-1 text-xs font-semibold text-on-surface-variant">
+                    {entry.score.toLocaleString("vi-VN")}
+                  </span>
+                  <span className="text-body-sm font-medium text-on-surface-variant">
                     điểm
                   </span>
-                </p>
+                </div>
+                <div
+                  className={`mb-3 rounded px-2 py-0.5 text-[11px] font-semibold ${
+                    isFirst
+                      ? "rounded-full border border-amber-300 bg-amber-light text-amber-900"
+                      : cfg.place === 2
+                        ? "border border-dusty-border bg-dusty-light text-primary"
+                        : "border border-amber-200 bg-amber-50 text-amber-900"
+                  }`}
+                >
+                  {cfg.label}
+                </div>
               </div>
 
               <div
-                className={`flex w-full flex-col items-center justify-center rounded-t-2xl shadow-inner ${cfg.barClass} ${
+                className={`flex w-full flex-col items-center justify-center rounded-t-xl shadow-inner ${cfg.barClass} ${
                   isHome ? cfg.barHeightHome : cfg.barHeight
-                } ${isHome ? "pt-2" : "pt-4"}`}
+                }`}
               >
-                {!isHome ? (
-                  <span className="text-xs font-bold tracking-widest uppercase opacity-90">
-                    {cfg.label}
-                  </span>
-                ) : null}
                 <span
-                  className={`font-black opacity-90 ${
-                    isHome
-                      ? "text-2xl md:text-5xl"
-                      : "mt-1 text-3xl md:text-4xl"
+                  className={`font-black opacity-80 ${
+                    isHome ? "text-headline-xl" : "text-3xl md:text-4xl"
                   }`}
                 >
                   {cfg.place}
+                </span>
+                <span className="text-[11px] font-bold tracking-widest uppercase opacity-80">
+                  {cfg.place === 1 ? "QUÁN QUÂN" : cfg.place === 2 ? "BẠC" : "ĐỒNG"}
                 </span>
               </div>
             </div>

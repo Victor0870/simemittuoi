@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { BRAND } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/client";
+import { CDILV_AUTH_APP, CDILV_RPC } from "@/lib/supabase/tables";
 
 type ValidateResult = {
   ok: boolean;
@@ -28,7 +30,7 @@ export default function RegisterPage() {
     setError(null);
     const supabase = createClient();
     const { data, error: rpcError } = await supabase.rpc(
-      "validate_employee_for_signup",
+      CDILV_RPC.validateEmployeeForSignup,
       { p_code: employeeCode },
     );
 
@@ -72,6 +74,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: {
+          app: CDILV_AUTH_APP,
           full_name: name,
           employee_code: code,
           department: dept,
@@ -94,7 +97,7 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-md rounded-3xl border border-outline-variant bg-surface-container-lowest p-8 shadow-sm">
         <h1 className="mb-2 text-headline-md text-[#173A67]">Đăng ký đoàn viên</h1>
         <p className="mb-6 text-body-md text-on-surface-variant">
-          Nhập mã nhân viên Si Mê Mít Tươi. Tài khoản sẽ chờ admin phê duyệt trước
+          Nhập mã nhân viên {BRAND.name}. Tài khoản sẽ chờ admin phê duyệt trước
           khi vào hệ thống.
         </p>
 

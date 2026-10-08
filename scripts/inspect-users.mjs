@@ -29,12 +29,12 @@ for (const row of users.rows) {
   console.log(JSON.stringify(row));
 }
 
-const profiles = await client.query(`select count(*)::int as c from public.profiles`);
+const profiles = await client.query(`select count(*)::int as c from public.cdilv_profiles`);
 console.log("PROFILES_COUNT", profiles.rows[0].c);
 
 const profileRows = await client.query(
   `select id, full_name, employee_code, role, approval_status, created_at
-   from public.profiles
+   from public.cdilv_profiles
    order by created_at desc
    limit 10`,
 );

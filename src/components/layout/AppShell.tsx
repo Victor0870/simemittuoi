@@ -38,10 +38,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <ApprovalGate>
-      <div className="min-h-screen bg-surface text-on-surface">
+      <div className="flex min-h-screen flex-col bg-surface-bg text-on-surface">
         <TopNav activeHref={activeHref} />
-        <main className="min-h-screen px-margin-mobile pt-24 pb-16 md:px-margin-desktop">
-          <div className="mx-auto max-w-container-max">{children}</div>
+        <main className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile py-8 pt-24 pb-20 md:px-margin-desktop">
+          {children}
         </main>
         <Footer />
         <MobileBottomNav activeHref={activeHref} />
