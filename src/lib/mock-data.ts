@@ -42,31 +42,31 @@ export const MOCK_USER = {
 
 export const MOCK_ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "logo-contest-2026",
+    tag: "Cuộc thi",
+    tagTone: "primary",
+    timeAgo: "Vừa xong",
+    title: "Phát động cuộc thi: Sáng tạo Logo chính thức website CDILV.VN",
+    excerpt:
+      "Ban Chấp hành Công đoàn cơ sở trân trọng thông báo và phát động Cuộc thi Sáng tạo Logo chính thức website CDILV.VN đến toàn thể cán bộ, đoàn viên...",
+  },
+  {
     id: "pickleball-2026",
     tag: "Thể thao",
     tagTone: "primary",
-    timeAgo: "Vừa xong",
+    timeAgo: "Hôm qua",
     title: "Phát động Giải thể thao Pickleball CDILV 2026: Bứt phá phong độ – Gắn kết đồng đội",
     excerpt:
       "Công đoàn cơ sở CDILV trân trọng thông báo và phát động Giải Pickleball CDILV 2026 dành cho toàn thể đoàn viên, cán bộ và người lao động trong toàn đơn vị...",
   },
   {
-    id: "1",
-    tag: "Khẩn cấp",
-    tagTone: "error",
-    timeAgo: "2 giờ trước",
-    title: "Cập nhật Quy định Bảo hiểm 2024",
-    excerpt:
-      "Các thay đổi quan trọng về mức đóng bảo hiểm y tế đã được thông qua bởi Công đoàn...",
-  },
-  {
-    id: "2",
-    tag: "Bầu cử",
+    id: "hoa-2010",
+    tag: "Sự kiện",
     tagTone: "primary",
-    timeAgo: "Hôm qua",
-    title: "Đề cử Đại diện Công đoàn cơ sở",
+    timeAgo: "2 ngày trước",
+    title: "Tổ chức cuộc thi cắm hoa chào mừng ngày 20-10",
     excerpt:
-      "Hãy tham gia đề cử những gương mặt ưu tú cho nhiệm kỳ 2024-2026 ngay hôm nay.",
+      "Công đoàn phát động cuộc thi cắm hoa nghệ thuật chào mừng ngày Phụ nữ Việt Nam 20-10...",
   },
 ];
 
