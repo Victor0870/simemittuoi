@@ -28,10 +28,10 @@ export function HomeLeaderboardSection({
           </div>
           <div>
             <h2 className="text-headline-lg tracking-tight text-on-surface">
-              BỤC VINH DANH PHONG TRÀO
+              BỤC VINH DANH
             </h2>
             <p className="text-body-sm text-on-surface-variant">
-              Tuyên dương gương điển hình tiên tiến &amp; sáng kiến xuất sắc
+              Tuyên dương các đoàn viên xuất sắc
             </p>
           </div>
         </div>
