@@ -293,6 +293,13 @@ export function AdminScoresManager({
             </span>
             <Link
               className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+              href="/admin/polls"
+            >
+              <MaterialIcon className="text-[18px]" name="how_to_vote" />
+              <span>Quản lý Bình chọn</span>
+            </Link>
+            <Link
+              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
               href="/admin/users"
             >
               <MaterialIcon className="text-[18px]" name="manage_accounts" />

@@ -12,6 +12,11 @@ export const CDILV_TABLE = {
   employeeScoreEvents: "cdilv_employee_score_events",
   leaderboardCache: "cdilv_leaderboard_cache",
   leaderboard: "cdilv_leaderboard",
+  polls: "cdilv_polls",
+  pollOptions: "cdilv_poll_options",
+  pollOptionMembers: "cdilv_poll_option_members",
+  pollVotes: "cdilv_poll_votes",
+  pollPredictions: "cdilv_poll_predictions",
 } as const;
 
 export const CDILV_RPC = {

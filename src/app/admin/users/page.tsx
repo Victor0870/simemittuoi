@@ -47,6 +47,13 @@ export default async function AdminUsersPage() {
               <MaterialIcon className="text-[18px] text-amber-600" name="military_tech" />
               <span>Quản lý & Cộng điểm</span>
             </Link>
+            <Link
+              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-primary hover:text-primary"
+              href="/admin/polls"
+            >
+              <MaterialIcon className="text-[18px] text-primary" name="how_to_vote" />
+              <span>Quản lý Bình chọn</span>
+            </Link>
             <span className="flex items-center gap-1.5 rounded-xl bg-[#173A67] px-3 py-1.5 text-label-md font-bold text-white shadow-xs">
               <MaterialIcon className="text-[18px]" name="manage_accounts" />
               <span>Duyệt đoàn viên</span>

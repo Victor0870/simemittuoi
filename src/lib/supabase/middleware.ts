@@ -20,6 +20,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  // Tối ưu 1: Nếu không có cookie auth của Supabase, không cần gọi API (khách lướt web)
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.includes("auth-token") || c.name.startsWith("sb-"));
+
+  if (!hasAuthCookie) {
+    if (pathname.startsWith("/admin")) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = "/login";
+      redirectUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   try {
@@ -51,6 +66,17 @@ export async function updateSession(request: NextRequest) {
         redirectUrl.searchParams.set("next", pathname);
         return NextResponse.redirect(redirectUrl);
       }
+      return supabaseResponse;
+    }
+
+    // Tối ưu 2: Chỉ truy vấn database profiles khi cần kiểm tra quyền Admin hoặc trang đặc biệt
+    const requiresProfileCheck =
+      pathname.startsWith("/admin") ||
+      pathname === "/pending" ||
+      pathname === "/login" ||
+      pathname === "/register";
+
+    if (!requiresProfileCheck) {
       return supabaseResponse;
     }
 
@@ -95,7 +121,8 @@ export async function updateSession(request: NextRequest) {
     }
 
     return supabaseResponse;
-  } catch {
-    return NextResponse.next({ request });
+  } catch (e) {
+    console.error("[middleware] updateSession error:", e);
+    return supabaseResponse;
   }
 }

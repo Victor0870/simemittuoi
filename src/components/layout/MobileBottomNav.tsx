@@ -3,11 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { MOBILE_NAV_ITEMS } from "@/lib/constants";
-import { createClient } from "@/lib/supabase/client";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type MobileBottomNavProps = {
   activeHref?: string;
@@ -16,55 +14,19 @@ type MobileBottomNavProps = {
 export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [, startTransition] = useTransition();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     setPendingHref(null);
   }, [pathname]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-
-    async function checkRole(user: User | null) {
-      if (cancelled) return;
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from(CDILV_TABLE.profiles)
-        .select("role, approval_status")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      setIsAdmin(profile?.role === "admin" && profile?.approval_status === "approved");
-    }
-
-    void supabase.auth.getUser().then(({ data }) => checkRole(data.user));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      void checkRole(session?.user ?? null);
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const current = pendingHref ?? activeHref;
 
   const items = isAdmin
     ? [
-        ...MOBILE_NAV_ITEMS.slice(0, 3),
+        ...MOBILE_NAV_ITEMS,
         { href: "/admin/scores", label: "Cộng điểm", icon: "military_tech" as const },
-        MOBILE_NAV_ITEMS[3],
       ]
     : MOBILE_NAV_ITEMS;
 
@@ -76,7 +38,7 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
         return (
           <Link
             key={item.href}
-            className={`flex flex-col items-center gap-1 rounded-lg px-3 py-1 transition-colors ${
+            className={`flex flex-col items-center gap-1 rounded-lg px-2.5 py-1 transition-colors ${
               isActive
                 ? "bg-tertiary-container text-on-tertiary-container"
                 : "text-on-surface-variant"

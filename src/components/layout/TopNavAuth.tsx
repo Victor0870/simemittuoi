@@ -1,98 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { createClient } from "@/lib/supabase/client";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
-
-type AuthState = {
-  loading: boolean;
-  isGuest: boolean;
-  isAdmin: boolean;
-  avatarUrl: string | null;
-  initial: string;
-};
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export function TopNavAuth() {
-  const pathname = usePathname();
-  const [state, setState] = useState<AuthState>({
-    loading: true,
-    isGuest: true,
-    isAdmin: false,
-    avatarUrl: null,
-    initial: "?",
-  });
+  const { user, profile, loading, isGuest, isAdmin } = useAuth();
 
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-
-    async function applyUser(user: User | null) {
-      if (cancelled) return;
-
-      if (!user) {
-        setState({
-          loading: false,
-          isGuest: true,
-          isAdmin: false,
-          avatarUrl: null,
-          initial: "?",
-        });
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from(CDILV_TABLE.profiles)
-        .select("approval_status, full_name, avatar_url, role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (profile?.approval_status !== "approved") {
-        setState({
-          loading: false,
-          isGuest: true,
-          isAdmin: false,
-          avatarUrl: null,
-          initial: "?",
-        });
-        return;
-      }
-
-      setState({
-        loading: false,
-        isGuest: false,
-        isAdmin: profile?.role === "admin",
-        avatarUrl: profile.avatar_url ?? null,
-        initial: (profile.full_name || user.email || "?").slice(0, 1).toUpperCase(),
-      });
-    }
-
-    void supabase.auth.getUser().then(({ data }) => applyUser(data.user));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      void applyUser(session?.user ?? null);
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, [pathname]);
-
-  if (state.loading) {
+  if (loading) {
     return (
       <div className="h-8 w-8 animate-pulse rounded-full bg-surface-container" />
     );
   }
 
-  if (state.isGuest) {
+  if (isGuest) {
     return (
       <div className="flex items-center gap-2">
         <Link
@@ -111,9 +32,11 @@ export function TopNavAuth() {
     );
   }
 
+  const initial = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
+
   return (
     <>
-      {state.isAdmin ? (
+      {isAdmin ? (
         <Link
           className="hidden items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 transition hover:bg-amber-100 sm:inline-flex"
           href="/admin/scores"
@@ -136,15 +59,15 @@ export function TopNavAuth() {
         href="/settings"
         title="Cài đặt / Avatar"
       >
-        {state.avatarUrl ? (
+        {profile?.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             alt="Ảnh đại diện"
             className="h-full w-full object-cover"
-            src={state.avatarUrl}
+            src={profile.avatar_url}
           />
         ) : (
-          state.initial
+          initial
         )}
       </Link>
     </>

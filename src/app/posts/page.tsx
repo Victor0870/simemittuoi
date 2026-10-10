@@ -3,8 +3,7 @@ import { PostCard } from "@/components/posts/PostCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPosts } from "@/lib/data/posts";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 60;
 
 export default async function PostsPage() {
   const posts = await getPosts();

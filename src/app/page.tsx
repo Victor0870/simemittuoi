@@ -6,8 +6,7 @@ import { HomeLeaderboardSection } from "@/components/home/HomeLeaderboardSection
 import { ScoreSummaryCard } from "@/components/home/ScoreSummaryCard";
 import { getHomePageData } from "@/lib/data/home";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30;
 
 export default async function HomePage() {
   const data = await getHomePageData();

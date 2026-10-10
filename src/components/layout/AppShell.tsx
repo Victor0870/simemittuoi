@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { ApprovalGate } from "@/components/auth/ApprovalGate";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TopNav } from "@/components/layout/TopNav";
@@ -13,6 +14,7 @@ function resolveActiveHref(pathname: string): string {
     ...NAV_ITEMS.map((item) => item.href),
     ...MOBILE_NAV_ITEMS.map((item) => item.href),
     "/posts",
+    "/polls",
     "/settings",
     "/score-history",
     "/campaigns",
@@ -21,6 +23,7 @@ function resolveActiveHref(pathname: string): string {
     "/pending",
     "/admin/users",
     "/admin/scores",
+    "/admin/polls",
   ];
 
   const unique = [...new Set(candidates)];
@@ -39,15 +42,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const activeHref = resolveActiveHref(pathname);
 
   return (
-    <ApprovalGate>
-      <div className="flex min-h-screen flex-col bg-surface-bg text-on-surface">
-        <TopNav activeHref={activeHref} />
-        <main className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile py-8 pt-24 pb-20 md:px-margin-desktop">
-          {children}
-        </main>
-        <Footer />
-        <MobileBottomNav activeHref={activeHref} />
-      </div>
-    </ApprovalGate>
+    <AuthProvider>
+      <ApprovalGate>
+        <div className="flex min-h-screen flex-col bg-surface-bg text-on-surface">
+          <TopNav activeHref={activeHref} />
+          <main className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile py-8 pt-24 pb-20 md:px-margin-desktop">
+            {children}
+          </main>
+          <Footer />
+          <MobileBottomNav activeHref={activeHref} />
+        </div>
+      </ApprovalGate>
+    </AuthProvider>
   );
 }

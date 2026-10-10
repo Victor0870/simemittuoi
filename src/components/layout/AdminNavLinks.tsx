@@ -1,58 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import type { User } from "@supabase/supabase-js";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { createClient } from "@/lib/supabase/client";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Props = {
   activeHref?: string;
 };
 
 export function AdminNavLinks({ activeHref = "/" }: Props) {
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const supabase = createClient();
-
-    async function checkRole(user: User | null) {
-      if (cancelled) return;
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from(CDILV_TABLE.profiles)
-        .select("role, approval_status")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (cancelled) return;
-      setIsAdmin(profile?.role === "admin" && profile?.approval_status === "approved");
-    }
-
-    void supabase.auth.getUser().then(({ data }) => checkRole(data.user));
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      void checkRole(session?.user ?? null);
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const { isAdmin } = useAuth();
 
   if (!isAdmin) return null;
 
   const isScoresActive = activeHref.startsWith("/admin/scores");
   const isUsersActive = activeHref.startsWith("/admin/users");
+  const isPollsActive = activeHref.startsWith("/admin/polls");
 
   return (
     <div className="flex items-center gap-2 border-l border-outline-variant/60 pl-3">
@@ -67,6 +30,19 @@ export function AdminNavLinks({ activeHref = "/" }: Props) {
       >
         <MaterialIcon className="text-[18px]" name="military_tech" />
         <span>Cộng điểm</span>
+      </Link>
+
+      <Link
+        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-label-md font-semibold transition-all ${
+          isPollsActive
+            ? "bg-primary text-white font-bold shadow-xs"
+            : "text-on-surface-variant hover:bg-surface-container-high"
+        }`}
+        href="/admin/polls"
+        title="Quản trị: Quản lý chương trình bình chọn"
+      >
+        <MaterialIcon className="text-[18px]" name="how_to_vote" />
+        <span>Quản lý vote</span>
       </Link>
 
       <Link
