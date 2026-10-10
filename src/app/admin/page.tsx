@@ -36,6 +36,7 @@ export default async function AdminDashboardPage() {
     { count: activePollsCount },
     { count: totalActivitiesCount },
     { count: openActivitiesCount },
+    { count: pendingFeedbackCount },
   ] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
@@ -59,6 +60,10 @@ export default async function AdminDashboardPage() {
       .from(CDILV_TABLE.activities)
       .select("id", { count: "exact", head: true })
       .eq("is_registration_open", true),
+    supabase
+      .from(CDILV_TABLE.feedbacks)
+      .select("id", { count: "exact", head: true })
+      .is("admin_reply", null),
   ]);
 
   const initial = (me.full_name || user.email || "A").slice(0, 1).toUpperCase();
@@ -303,6 +308,48 @@ export default async function AdminDashboardPage() {
 
             <div className="mt-4 flex items-center justify-between border-t border-dusty-border/60 pt-3 text-label-sm font-bold text-primary">
               <span>Vào quản lý hoạt động</span>
+              <MaterialIcon
+                className="text-[18px] transition-transform group-hover:translate-x-1"
+                name="arrow_forward"
+              />
+            </div>
+          </Link>
+
+          {/* Card Hòm thư Góp ý */}
+          <Link
+            href="/feedback"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-blue-300/80 bg-gradient-to-br from-blue-50/60 via-white to-white p-5 shadow-xs transition-all hover:border-blue-400 hover:shadow-md"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#173A67] text-white shadow-xs">
+                  <MaterialIcon className="text-[22px]" name="rate_review" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {(pendingFeedbackCount ?? 0) > 0 ? (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-label-xs font-bold text-amber-800">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      {pendingFeedbackCount} chờ phản hồi
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-label-xs font-bold text-emerald-800">
+                      ✓ Đã xử lý hết
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <h3 className="mt-3.5 text-title-md font-bold text-on-surface transition-colors group-hover:text-primary">
+                Hòm thư Góp ý & Nguyện vọng
+              </h3>
+
+              <p className="mt-1 text-body-sm text-on-surface-variant leading-relaxed">
+                Tiếp nhận tâm tư, ý kiến đóng góp và sáng kiến của đoàn viên. Chủ tịch và Ban Chấp hành trực tiếp phản hồi giải quyết.
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-blue-200/60 pt-3 text-label-sm font-bold text-primary">
+              <span>Vào xem và phản hồi</span>
               <MaterialIcon
                 className="text-[18px] transition-transform group-hover:translate-x-1"
                 name="arrow_forward"

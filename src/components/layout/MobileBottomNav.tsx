@@ -34,11 +34,12 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
       ];
 
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-50 flex h-16 items-center justify-around border-t border-outline-variant/70 bg-white/95 backdrop-blur-md px-1 shadow-[0_-3px_12px_rgba(0,0,0,0.06)] md:hidden">
+    <div className="fixed right-0 bottom-0 left-0 z-50 flex h-16 items-center justify-around border-t border-outline-variant/70 bg-white/95 backdrop-blur-md px-0.5 shadow-[0_-3px_12px_rgba(0,0,0,0.06)] md:hidden">
       {items.map((item) => {
         const isActive =
           item.href === current ||
-          (item.href === "/admin" && pathname.startsWith("/admin"));
+          (item.href === "/admin" && pathname.startsWith("/admin")) ||
+          (item.href === "/feedback" && pathname.startsWith("/feedback"));
 
         return (
           <Link
@@ -55,14 +56,14 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
             }}
           >
             <div
-              className={`flex items-center justify-center rounded-full px-3 py-0.5 transition-all ${
+              className={`flex items-center justify-center rounded-full px-2 py-0.5 transition-all ${
                 isActive ? "bg-amber-100 text-amber-900" : ""
               }`}
             >
-              <MaterialIcon className="text-[21px]" filled={isActive} name={item.icon} />
+              <MaterialIcon className="text-[20px]" filled={isActive} name={item.icon} />
             </div>
             <span
-              className={`text-[10px] tracking-tight mt-0.5 ${
+              className={`text-[9.5px] tracking-tight mt-0.5 whitespace-nowrap ${
                 isActive ? "font-extrabold text-[#173A67]" : "font-medium text-slate-600"
               }`}
             >
