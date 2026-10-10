@@ -84,6 +84,20 @@ create table if not exists public.cdilv_posts (
   published_at timestamptz not null default now()
 );
 
+create table if not exists public.cdilv_post_comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.cdilv_posts(id) on delete cascade,
+  user_id uuid not null references public.cdilv_profiles(id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists cdilv_post_comments_post_idx
+  on public.cdilv_post_comments (post_id, created_at desc);
+
+create index if not exists cdilv_post_comments_user_post_idx
+  on public.cdilv_post_comments (post_id, user_id);
+
 create table if not exists public.cdilv_activities (
   id uuid primary key default gen_random_uuid(),
   title text not null,

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/posts/PostCard";
+import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { getPostById, getRelatedPosts } from "@/lib/data/posts";
+import { getPostById, getPostComments, getRelatedPosts } from "@/lib/data/posts";
 
 export const revalidate = 60;
 
@@ -15,7 +16,11 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const post = await getPostById(id);
   if (!post) notFound();
 
-  const related = await getRelatedPosts(post.id, 6);
+  const [related, comments] = await Promise.all([
+    getRelatedPosts(post.id, 6),
+    getPostComments(post.id),
+  ]);
+
   const publishedLabel = new Date(post.publishedAt).toLocaleString("vi-VN", {
     dateStyle: "long",
     timeStyle: "short",
@@ -77,6 +82,12 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
           </Link>
         </div>
       </article>
+
+      <PostCommentsSection
+        postId={post.id}
+        postTitle={post.title}
+        initialComments={comments}
+      />
 
       {related.length > 0 ? (
         <section className="space-y-5 border-t border-dusty-border/70 pt-8">

@@ -104,3 +104,65 @@ export async function getRelatedPosts(
   }
   return (data ?? []).map(mapRow);
 }
+
+export type PostComment = {
+  id: string;
+  postId: string;
+  userId: string;
+  authorName: string;
+  authorAvatar: string | null;
+  authorRole: string;
+  authorDepartment: string | null;
+  authorCode: string | null;
+  content: string;
+  createdAt: string;
+  timeAgo: string;
+};
+
+export async function getPostComments(postId: string): Promise<PostComment[]> {
+  const db = createPublicClient();
+  const { data, error } = await db
+    .from(CDILV_TABLE.postComments)
+    .select(`
+      id,
+      post_id,
+      user_id,
+      content,
+      created_at,
+      cdilv_profiles (
+        id,
+        full_name,
+        avatar_url,
+        role,
+        department,
+        employee_code
+      )
+    `)
+    .eq("post_id", postId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[posts] getPostComments error:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => {
+    const prof = Array.isArray(row.cdilv_profiles)
+      ? row.cdilv_profiles[0]
+      : row.cdilv_profiles;
+    return {
+      id: row.id,
+      postId: row.post_id,
+      userId: row.user_id,
+      authorName: prof?.full_name || "Đoàn viên",
+      authorAvatar: prof?.avatar_url || null,
+      authorRole: prof?.role || "user",
+      authorDepartment: prof?.department || null,
+      authorCode: prof?.employee_code || null,
+      content: row.content,
+      createdAt: row.created_at,
+      timeAgo: formatTimeAgo(row.created_at),
+    };
+  });
+}
+
