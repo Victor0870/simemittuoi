@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -18,6 +18,11 @@ export function PollAdminToolbar({ poll }: Props) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [isActive, setIsActive] = useState(poll.isActive);
+
+  useEffect(() => {
+    setIsActive(poll.isActive);
+  }, [poll.isActive]);
 
   // Only show if user is admin
   if (loading || profile?.role !== "admin" || profile?.approval_status !== "approved") {
@@ -73,15 +78,19 @@ export function PollAdminToolbar({ poll }: Props) {
   async function handleToggleActive() {
     setIsBusy(true);
     setMessage(null);
+    const nextActive = !isActive;
+    setIsActive(nextActive); // Optimistic UI update
     try {
-      const nextActive = !poll.isActive;
       const res = await fetch("/api/polls/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pollId: poll.id, isActive: nextActive }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Thao tác thất bại");
+      if (!res.ok) {
+        setIsActive(!nextActive); // Revert on error
+        throw new Error(data.error || "Thao tác thất bại");
+      }
       setMessage(
         nextActive
           ? "Đã kích hoạt (Active) chương trình! Người dùng có thể nhìn thấy và bình chọn."
@@ -117,13 +126,13 @@ export function PollAdminToolbar({ poll }: Props) {
             {/* BUTTON TOGGLE ACTIVE / INACTIVE */}
             <button
               className={`flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50 ${
-                poll.isActive
+                isActive
                   ? "bg-emerald-500 hover:bg-emerald-600 text-white"
                   : "bg-slate-300 hover:bg-slate-200 text-slate-900"
               }`}
               disabled={isBusy}
               title={
-                poll.isActive
+                isActive
                   ? "Đang Active (Hiện). Bấm để chuyển sang Inactive (Tạm ẩn)"
                   : "Đang Inactive (Tạm ẩn). Bấm để chuyển sang Active (Kích hoạt)"
               }
@@ -132,10 +141,10 @@ export function PollAdminToolbar({ poll }: Props) {
             >
               <span
                 className={`h-2 w-2 rounded-full ${
-                  poll.isActive ? "bg-white animate-pulse" : "bg-slate-600"
+                  isActive ? "bg-white animate-pulse" : "bg-slate-600"
                 }`}
               />
-              <span>{poll.isActive ? "Active" : "Inactive"}</span>
+              <span>{isActive ? "Active" : "Inactive"}</span>
             </button>
 
             {/* BUTTON CÀI ĐẶT & CHỈNH SỬA CUỘC THI */}
@@ -182,7 +191,7 @@ export function PollAdminToolbar({ poll }: Props) {
           </div>
         </div>
 
-        {!poll.isActive ? (
+        {!isActive ? (
           <div className="flex items-center gap-2 rounded-xl bg-amber-500/25 border border-amber-400/50 px-3 py-2 text-xs font-semibold text-amber-200">
             <MaterialIcon className="text-[18px] text-amber-300 shrink-0" name="visibility_off" />
             <span>

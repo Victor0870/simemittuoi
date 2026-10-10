@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollSummary } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
@@ -14,6 +14,11 @@ type Props = {
 
 export function AdminPollsManager({ polls, currentAdminName }: Props) {
   const router = useRouter();
+  const [pollList, setPollList] = useState<PollSummary[]>(polls);
+
+  useEffect(() => {
+    setPollList(polls);
+  }, [polls]);
 
   // Modal State
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -106,15 +111,25 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
     setBusyPollId(pollId);
     setSuccessMessage(null);
     setErrorMessage(null);
+    const nextActive = !currentActive;
+    // Optimistic UI update
+    setPollList((prev) =>
+      prev.map((p) => (p.id === pollId ? { ...p, isActive: nextActive } : p))
+    );
     try {
-      const nextActive = !currentActive;
       const res = await fetch("/api/polls/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pollId, isActive: nextActive }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Thao tác thất bại");
+      if (!res.ok) {
+        // Revert on error
+        setPollList((prev) =>
+          prev.map((p) => (p.id === pollId ? { ...p, isActive: currentActive } : p))
+        );
+        throw new Error(data.error || "Thao tác thất bại");
+      }
       setSuccessMessage(
         nextActive
           ? "Đã kích hoạt (Active) chương trình! Người dùng có thể nhìn thấy và bình chọn."
@@ -221,7 +236,7 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-title-lg font-bold text-[#173A67]">
-            Các Chương Trình Bình Chọn ({polls.length})
+            Các Chương Trình Bình Chọn ({pollList.length})
           </h2>
           <span className="text-xs text-on-surface-variant font-medium">
             Đăng nhập bởi: <strong>{currentAdminName}</strong>
@@ -242,7 +257,7 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
               </tr>
             </thead>
             <tbody>
-              {polls.map((p) => {
+              {pollList.map((p) => {
                 const isOpen = p.status === "open";
                 const isBusy = busyPollId === p.id;
                 const isLoadingEdit = loadingPollId === p.id;

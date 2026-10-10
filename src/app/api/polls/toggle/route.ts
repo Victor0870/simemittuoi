@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -51,18 +52,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
     }
 
-    const { error } = await publicDb
+    const { data: updatedRows, error } = await publicDb
       .from(CDILV_TABLE.polls)
       .update(updatePayload)
-      .eq("id", pollId);
+      .eq("id", pollId)
+      .select("id, is_active, status");
 
     if (error) throw error;
+    if (!updatedRows || updatedRows.length === 0) {
+      throw new Error("Không thể cập nhật chương trình (0 dòng được cập nhật).");
+    }
+
+    // Purge server caches
+    try {
+      revalidatePath("/polls");
+      revalidatePath(`/polls/${pollId}`);
+      revalidatePath("/admin/polls");
+      revalidatePath("/");
+    } catch {
+      // ignore
+    }
+
+    const updated = updatedRows[0];
 
     return NextResponse.json({
       success: true,
-      ...updatePayload,
+      ...updated,
       message: typeof isActive === "boolean"
-        ? (isActive ? "Đã kích hoạt chương trình (Active)!" : "Đã chuyển chương trình sang Inactive (Tạm ẩn)!")
+        ? (updated.is_active ? "Đã kích hoạt chương trình (Active)!" : "Đã chuyển chương trình sang Inactive (Tạm ẩn)!")
         : "Đã cập nhật trạng thái!",
     });
   } catch (err: any) {
