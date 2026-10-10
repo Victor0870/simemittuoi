@@ -52,15 +52,15 @@ export function PollPodiumResults({ poll }: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-amber-300/80 bg-surface-container-lowest shadow-sm">
       {/* Header Banner */}
-      <div className="border-b border-amber-200/80 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="border-b border-amber-200/80 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex items-center gap-2">
-            <MaterialIcon className="text-[26px] text-amber-600" name="emoji_events" />
+            <MaterialIcon className="text-[22px] sm:text-[26px] text-amber-600 shrink-0" name="emoji_events" />
             <div>
-              <h2 className="text-title-lg font-black text-[#173A67]">
+              <h2 className="text-base sm:text-title-lg font-black text-[#173A67] leading-snug">
                 {isClosed ? "BẢNG KẾT QUẢ CHUNG CUỘC" : "BẢNG XẾP HẠNG THỨ HẠNG TRỰC TIẾP"}
               </h2>
-              <p className="text-label-sm text-on-surface-variant">
+              <p className="text-xs sm:text-label-sm text-on-surface-variant">
                 {isClosed
                   ? "Chương trình đã kết thúc – Điểm số và các giải thưởng chính thức"
                   : "Cập nhật theo lượt bình chọn mới nhất (Điểm chi tiết sẽ công bố khi đóng bình chọn)"}
@@ -69,88 +69,88 @@ export function PollPodiumResults({ poll }: Props) {
           </div>
 
           <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold ${
               isClosed
                 ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
                 : "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
             }`}
           >
-            <span className={`h-2 w-2 rounded-full ${isClosed ? "bg-emerald-600" : "bg-amber-600"}`} />
+            <span className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${isClosed ? "bg-emerald-600" : "bg-amber-600"}`} />
             {isClosed ? "Đã có kết quả chính thức" : "Đang bình chọn realtime"}
           </span>
         </div>
       </div>
 
-      <div className="p-6 space-y-8">
+      <div className="p-3 sm:p-6 space-y-5 sm:space-y-8">
         {/* Podium: Bục trao giải 3 vị trí */}
-        <div className="grid grid-cols-3 items-end gap-2 sm:gap-6 pt-6 pb-2 text-center">
+        <div className="grid grid-cols-3 items-end gap-1.5 sm:gap-4 md:gap-6 pt-3 sm:pt-6 pb-1 text-center">
           {/* Hạng 2 (Bên trái) */}
           <div className="flex flex-col items-center">
             {top2 ? (
-              <div className="w-full space-y-2">
-                <div className="relative mx-auto h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-2xl border-2 border-slate-300 bg-slate-100 shadow-xs">
+              <div className="w-full space-y-1 sm:space-y-2">
+                <div className="relative mx-auto h-14 w-14 sm:h-20 sm:w-20 overflow-hidden rounded-xl sm:rounded-2xl border-2 border-slate-300 bg-slate-100 shadow-xs">
                   {top2.imageUrls[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img alt="" className="h-full w-full object-cover" src={top2.imageUrls[0]} />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center font-bold text-slate-500">
+                    <div className="flex h-full w-full items-center justify-center font-bold text-slate-500 text-xs sm:text-base">
                       #2
                     </div>
                   )}
-                  <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-400 text-xs font-black text-white shadow-xs">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-slate-400 text-[10px] sm:text-xs font-black text-white shadow-xs">
                     2
                   </span>
                 </div>
-                <h4 className="line-clamp-2 text-label-md font-bold text-[#173A67]">{top2.title}</h4>
+                <h4 className="line-clamp-1 sm:line-clamp-2 text-xs sm:text-label-md font-bold text-[#173A67] leading-tight">{top2.title}</h4>
                 {top2.members.length > 0 ? (
-                  <p className="line-clamp-1 text-label-xs text-on-surface-variant">
+                  <p className="line-clamp-1 text-[10px] sm:text-label-xs text-on-surface-variant">
                     {top2.members.map((m) => m.fullName).join(", ")}
                   </p>
                 ) : null}
                 {isClosed ? (
-                  <span className="inline-block rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-extrabold text-slate-800">
+                  <span className="inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-slate-800">
                     {top2.voteCount} phiếu
                   </span>
                 ) : null}
               </div>
             ) : null}
-            <div className="mt-3 flex h-24 sm:h-28 w-full items-center justify-center rounded-t-2xl border-t-4 border-slate-400 bg-gradient-to-t from-slate-200 to-slate-100 font-black text-slate-700 text-title-lg">
+            <div className="mt-2 sm:mt-3 flex h-18 sm:h-28 w-full items-center justify-center rounded-t-xl sm:rounded-t-2xl border-t-4 border-slate-400 bg-gradient-to-t from-slate-200 to-slate-100 font-black text-slate-700 text-xs sm:text-base md:text-title-lg tracking-tight">
               GIẢI NHÌ
             </div>
           </div>
 
           {/* Hạng 1 (Chính giữa - Cao nhất) */}
-          <div className="flex flex-col items-center -mt-6">
-            <MaterialIcon className="text-[36px] text-amber-500 mb-1 animate-bounce" name="crown" />
+          <div className="flex flex-col items-center -mt-4 sm:-mt-6">
+            <MaterialIcon className="text-[28px] sm:text-[36px] text-amber-500 mb-0.5 sm:mb-1 animate-bounce" name="crown" />
             {top1 ? (
-              <div className="w-full space-y-2">
-                <div className="relative mx-auto h-20 w-20 sm:h-24 sm:w-24 overflow-hidden rounded-2xl border-3 border-amber-400 bg-amber-50 shadow-md">
+              <div className="w-full space-y-1 sm:space-y-2">
+                <div className="relative mx-auto h-18 w-18 sm:h-24 sm:w-24 overflow-hidden rounded-xl sm:rounded-2xl border-2 sm:border-3 border-amber-400 bg-amber-50 shadow-md">
                   {top1.imageUrls[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img alt="" className="h-full w-full object-cover" src={top1.imageUrls[0]} />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center font-bold text-amber-700">
+                    <div className="flex h-full w-full items-center justify-center font-bold text-amber-700 text-sm sm:text-lg">
                       #1
                     </div>
                   )}
-                  <span className="absolute -top-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-sm font-black text-white shadow-md">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full bg-amber-500 text-[10px] sm:text-sm font-black text-white shadow-md">
                     1
                   </span>
                 </div>
-                <h4 className="line-clamp-2 text-title-sm font-extrabold text-amber-950">{top1.title}</h4>
+                <h4 className="line-clamp-1 sm:line-clamp-2 text-xs sm:text-title-sm font-extrabold text-amber-950 leading-tight">{top1.title}</h4>
                 {top1.members.length > 0 ? (
-                  <p className="line-clamp-1 text-label-xs font-semibold text-amber-800">
+                  <p className="line-clamp-1 text-[10px] sm:text-label-xs font-semibold text-amber-800">
                     {top1.members.map((m) => m.fullName).join(", ")}
                   </p>
                 ) : null}
                 {isClosed ? (
-                  <span className="inline-block rounded-full bg-amber-400 px-3 py-1 text-xs font-black text-amber-950 shadow-2xs">
+                  <span className="inline-block rounded-full bg-amber-400 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-amber-950 shadow-2xs">
                     {top1.voteCount} phiếu (Vô địch)
                   </span>
                 ) : null}
               </div>
             ) : null}
-            <div className="mt-3 flex h-32 sm:h-36 w-full items-center justify-center rounded-t-2xl border-t-4 border-amber-500 bg-gradient-to-t from-amber-300 to-amber-200 font-black text-amber-950 text-title-xl shadow-xs">
+            <div className="mt-2 sm:mt-3 flex h-26 sm:h-36 w-full items-center justify-center rounded-t-xl sm:rounded-t-2xl border-t-4 border-amber-500 bg-gradient-to-t from-amber-300 to-amber-200 font-black text-amber-950 text-sm sm:text-lg md:text-title-xl shadow-xs tracking-tight">
               GIẢI NHẤT
             </div>
           </div>
@@ -158,34 +158,34 @@ export function PollPodiumResults({ poll }: Props) {
           {/* Hạng 3 (Bên phải) */}
           <div className="flex flex-col items-center">
             {top3 ? (
-              <div className="w-full space-y-2">
-                <div className="relative mx-auto h-16 w-16 sm:h-20 sm:w-20 overflow-hidden rounded-2xl border-2 border-amber-700/40 bg-amber-100/50 shadow-xs">
+              <div className="w-full space-y-1 sm:space-y-2">
+                <div className="relative mx-auto h-14 w-14 sm:h-20 sm:w-20 overflow-hidden rounded-xl sm:rounded-2xl border-2 border-amber-700/40 bg-amber-100/50 shadow-xs">
                   {top3.imageUrls[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img alt="" className="h-full w-full object-cover" src={top3.imageUrls[0]} />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center font-bold text-amber-800">
+                    <div className="flex h-full w-full items-center justify-center font-bold text-amber-800 text-xs sm:text-base">
                       #3
                     </div>
                   )}
-                  <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-700 text-xs font-black text-white shadow-xs">
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-700 text-[10px] sm:text-xs font-black text-white shadow-xs">
                     3
                   </span>
                 </div>
-                <h4 className="line-clamp-2 text-label-md font-bold text-[#173A67]">{top3.title}</h4>
+                <h4 className="line-clamp-1 sm:line-clamp-2 text-xs sm:text-label-md font-bold text-[#173A67] leading-tight">{top3.title}</h4>
                 {top3.members.length > 0 ? (
-                  <p className="line-clamp-1 text-label-xs text-on-surface-variant">
+                  <p className="line-clamp-1 text-[10px] sm:text-label-xs text-on-surface-variant">
                     {top3.members.map((m) => m.fullName).join(", ")}
                   </p>
                 ) : null}
                 {isClosed ? (
-                  <span className="inline-block rounded-full bg-amber-200 px-2.5 py-0.5 text-xs font-extrabold text-amber-900">
+                  <span className="inline-block rounded-full bg-amber-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-amber-900">
                     {top3.voteCount} phiếu
                   </span>
                 ) : null}
               </div>
             ) : null}
-            <div className="mt-3 flex h-20 sm:h-24 w-full items-center justify-center rounded-t-2xl border-t-4 border-amber-700 bg-gradient-to-t from-amber-200/80 to-amber-100 font-black text-amber-900 text-title-lg">
+            <div className="mt-2 sm:mt-3 flex h-16 sm:h-24 w-full items-center justify-center rounded-t-xl sm:rounded-t-2xl border-t-4 border-amber-700 bg-gradient-to-t from-amber-200/80 to-amber-100 font-black text-amber-900 text-xs sm:text-base md:text-title-lg tracking-tight">
               GIẢI BA
             </div>
           </div>

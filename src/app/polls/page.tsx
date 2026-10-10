@@ -12,27 +12,27 @@ export default async function PollsPage() {
   const closedPolls = polls.filter((p) => p.status === "closed");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-6">
+      <header className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 border-b border-outline-variant pb-4 sm:pb-6">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="rounded-xl bg-amber-500/15 p-2 text-amber-700">
-              <MaterialIcon className="text-[28px]" name="how_to_vote" />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="rounded-xl bg-amber-500/15 p-1.5 sm:p-2 text-amber-700">
+              <MaterialIcon className="text-[22px] sm:text-[28px]" name="how_to_vote" />
             </div>
             <div>
-              <h1 className="text-headline-lg font-extrabold tracking-tight text-[#173A67]">
+              <h1 className="text-title-lg sm:text-headline-lg font-extrabold tracking-tight text-[#173A67]">
                 Chương Trình Bình Chọn
               </h1>
-              <p className="text-body-md text-on-surface-variant">
-                Bình chọn các cuộc thi, phong trào và dự đoán kết quả nhận điểm thưởng thi đua
+              <p className="text-xs sm:text-body-md text-on-surface-variant">
+                Bình chọn các cuộc thi, phong trào và dự đoán kết quả nhận điểm thưởng
               </p>
             </div>
           </div>
         </div>
 
         <Link
-          className="rounded-xl border border-outline-variant bg-white px-4 py-2 text-label-md font-bold text-[#173A67] hover:bg-surface-container-high transition"
+          className="rounded-xl border border-outline-variant bg-white px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-label-md font-bold text-[#173A67] hover:bg-surface-container-high transition"
           href="/"
         >
           ← Về trang chủ

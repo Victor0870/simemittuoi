@@ -183,10 +183,10 @@ export function PollVotingSection({ poll }: Props) {
             >
               {/* Photo Gallery (up to 3 photos) */}
               {poll.contentType === "image" && opt.imageUrls.length > 0 ? (
-                <div className="space-y-1.5 p-3 pb-0">
+                <div className="space-y-1.5 p-2.5 sm:p-3 pb-0">
                   {/* Main large image */}
                   <div
-                    className="group relative h-56 w-full overflow-hidden rounded-xl bg-surface-container cursor-pointer"
+                    className="group relative h-44 sm:h-56 w-full overflow-hidden rounded-xl bg-surface-container cursor-pointer"
                     onClick={() =>
                       setZoomedImage({ url: opt.imageUrls[0], title: opt.title })
                     }
@@ -198,8 +198,8 @@ export function PollVotingSection({ poll }: Props) {
                       src={opt.imageUrls[0]}
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-label-sm font-bold text-white backdrop-blur-xs">
-                        <MaterialIcon className="text-[18px]" name="zoom_in" />
+                      <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs sm:text-label-sm font-bold text-white backdrop-blur-xs">
+                        <MaterialIcon className="text-[16px] sm:text-[18px]" name="zoom_in" />
                         Xem phóng to
                       </span>
                     </div>
@@ -211,7 +211,7 @@ export function PollVotingSection({ poll }: Props) {
                       {opt.imageUrls.slice(1, 3).map((img, i) => (
                         <div
                           key={i}
-                          className="group relative h-24 overflow-hidden rounded-lg bg-surface-container cursor-pointer"
+                          className="group relative h-20 sm:h-24 overflow-hidden rounded-lg bg-surface-container cursor-pointer"
                           onClick={() =>
                             setZoomedImage({
                               url: img,
@@ -226,7 +226,7 @@ export function PollVotingSection({ poll }: Props) {
                             src={img}
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MaterialIcon className="text-white text-[20px]" name="zoom_in" />
+                            <MaterialIcon className="text-white text-[18px] sm:text-[20px]" name="zoom_in" />
                           </div>
                         </div>
                       ))}
@@ -236,12 +236,12 @@ export function PollVotingSection({ poll }: Props) {
               ) : null}
 
               {/* Card Body */}
-              <div className="flex flex-1 flex-col p-5">
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <h4 className="text-title-md font-extrabold text-[#173A67] leading-snug">
+              <div className="flex flex-1 flex-col p-3.5 sm:p-5">
+                <div className="mb-2 flex items-start justify-between gap-2.5">
+                  <h4 className="text-base sm:text-title-md font-extrabold text-[#173A67] leading-snug">
                     {opt.title}
                   </h4>
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-xs font-bold text-on-surface-variant">
+                  <span className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-[11px] sm:text-xs font-bold text-on-surface-variant">
                     #{opt.orderNum}
                   </span>
                 </div>
@@ -298,21 +298,21 @@ export function PollVotingSection({ poll }: Props) {
       {/* Submission Form (Prediction & Final Action) */}
       {!isClosed ? (
         <form
-          className="mt-8 space-y-6 rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-6 sm:p-8 shadow-sm"
+          className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-4 sm:p-8 shadow-xs"
           onSubmit={handleSubmitVote}
         >
           <div className="flex items-center gap-2 text-amber-950">
-            <MaterialIcon className="text-[26px] text-amber-600" name="how_to_vote" />
-            <h3 className="text-title-lg font-black">Xác Nhận & Gửi Phiếu Bình Chọn</h3>
+            <MaterialIcon className="text-[22px] sm:text-[26px] text-amber-600 shrink-0" name="how_to_vote" />
+            <h3 className="text-base sm:text-title-lg font-black">Xác Nhận & Gửi Phiếu Bình Chọn</h3>
           </div>
 
-          <p className="text-body-md text-amber-900">
+          <p className="text-sm sm:text-body-md text-amber-900">
             Bạn đang chọn <strong>{selectedOptionIds.length}</strong> / {maxVotes} tác phẩm.
           </p>
 
           {/* Prediction Question Section */}
           {poll.hasPrediction ? (
-            <div className="space-y-4 rounded-xl border border-amber-300 bg-white p-5 shadow-2xs">
+            <div className="space-y-3 sm:space-y-4 rounded-xl border border-amber-300 bg-white p-3.5 sm:p-5 shadow-2xs">
               <div className="flex items-start gap-3">
                 <div className="rounded-xl bg-amber-500/10 p-2 text-amber-700 shrink-0">
                   <MaterialIcon className="text-[22px]" name="help" />

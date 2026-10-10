@@ -72,62 +72,63 @@ export function PollAdminToolbar({ poll }: Props) {
 
   return (
     <>
-      <div className="rounded-2xl border-2 border-[#173A67] bg-linear-to-r from-[#173A67] to-[#27496D] p-4 text-white shadow-md space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400 text-slate-900 font-bold">
-              <MaterialIcon className="text-[20px]" name="shield_person" />
+      <div className="rounded-2xl border-2 border-[#173A67] bg-linear-to-r from-[#173A67] to-[#27496D] p-3 sm:p-4 text-white shadow-md space-y-2.5 sm:space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <span className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-slate-900 font-bold">
+              <MaterialIcon className="text-[18px] sm:text-[20px]" name="shield_person" />
             </span>
             <div>
-              <p className="text-xs uppercase tracking-wider font-extrabold text-amber-300">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wider font-extrabold text-amber-300">
                 Chế độ Quản Trị Viên
               </p>
-              <p className="text-sm font-semibold text-white/90">
-                Bạn có toàn quyền cấu hình, up ảnh, nhập thành viên và chốt kết quả cuộc thi này
+              <p className="text-xs sm:text-sm font-semibold text-white/90 line-clamp-1 sm:line-clamp-none">
+                Cấu hình, tải ảnh lên, nhập thành viên và chốt giải cuộc thi
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
             {/* BUTTON CÀI ĐẶT & CHỈNH SỬA CUỘC THI */}
             <button
-              className="flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-xs font-black text-slate-900 shadow-xs hover:bg-amber-300 transition cursor-pointer"
+              className="flex flex-1 sm:flex-none items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-black text-slate-900 shadow-xs hover:bg-amber-300 transition cursor-pointer"
               type="button"
               onClick={() => setIsEditorOpen(true)}
             >
-              <MaterialIcon className="text-[18px]" name="tune" />
-              <span>⚙️ Cài Đặt Cuộc Thi (Up ảnh, sửa tác phẩm, đoàn viên)</span>
+              <MaterialIcon className="text-[16px] sm:text-[18px]" name="tune" />
+              <span>⚙️ Cài đặt cuộc thi</span>
+              <span className="hidden md:inline">(Up ảnh, thành viên)</span>
             </button>
 
             {/* BUTTON ĐÓNG/MỞ LẠI */}
             {isOpen ? (
               <button
-                className="flex items-center gap-1.5 rounded-xl bg-rose-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-1 rounded-xl bg-rose-500 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition cursor-pointer disabled:opacity-50"
                 disabled={isBusy}
                 type="button"
                 onClick={handleClosePoll}
               >
-                <MaterialIcon className="text-[16px]" name="emoji_events" />
-                <span>{isBusy ? "Đang xử lý..." : "Đóng & Trao giải"}</span>
+                <MaterialIcon className="text-[15px] sm:text-[16px]" name="emoji_events" />
+                <span>{isBusy ? "Đang tính..." : "Đóng & Trao giải"}</span>
               </button>
             ) : (
               <button
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-emerald-600 transition cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-1 rounded-xl bg-emerald-500 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-emerald-600 transition cursor-pointer disabled:opacity-50"
                 disabled={isBusy}
                 type="button"
                 onClick={handleReopenPoll}
               >
-                <MaterialIcon className="text-[16px]" name="refresh" />
-                <span>{isBusy ? "Đang mở..." : "Mở lại bình chọn"}</span>
+                <MaterialIcon className="text-[15px] sm:text-[16px]" name="refresh" />
+                <span>{isBusy ? "Đang mở..." : "Mở lại"}</span>
               </button>
             )}
 
             <Link
-              className="flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/20 transition"
+              className="flex items-center gap-0.5 rounded-xl bg-white/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold text-white hover:bg-white/20 transition"
               href="/admin/polls"
             >
-              <span>Tất cả polls</span>
-              <MaterialIcon className="text-[14px]" name="arrow_forward" />
+              <span>Tất cả</span>
+              <MaterialIcon className="text-[13px] sm:text-[14px]" name="arrow_forward" />
             </Link>
           </div>
         </div>

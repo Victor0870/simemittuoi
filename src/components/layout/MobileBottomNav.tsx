@@ -31,18 +31,16 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
     : MOBILE_NAV_ITEMS;
 
   return (
-    <div className="fixed right-0 bottom-0 left-0 z-50 flex h-16 items-center justify-around border-t border-outline-variant bg-surface-container-lowest shadow-lg md:hidden">
+    <div className="fixed right-0 bottom-0 left-0 z-50 flex h-16 items-center justify-around border-t border-outline-variant/70 bg-white/95 backdrop-blur-md px-1 shadow-[0_-3px_12px_rgba(0,0,0,0.06)] md:hidden">
       {items.map((item) => {
         const isActive = item.href === current;
 
         return (
           <Link
             key={item.href}
-            className={`flex flex-col items-center gap-1 rounded-lg px-2.5 py-1 transition-colors ${
-              isActive
-                ? "bg-tertiary-container text-on-tertiary-container"
-                : "text-on-surface-variant"
-            } ${pendingHref === item.href ? "opacity-80" : ""}`}
+            className={`flex flex-1 flex-col items-center justify-center py-1 transition-all ${
+              isActive ? "text-[#173A67]" : "text-slate-500 hover:text-slate-700"
+            } ${pendingHref === item.href ? "opacity-70 scale-95" : ""}`}
             href={item.href}
             prefetch
             onClick={() => {
@@ -51,8 +49,18 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
               startTransition(() => undefined);
             }}
           >
-            <MaterialIcon filled={isActive} name={item.icon} />
-            <span className={`text-[10px] ${isActive ? "font-bold" : ""}`}>
+            <div
+              className={`flex items-center justify-center rounded-full px-3 py-0.5 transition-all ${
+                isActive ? "bg-amber-100 text-amber-900" : ""
+              }`}
+            >
+              <MaterialIcon className="text-[21px]" filled={isActive} name={item.icon} />
+            </div>
+            <span
+              className={`text-[10px] tracking-tight mt-0.5 ${
+                isActive ? "font-extrabold text-[#173A67]" : "font-medium text-slate-600"
+              }`}
+            >
               {item.label}
             </span>
           </Link>

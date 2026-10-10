@@ -36,41 +36,41 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
       </nav>
 
       <article className="overflow-hidden rounded-2xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm">
-        <div className="border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/80 via-white to-white px-6 py-8 sm:px-10">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-white px-2.5 py-0.5 text-label-sm font-bold text-primary">
-              <MaterialIcon className="text-[14px]" name="article" />
+        <div className="border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/80 via-white to-white px-4 py-6 sm:px-10 sm:py-8">
+          <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
+            <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-white px-2.5 py-0.5 text-label-xs sm:text-label-sm font-bold text-primary">
+              <MaterialIcon className="text-[13px] sm:text-[14px]" name="article" />
               {post.tag}
             </span>
-            <span className="inline-flex items-center gap-1 text-body-sm text-on-surface-variant">
-              <MaterialIcon className="text-[16px]" name="schedule" />
+            <span className="inline-flex items-center gap-1 text-xs sm:text-body-sm text-on-surface-variant">
+              <MaterialIcon className="text-[14px] sm:text-[16px]" name="schedule" />
               {publishedLabel}
             </span>
-            <span className="text-body-sm text-on-surface-variant">
+            <span className="text-xs sm:text-body-sm text-on-surface-variant">
               · {post.timeAgo}
             </span>
           </div>
-          <h1 className="max-w-3xl text-headline-lg font-extrabold tracking-tight text-on-surface sm:text-headline-xl">
+          <h1 className="max-w-3xl text-xl sm:text-headline-lg md:text-headline-xl font-extrabold tracking-tight text-on-surface leading-tight">
             {post.title}
           </h1>
         </div>
 
-        <div className="px-6 py-8 sm:px-10">
-          <div className="max-w-3xl whitespace-pre-wrap text-body-lg leading-relaxed text-on-surface">
+        <div className="px-4 py-6 sm:px-10 sm:py-8">
+          <div className="max-w-3xl whitespace-pre-wrap text-body-md sm:text-body-lg leading-relaxed text-on-surface">
             {post.content}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dusty-border/70 px-6 py-5 sm:px-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dusty-border/70 px-4 py-4 sm:px-10 sm:py-5">
           <Link
-            className="inline-flex items-center gap-1 text-label-md font-semibold text-primary hover:text-dusty-dark"
+            className="inline-flex items-center gap-1 text-label-sm sm:text-label-md font-semibold text-primary hover:text-dusty-dark"
             href="/posts"
           >
-            <MaterialIcon className="text-[18px]" name="arrow_back" />
+            <MaterialIcon className="text-[16px] sm:text-[18px]" name="arrow_back" />
             Tất cả bài viết
           </Link>
           <Link
-            className="inline-flex items-center gap-1 rounded-xl border border-primary px-4 py-2 text-label-md font-bold text-primary transition-colors hover:bg-primary hover:text-white"
+            className="inline-flex items-center gap-1 rounded-xl border border-primary px-3.5 py-1.5 sm:px-4 sm:py-2 text-label-sm sm:text-label-md font-bold text-primary transition-colors hover:bg-primary hover:text-white"
             href="/"
           >
             Về trang chủ

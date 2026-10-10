@@ -39,64 +39,64 @@ export default async function PollDetailPage({ params }: Props) {
       </nav>
 
       {/* Main Header Card */}
-      <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 sm:p-8 shadow-xs space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs space-y-3 sm:space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold ${
                 !isClosed
                   ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
                   : "bg-surface-container-high text-on-surface-variant"
               }`}
             >
               <span
-                className={`h-2 w-2 rounded-full ${
+                className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${
                   !isClosed ? "bg-emerald-600 animate-pulse" : "bg-slate-400"
                 }`}
               />
               {!isClosed ? "Đang mở bình chọn" : "Đã kết thúc"}
             </span>
 
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              {poll.pollType === "vote" ? "Bình chọn / Vote tác phẩm" : "Trả lời câu hỏi trắc nghiệm"}
+            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-primary">
+              {poll.pollType === "vote" ? "Bình chọn tác phẩm" : "Câu hỏi trắc nghiệm"}
             </span>
 
-            <span className="rounded-full bg-surface-container-high px-3 py-1 text-xs font-semibold text-on-surface-variant">
-              {poll.accessType === "free" ? "Bình chọn tự do (Free)" : "Dành riêng cho đoàn viên"}
+            <span className="rounded-full bg-surface-container-high px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-on-surface-variant">
+              {poll.accessType === "free" ? "Công khai (Free)" : "Đoàn viên"}
             </span>
           </div>
 
-          <span className="text-body-sm text-on-surface-variant">
+          <span className="text-xs sm:text-body-sm text-on-surface-variant">
             Ngày mở: {new Date(poll.createdAt).toLocaleDateString("vi-VN")}
           </span>
         </div>
 
-        <h1 className="text-headline-md sm:text-headline-lg font-extrabold text-[#173A67] tracking-tight">
+        <h1 className="text-xl sm:text-headline-md md:text-headline-lg font-extrabold text-[#173A67] tracking-tight leading-tight">
           {poll.title}
         </h1>
 
         {poll.description ? (
-          <p className="text-body-lg text-on-surface-variant leading-relaxed">
+          <p className="text-sm sm:text-body-lg text-on-surface-variant leading-relaxed">
             {poll.description}
           </p>
         ) : null}
 
         {/* Reward info chips */}
-        <div className="flex flex-wrap items-center gap-3 border-t border-outline-variant/60 pt-4 text-body-sm text-[#27496D]">
-          <span className="flex items-center gap-1.5 rounded-lg bg-surface-container-low px-3 py-1 font-semibold">
-            <MaterialIcon className="text-[18px] text-amber-600" name="how_to_vote" />
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 border-t border-outline-variant/60 pt-3 sm:pt-4 text-xs sm:text-body-sm text-[#27496D]">
+          <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
+            <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="how_to_vote" />
             Được chọn tối đa: <strong>{poll.maxVotesPerUser} tác phẩm</strong>
           </span>
           {poll.hasPrediction ? (
-            <span className="flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1 font-semibold text-emerald-900 border border-emerald-200">
-              <MaterialIcon className="text-[18px] text-emerald-600" name="stars" />
-              Thưởng dự đoán đúng: <strong>+{poll.predictorRewardPoints} điểm</strong>
+            <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-900 border border-emerald-200">
+              <MaterialIcon className="text-[16px] sm:text-[18px] text-emerald-600" name="stars" />
+              Thưởng dự đoán: <strong>+{poll.predictorRewardPoints} điểm</strong>
             </span>
           ) : null}
           {poll.voterRewardPoints > 0 ? (
-            <span className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-3 py-1 font-semibold text-primary">
-              <MaterialIcon className="text-[18px]" name="card_giftcard" />
-              Thưởng tham gia vote: <strong>+{poll.voterRewardPoints} điểm</strong>
+            <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+              <MaterialIcon className="text-[16px] sm:text-[18px]" name="card_giftcard" />
+              Thưởng tham gia: <strong>+{poll.voterRewardPoints} điểm</strong>
             </span>
           ) : null}
         </div>
@@ -108,7 +108,7 @@ export default async function PollDetailPage({ params }: Props) {
       </section>
 
       {/* 2. KHU VỰC BÌNH CHỌN / BẦU CHỌN TÁC PHẨM */}
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-6 sm:p-8 shadow-xs">
+      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs">
         <PollVotingSection poll={poll} />
       </section>
 

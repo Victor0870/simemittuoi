@@ -275,25 +275,25 @@ export function PollEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-6 overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl bg-surface-container-lowest shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-6 overflow-y-auto">
+      <div className="relative w-full max-w-4xl max-h-[96vh] sm:max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-surface-container-lowest shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-outline-variant/70 bg-[#F4F9F8] px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#173A67] text-white shadow-xs">
-              <MaterialIcon className="text-[22px]" name="settings" />
+        <div className="flex items-center justify-between border-b border-outline-variant/70 bg-[#F4F9F8] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <span className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-[#173A67] text-white shadow-xs">
+              <MaterialIcon className="text-[18px] sm:text-[22px]" name="settings" />
             </span>
             <div>
-              <h2 className="text-title-lg font-black text-[#173A67]">
-                {mode === "edit" ? "Cài Đặt & Chỉnh Sửa Chương Trình Bình Chọn" : "Tạo Chương Trình Bình Chọn Mới"}
+              <h2 className="text-sm sm:text-title-lg font-black text-[#173A67] leading-snug">
+                {mode === "edit" ? "Cài Đặt & Chỉnh Sửa Bình Chọn" : "Tạo Chương Trình Mới"}
               </h2>
-              <p className="text-body-xs text-[#27496D]">
-                Thiết lập số lượng tác phẩm, tải ảnh lên, quản lý danh sách đoàn viên và thể lệ vote
+              <p className="text-[11px] sm:text-body-xs text-[#27496D] line-clamp-1 sm:line-clamp-none">
+                Tác phẩm, tải ảnh lên, danh sách đoàn viên và thể lệ vote
               </p>
             </div>
           </div>
           <button
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition cursor-pointer"
+            className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:bg-surface-container-highest transition cursor-pointer text-xs sm:text-sm shrink-0"
             type="button"
             onClick={onClose}
           >
@@ -301,10 +301,10 @@ export function PollEditorModal({
           </button>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-outline-variant bg-surface-container-low px-6 gap-2">
+        {/* Tab Navigation (Scrollable on mobile) */}
+        <div className="flex overflow-x-auto border-b border-outline-variant bg-surface-container-low px-3 sm:px-6 gap-1 sm:gap-2 whitespace-nowrap">
           <button
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-bold transition cursor-pointer ${
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
               activeTab === "options"
                 ? "border-primary text-primary"
                 : "border-transparent text-on-surface-variant hover:text-on-surface"
@@ -312,11 +312,11 @@ export function PollEditorModal({
             type="button"
             onClick={() => setActiveTab("options")}
           >
-            <MaterialIcon className="text-[18px]" name="collections" />
+            <MaterialIcon className="text-[16px] sm:text-[18px]" name="collections" />
             <span>Tác Phẩm & Đoàn Viên ({options.length})</span>
           </button>
           <button
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-bold transition cursor-pointer ${
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
               activeTab === "general"
                 ? "border-primary text-primary"
                 : "border-transparent text-on-surface-variant hover:text-on-surface"
@@ -324,11 +324,11 @@ export function PollEditorModal({
             type="button"
             onClick={() => setActiveTab("general")}
           >
-            <MaterialIcon className="text-[18px]" name="tune" />
+            <MaterialIcon className="text-[16px] sm:text-[18px]" name="tune" />
             <span>Cài Đặt Vote & Thể Lệ</span>
           </button>
           <button
-            className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-bold transition cursor-pointer ${
+            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
               activeTab === "prizes"
                 ? "border-primary text-primary"
                 : "border-transparent text-on-surface-variant hover:text-on-surface"
@@ -336,7 +336,7 @@ export function PollEditorModal({
             type="button"
             onClick={() => setActiveTab("prizes")}
           >
-            <MaterialIcon className="text-[18px]" name="emoji_events" />
+            <MaterialIcon className="text-[16px] sm:text-[18px]" name="emoji_events" />
             <span>Giải Thưởng & Dự Đoán</span>
           </button>
         </div>
