@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { ActivityEditorModal } from "@/components/activities/ActivityEditorModal";
 import type { Activity } from "@/lib/mock-data";
 
 type ActivityCardProps = {
@@ -24,6 +25,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     activity.participantCount ?? 0,
   );
   const [loading, setLoading] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
@@ -33,6 +35,35 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     setTimeout(() => {
       setFeedback(null);
     }, 4000);
+  }
+
+  async function handleDeleteActivity() {
+    if (loading) return;
+
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn xóa hoạt động "${activity.title}"? Dữ liệu người đăng ký cũng sẽ bị xóa vĩnh viễn.`,
+    );
+    if (!confirmed) return;
+
+    setLoading(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(`/api/activities/delete?id=${encodeURIComponent(activity.id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Xóa không thành công.");
+      }
+
+      showToast("success", "Đã xóa hoạt động thành công!");
+      router.refresh();
+    } catch (err: any) {
+      showToast("error", err.message || "Lỗi khi xóa hoạt động.");
+      setLoading(false);
+    }
   }
 
   async function handleRegister() {
@@ -234,6 +265,30 @@ export function ActivityCard({ activity }: ActivityCardProps) {
 
           {/* Buttons 2: Nút Đăng ký / Đã tham gia / Hủy tham gia / Admin dừng đăng ký */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Admin management buttons: Edit & Delete */}
+            {isAdmin && (
+              <div className="flex items-center gap-1 border-r border-dusty-border/80 pr-2 mr-0.5">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOpen(true)}
+                  disabled={loading}
+                  title="Admin: Chỉnh sửa thông tin hoạt động"
+                  className="rounded-lg p-1.5 text-on-surface-variant hover:bg-dusty-light hover:text-primary transition"
+                >
+                  <MaterialIcon className="text-[18px]" name="edit" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteActivity}
+                  disabled={loading}
+                  title="Admin: Xóa hoạt động này"
+                  className="rounded-lg p-1.5 text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition"
+                >
+                  <MaterialIcon className="text-[18px]" name="delete_outline" />
+                </button>
+              </div>
+            )}
+
             {/* Admin control button: Dừng đăng ký / Mở lại */}
             {isAdmin && (
               isRegistrationOpen ? (
@@ -303,6 +358,16 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           </div>
         </div>
       </div>
+
+      {/* Admin Edit Modal */}
+      {isAdmin && isEditOpen && (
+        <ActivityEditorModal
+          isOpen={isEditOpen}
+          mode="edit"
+          initialActivity={activity}
+          onClose={() => setIsEditOpen(false)}
+        />
+      )}
     </article>
   );
 }

@@ -34,6 +34,8 @@ export default async function AdminDashboardPage() {
     { count: totalUsersCount },
     { count: totalPollsCount },
     { count: activePollsCount },
+    { count: totalActivitiesCount },
+    { count: openActivitiesCount },
   ] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
@@ -50,6 +52,13 @@ export default async function AdminDashboardPage() {
       .select("id", { count: "exact", head: true })
       .eq("is_active", true)
       .eq("status", "open"),
+    supabase
+      .from(CDILV_TABLE.activities)
+      .select("id", { count: "exact", head: true }),
+    supabase
+      .from(CDILV_TABLE.activities)
+      .select("id", { count: "exact", head: true })
+      .eq("is_registration_open", true),
   ]);
 
   const initial = (me.full_name || user.email || "A").slice(0, 1).toUpperCase();
@@ -263,26 +272,43 @@ export default async function AdminDashboardPage() {
             </div>
           </Link>
 
-          {/* Placeholder for future competition features */}
-          <div className="flex flex-col justify-between rounded-2xl border-2 border-dashed border-dusty-border/80 bg-surface-container-lowest/50 p-5">
+          {/* Card Quản lý Hoạt động */}
+          <Link
+            href="/admin/activities"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/[0.04] via-white to-white p-5 shadow-xs transition-all hover:border-primary hover:shadow-md"
+          >
             <div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-dusty-light text-primary">
-                <MaterialIcon className="text-[22px]" name="auto_awesome" />
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white shadow-xs">
+                  <MaterialIcon className="text-[22px]" name="event_available" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-label-xs font-bold text-emerald-800">
+                    {openActivitiesCount ?? 0} đang mở
+                  </span>
+                  <span className="rounded-full bg-dusty-light px-2 py-0.5 text-label-xs font-semibold text-primary">
+                    {totalActivitiesCount ?? 0} hoạt động
+                  </span>
+                </div>
               </div>
 
-              <h3 className="mt-3.5 text-title-md font-bold text-on-surface">
-                Tính năng thi đua tiếp theo
+              <h3 className="mt-3.5 text-title-md font-bold text-on-surface transition-colors group-hover:text-primary">
+                Quản lý Hoạt động & Phong trào
               </h3>
 
               <p className="mt-1 text-body-sm text-on-surface-variant leading-relaxed">
-                Hệ thống đang sẵn sàng để tích hợp thêm các tính năng thi đua chuyên đề, tổng kết thi đua cuối năm và bảng thành tích tập thể.
+                Tạo hoạt động mới, phát động phong trào, cập nhật thời gian & địa điểm, dừng hoặc mở nhận đăng ký và theo dõi danh sách đoàn viên.
               </p>
             </div>
 
-            <div className="mt-4 border-t border-dusty-border/60 pt-3 text-xs text-on-surface-variant/80 font-medium">
-              Sẽ tiếp tục được bổ sung tại đây
+            <div className="mt-4 flex items-center justify-between border-t border-dusty-border/60 pt-3 text-label-sm font-bold text-primary">
+              <span>Vào quản lý hoạt động</span>
+              <MaterialIcon
+                className="text-[18px] transition-transform group-hover:translate-x-1"
+                name="arrow_forward"
+              />
             </div>
-          </div>
+          </Link>
         </div>
       </section>
 
