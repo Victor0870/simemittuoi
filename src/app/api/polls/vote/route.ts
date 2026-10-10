@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       if (poll.access_type === "free" && currentGuestVotes >= maxGuestVotes) {
         return NextResponse.json(
           {
-            error: `Chương trình đã đạt giới hạn an toàn ${maxGuestVotes} lượt bình chọn tự do. Hiện tại chỉ có Đoàn viên đã đăng nhập tài khoản mới có thể tiếp tục bình chọn!`,
+            error: "Chương trình hiện chỉ mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập. Quý đoàn viên vui lòng đăng nhập để bình chọn!",
             guestLimitReached: true,
           },
           { status: 403 },

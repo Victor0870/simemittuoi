@@ -55,7 +55,7 @@ export function PollVotingSection({ poll }: Props) {
 
     if (isBlockedForGuest) {
       alert(
-        `Chương trình đã đạt giới hạn an toàn ${maxGuestVotes} lượt bình chọn tự do. Vui lòng đăng nhập tài khoản Đoàn viên để tiếp tục bình chọn.`
+        "Chương trình hiện chỉ mở bình chọn cho Đoàn viên Công đoàn. Vui lòng đăng nhập tài khoản để bình chọn."
       );
       return;
     }
@@ -85,7 +85,7 @@ export function PollVotingSection({ poll }: Props) {
 
     if (isBlockedForGuest) {
       setErrorMessage(
-        `Chương trình đã đạt giới hạn an toàn ${maxGuestVotes} lượt bình chọn tự do. Vui lòng đăng nhập tài khoản Đoàn viên để tiếp tục bình chọn.`
+        "Chương trình hiện chỉ mở bình chọn cho Đoàn viên Công đoàn. Vui lòng đăng nhập tài khoản để gửi bình chọn."
       );
       return;
     }
@@ -167,52 +167,32 @@ export function PollVotingSection({ poll }: Props) {
               : isClosed
               ? "Chương trình bình chọn đã kết thúc."
               : isBlockedForGuest
-              ? `Chương trình đã đạt giới hạn an toàn ${maxGuestVotes} lượt bình chọn tự do.`
+              ? "Chương trình hiện mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập."
               : `Chọn tối đa ${maxVotes} tác phẩm bạn yêu thích nhất (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`}
           </p>
         </div>
 
         {!isClosed && !isInactive ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {poll.accessType === "free" ? (
-              <div
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold border ${
-                  isGuestLimitReached
-                    ? "bg-rose-50 text-rose-800 border-rose-300"
-                    : currentGuestVotes >= maxGuestVotes * 0.8
-                    ? "bg-amber-50 text-amber-900 border-amber-300"
-                    : "bg-surface-container-high text-[#173A67] border-outline-variant"
-                }`}
-                title={`Giới hạn bảo vệ chống spam: Tối đa ${maxGuestVotes} lượt khách không đăng nhập`}
-              >
-                <MaterialIcon className="text-[16px]" name="shield" />
-                <span>
-                  Lượt Free: <strong>{currentGuestVotes}</strong>/{maxGuestVotes}
-                </span>
-              </div>
-            ) : null}
-
-            <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3.5 py-1.5 text-label-md font-bold text-amber-900 border border-amber-300">
-              <MaterialIcon className="text-[18px] text-amber-600" name="how_to_vote" />
-              <span>Được chọn tối đa {maxVotes} tác phẩm</span>
-            </div>
+          <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3.5 py-1.5 text-label-md font-bold text-amber-900 border border-amber-300">
+            <MaterialIcon className="text-[18px] text-amber-600" name="how_to_vote" />
+            <span>Được chọn tối đa {maxVotes} tác phẩm</span>
           </div>
         ) : null}
       </div>
 
-      {/* Guest Limit Reached Banner for Non-Members */}
+      {/* Login required banner for Non-Members when guest limit reached */}
       {isBlockedForGuest && !isClosed && !isInactive ? (
-        <div className="rounded-2xl border-2 border-amber-400 bg-linear-to-r from-amber-50 to-orange-50 p-4 sm:p-5 text-amber-950 shadow-xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5 text-[#173A67] shadow-xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
-              <MaterialIcon className="text-[24px]" name="shield" />
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-xs">
+              <MaterialIcon className="text-[22px]" name="how_to_reg" />
             </span>
             <div>
-              <h4 className="text-sm sm:text-base font-extrabold text-amber-900">
-                Đã đạt giới hạn an toàn {maxGuestVotes} lượt bình chọn tự do
+              <h4 className="text-sm sm:text-base font-extrabold text-[#173A67]">
+                Chương trình hiện yêu cầu đăng nhập tài khoản Đoàn viên
               </h4>
-              <p className="text-xs sm:text-sm text-amber-800 mt-0.5 leading-relaxed">
-                Để bảo đảm an toàn và chống spam, hệ thống hiện chỉ cho phép <strong>Đoàn viên đã đăng nhập tài khoản</strong> tiếp tục bình chọn. Quý đoàn viên vui lòng đăng nhập để gửi phiếu bình chọn!
+              <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5 leading-relaxed">
+                Quý đoàn viên vui lòng đăng nhập tài khoản để tiếp tục bình chọn cho tác phẩm yêu thích và tích lũy điểm thi đua.
               </p>
             </div>
           </div>
@@ -223,16 +203,6 @@ export function PollVotingSection({ poll }: Props) {
             <MaterialIcon className="text-[16px]" name="login" />
             <span>Đăng nhập Đoàn viên</span>
           </Link>
-        </div>
-      ) : null}
-
-      {/* Member Exclusivity Banner when Guest Limit Reached */}
-      {!isGuest && isGuestLimitReached && !isClosed && !isInactive ? (
-        <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-3.5 text-xs sm:text-sm text-emerald-900 font-semibold flex items-center gap-2.5 shadow-2xs">
-          <MaterialIcon className="text-[20px] text-emerald-600 shrink-0" name="verified_user" />
-          <span>
-            🛡️ Bạn đang bình chọn với tư cách <strong>Đoàn viên Công đoàn</strong> (Đặc quyền tiếp tục bình chọn sau khi chương trình đạt giới hạn {maxGuestVotes} lượt tự do).
-          </span>
         </div>
       ) : null}
 
@@ -368,11 +338,11 @@ export function PollVotingSection({ poll }: Props) {
                   </div>
                 ) : isBlockedForGuest ? (
                   <Link
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-amber-100 py-2.5 text-xs font-bold text-amber-900 hover:bg-amber-200 transition shadow-2xs border border-amber-300"
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary/10 py-2.5 text-xs font-bold text-primary hover:bg-primary/20 transition shadow-2xs border border-primary/20"
                     href={`/login?returnUrl=/polls/${poll.id}`}
                   >
-                    <MaterialIcon className="text-[16px] text-amber-700" name="lock" />
-                    <span>Đăng nhập để vote (Đã hết {maxGuestVotes} lượt free)</span>
+                    <MaterialIcon className="text-[16px]" name="login" />
+                    <span>Đăng nhập để bình chọn</span>
                   </Link>
                 ) : !isClosed ? (
                   <button
@@ -406,20 +376,20 @@ export function PollVotingSection({ poll }: Props) {
           </p>
         </div>
       ) : isBlockedForGuest ? (
-        <div className="mt-6 sm:mt-8 rounded-2xl border-2 border-dashed border-amber-400 bg-amber-50/80 p-6 sm:p-8 text-center text-amber-950 space-y-3">
-          <MaterialIcon className="text-[40px] text-amber-600 mx-auto" name="shield" />
-          <h3 className="text-base sm:text-title-lg font-extrabold text-amber-900">
-            Đã đạt giới hạn an toàn {maxGuestVotes} lượt bình chọn tự do
+        <div className="mt-6 sm:mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-6 sm:p-8 text-center text-[#173A67] space-y-3">
+          <MaterialIcon className="text-[38px] text-primary mx-auto" name="how_to_reg" />
+          <h3 className="text-base sm:text-title-lg font-extrabold text-[#173A67]">
+            Vui lòng đăng nhập tài khoản Đoàn viên
           </h3>
-          <p className="text-xs sm:text-body-sm text-amber-800 max-w-lg mx-auto leading-relaxed">
-            Để bảo đảm tính minh bạch và công bằng cho cuộc thi, chương trình hiện chỉ chấp nhận phiếu bình chọn từ tài khoản Đoàn viên đã đăng nhập.
+          <p className="text-xs sm:text-body-sm text-on-surface-variant max-w-lg mx-auto leading-relaxed">
+            Chương trình hiện dành quyền bình chọn cho Đoàn viên Công đoàn. Quý đoàn viên vui lòng đăng nhập để gửi phiếu bình chọn.
           </p>
           <Link
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-xs sm:text-sm font-bold text-white shadow-md hover:bg-dusty-dark transition"
             href={`/login?returnUrl=/polls/${poll.id}`}
           >
             <MaterialIcon className="text-[18px]" name="login" />
-            <span>Đăng nhập tài khoản Đoàn viên để bình chọn</span>
+            <span>Đăng nhập tài khoản Đoàn viên</span>
           </Link>
         </div>
       ) : !isClosed ? (

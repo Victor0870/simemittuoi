@@ -86,21 +86,6 @@ export default async function PollDetailPage({ params }: Props) {
             <span className="rounded-full bg-surface-container-high px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-on-surface-variant">
               {poll.accessType === "free" ? "Công khai (Free)" : "Đoàn viên"}
             </span>
-
-            {poll.accessType === "free" ? (
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] sm:text-xs font-bold border ${
-                  poll.guestVoteCount >= poll.maxGuestVotes
-                    ? "bg-rose-50 text-rose-800 border-rose-300"
-                    : "bg-amber-50 text-amber-900 border-amber-300"
-                }`}
-              >
-                <MaterialIcon className="text-[14px]" name="shield" />
-                {poll.guestVoteCount >= poll.maxGuestVotes
-                  ? `Đã đủ ${poll.maxGuestVotes} lượt free (Chỉ mở Đoàn viên)`
-                  : `Free: ${poll.guestVoteCount}/${poll.maxGuestVotes} lượt`}
-              </span>
-            ) : null}
           </div>
 
           <span className="text-xs sm:text-body-sm text-on-surface-variant">
