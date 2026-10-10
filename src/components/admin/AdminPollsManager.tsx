@@ -101,6 +101,33 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
     }
   }
 
+  // Toggle Active / Inactive
+  async function handleToggleActive(pollId: string, currentActive: boolean) {
+    setBusyPollId(pollId);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    try {
+      const nextActive = !currentActive;
+      const res = await fetch("/api/polls/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pollId, isActive: nextActive }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Thao tác thất bại");
+      setSuccessMessage(
+        nextActive
+          ? "Đã kích hoạt (Active) chương trình! Người dùng có thể nhìn thấy và bình chọn."
+          : "Đã chuyển sang Inactive (Tạm ẩn)! Người dùng thông thường sẽ không nhìn thấy chương trình."
+      );
+      router.refresh();
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Lỗi khi cập nhật trạng thái kích hoạt.");
+    } finally {
+      setBusyPollId(null);
+    }
+  }
+
   return (
     <div className="space-y-8">
       {/* 1. Header with Admin Tabs */}
@@ -208,7 +235,8 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
                 <th className="px-4 py-3 font-bold">Tên chương trình</th>
                 <th className="px-4 py-3 font-bold">Hình thức</th>
                 <th className="px-4 py-3 font-bold">Đối tượng</th>
-                <th className="px-4 py-3 font-bold">Trạng thái</th>
+                <th className="px-4 py-3 font-bold">Hiển thị (Active)</th>
+                <th className="px-4 py-3 font-bold">Tiến trình</th>
                 <th className="px-4 py-3 font-bold">Ngày tạo</th>
                 <th className="px-4 py-3 font-bold text-right">Thao tác Quản trị</th>
               </tr>
@@ -222,9 +250,16 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
                 return (
                   <tr key={p.id} className="border-t border-outline-variant hover:bg-surface-container-low/50">
                     <td className="px-4 py-3.5 font-bold text-[#173A67] max-w-sm">
-                      <Link className="hover:underline line-clamp-2" href={`/polls/${p.id}`}>
-                        {p.title}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Link className="hover:underline line-clamp-2" href={`/polls/${p.id}`}>
+                          {p.title}
+                        </Link>
+                        {!p.isActive ? (
+                          <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                            Ẩn
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3.5 text-on-surface-variant">
                       {p.pollType === "vote" ? "Vote tác phẩm" : "Trắc nghiệm"}
@@ -233,6 +268,31 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
                       <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
                         {p.accessType === "free" ? "Free (IP check)" : "Đoàn viên"}
                       </span>
+                    </td>
+                    {/* CỘT KÍCH HOẠT (ACTIVE / INACTIVE) */}
+                    <td className="px-4 py-3.5">
+                      <button
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition cursor-pointer shadow-2xs border ${
+                          p.isActive
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+                            : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+                        } disabled:opacity-50`}
+                        disabled={isBusy}
+                        title={
+                          p.isActive
+                            ? "Đang Active (Hiện). Bấm để chuyển sang Inactive (Tạm ẩn)"
+                            : "Đang Inactive (Tạm ẩn). Bấm để chuyển sang Active (Kích hoạt)"
+                        }
+                        type="button"
+                        onClick={() => handleToggleActive(p.id, p.isActive)}
+                      >
+                        <span
+                          className={`h-2 w-2 rounded-full ${
+                            p.isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+                          }`}
+                        />
+                        <span>{p.isActive ? "Active" : "Inactive"}</span>
+                      </button>
                     </td>
                     <td className="px-4 py-3.5">
                       <span

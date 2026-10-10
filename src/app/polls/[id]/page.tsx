@@ -38,10 +38,32 @@ export default async function PollDetailPage({ params }: Props) {
         <span className="line-clamp-1 text-on-surface font-semibold">{poll.title}</span>
       </nav>
 
+      {/* Inactive Notice Banner */}
+      {!poll.isActive ? (
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 sm:p-5 text-amber-950 shadow-xs flex items-start gap-3">
+          <MaterialIcon className="text-[26px] text-amber-600 shrink-0 mt-0.5" name="pause_circle" />
+          <div className="space-y-1">
+            <h3 className="text-title-sm sm:text-title-md font-bold text-amber-900">
+              Chương trình bình chọn đang tạm ngưng (Inactive)
+            </h3>
+            <p className="text-xs sm:text-body-sm text-amber-800 leading-relaxed">
+              Ban Chấp hành Công đoàn đang tạm ẩn hoặc bảo trì chương trình này. Người dùng hiện chưa thể gửi phiếu bình chọn. Vui lòng quay lại sau!
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Main Header Card */}
       <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs space-y-3 sm:space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            {!poll.isActive ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold text-slate-700">
+                <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-slate-500" />
+                Tạm ngưng (Inactive)
+              </span>
+            ) : null}
+
             <span
               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold ${
                 !isClosed

@@ -28,22 +28,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { pollId, status } = await request.json();
-    if (!pollId || !status) {
+    const { pollId, status, isActive } = await request.json();
+    if (!pollId) {
+      return NextResponse.json({ error: "Thiếu ID chương trình." }, { status: 400 });
+    }
+
+    const updatePayload: any = {};
+    if (status) {
+      updatePayload.status = status;
+      if (status === "closed") {
+        updatePayload.closed_at = new Date().toISOString();
+      } else if (status === "open") {
+        updatePayload.closed_at = null;
+      }
+    }
+
+    if (typeof isActive === "boolean") {
+      updatePayload.is_active = isActive;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
       return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
     }
 
     const { error } = await publicDb
       .from(CDILV_TABLE.polls)
-      .update({
-        status,
-        closed_at: status === "closed" ? new Date().toISOString() : null,
-      })
+      .update(updatePayload)
       .eq("id", pollId);
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, status });
+    return NextResponse.json({
+      success: true,
+      ...updatePayload,
+      message: typeof isActive === "boolean"
+        ? (isActive ? "Đã kích hoạt chương trình (Active)!" : "Đã chuyển chương trình sang Inactive (Tạm ẩn)!")
+        : "Đã cập nhật trạng thái!",
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message }, { status: 500 });
   }

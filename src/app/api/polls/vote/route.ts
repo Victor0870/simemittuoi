@@ -43,6 +43,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (poll.is_active === false) {
+      return NextResponse.json(
+        { error: "Chương trình bình chọn đang ở trạng thái tạm ngưng (Inactive)." },
+        { status: 400 },
+      );
+    }
+
     if (optionIds.length > (poll.max_votes_per_user || 3)) {
       return NextResponse.json(
         {

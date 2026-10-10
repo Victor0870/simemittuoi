@@ -33,6 +33,7 @@ export function PollEditorModal({
   const [pollType, setPollType] = useState<"quiz" | "vote">("vote");
   const [accessType, setAccessType] = useState<"members_only" | "free">("free");
   const [contentType, setContentType] = useState<"text" | "image">("image");
+  const [isActive, setIsActive] = useState(true);
   const [maxVotesPerUser, setMaxVotesPerUser] = useState(3);
   const [hasPrediction, setHasPrediction] = useState(true);
   const [predictionQuestion, setPredictionQuestion] = useState(
@@ -73,6 +74,7 @@ export function PollEditorModal({
       setPollType(initialPoll.pollType || "vote");
       setAccessType(initialPoll.accessType || "free");
       setContentType(initialPoll.contentType || "image");
+      setIsActive(initialPoll.isActive !== false);
       setMaxVotesPerUser(initialPoll.maxVotesPerUser || 3);
       setHasPrediction(Boolean(initialPoll.hasPrediction));
       setPredictionQuestion(
@@ -238,6 +240,7 @@ export function PollEditorModal({
         pollType,
         accessType,
         contentType,
+        isActive,
         maxVotesPerUser,
         hasPrediction,
         predictionQuestion,
@@ -617,6 +620,50 @@ export function PollEditorModal({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   />
+                </div>
+              </div>
+
+              {/* Active / Inactive Status Setting */}
+              <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 sm:p-5 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-[#173A67] flex items-center gap-2">
+                      <MaterialIcon className={`text-[18px] ${isActive ? "text-emerald-600" : "text-slate-500"}`} name="power_settings_new" />
+                      <span>Trạng thái hoạt động (Active / Inactive)</span>
+                    </h4>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      {isActive
+                        ? "🟢 Đang kích hoạt (Active) – Chương trình hiển thị công khai trên website cho mọi người tham gia."
+                        : "⚪ Tạm ngưng (Inactive) – Chương trình bị ẩn khỏi website, chỉ Quản trị viên mới thấy để tiếp tục biên tập."}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center rounded-xl bg-white p-1 border border-outline-variant shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setIsActive(true)}
+                      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                        isActive
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-emerald-300" />
+                      <span>Active</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsActive(false)}
+                      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                        !isActive
+                          ? "bg-slate-700 text-white shadow-xs"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      <span className="h-2 w-2 rounded-full bg-slate-300" />
+                      <span>Inactive</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

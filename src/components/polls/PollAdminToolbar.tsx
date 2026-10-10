@@ -70,6 +70,31 @@ export function PollAdminToolbar({ poll }: Props) {
     }
   }
 
+  async function handleToggleActive() {
+    setIsBusy(true);
+    setMessage(null);
+    try {
+      const nextActive = !poll.isActive;
+      const res = await fetch("/api/polls/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pollId: poll.id, isActive: nextActive }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Thao tác thất bại");
+      setMessage(
+        nextActive
+          ? "Đã kích hoạt (Active) chương trình! Người dùng có thể nhìn thấy và bình chọn."
+          : "Đã chuyển sang Inactive (Tạm ẩn)! Người dùng thông thường sẽ không nhìn thấy chương trình."
+      );
+      router.refresh();
+    } catch (err: any) {
+      alert(err?.message || "Lỗi khi đổi trạng thái kích hoạt");
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="rounded-2xl border-2 border-[#173A67] bg-linear-to-r from-[#173A67] to-[#27496D] p-3 sm:p-4 text-white shadow-md space-y-2.5 sm:space-y-3">
@@ -89,6 +114,30 @@ export function PollAdminToolbar({ poll }: Props) {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+            {/* BUTTON TOGGLE ACTIVE / INACTIVE */}
+            <button
+              className={`flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-bold transition cursor-pointer shadow-xs disabled:opacity-50 ${
+                poll.isActive
+                  ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                  : "bg-slate-300 hover:bg-slate-200 text-slate-900"
+              }`}
+              disabled={isBusy}
+              title={
+                poll.isActive
+                  ? "Đang Active (Hiện). Bấm để chuyển sang Inactive (Tạm ẩn)"
+                  : "Đang Inactive (Tạm ẩn). Bấm để chuyển sang Active (Kích hoạt)"
+              }
+              type="button"
+              onClick={handleToggleActive}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  poll.isActive ? "bg-white animate-pulse" : "bg-slate-600"
+                }`}
+              />
+              <span>{poll.isActive ? "Active" : "Inactive"}</span>
+            </button>
+
             {/* BUTTON CÀI ĐẶT & CHỈNH SỬA CUỘC THI */}
             <button
               className="flex flex-1 sm:flex-none items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-black text-slate-900 shadow-xs hover:bg-amber-300 transition cursor-pointer"
@@ -132,6 +181,15 @@ export function PollAdminToolbar({ poll }: Props) {
             </Link>
           </div>
         </div>
+
+        {!poll.isActive ? (
+          <div className="flex items-center gap-2 rounded-xl bg-amber-500/25 border border-amber-400/50 px-3 py-2 text-xs font-semibold text-amber-200">
+            <MaterialIcon className="text-[18px] text-amber-300 shrink-0" name="visibility_off" />
+            <span>
+              ⚠️ Lưu ý Quản trị: Chương trình này đang ở trạng thái <strong>INACTIVE (Tạm ẩn)</strong>. Người dùng thông thường và khách không thấy trong danh sách và không thể gửi bình chọn.
+            </span>
+          </div>
+        ) : null}
 
         {message ? (
           <div className="rounded-xl bg-white/10 px-3 py-1.5 text-xs text-amber-200">

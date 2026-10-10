@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       thirdPrizePoints = 30,
       consolationPrizePoints = 20,
       consolationPrizeCount = 2,
+      isActive,
       options = [],
     } = body;
 
@@ -87,6 +88,10 @@ export async function POST(request: NextRequest) {
       consolation_prize_points: parseInt(String(consolationPrizePoints), 10) || 0,
       consolation_prize_count: parseInt(String(consolationPrizeCount), 10) || 2,
     };
+
+    if (typeof isActive === "boolean") {
+      updateData.is_active = isActive;
+    }
 
     if (status && ["open", "closed", "draft"].includes(status)) {
       updateData.status = status;
@@ -130,6 +135,7 @@ export async function POST(request: NextRequest) {
             title: opt.title?.trim() || `Tác phẩm ${i + 1}`,
             description: opt.description?.trim() || null,
             image_urls: opt.imageUrls || [],
+            is_active: opt.isActive !== false,
           })
           .eq("id", optId);
       } else {
@@ -142,6 +148,7 @@ export async function POST(request: NextRequest) {
             title: opt.title?.trim() || `Tác phẩm ${i + 1}`,
             description: opt.description?.trim() || null,
             image_urls: opt.imageUrls || [],
+            is_active: opt.isActive !== false,
           })
           .select("id")
           .single();

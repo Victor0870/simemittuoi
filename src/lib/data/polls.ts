@@ -17,6 +17,7 @@ export type PollOption = {
   imageUrls: string[];
   voteCount: number;
   finalRank: number | null;
+  isActive?: boolean;
   members: PollMember[];
 };
 
@@ -28,6 +29,7 @@ export type PollSummary = {
   accessType: "members_only" | "free";
   contentType: "text" | "image";
   status: "open" | "closed" | "draft";
+  isActive: boolean;
   maxVotesPerUser: number;
   hasPrediction: boolean;
   predictionQuestion: string;
@@ -50,7 +52,7 @@ export type PollDetail = PollSummary & {
   options: PollOption[];
 };
 
-export async function getPolls(): Promise<PollSummary[]> {
+export async function getPolls(includeInactive = false): Promise<PollSummary[]> {
   const db = createPublicClient();
   const { data, error } = await db
     .from(CDILV_TABLE.polls)
@@ -62,7 +64,7 @@ export async function getPolls(): Promise<PollSummary[]> {
     return [];
   }
 
-  return (data ?? []).map((row) => ({
+  const all: PollSummary[] = (data ?? []).map((row) => ({
     id: row.id,
     title: row.title,
     description: row.description,
@@ -70,6 +72,7 @@ export async function getPolls(): Promise<PollSummary[]> {
     accessType: row.access_type,
     contentType: row.content_type,
     status: row.status,
+    isActive: row.is_active !== false,
     maxVotesPerUser: row.max_votes_per_user ?? 3,
     hasPrediction: Boolean(row.has_prediction),
     predictionQuestion:
@@ -88,6 +91,12 @@ export async function getPolls(): Promise<PollSummary[]> {
     createdAt: row.created_at,
     closedAt: row.closed_at,
   }));
+
+  if (!includeInactive) {
+    return all.filter((p) => p.isActive);
+  }
+
+  return all;
 }
 
 export async function getPollById(id: string): Promise<PollDetail | null> {
@@ -152,6 +161,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
       : [],
     voteCount: row.vote_count ?? 0,
     finalRank: row.final_rank,
+    isActive: row.is_active !== false,
     members: membersByOption.get(row.id) || [],
   }));
 
@@ -165,6 +175,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     accessType: pollRow.access_type,
     contentType: pollRow.content_type,
     status: pollRow.status,
+    isActive: pollRow.is_active !== false,
     maxVotesPerUser: pollRow.max_votes_per_user ?? 3,
     hasPrediction: Boolean(pollRow.has_prediction),
     predictionQuestion:

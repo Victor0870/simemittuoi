@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       thirdPrizePoints = 30,
       consolationPrizePoints = 20,
       consolationPrizeCount = 2,
+      isActive = true,
       options = [],
     } = body;
 
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
         access_type: accessType,
         content_type: contentType,
         status: "open",
+        is_active: isActive !== false,
         max_votes_per_user: parseInt(String(maxVotesPerUser), 10) || 3,
         has_prediction: Boolean(hasPrediction),
         prediction_question:
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
           title: opt.title?.trim() || `Lựa chọn ${i + 1}`,
           description: opt.description?.trim() || null,
           image_urls: opt.imageUrls || [],
+          is_active: opt.isActive !== false,
         })
         .select("id")
         .single();

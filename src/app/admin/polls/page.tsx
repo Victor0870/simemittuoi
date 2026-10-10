@@ -27,7 +27,7 @@ export default async function AdminPollsPage() {
     redirect("/");
   }
 
-  const polls = await getPolls();
+  const polls = await getPolls(true);
 
   return (
     <AdminPollsManager

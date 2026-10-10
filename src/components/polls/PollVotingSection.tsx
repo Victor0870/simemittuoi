@@ -40,9 +40,10 @@ export function PollVotingSection({ poll }: Props) {
 
   const maxVotes = poll.maxVotesPerUser || 3;
   const isClosed = poll.status === "closed";
+  const isInactive = poll.isActive === false;
 
   function handleToggleOption(optionId: string) {
-    if (isClosed) return;
+    if (isClosed || isInactive) return;
 
     if (selectedOptionIds.includes(optionId)) {
       setSelectedOptionIds(selectedOptionIds.filter((id) => id !== optionId));
@@ -61,6 +62,11 @@ export function PollVotingSection({ poll }: Props) {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
+
+    if (isInactive) {
+      setErrorMessage("Chương trình đang tạm ngưng (Inactive), không nhận thêm bình chọn.");
+      return;
+    }
 
     if (selectedOptionIds.length === 0) {
       setErrorMessage("Vui lòng chọn ít nhất 1 tác phẩm để bình chọn.");
@@ -134,13 +140,15 @@ export function PollVotingSection({ poll }: Props) {
             Danh Sách Tác Phẩm Bình Chọn
           </h3>
           <p className="text-body-sm text-on-surface-variant">
-            {isClosed
+            {isInactive
+              ? "Chương trình hiện đang tạm ngưng (Inactive)."
+              : isClosed
               ? "Chương trình bình chọn đã kết thúc."
               : `Chọn tối đa ${maxVotes} tác phẩm bạn yêu thích nhất (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`}
           </p>
         </div>
 
-        {!isClosed ? (
+        {!isClosed && !isInactive ? (
           <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3.5 py-1.5 text-label-md font-bold text-amber-900 border border-amber-300">
             <MaterialIcon className="text-[18px] text-amber-600" name="how_to_vote" />
             <span>Được chọn tối đa {maxVotes} tác phẩm</span>
@@ -273,7 +281,12 @@ export function PollVotingSection({ poll }: Props) {
                 ) : null}
 
                 {/* Vote Selection Button */}
-                {!isClosed ? (
+                {isInactive ? (
+                  <div className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-semibold text-slate-500 border border-slate-200">
+                    <MaterialIcon className="text-[16px]" name="pause_circle" />
+                    <span>Tạm ngưng bình chọn</span>
+                  </div>
+                ) : !isClosed ? (
                   <button
                     className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold transition shadow-xs cursor-pointer ${
                       isSelected
@@ -296,7 +309,15 @@ export function PollVotingSection({ poll }: Props) {
       </div>
 
       {/* Submission Form (Prediction & Final Action) */}
-      {!isClosed ? (
+      {isInactive ? (
+        <div className="mt-6 sm:mt-8 rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/70 p-6 text-center text-amber-950">
+          <MaterialIcon className="text-[36px] text-amber-600 mx-auto mb-2" name="visibility_off" />
+          <h3 className="text-base sm:text-title-md font-bold">Chương trình bình chọn đang ở trạng thái Inactive (Tạm ẩn)</h3>
+          <p className="text-xs sm:text-body-sm text-amber-800 mt-1 max-w-lg mx-auto">
+            Hệ thống tạm ngưng nhận bình chọn. Bạn sẽ có thể gửi bình chọn khi Quản trị viên kích hoạt lại chương trình.
+          </p>
+        </div>
+      ) : !isClosed ? (
         <form
           className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-4 sm:p-8 shadow-xs"
           onSubmit={handleSubmitVote}
