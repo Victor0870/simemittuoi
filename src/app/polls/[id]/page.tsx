@@ -4,6 +4,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPollById } from "@/lib/data/polls";
 import { PollPodiumResults } from "@/components/polls/PollPodiumResults";
 import { PollVotingSection } from "@/components/polls/PollVotingSection";
+import { PollAdminToolbar } from "@/components/polls/PollAdminToolbar";
 
 export const revalidate = 15;
 
@@ -21,6 +22,9 @@ export default async function PollDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
+      {/* Admin Action Toolbar */}
+      <PollAdminToolbar poll={poll} />
+
       {/* Breadcrumb */}
       <nav className="flex flex-wrap items-center gap-2 text-body-sm text-on-surface-variant">
         <Link className="hover:text-primary" href="/">
