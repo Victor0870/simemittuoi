@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { createClient } from "@/lib/supabase/client";
+import { CDILV_STORAGE } from "@/lib/supabase/tables";
 import type { PostComment } from "@/lib/data/posts";
 
 type PostCommentsSectionProps = {
@@ -12,6 +14,36 @@ type PostCommentsSectionProps = {
   initialCommentCount?: number;
   initialComments?: PostComment[];
 };
+
+/**
+ * Trích xuất các URL ảnh trong nội dung bình luận để hiển thị ảnh trực quan
+ */
+function parseCommentContent(text: string): { cleanText: string; imageUrls: string[] } {
+  // Nhận diện các link ảnh thông dụng hoặc link upload từ Supabase Storage
+  const imgUrlRegex =
+    /(https?:\/\/[^\s]+?\.(?:png|jpe?g|webp|gif|svg)(?:\?[^\s]*)?|https?:\/\/[^\s]+?\/storage\/v1\/object\/public\/[^\s]+)/gi;
+
+  const matches = text.match(imgUrlRegex) || [];
+  const imageUrls: string[] = [];
+  matches.forEach((url) => {
+    // Làm sạch dấu ngoặc hoặc dấu câu ở cuối nếu bị dính
+    const cleanUrl = url.replace(/[),;.]+$/, "");
+    if (!imageUrls.includes(cleanUrl)) {
+      imageUrls.push(cleanUrl);
+    }
+  });
+
+  // Loại bỏ các dòng gắn nhãn link ảnh thô để phần chữ hiển thị gãy gọn
+  let cleanText = text;
+  imageUrls.forEach((url) => {
+    cleanText = cleanText
+      .replace(new RegExp(`\\[?Ảnh[^\\]]*\\]?:?\\s*${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "gi"), "")
+      .replace(url, "")
+      .trim();
+  });
+
+  return { cleanText, imageUrls };
+}
 
 export function PostCommentsSection({
   postId,
@@ -32,6 +64,11 @@ export function PostCommentsSection({
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Đính kèm ảnh thiết kế logo / tác phẩm
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachedImageUrl, setAttachedImageUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Fetch comments only when user is an approved member
   useEffect(() => {
@@ -84,9 +121,75 @@ export function PostCommentsSection({
     }, 5000);
   }
 
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!user || !isApproved) {
+      setNotice({
+        type: "error",
+        text: "Chỉ thành viên đã được duyệt mới có quyền tải ảnh tác phẩm.",
+      });
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setNotice({
+        type: "error",
+        text: "Vui lòng chọn tệp định dạng hình ảnh (PNG, JPG, JPEG, WEBP).",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setNotice({
+        type: "error",
+        text: "Dung lượng ảnh tối đa là 5MB.",
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    setNotice(null);
+
+    try {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop() || "png";
+      const cleanFileName = `logo_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const filePath = `${user.id}/${cleanFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(CDILV_STORAGE.avatars)
+        .upload(filePath, file, { upsert: true, contentType: file.type });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: pub } = supabase.storage
+        .from(CDILV_STORAGE.avatars)
+        .getPublicUrl(filePath);
+
+      setAttachedImageUrl(pub.publicUrl);
+      setNotice({
+        type: "success",
+        text: "Đã tải ảnh lên thành công! Hãy viết vài câu thuyết minh ý nghĩa Logo rồi gửi bình luận.",
+      });
+      clearNoticeAfterTimeout();
+    } catch (err: any) {
+      setNotice({
+        type: "error",
+        text: err?.message || "Không thể tải ảnh lên. Bạn cũng có thể dán đường dẫn ảnh trực tiếp.",
+      });
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || uploadingImage) return;
 
     if (!user || !isApproved) {
       setNotice({
@@ -97,18 +200,25 @@ export function PostCommentsSection({
     }
 
     const trimmed = content.trim();
-    if (!trimmed) {
+    if (!trimmed && !attachedImageUrl) {
       setNotice({
         type: "error",
-        text: "Vui lòng nhập nội dung bình luận.",
+        text: "Vui lòng nhập nội dung thuyết minh hoặc tải ảnh thiết kế logo.",
       });
       return;
     }
 
-    if (trimmed.length > 1000) {
+    // Ghép ảnh đính kèm vào nội dung
+    const fullContent = attachedImageUrl
+      ? trimmed
+        ? `${trimmed}\n\n[Ảnh thiết kế Logo]: ${attachedImageUrl}`
+        : `[Ảnh thiết kế Logo]: ${attachedImageUrl}`
+      : trimmed;
+
+    if (fullContent.length > 2000) {
       setNotice({
         type: "error",
-        text: "Bình luận tối đa 1000 ký tự.",
+        text: "Bình luận quá dài (tối đa 2000 ký tự).",
       });
       return;
     }
@@ -128,7 +238,7 @@ export function PostCommentsSection({
       const res = await fetch("/api/posts/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId, content: trimmed }),
+        body: JSON.stringify({ postId, content: fullContent }),
       });
 
       const data = await res.json();
@@ -147,7 +257,7 @@ export function PostCommentsSection({
         authorRole: profile?.role || "user",
         authorDepartment: profile?.department || null,
         authorCode: profile?.employee_code || null,
-        content: trimmed,
+        content: fullContent,
         createdAt: new Date().toISOString(),
         timeAgo: "Vừa xong",
       };
@@ -155,6 +265,7 @@ export function PostCommentsSection({
       setComments((prev) => [...prev, newComment]);
       setCommentCount((prev) => prev + 1);
       setContent("");
+      setAttachedImageUrl(null);
       setNotice({
         type: "success",
         text: data.message || "Bình luận thành công! Bạn nhận được +1 điểm thi đua.",
@@ -219,10 +330,10 @@ export function PostCommentsSection({
           </div>
           <div>
             <h2 className="text-title-lg sm:text-headline-sm font-bold text-on-surface">
-              Bình luận trao đổi
+              Bình luận trao đổi & Tác phẩm dự thi
             </h2>
             <p className="text-body-xs sm:text-body-sm text-on-surface-variant">
-              Giao lưu, đóng góp ý kiến và nhận điểm thi đua phong trào
+              Giao lưu, đóng góp ý kiến, gửi ảnh thiết kế và nhận điểm thi đua
             </p>
           </div>
         </div>
@@ -244,8 +355,8 @@ export function PostCommentsSection({
         <div className="leading-relaxed">
           <strong className="text-on-surface">Quy định bình luận: </strong>
           Đoàn viên được cộng <strong>+1 điểm thi đua</strong> cho mỗi bình luận. Giới hạn{" "}
-          <strong>tối đa 3 bình luận</strong> cho mỗi đoàn viên trên một bài viết. Quản trị viên
-          không bị giới hạn.
+          <strong>tối đa 3 bình luận</strong> cho mỗi đoàn viên trên một bài viết (cho phép gửi tối
+          đa 3 mẫu thiết kế khác nhau). Quản trị viên không bị giới hạn.
         </div>
       </div>
 
@@ -280,8 +391,7 @@ export function PostCommentsSection({
         /* Loading Auth State */
         <div className="h-32 animate-pulse rounded-2xl bg-surface-container/60" />
       ) : !isApproved ? (
-        /* NON-MEMBER / GUEST / PENDING / REJECTED VIEW:
-           Chỉ nhìn thấy số lượng bình luận và Card nhắc nhở đăng ký thành viên */
+        /* NON-MEMBER / GUEST / PENDING / REJECTED VIEW */
         <div className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-dusty-light/60 via-white to-primary/5 p-6 sm:p-8 text-center shadow-xs">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs ring-4 ring-primary/5">
             <MaterialIcon className="text-[32px]" name="lock" />
@@ -294,8 +404,8 @@ export function PostCommentsSection({
           <p className="mx-auto mt-2 max-w-lg text-body-sm sm:text-body-md text-on-surface-variant leading-relaxed">
             Bài viết hiện có{" "}
             <strong className="font-bold text-primary">{commentCount} bình luận</strong> trao đổi.
-            Vui lòng đăng ký hoặc đăng nhập tài khoản thành viên Đoàn cơ sở để được đọc toàn bộ
-            bình luận và tham gia thảo luận.
+            Vui lòng đăng ký hoặc đăng nhập tài khoản thành viên Đoàn cơ sở để được đọc toàn bộ bình
+            luận, xem các tác phẩm thiết kế và tham gia đóng góp ý kiến.
           </p>
 
           <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1 text-xs font-semibold text-amber-900">
@@ -304,7 +414,6 @@ export function PostCommentsSection({
           </div>
 
           {!user ? (
-            /* Khách chưa đăng nhập: Nút Đăng ký & Đăng nhập */
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/register"
@@ -322,7 +431,6 @@ export function PostCommentsSection({
               </Link>
             </div>
           ) : profile?.approval_status === "pending" ? (
-            /* Đã đăng nhập nhưng đang chờ duyệt */
             <div className="mt-5 mx-auto max-w-md rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-center text-amber-950">
               <div className="flex items-center justify-center gap-2 font-bold text-amber-900 text-sm">
                 <MaterialIcon className="text-[18px] text-amber-700" name="hourglass_top" />
@@ -330,12 +438,11 @@ export function PostCommentsSection({
               </div>
               <p className="mt-1.5 text-xs text-amber-800 leading-relaxed">
                 Hồ sơ của bạn (<strong>{profile?.full_name || user.email}</strong>) đang được Ban
-                chấp hành xem xét phê duyệt. Sau khi được duyệt, bạn sẽ có thể đọc toàn bộ bình luận
-                và tham gia đóng góp ý kiến nhận điểm thi đua.
+                chấp hành xem xét phê duyệt. Sau khi được duyệt, bạn sẽ có thể xem toàn bộ bình luận,
+                gửi mẫu thiết kế Logo và nhận điểm thi đua.
               </p>
             </div>
           ) : profile?.approval_status === "rejected" ? (
-            /* Tài khoản bị từ chối */
             <div className="mt-5 mx-auto max-w-md rounded-xl border border-red-300 bg-red-50 p-4 text-center text-red-950">
               <div className="flex items-center justify-center gap-2 font-bold text-red-900 text-sm">
                 <MaterialIcon className="text-[18px] text-red-600" name="cancel" />
@@ -381,7 +488,7 @@ export function PostCommentsSection({
                     <span className="text-on-surface-variant">
                       Đã bình luận:{" "}
                       <strong className="text-primary">{myCommentCount}/3</strong> (Còn{" "}
-                      <strong>{remainingCount}</strong> lượt)
+                      <strong>{remainingCount}</strong> lượt gửi)
                     </span>
                   )}
                 </div>
@@ -395,8 +502,8 @@ export function PostCommentsSection({
                 <div className="text-xs sm:text-body-sm">
                   <p className="font-bold">Bạn đã đăng đủ 3 bình luận cho bài viết này!</p>
                   <p className="text-emerald-800">
-                    Toàn bộ điểm thi đua (+3đ) đã được ghi nhận. Cảm ơn sự tích cực đóng góp và thảo
-                    luận sôi nổi của bạn!
+                    Toàn bộ điểm thi đua (+3đ) đã được ghi nhận. Cảm ơn sự tích cực đóng góp và chia
+                    sẻ sáng tạo của bạn!
                   </p>
                 </div>
               </div>
@@ -406,25 +513,81 @@ export function PostCommentsSection({
                   <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder="Viết bình luận, ý kiến đóng góp hoặc lời chúc của bạn... (+1đ thi đua)"
+                    placeholder="Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
                     rows={3}
-                    maxLength={1000}
-                    disabled={submitting}
+                    maxLength={1500}
+                    disabled={submitting || uploadingImage}
                     className="w-full rounded-2xl border border-dusty-border bg-white p-3.5 sm:p-4 text-body-sm sm:text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container"
                   />
                   <div className="absolute bottom-3 right-3 text-[11px] text-on-surface-variant">
-                    {content.length}/1000
+                    {content.length}/1500
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-on-surface-variant">
-                    Mỗi bình luận tích lũy ngay <strong>+1 điểm thi đua</strong>
-                  </span>
+                {/* Khung xem trước ảnh đính kèm (nếu có) */}
+                {attachedImageUrl && (
+                  <div className="relative inline-flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/[0.03] p-2.5 shadow-2xs">
+                    <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-dusty-border bg-white shadow-xs">
+                      <img
+                        src={attachedImageUrl}
+                        alt="Ảnh đính kèm"
+                        className="h-full w-full object-contain"
+                      />
+                    </div>
+                    <div className="text-xs">
+                      <p className="font-bold text-on-surface">Đã đính kèm ảnh thiết kế Logo</p>
+                      <p className="text-on-surface-variant">Ảnh sẽ được đăng cùng bình luận</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedImageUrl(null)}
+                      title="Gỡ ảnh"
+                      className="ml-2 rounded-full p-1 text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition"
+                    >
+                      <MaterialIcon className="text-[18px]" name="close" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Input file ẩn */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    {/* Nút đính kèm ảnh Logo */}
+                    <button
+                      type="button"
+                      disabled={uploadingImage || submitting}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-dusty-border bg-white px-3.5 py-2 text-xs sm:text-label-sm font-semibold text-on-surface transition hover:bg-dusty-light disabled:opacity-50"
+                    >
+                      {uploadingImage ? (
+                        <>
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          <span>Đang tải ảnh...</span>
+                        </>
+                      ) : (
+                        <>
+                          <MaterialIcon className="text-[18px] text-primary" name="add_photo_alternate" />
+                          <span>Đính kèm ảnh Logo</span>
+                        </>
+                      )}
+                    </button>
+
+                    <span className="text-xs text-on-surface-variant hidden sm:inline">
+                      Mỗi bình luận tích lũy ngay <strong>+1 điểm thi đua</strong>
+                    </span>
+                  </div>
 
                   <button
                     type="submit"
-                    disabled={submitting || !content.trim()}
+                    disabled={submitting || uploadingImage || (!content.trim() && !attachedImageUrl)}
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 sm:px-5 sm:py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {submitting ? (
@@ -458,19 +621,20 @@ export function PostCommentsSection({
                   name="chat_bubble_outline"
                 />
                 <p className="text-body-sm font-medium text-on-surface-variant">
-                  Chưa có bình luận nào cho bài viết này.
+                  Chưa có bình luận hoặc tác phẩm nào cho bài viết này.
                 </p>
                 <p className="mt-0.5 text-xs text-on-surface-variant/70">
-                  Hãy là người đầu tiên để lại ý kiến đóng góp!
+                  Hãy là người đầu tiên gửi ý kiến đóng góp hoặc gửi tác phẩm thiết kế Logo dự thi!
                 </p>
               </div>
             ) : (
-              <ul className="space-y-3.5">
+              <ul className="space-y-4">
                 {comments.map((comment) => {
                   const isAuthor = user && user.id === comment.userId;
                   const canDelete = isAdmin || isAuthor;
                   const isCommentAdmin = comment.authorRole === "admin";
                   const initial = (comment.authorName || "?").slice(0, 1).toUpperCase();
+                  const parsed = parseCommentContent(comment.content);
 
                   return (
                     <li
@@ -557,11 +721,54 @@ export function PostCommentsSection({
                         )}
                       </div>
 
-                      {/* Comment content */}
-                      <div className="mt-3 pl-0 sm:pl-[52px]">
-                        <p className="whitespace-pre-wrap break-words text-body-sm sm:text-body-md leading-relaxed text-on-surface">
-                          {comment.content}
-                        </p>
+                      {/* Comment content & Images */}
+                      <div className="mt-3 pl-0 sm:pl-[52px] space-y-3">
+                        {parsed.cleanText && (
+                          <p className="whitespace-pre-wrap break-words text-body-sm sm:text-body-md leading-relaxed text-on-surface">
+                            {parsed.cleanText}
+                          </p>
+                        )}
+
+                        {/* Danh sách ảnh đính kèm (Logo tác phẩm) */}
+                        {parsed.imageUrls.length > 0 && (
+                          <div className="flex flex-wrap gap-3 pt-1">
+                            {parsed.imageUrls.map((imgUrl, idx) => (
+                              <div
+                                key={idx}
+                                className="group/img relative inline-block max-w-full overflow-hidden rounded-2xl border border-dusty-border bg-slate-50/80 shadow-xs"
+                              >
+                                <div className="flex items-center justify-between gap-2 border-b border-dusty-border/60 bg-white px-3 py-1.5 text-[11px] font-semibold text-on-surface-variant">
+                                  <div className="flex items-center gap-1.5 text-primary">
+                                    <MaterialIcon className="text-[15px]" name="palette" />
+                                    <span>Tác phẩm thiết kế Logo</span>
+                                  </div>
+                                  <a
+                                    href={imgUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-0.5 text-primary hover:underline text-[10px]"
+                                  >
+                                    Xem ảnh gốc
+                                    <MaterialIcon className="text-[12px]" name="open_in_new" />
+                                  </a>
+                                </div>
+                                <a
+                                  href={imgUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block p-2 cursor-zoom-in bg-white hover:bg-slate-50 transition"
+                                >
+                                  <img
+                                    src={imgUrl}
+                                    alt="Mẫu thiết kế Logo CDILV"
+                                    className="max-h-80 w-auto rounded-lg object-contain transition-transform duration-200 group-hover/img:scale-[1.01]"
+                                    loading="lazy"
+                                  />
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </li>
                   );
