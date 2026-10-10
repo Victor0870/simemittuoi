@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { Announcement } from "@/lib/mock-data";
 
@@ -9,13 +10,16 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   const isUrgent = announcement.tagTone === "error";
 
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-y border-r border-dusty-border/80 border-l-4 border-l-primary bg-surface-container-lowest p-5 shadow-sm transition-shadow hover:shadow-md">
+    <Link
+      className="group relative block overflow-hidden rounded-2xl border border-y border-r border-dusty-border/80 border-l-4 border-l-primary bg-surface-container-lowest p-5 shadow-sm transition-shadow hover:shadow-md"
+      href={`/posts/${announcement.id}`}
+    >
       <div className="mb-3 flex items-center justify-between">
         <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-dusty-light px-2.5 py-0.5 text-label-sm font-bold text-primary">
           {isUrgent ? (
             <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
           ) : (
-            <MaterialIcon className="text-[14px]" name="how_to_vote" />
+            <MaterialIcon className="text-[14px]" name="article" />
           )}
           {announcement.tag}
         </span>
@@ -36,6 +40,6 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
           <MaterialIcon className="text-[16px]" name="chevron_right" />
         </span>
       </div>
-    </article>
+    </Link>
   );
 }

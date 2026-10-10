@@ -29,10 +29,6 @@ export async function GET(request: Request) {
             status === "rejected" ? "/pending?status=rejected" : "/pending";
           return NextResponse.redirect(`${origin}${pendingPath}`);
         }
-
-        if (profile?.role === "admin") {
-          return NextResponse.redirect(`${origin}/admin/users`);
-        }
       }
 
       return NextResponse.redirect(`${origin}/`);

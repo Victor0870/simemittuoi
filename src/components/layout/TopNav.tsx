@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AdminNavLinks } from "@/components/layout/AdminNavLinks";
 import { TopNavAuth } from "@/components/layout/TopNavAuth";
 import { BRAND } from "@/lib/brand";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -35,6 +36,7 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
             </Link>
           );
         })}
+        <AdminNavLinks activeHref={activeHref} />
       </div>
 
       <div className="flex items-center gap-4">

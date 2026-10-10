@@ -12,6 +12,7 @@ function resolveActiveHref(pathname: string): string {
   const candidates = [
     ...NAV_ITEMS.map((item) => item.href),
     ...MOBILE_NAV_ITEMS.map((item) => item.href),
+    "/posts",
     "/settings",
     "/score-history",
     "/campaigns",
@@ -19,6 +20,7 @@ function resolveActiveHref(pathname: string): string {
     "/register",
     "/pending",
     "/admin/users",
+    "/admin/scores",
   ];
 
   const unique = [...new Set(candidates)];

@@ -8,14 +8,14 @@ export const USER_AVATAR_URL =
 
 export const NAV_ITEMS = [
   { href: "/", label: "Trang chủ", icon: "home" },
+  { href: "/posts", label: "Bài viết", icon: "article" },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: "leaderboard" },
-  { href: "/rewards", label: "Giải thưởng", icon: "emoji_events" },
   { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
 ] as const;
 
 export const MOBILE_NAV_ITEMS = [
   { href: "/", label: "Trang chủ", icon: "home" },
+  { href: "/posts", label: "Bài viết", icon: "article" },
   { href: "/leaderboard", label: "Xếp hạng", icon: "leaderboard" },
-  { href: "/rewards", label: "Giải thưởng", icon: "emoji_events" },
   { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
 ] as const;

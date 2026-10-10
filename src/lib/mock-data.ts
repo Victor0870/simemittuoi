@@ -38,6 +38,15 @@ export const MOCK_USER = {
 
 export const MOCK_ANNOUNCEMENTS: Announcement[] = [
   {
+    id: "pickleball-2026",
+    tag: "Thể thao",
+    tagTone: "primary",
+    timeAgo: "Vừa xong",
+    title: "Phát động Giải thể thao Pickleball CDILV 2026: Bứt phá phong độ – Gắn kết đồng đội",
+    excerpt:
+      "Công đoàn cơ sở CDILV trân trọng thông báo và phát động Giải Pickleball CDILV 2026 dành cho toàn thể đoàn viên, cán bộ và người lao động trong toàn đơn vị...",
+  },
+  {
     id: "1",
     tag: "Khẩn cấp",
     tagTone: "error",
@@ -59,6 +68,18 @@ export const MOCK_ANNOUNCEMENTS: Announcement[] = [
 
 export const MOCK_ACTIVITIES: Activity[] = [
   {
+    id: "pickleball-2026",
+    title: "Giải thể thao Pickleball CDILV 2026",
+    date: "15/11/2026",
+    location: "Cụm sân Pickleball CDILV",
+    points: 100,
+    imageUrl:
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuA1wtWPeBzDu-EUS2f282aGUtU1Cs8yvh_CmoJxECbnLCW4Y60CrP6n6A9D7GWDr1Iz4OvYwKg_b42Drz3wftnkmOejNefM93xMzUrx5lFypDcM6liWObAw1UpOqV9IqdPuaZ6NwFDTW8Pgh-Fsev91XsXzi-gYjUeinSUip3DMwyla0ljB-jfwJg-mRSqiMox6PvNQTuTa63f7kIKHsEQ3bxzCJcbfOMGEzXW1gsRwxd9HACCmlX56pUEWicYzQuT1s5VMzJw_RHQ",
+    imageAlt: "Giải thể thao Pickleball CDILV 2026",
+    participantAvatars: [],
+    extraParticipants: 24,
+  },
+  {
     id: "1",
     title: "Chạy bộ từ thiện 2024",
     date: "15/10/2024",
@@ -69,7 +90,7 @@ export const MOCK_ACTIVITIES: Activity[] = [
     imageAlt: "Nhóm nhân viên tham gia chạy bộ từ thiện ngoài trời",
     participantAvatars: [
       "https://lh3.googleusercontent.com/aida-public/AB6AXuDcxxkVUxDRwD_QQyBNa114LRp2ZtFbKY9RJhBWjPcbNbWpRhF0NdwwhlMQACCqQD4w_lXrMR0I237sTlao7XHrzdYT3YU4DC2DQPT1qaJUosdCTo7_r9serDX1UZmYFnGG4RjrnrO0hjT1aB1wGBoqXw0AX3HQCnH6eJARgzrS6UR3qxgszExJpJbA-hORA0hLffy2Mqb1FBj3XdcuyV6fNmaBFlq8GT0bq_qrAS49w6T-IuPtAwI4nxBJNEcNOP4ZjxP-6ljTWhk",
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuD0HpjsqB7nIgOqQ2o7_uCgidE2Q1OxST3m5IB21ltcZbXq0UfS11KMzwqm5Tb6V9ZHy_JcIDTN1DYsQ17OLfFi4-FX4ttypJpmlqQzk1qYnQPpmps8PXgjCqOl1nYvThrZ9AGnluxEK4trYI_4fS7HGTs3nvTvJKP4KkvV2LXdsuSEzy2riewgjk2zGfIot4IWXHvS6SRBwOKb0Ug3RBob21cZXocE-EzQzzPOgDWIMr0r7NnBIDp9FyPUIKW0fJxJ2Eu2dboLPtw",
+      "https://lh3.googleusercontent.com/aida-public/AB6AXuD0HpjsqB7nIgOqQ2o7_uCgidE2Q1OxST3m5IB21ltcZbXq0UfS11KMzwqm5Tb6V9ZHy_JcIDTN1DYsQ17OLfFi4-FX4ttypJmlqQzk1qYnQPpmps8PXgjCqOl1nYvThrZ9AGnluxEK4trYI_4fS7HGTs3nvTvJKP4KkvV2LXdsuSEzy2riewgjk2zGfIot4IWXHvS6SRBwOKb0Ug3RBob21cZXocE-EzQzzPOgDWIMr0r7NnBIDp9FyPUIKW0fJxJ2Eu2dboLPtw",
     ],
     extraParticipants: 45,
   },

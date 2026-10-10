@@ -46,14 +46,8 @@ export default function LoginPage() {
           profile?.approval_status === "rejected"
             ? "/pending?status=rejected"
             : "/pending";
-      } else if (profile.role === "admin") {
-        nextPath = "/admin/users";
-        try {
-          sessionStorage.setItem("smm_approval_ok", "1");
-        } catch {
-          // ignore
-        }
       } else {
+        nextPath = "/";
         try {
           sessionStorage.setItem("smm_approval_ok", "1");
         } catch {

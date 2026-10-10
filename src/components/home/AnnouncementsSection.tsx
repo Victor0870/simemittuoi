@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AnnouncementCard } from "@/components/home/AnnouncementCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { Announcement } from "@/lib/mock-data";
@@ -18,13 +19,13 @@ export function AnnouncementsSection({
             Thông báo quan trọng
           </h2>
         </div>
-        <button
+        <Link
           className="flex items-center gap-1 text-label-md font-semibold text-primary transition-colors hover:text-dusty-dark"
-          type="button"
+          href="/posts"
         >
           Xem tất cả
           <MaterialIcon className="text-[16px]" name="arrow_forward" />
-        </button>
+        </Link>
       </div>
 
       {announcements.length === 0 ? (

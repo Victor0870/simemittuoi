@@ -78,7 +78,7 @@ export function ApprovalGate({ children }: { children: React.ReactNode }) {
       }
 
       if (EXEMPT.has(pathname)) {
-        router.replace(profile?.role === "admin" ? "/admin/users" : "/");
+        router.replace("/");
       }
     }
 

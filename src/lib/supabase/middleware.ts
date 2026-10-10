@@ -90,7 +90,7 @@ export async function updateSession(request: NextRequest) {
       pathname === "/register"
     ) {
       const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = role === "admin" ? "/admin/users" : "/";
+      redirectUrl.pathname = "/";
       return NextResponse.redirect(redirectUrl);
     }
 

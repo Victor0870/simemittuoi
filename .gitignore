@@ -11,3 +11,8 @@ pas data.txt
 pas data
 file danh sách nhân viên.xlsx
 *.xlsx
+.vercel
+.env*
+tsconfig.tsbuildinfo
+.playwright-mcp
+supabase/.temp
