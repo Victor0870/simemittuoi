@@ -16,3 +16,4 @@ file danh sách nhân viên.xlsx
 tsconfig.tsbuildinfo
 .playwright-mcp
 supabase/.temp
+scripts/
