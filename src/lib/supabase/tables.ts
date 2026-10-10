@@ -18,6 +18,7 @@ export const CDILV_TABLE = {
   pollVotes: "cdilv_poll_votes",
   pollPredictions: "cdilv_poll_predictions",
   postComments: "cdilv_post_comments",
+  activityRegistrations: "cdilv_activity_registrations",
 } as const;
 
 export const CDILV_RPC = {

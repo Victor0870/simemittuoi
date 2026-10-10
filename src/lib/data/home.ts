@@ -58,7 +58,7 @@ export async function getHomePageData(): Promise<HomePageData> {
   try {
     const publicDb = createPublicClient();
 
-    const [postsResult, activitiesResult, leaderboardResult] =
+    const [postsResult, activitiesResult, leaderboardResult, registrationsResult] =
       await Promise.all([
         publicDb
           .from(CDILV_TABLE.posts)
@@ -68,7 +68,7 @@ export async function getHomePageData(): Promise<HomePageData> {
         publicDb
           .from(CDILV_TABLE.activities)
           .select(
-            "id, title, location, event_date, points, image_url, image_alt",
+            "id, title, description, location, event_date, points, image_url, image_alt, is_registration_open",
           )
           .order("event_date", { ascending: false })
           .limit(10),
@@ -79,6 +79,9 @@ export async function getHomePageData(): Promise<HomePageData> {
           )
           .order("rank", { ascending: true })
           .limit(10),
+        publicDb
+          .from(CDILV_TABLE.activityRegistrations)
+          .select("id, activity_id, user_id"),
       ]);
 
     const errors = [
@@ -93,6 +96,7 @@ export async function getHomePageData(): Promise<HomePageData> {
 
     const posts = postsResult.data ?? [];
     const activities = activitiesResult.data ?? [];
+    const allRegistrations = registrationsResult.data ?? [];
     let leaderboardRows = leaderboardResult.data ?? [];
 
     // Fallback cache nếu view lỗi
@@ -119,17 +123,7 @@ export async function getHomePageData(): Promise<HomePageData> {
       excerpt: post.content,
     }));
 
-    const activityItems: Activity[] = activities.map((item) => ({
-      id: item.id,
-      title: item.title,
-      date: formatDate(item.event_date),
-      location: item.location ?? "",
-      points: item.points,
-      imageUrl: item.image_url ?? "",
-      imageAlt: item.image_alt ?? item.title,
-      participantAvatars: [],
-      extraParticipants: 0,
-    }));
+    let authUser: any = null;
 
     const leaderboard: LeaderboardEntry[] = leaderboardRows
       .slice(0, 6)
@@ -190,12 +184,33 @@ export async function getHomePageData(): Promise<HomePageData> {
           name: profile?.full_name ?? "Đoàn viên",
           score,
           rank,
-          newActivitiesCount: activityItems.length,
+          newActivitiesCount: activities.length,
         };
       }
     } catch (authErr) {
       console.warn("[home] auth session skipped:", authErr);
     }
+
+    const activityItems: Activity[] = activities.map((item) => {
+      const actRegs = allRegistrations.filter((r: any) => r.activity_id === item.id);
+      const isUserRegistered = authUser ? actRegs.some((r: any) => r.user_id === authUser.id) : false;
+
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description ?? "",
+        date: formatDate(item.event_date),
+        location: item.location ?? "",
+        points: item.points,
+        imageUrl: item.image_url ?? "",
+        imageAlt: item.image_alt ?? item.title,
+        participantAvatars: [],
+        extraParticipants: 0,
+        isRegistrationOpen: item.is_registration_open !== false,
+        participantCount: actRegs.length,
+        isRegistered: isUserRegistered,
+      };
+    });
 
     const hasContent =
       announcements.length > 0 ||

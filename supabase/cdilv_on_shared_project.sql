@@ -107,8 +107,23 @@ create table if not exists public.cdilv_activities (
   points integer not null default 0,
   image_url text,
   image_alt text,
+  is_registration_open boolean not null default true,
   created_at timestamptz not null default now()
 );
+
+create table if not exists public.cdilv_activity_registrations (
+  id uuid primary key default gen_random_uuid(),
+  activity_id uuid not null references public.cdilv_activities(id) on delete cascade,
+  user_id uuid not null references public.cdilv_profiles(id) on delete cascade,
+  registered_at timestamptz not null default now(),
+  unique (activity_id, user_id)
+);
+
+create index if not exists cdilv_activity_registrations_act_idx
+  on public.cdilv_activity_registrations (activity_id, registered_at asc);
+
+create index if not exists cdilv_activity_registrations_user_idx
+  on public.cdilv_activity_registrations (user_id);
 
 create table if not exists public.cdilv_score_events (
   id uuid primary key default gen_random_uuid(),

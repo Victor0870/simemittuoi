@@ -17,6 +17,10 @@ export type Activity = {
   imageAlt: string;
   participantAvatars: string[];
   extraParticipants: number;
+  description?: string;
+  isRegistrationOpen?: boolean;
+  participantCount?: number;
+  isRegistered?: boolean;
 };
 
 export type LeaderboardEntry = {
