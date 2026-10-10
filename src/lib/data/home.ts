@@ -64,14 +64,14 @@ export async function getHomePageData(): Promise<HomePageData> {
           .from(CDILV_TABLE.posts)
           .select("id, title, content, tag, tag_tone, published_at")
           .order("published_at", { ascending: false })
-          .limit(10),
+          .limit(4),
         publicDb
           .from(CDILV_TABLE.activities)
           .select(
             "id, title, description, location, event_date, points, image_url, image_alt, is_registration_open",
           )
           .order("event_date", { ascending: false })
-          .limit(10),
+          .limit(4),
         publicDb
           .from(CDILV_TABLE.leaderboard)
           .select(
@@ -219,8 +219,8 @@ export async function getHomePageData(): Promise<HomePageData> {
 
     return {
       user,
-      announcements,
-      activities: activityItems,
+      announcements: announcements.slice(0, 4),
+      activities: activityItems.slice(0, 4),
       leaderboard,
       goal: MOCK_GOAL,
       dataSource: hasContent ? "supabase" : errors.length ? "error" : "empty",
