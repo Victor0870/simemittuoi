@@ -22,7 +22,47 @@ export async function GET(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Query comments with author profile
+    // Check if requester is an approved member or admin
+    let isApproved = false;
+    let isAdmin = false;
+    let myCommentCount = 0;
+
+    if (user) {
+      const { data: me } = await publicDb
+        .from(CDILV_TABLE.profiles)
+        .select("role, approval_status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      isApproved = me?.approval_status === "approved";
+      isAdmin = isApproved && me?.role === "admin";
+    }
+
+    // Get total comment count for this post
+    const { count: totalCommentsCount, error: countErr } = await publicDb
+      .from(CDILV_TABLE.postComments)
+      .select("id", { count: "exact", head: true })
+      .eq("post_id", postId);
+
+    if (countErr) {
+      throw countErr;
+    }
+
+    // Only approved members can view the actual comments
+    if (!isApproved) {
+      return NextResponse.json({
+        totalCount: totalCommentsCount ?? 0,
+        comments: [],
+        isMember: false,
+        isAdmin: false,
+        canComment: false,
+        myCommentCount: 0,
+        maxComments: 3,
+        message: "Chỉ thành viên Đoàn cơ sở mới có quyền xem nội dung bình luận.",
+      });
+    }
+
+    // Query comments with author profile for members
     const { data: rawComments, error } = await publicDb
       .from(CDILV_TABLE.postComments)
       .select(`
@@ -47,25 +87,13 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    let myCommentCount = 0;
-    let isAdmin = false;
-    let canComment = false;
-
     if (user) {
-      const { data: me } = await publicDb
-        .from(CDILV_TABLE.profiles)
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      isAdmin = me?.role === "admin";
-
       myCommentCount = (rawComments ?? []).filter(
         (c: any) => c.user_id === user.id,
       ).length;
-
-      canComment = isAdmin || myCommentCount < 3;
     }
+
+    const canComment = isAdmin || myCommentCount < 3;
 
     const comments = (rawComments ?? []).map((row: any) => {
       const prof = Array.isArray(row.cdilv_profiles)
@@ -86,7 +114,9 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
+      totalCount: totalCommentsCount ?? comments.length,
       comments,
+      isMember: true,
       myCommentCount,
       canComment,
       maxComments: isAdmin ? null : 3,
@@ -118,13 +148,23 @@ export async function POST(request: NextRequest) {
     const publicDb = createPublicClient();
     const { data: me } = await publicDb
       .from(CDILV_TABLE.profiles)
-      .select("role, full_name")
+      .select("role, full_name, approval_status")
       .eq("id", user.id)
       .maybeSingle();
 
     if (!me) {
       return NextResponse.json(
         { error: "Tài khoản không tồn tại trong hệ thống." },
+        { status: 403 },
+      );
+    }
+
+    if (me.approval_status !== "approved") {
+      return NextResponse.json(
+        {
+          error:
+            "Tài khoản của bạn đang chờ phê duyệt. Chỉ đoàn viên chính thức mới có quyền đăng bình luận.",
+        },
         { status: 403 },
       );
     }

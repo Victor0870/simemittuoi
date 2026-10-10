@@ -166,3 +166,19 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
   });
 }
 
+export async function getPostCommentsCount(postId: string): Promise<number> {
+  const db = createPublicClient();
+  const { count, error } = await db
+    .from(CDILV_TABLE.postComments)
+    .select("id", { count: "exact", head: true })
+    .eq("post_id", postId);
+
+  if (error) {
+    console.error("[posts] getPostCommentsCount error:", error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { getPostById, getPostComments, getRelatedPosts } from "@/lib/data/posts";
+import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/posts";
 
 export const revalidate = 60;
 
@@ -16,9 +16,9 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const post = await getPostById(id);
   if (!post) notFound();
 
-  const [related, comments] = await Promise.all([
+  const [related, commentCount] = await Promise.all([
     getRelatedPosts(post.id, 6),
-    getPostComments(post.id),
+    getPostCommentsCount(post.id),
   ]);
 
   const publishedLabel = new Date(post.publishedAt).toLocaleString("vi-VN", {
@@ -86,7 +86,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
       <PostCommentsSection
         postId={post.id}
         postTitle={post.title}
-        initialComments={comments}
+        initialCommentCount={commentCount}
       />
 
       {related.length > 0 ? (

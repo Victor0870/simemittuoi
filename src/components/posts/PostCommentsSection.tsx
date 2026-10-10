@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -9,21 +9,68 @@ import type { PostComment } from "@/lib/data/posts";
 type PostCommentsSectionProps = {
   postId: string;
   postTitle?: string;
-  initialComments: PostComment[];
+  initialCommentCount?: number;
+  initialComments?: PostComment[];
 };
 
 export function PostCommentsSection({
   postId,
   postTitle,
+  initialCommentCount = 0,
   initialComments,
 }: PostCommentsSectionProps) {
-  const { user, profile, isAdmin, isGuest, loading } = useAuth();
+  const { user, profile, isAdmin, isApproved, loading: authLoading } = useAuth();
 
-  const [comments, setComments] = useState<PostComment[]>(initialComments);
+  const [commentCount, setCommentCount] = useState<number>(
+    initialCommentCount ?? initialComments?.length ?? 0,
+  );
+  const [comments, setComments] = useState<PostComment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Fetch comments only when user is an approved member
+  useEffect(() => {
+    if (authLoading) return;
+
+    if (!isApproved) {
+      setComments([]);
+      setHasLoaded(true);
+      return;
+    }
+
+    let isMounted = true;
+    setLoadingComments(true);
+
+    fetch(`/api/posts/comments?postId=${encodeURIComponent(postId)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.comments && Array.isArray(data.comments)) {
+          setComments(data.comments);
+          if (typeof data.totalCount === "number") {
+            setCommentCount(data.totalCount);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load comments:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingComments(false);
+          setHasLoaded(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [postId, authLoading, isApproved]);
 
   // Comments submitted by the current user for this post
   const myComments = user ? comments.filter((c) => c.userId === user.id) : [];
@@ -41,10 +88,10 @@ export function PostCommentsSection({
     e.preventDefault();
     if (submitting) return;
 
-    if (!user) {
+    if (!user || !isApproved) {
       setNotice({
         type: "error",
-        text: "Vui lòng đăng nhập để gửi bình luận.",
+        text: "Chỉ thành viên đã được phê duyệt mới có quyền gửi bình luận.",
       });
       return;
     }
@@ -106,6 +153,7 @@ export function PostCommentsSection({
       };
 
       setComments((prev) => [...prev, newComment]);
+      setCommentCount((prev) => prev + 1);
       setContent("");
       setNotice({
         type: "success",
@@ -145,6 +193,7 @@ export function PostCommentsSection({
       }
 
       setComments((prev) => prev.filter((c) => c.id !== commentId));
+      setCommentCount((prev) => Math.max(0, prev - 1));
       setNotice({
         type: "success",
         text: data.message || "Đã xóa bình luận thành công.",
@@ -184,7 +233,7 @@ export function PostCommentsSection({
             +1đ thi đua / bình luận
           </span>
           <span className="rounded-full bg-dusty-light px-3 py-1 text-label-xs sm:text-label-sm font-semibold text-primary">
-            {comments.length} bình luận
+            {commentCount} bình luận
           </span>
         </div>
       </div>
@@ -226,250 +275,302 @@ export function PostCommentsSection({
         </div>
       )}
 
-      {/* Input box or Login prompt */}
-      {loading ? (
-        <div className="h-28 animate-pulse rounded-2xl bg-surface-container" />
-      ) : isGuest ? (
-        /* Guest view: Prompt login */
-        <div className="rounded-2xl border border-dashed border-primary/40 bg-gradient-to-br from-dusty-light/60 via-white to-white p-5 sm:p-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <MaterialIcon className="text-[28px]" name="lock_open" />
+      {/* MAIN CONTENT AREA */}
+      {authLoading ? (
+        /* Loading Auth State */
+        <div className="h-32 animate-pulse rounded-2xl bg-surface-container/60" />
+      ) : !isApproved ? (
+        /* NON-MEMBER / GUEST / PENDING / REJECTED VIEW:
+           Chỉ nhìn thấy số lượng bình luận và Card nhắc nhở đăng ký thành viên */
+        <div className="overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-dusty-light/60 via-white to-primary/5 p-6 sm:p-8 text-center shadow-xs">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs ring-4 ring-primary/5">
+            <MaterialIcon className="text-[32px]" name="lock" />
           </div>
-          <h3 className="text-base sm:text-title-md font-bold text-on-surface">
-            Đăng nhập để tham gia bình luận
+
+          <h3 className="text-lg sm:text-title-lg font-bold text-on-surface">
+            Nội dung bình luận chỉ dành cho thành viên
           </h3>
-          <p className="mx-auto mt-1 max-w-md text-xs sm:text-body-sm text-on-surface-variant">
-            Chỉ thành viên đã đăng ký tài khoản Đoàn viên mới có quyền đăng bình luận và nhận
-            ngay <strong>+1 điểm thi đua</strong>.
+
+          <p className="mx-auto mt-2 max-w-lg text-body-sm sm:text-body-md text-on-surface-variant leading-relaxed">
+            Bài viết hiện có{" "}
+            <strong className="font-bold text-primary">{commentCount} bình luận</strong> trao đổi.
+            Vui lòng đăng ký hoặc đăng nhập tài khoản thành viên Đoàn cơ sở để được đọc toàn bộ
+            bình luận và tham gia thảo luận.
           </p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={`/login?next=/posts/${postId}`}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-dusty-dark"
-            >
-              <MaterialIcon className="text-[18px]" name="login" />
-              Đăng nhập ngay
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-xl border border-dusty-border bg-white px-4 py-2.5 text-sm font-bold text-on-surface transition hover:bg-dusty-light/50"
-            >
-              Đăng ký tài khoản
-            </Link>
+
+          <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1 text-xs font-semibold text-amber-900">
+            <MaterialIcon className="text-[16px] text-amber-600" name="military_tech" />
+            Tham gia bình luận tích luỹ ngay +1 điểm thi đua / bình luận
           </div>
+
+          {!user ? (
+            /* Khách chưa đăng nhập: Nút Đăng ký & Đăng nhập */
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-dusty-dark"
+              >
+                <MaterialIcon className="text-[18px]" name="person_add" />
+                Đăng ký thành viên
+              </Link>
+              <Link
+                href={`/login?next=/posts/${postId}`}
+                className="inline-flex items-center gap-2 rounded-xl border border-dusty-border bg-white px-5 py-2.5 text-sm font-bold text-on-surface transition hover:bg-dusty-light"
+              >
+                <MaterialIcon className="text-[18px]" name="login" />
+                Đã có tài khoản? Đăng nhập
+              </Link>
+            </div>
+          ) : profile?.approval_status === "pending" ? (
+            /* Đã đăng nhập nhưng đang chờ duyệt */
+            <div className="mt-5 mx-auto max-w-md rounded-xl border border-amber-300 bg-amber-50/90 p-4 text-center text-amber-950">
+              <div className="flex items-center justify-center gap-2 font-bold text-amber-900 text-sm">
+                <MaterialIcon className="text-[18px] text-amber-700" name="hourglass_top" />
+                Tài khoản đang chờ duyệt thành viên
+              </div>
+              <p className="mt-1.5 text-xs text-amber-800 leading-relaxed">
+                Hồ sơ của bạn (<strong>{profile?.full_name || user.email}</strong>) đang được Ban
+                chấp hành xem xét phê duyệt. Sau khi được duyệt, bạn sẽ có thể đọc toàn bộ bình luận
+                và tham gia đóng góp ý kiến nhận điểm thi đua.
+              </p>
+            </div>
+          ) : profile?.approval_status === "rejected" ? (
+            /* Tài khoản bị từ chối */
+            <div className="mt-5 mx-auto max-w-md rounded-xl border border-red-300 bg-red-50 p-4 text-center text-red-950">
+              <div className="flex items-center justify-center gap-2 font-bold text-red-900 text-sm">
+                <MaterialIcon className="text-[18px] text-red-600" name="cancel" />
+                Tài khoản chưa được phê duyệt
+              </div>
+              <p className="mt-1 text-xs text-red-800">
+                Vui lòng liên hệ Ban chấp hành Đoàn cơ sở để được hỗ trợ kích hoạt tài khoản đoàn viên.
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : (
-        /* Logged-in view */
-        <div className="space-y-3">
-          {/* Status info bar */}
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-body-sm">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-on-surface">
-                {profile?.full_name || user?.email}
-              </span>
-              {isAdmin ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-label-xs font-bold text-amber-900">
-                  <MaterialIcon className="text-[12px] text-amber-600" name="shield" />
-                  Quản trị viên (Không giới hạn)
+        /* MEMBER VIEW: Thành viên chính thức đã được phê duyệt */
+        <div className="space-y-6">
+          {/* Member comment form or Limit reached */}
+          <div className="space-y-3">
+            {/* Status info bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-body-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-on-surface">
+                  {profile?.full_name || user?.email}
                 </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-dusty-light px-2 py-0.5 text-label-xs font-semibold text-primary">
-                  {profile?.department || "Đoàn viên"}
-                </span>
-              )}
-            </div>
-
-            {!isAdmin && (
-              <div className="flex items-center gap-1.5 font-medium">
-                {isLimitReached ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-label-xs font-bold text-red-800">
-                    <MaterialIcon className="text-[13px]" name="block" />
-                    Đã đạt tối đa 3/3 bình luận
+                {isAdmin ? (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-label-xs font-bold text-amber-900">
+                    <MaterialIcon className="text-[12px] text-amber-600" name="shield" />
+                    Quản trị viên (Không giới hạn)
                   </span>
                 ) : (
-                  <span className="text-on-surface-variant">
-                    Đã bình luận:{" "}
-                    <strong className="text-primary">{myCommentCount}/3</strong> (Còn{" "}
-                    <strong>{remainingCount}</strong> lượt)
+                  <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-dusty-light px-2 py-0.5 text-label-xs font-semibold text-primary">
+                    {profile?.department || "Đoàn viên"}
                   </span>
                 )}
               </div>
+
+              {!isAdmin && (
+                <div className="flex items-center gap-1.5 font-medium">
+                  {isLimitReached ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-label-xs font-bold text-red-800">
+                      <MaterialIcon className="text-[13px]" name="block" />
+                      Đã đạt tối đa 3/3 bình luận
+                    </span>
+                  ) : (
+                    <span className="text-on-surface-variant">
+                      Đã bình luận:{" "}
+                      <strong className="text-primary">{myCommentCount}/3</strong> (Còn{" "}
+                      <strong>{remainingCount}</strong> lượt)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Form or Max Reached Banner */}
+            {isLimitReached ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-950">
+                <MaterialIcon className="shrink-0 text-[24px] text-emerald-600" name="task_alt" />
+                <div className="text-xs sm:text-body-sm">
+                  <p className="font-bold">Bạn đã đăng đủ 3 bình luận cho bài viết này!</p>
+                  <p className="text-emerald-800">
+                    Toàn bộ điểm thi đua (+3đ) đã được ghi nhận. Cảm ơn sự tích cực đóng góp và thảo
+                    luận sôi nổi của bạn!
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="relative">
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder="Viết bình luận, ý kiến đóng góp hoặc lời chúc của bạn... (+1đ thi đua)"
+                    rows={3}
+                    maxLength={1000}
+                    disabled={submitting}
+                    className="w-full rounded-2xl border border-dusty-border bg-white p-3.5 sm:p-4 text-body-sm sm:text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container"
+                  />
+                  <div className="absolute bottom-3 right-3 text-[11px] text-on-surface-variant">
+                    {content.length}/1000
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-on-surface-variant">
+                    Mỗi bình luận tích lũy ngay <strong>+1 điểm thi đua</strong>
+                  </span>
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !content.trim()}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 sm:px-5 sm:py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span>Đang gửi...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MaterialIcon className="text-[18px]" name="send" />
+                        <span>Gửi bình luận (+1đ)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
 
-          {/* Comment Form or Max Reached Banner */}
-          {isLimitReached ? (
-            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-950">
-              <MaterialIcon className="shrink-0 text-[24px] text-emerald-600" name="task_alt" />
-              <div className="text-xs sm:text-body-sm">
-                <p className="font-bold">Bạn đã đăng đủ 3 bình luận cho bài viết này!</p>
-                <p className="text-emerald-800">
-                  Toàn bộ điểm thi đua (+3đ) đã được ghi nhận. Cảm ơn sự tích cực đóng góp và thảo
-                  luận sôi nổi của bạn!
+          {/* Member Comments List */}
+          <div className="space-y-4 pt-2">
+            {loadingComments ? (
+              <div className="space-y-3">
+                <div className="h-20 animate-pulse rounded-2xl bg-surface-container/60" />
+                <div className="h-20 animate-pulse rounded-2xl bg-surface-container/60" />
+              </div>
+            ) : comments.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-dusty-border/80 bg-white/50 p-8 text-center">
+                <MaterialIcon
+                  className="mx-auto mb-2 text-[36px] text-on-surface-variant/40"
+                  name="chat_bubble_outline"
+                />
+                <p className="text-body-sm font-medium text-on-surface-variant">
+                  Chưa có bình luận nào cho bài viết này.
+                </p>
+                <p className="mt-0.5 text-xs text-on-surface-variant/70">
+                  Hãy là người đầu tiên để lại ý kiến đóng góp!
                 </p>
               </div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="relative">
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Viết bình luận, ý kiến đóng góp hoặc lời chúc của bạn... (+1đ thi đua)"
-                  rows={3}
-                  maxLength={1000}
-                  disabled={submitting}
-                  className="w-full rounded-2xl border border-dusty-border bg-white p-3.5 sm:p-4 text-body-sm sm:text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container"
-                />
-                <div className="absolute bottom-3 right-3 text-[11px] text-on-surface-variant">
-                  {content.length}/1000
-                </div>
-              </div>
+            ) : (
+              <ul className="space-y-3.5">
+                {comments.map((comment) => {
+                  const isAuthor = user && user.id === comment.userId;
+                  const canDelete = isAdmin || isAuthor;
+                  const isCommentAdmin = comment.authorRole === "admin";
+                  const initial = (comment.authorName || "?").slice(0, 1).toUpperCase();
 
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-on-surface-variant">
-                  Mỗi bình luận tích lũy ngay <strong>+1 điểm thi đua</strong>
-                </span>
+                  return (
+                    <li
+                      key={comment.id}
+                      className={`group relative rounded-2xl border p-4 sm:p-5 transition-colors ${
+                        isAuthor
+                          ? "border-primary/30 bg-primary/[0.02]"
+                          : "border-dusty-border/70 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        {/* User info */}
+                        <div className="flex items-start gap-3">
+                          {/* Avatar */}
+                          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dusty-border bg-dusty-light font-bold text-primary">
+                            {comment.authorAvatar ? (
+                              <img
+                                src={comment.authorAvatar}
+                                alt={comment.authorName}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <span>{initial}</span>
+                            )}
+                          </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting || !content.trim()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 sm:px-5 sm:py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      <span>Đang gửi...</span>
-                    </>
-                  ) : (
-                    <>
-                      <MaterialIcon className="text-[18px]" name="send" />
-                      <span>Gửi bình luận (+1đ)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          )}
+                          {/* Name & metadata */}
+                          <div className="space-y-0.5">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <span className="font-bold text-on-surface text-body-sm sm:text-body-md">
+                                {comment.authorName}
+                              </span>
+
+                              {isCommentAdmin ? (
+                                <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.2 text-[10px] sm:text-label-xs font-bold text-amber-900">
+                                  <MaterialIcon className="text-[12px] text-amber-600" name="shield" />
+                                  Quản trị viên
+                                </span>
+                              ) : comment.authorDepartment ? (
+                                <span className="inline-flex items-center rounded-full border border-dusty-border bg-dusty-light px-2 py-0.2 text-[10px] sm:text-label-xs font-medium text-on-surface-variant">
+                                  {comment.authorDepartment}
+                                </span>
+                              ) : null}
+
+                              {comment.authorCode && (
+                                <span className="text-[11px] text-on-surface-variant/70">
+                                  · {comment.authorCode}
+                                </span>
+                              )}
+
+                              {isAuthor && (
+                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.2 text-[10px] font-bold text-primary">
+                                  Bạn
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1 text-[11px] sm:text-xs text-on-surface-variant">
+                              <MaterialIcon className="text-[13px]" name="schedule" />
+                              <span>{comment.timeAgo}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Delete button (for admin or author) */}
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(comment.id)}
+                            disabled={deletingId === comment.id}
+                            title={
+                              isAdmin && !isAuthor
+                                ? "Xóa bình luận (Quyền Admin)"
+                                : "Xóa bình luận của bạn"
+                            }
+                            className="rounded-lg p-1.5 text-on-surface-variant/60 hover:bg-red-50 hover:text-red-600 transition"
+                            type="button"
+                          >
+                            {deletingId === comment.id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                            ) : (
+                              <MaterialIcon className="text-[18px]" name="delete_outline" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Comment content */}
+                      <div className="mt-3 pl-0 sm:pl-[52px]">
+                        <p className="whitespace-pre-wrap break-words text-body-sm sm:text-body-md leading-relaxed text-on-surface">
+                          {comment.content}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Comments List */}
-      <div className="space-y-4 pt-3">
-        {comments.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-dusty-border/80 bg-white/50 p-8 text-center">
-            <MaterialIcon
-              className="mx-auto mb-2 text-[36px] text-on-surface-variant/40"
-              name="chat_bubble_outline"
-            />
-            <p className="text-body-sm font-medium text-on-surface-variant">
-              Chưa có bình luận nào cho bài viết này.
-            </p>
-            <p className="mt-0.5 text-xs text-on-surface-variant/70">
-              Hãy là người đầu tiên để lại ý kiến đóng góp!
-            </p>
-          </div>
-        ) : (
-          <ul className="space-y-3.5">
-            {comments.map((comment) => {
-              const isAuthor = user && user.id === comment.userId;
-              const canDelete = isAdmin || isAuthor;
-              const isCommentAdmin = comment.authorRole === "admin";
-              const initial = (comment.authorName || "?").slice(0, 1).toUpperCase();
-
-              return (
-                <li
-                  key={comment.id}
-                  className={`group relative rounded-2xl border p-4 sm:p-5 transition-colors ${
-                    isAuthor
-                      ? "border-primary/30 bg-primary/[0.02]"
-                      : "border-dusty-border/70 bg-white"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    {/* User info */}
-                    <div className="flex items-start gap-3">
-                      {/* Avatar */}
-                      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dusty-border bg-dusty-light font-bold text-primary">
-                        {comment.authorAvatar ? (
-                          <img
-                            src={comment.authorAvatar}
-                            alt={comment.authorName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span>{initial}</span>
-                        )}
-                      </div>
-
-                      {/* Name & metadata */}
-                      <div className="space-y-0.5">
-                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                          <span className="font-bold text-on-surface text-body-sm sm:text-body-md">
-                            {comment.authorName}
-                          </span>
-
-                          {isCommentAdmin ? (
-                            <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.2 text-[10px] sm:text-label-xs font-bold text-amber-900">
-                              <MaterialIcon className="text-[12px] text-amber-600" name="shield" />
-                              Quản trị viên
-                            </span>
-                          ) : comment.authorDepartment ? (
-                            <span className="inline-flex items-center rounded-full border border-dusty-border bg-dusty-light px-2 py-0.2 text-[10px] sm:text-label-xs font-medium text-on-surface-variant">
-                              {comment.authorDepartment}
-                            </span>
-                          ) : null}
-
-                          {comment.authorCode && (
-                            <span className="text-[11px] text-on-surface-variant/70">
-                              · {comment.authorCode}
-                            </span>
-                          )}
-
-                          {isAuthor && (
-                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.2 text-[10px] font-bold text-primary">
-                              Bạn
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1 text-[11px] sm:text-xs text-on-surface-variant">
-                          <MaterialIcon className="text-[13px]" name="schedule" />
-                          <span>{comment.timeAgo}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Delete button (for admin or author) */}
-                    {canDelete && (
-                      <button
-                        onClick={() => handleDelete(comment.id)}
-                        disabled={deletingId === comment.id}
-                        title={isAdmin && !isAuthor ? "Xóa bình luận (Quyền Admin)" : "Xóa bình luận của bạn"}
-                        className="rounded-lg p-1.5 text-on-surface-variant/60 hover:bg-red-50 hover:text-red-600 transition"
-                        type="button"
-                      >
-                        {deletingId === comment.id ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
-                        ) : (
-                          <MaterialIcon className="text-[18px]" name="delete_outline" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Comment content */}
-                  <div className="mt-3 pl-0 sm:pl-[52px]">
-                    <p className="whitespace-pre-wrap break-words text-body-sm sm:text-body-md leading-relaxed text-on-surface">
-                      {comment.content}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
     </section>
   );
 }
