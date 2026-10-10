@@ -151,6 +151,13 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
           <div className="mb-3 flex items-center gap-2">
             <Link
               className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+              href="/admin"
+            >
+              <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
+              <span>Tổng quan Admin</span>
+            </Link>
+            <Link
+              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
               href="/admin/scores"
             >
               <MaterialIcon className="text-[18px] text-amber-600" name="military_tech" />

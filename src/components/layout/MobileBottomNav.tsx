@@ -26,14 +26,19 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
   const items = isAdmin
     ? [
         ...MOBILE_NAV_ITEMS,
-        { href: "/admin/scores", label: "Cộng điểm", icon: "military_tech" as const },
+        { href: "/admin", label: "Tài khoản", icon: "admin_panel_settings" as const },
       ]
-    : MOBILE_NAV_ITEMS;
+    : [
+        ...MOBILE_NAV_ITEMS,
+        { href: "/settings", label: "Tài khoản", icon: "person" as const },
+      ];
 
   return (
     <div className="fixed right-0 bottom-0 left-0 z-50 flex h-16 items-center justify-around border-t border-outline-variant/70 bg-white/95 backdrop-blur-md px-1 shadow-[0_-3px_12px_rgba(0,0,0,0.06)] md:hidden">
       {items.map((item) => {
-        const isActive = item.href === current;
+        const isActive =
+          item.href === current ||
+          (item.href === "/admin" && pathname.startsWith("/admin"));
 
         return (
           <Link

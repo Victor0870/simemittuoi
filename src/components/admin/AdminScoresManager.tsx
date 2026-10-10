@@ -287,6 +287,13 @@ export function AdminScoresManager({
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-6">
         <div>
           <div className="mb-3 flex items-center gap-2">
+            <Link
+              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+              href="/admin"
+            >
+              <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
+              <span>Tổng quan Admin</span>
+            </Link>
             <span className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-3 py-1.5 text-label-md font-bold text-white shadow-xs">
               <MaterialIcon className="text-[18px]" name="military_tech" />
               <span>Quản lý & Cộng điểm</span>

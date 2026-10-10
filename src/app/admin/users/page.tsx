@@ -41,6 +41,13 @@ export default async function AdminUsersPage() {
         <div>
           <div className="mb-3 flex items-center gap-2">
             <Link
+              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+              href="/admin"
+            >
+              <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
+              <span>Tổng quan Admin</span>
+            </Link>
+            <Link
               className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-amber-400 hover:text-amber-800"
               href="/admin/scores"
             >

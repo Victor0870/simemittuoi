@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,7 +46,7 @@ export default function SettingsPage() {
       const [{ data: profile }, { data: bonus }] = await Promise.all([
         supabase
           .from(CDILV_TABLE.profiles)
-          .select("full_name, avatar_url")
+          .select("full_name, avatar_url, role")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
@@ -61,6 +62,7 @@ export default function SettingsPage() {
       setUserId(user.id);
       setFullName(profile?.full_name ?? "");
       setAvatarUrl(profile?.avatar_url ?? null);
+      setIsAdmin(profile?.role === "admin");
       setHasAvatarBonus(Boolean(bonus?.id));
       setLoading(false);
     }
@@ -160,6 +162,26 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
+      {isAdmin ? (
+        <Link
+          href="/admin"
+          className="flex items-center justify-between rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 transition hover:bg-amber-100 shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
+              <MaterialIcon className="text-[22px]" name="shield" />
+            </div>
+            <div>
+              <p className="font-bold text-sm sm:text-base">Trung tâm Quản trị (Admin)</p>
+              <p className="text-xs text-amber-800">
+                Quản lý vote, duyệt thành viên và cộng điểm thi đua
+              </p>
+            </div>
+          </div>
+          <MaterialIcon className="text-[20px] text-amber-700" name="arrow_forward" />
+        </Link>
+      ) : null}
+
       <div>
         <h1 className="text-headline-xl font-extrabold text-[#173A67]">Cài đặt</h1>
         <p className="mt-2 text-body-md text-on-surface-variant">
