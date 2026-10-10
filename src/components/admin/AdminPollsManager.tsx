@@ -265,9 +265,16 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
                       {p.pollType === "vote" ? "Vote tác phẩm" : "Trắc nghiệm"}
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
-                        {p.accessType === "free" ? "Free (IP check)" : "Đoàn viên"}
-                      </span>
+                      <div className="space-y-1">
+                        <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
+                          {p.accessType === "free" ? "Free (IP check)" : "Đoàn viên"}
+                        </span>
+                        {p.accessType === "free" ? (
+                          <div className="text-[11px] font-medium text-amber-900">
+                            🛡️ {p.guestVoteCount}/{p.maxGuestVotes} lượt
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
                     {/* CỘT KÍCH HOẠT (ACTIVE / INACTIVE) */}
                     <td className="px-4 py-3.5">

@@ -35,6 +35,7 @@ export function PollEditorModal({
   const [contentType, setContentType] = useState<"text" | "image">("image");
   const [isActive, setIsActive] = useState(true);
   const [maxVotesPerUser, setMaxVotesPerUser] = useState(3);
+  const [maxGuestVotes, setMaxGuestVotes] = useState(250);
   const [hasPrediction, setHasPrediction] = useState(true);
   const [predictionQuestion, setPredictionQuestion] = useState(
     "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
@@ -76,6 +77,7 @@ export function PollEditorModal({
       setContentType(initialPoll.contentType || "image");
       setIsActive(initialPoll.isActive !== false);
       setMaxVotesPerUser(initialPoll.maxVotesPerUser || 3);
+      setMaxGuestVotes(initialPoll.maxGuestVotes ?? 250);
       setHasPrediction(Boolean(initialPoll.hasPrediction));
       setPredictionQuestion(
         initialPoll.predictionQuestion ||
@@ -242,6 +244,7 @@ export function PollEditorModal({
         contentType,
         isActive,
         maxVotesPerUser,
+        maxGuestVotes,
         hasPrediction,
         predictionQuestion,
         voterRewardPoints,
@@ -743,6 +746,34 @@ export function PollEditorModal({
                     onChange={(e) => setVoterRewardPoints(Number(e.target.value))}
                   />
                 </div>
+
+                {/* Tính năng an toàn: Giới hạn lượt bình chọn tự do (Free) */}
+                {accessType === "free" && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-300/80 bg-amber-50/60 p-4 -mx-5 -mb-5 rounded-b-2xl">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5 text-amber-950">
+                        <MaterialIcon className="text-[20px] text-amber-700" name="shield" />
+                        <h4 className="text-sm font-extrabold">
+                          Giới hạn an toàn bình chọn tự do (Chống spam)
+                        </h4>
+                      </div>
+                      <p className="text-xs text-amber-900 max-w-md">
+                        Tối đa <strong>{maxGuestVotes}</strong> lượt không đăng nhập. Vượt quá mức này sẽ tự động chặn khách và chỉ cho phép Đoàn viên đăng nhập tiếp tục bình chọn.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="w-24 rounded-xl border border-amber-400 bg-white px-3 py-2 text-center text-title-md font-black text-amber-950 focus:border-amber-600 focus:ring-2 focus:ring-amber-200"
+                        min={10}
+                        max={10000}
+                        type="number"
+                        value={maxGuestVotes}
+                        onChange={(e) => setMaxGuestVotes(Number(e.target.value) || 250)}
+                      />
+                      <span className="text-xs font-bold text-amber-900">lượt</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

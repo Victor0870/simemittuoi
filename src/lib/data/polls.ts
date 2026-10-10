@@ -31,6 +31,8 @@ export type PollSummary = {
   status: "open" | "closed" | "draft";
   isActive: boolean;
   maxVotesPerUser: number;
+  maxGuestVotes: number;
+  guestVoteCount: number;
   hasPrediction: boolean;
   predictionQuestion: string;
   voterRewardPoints: number;
@@ -74,6 +76,8 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     status: row.status,
     isActive: row.is_active !== false,
     maxVotesPerUser: row.max_votes_per_user ?? 3,
+    maxGuestVotes: row.max_guest_votes ?? 250,
+    guestVoteCount: row.guest_vote_count ?? 0,
     hasPrediction: Boolean(row.has_prediction),
     predictionQuestion:
       row.prediction_question ||
@@ -177,6 +181,8 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     status: pollRow.status,
     isActive: pollRow.is_active !== false,
     maxVotesPerUser: pollRow.max_votes_per_user ?? 3,
+    maxGuestVotes: pollRow.max_guest_votes ?? 250,
+    guestVoteCount: pollRow.guest_vote_count ?? 0,
     hasPrediction: Boolean(pollRow.has_prediction),
     predictionQuestion:
       pollRow.prediction_question ||

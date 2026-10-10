@@ -191,6 +191,15 @@ export function PollAdminToolbar({ poll }: Props) {
           </div>
         ) : null}
 
+        {poll.accessType === "free" && poll.guestVoteCount >= poll.maxGuestVotes ? (
+          <div className="flex items-center gap-2 rounded-xl bg-rose-500/25 border border-rose-400/50 px-3 py-2 text-xs font-semibold text-rose-200">
+            <MaterialIcon className="text-[18px] text-rose-300 shrink-0" name="shield" />
+            <span>
+              🛡️ An toàn: Đã đạt giới hạn <strong>{poll.maxGuestVotes} lượt bình chọn tự do</strong>. Hệ thống đang tự động chặn khách vãng lai và chỉ mở tiếp cho Đoàn viên đăng nhập.
+            </span>
+          </div>
+        ) : null}
+
         {message ? (
           <div className="rounded-xl bg-white/10 px-3 py-1.5 text-xs text-amber-200">
             {message}

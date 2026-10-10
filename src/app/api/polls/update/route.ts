@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
       thirdPrizePoints = 30,
       consolationPrizePoints = 20,
       consolationPrizeCount = 2,
+      maxGuestVotes = 250,
       isActive,
       options = [],
     } = body;
@@ -75,6 +76,7 @@ export async function POST(request: NextRequest) {
       access_type: accessType,
       content_type: contentType,
       max_votes_per_user: parseInt(String(maxVotesPerUser), 10) || 3,
+      max_guest_votes: parseInt(String(maxGuestVotes), 10) || 250,
       has_prediction: Boolean(hasPrediction),
       prediction_question:
         predictionQuestion?.trim() ||

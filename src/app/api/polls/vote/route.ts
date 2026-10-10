@@ -74,6 +74,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Safety limit check for free polls: max guest votes (default 250)
+    const maxGuestVotes = poll.max_guest_votes ?? 250;
+    const currentGuestVotes = poll.guest_vote_count ?? 0;
+
+    if (!user) {
+      if (poll.access_type === "free" && currentGuestVotes >= maxGuestVotes) {
+        return NextResponse.json(
+          {
+            error: `Chương trình đã đạt giới hạn an toàn ${maxGuestVotes} lượt bình chọn tự do. Hiện tại chỉ có Đoàn viên đã đăng nhập tài khoản mới có thể tiếp tục bình chọn!`,
+            guestLimitReached: true,
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     // IP & anti-spam check (1 vote / 30 minutes in free mode)
     const clientIp =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -120,12 +136,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert votes
+    const submissionId = crypto.randomUUID();
     const voteInserts = optionIds.map((optId: string) => ({
       poll_id: pollId,
       option_id: optId,
       user_id: user?.id || null,
       ip_address: clientIp,
       device_fingerprint: fingerprint,
+      submission_id: submissionId,
     }));
 
     const { error: insertVotesError } = await publicDb
@@ -134,6 +152,14 @@ export async function POST(request: NextRequest) {
 
     if (insertVotesError) {
       throw insertVotesError;
+    }
+
+    // If guest vote, increment guest_vote_count on poll
+    if (!user) {
+      await publicDb
+        .from(CDILV_TABLE.polls)
+        .update({ guest_vote_count: currentGuestVotes + 1 })
+        .eq("id", pollId);
     }
 
     // Increment vote_count on options
