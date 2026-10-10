@@ -38,7 +38,7 @@ export default async function PostsPage() {
           Chưa có bài viết nào. Vui lòng quay lại sau.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-gutter md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-gutter md:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
             <PostCard key={post.id} post={post} />
           ))}

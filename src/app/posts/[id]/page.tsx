@@ -27,21 +27,21 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   });
 
   return (
-    <div className="space-y-10">
+    <div className="mx-auto max-w-4xl xl:max-w-5xl space-y-8 sm:space-y-10">
       <nav className="flex flex-wrap items-center gap-2 text-body-sm text-on-surface-variant">
-        <Link className="hover:text-primary" href="/">
+        <Link className="hover:text-primary transition" href="/">
           Trang chủ
         </Link>
         <MaterialIcon className="text-[14px]" name="chevron_right" />
-        <Link className="hover:text-primary" href="/posts">
+        <Link className="hover:text-primary transition" href="/posts">
           Bài viết
         </Link>
         <MaterialIcon className="text-[14px]" name="chevron_right" />
-        <span className="line-clamp-1 text-on-surface">{post.title}</span>
+        <span className="line-clamp-1 text-on-surface font-medium">{post.title}</span>
       </nav>
 
       <article className="overflow-hidden rounded-2xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm">
-        <div className="border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/80 via-white to-white px-4 py-6 sm:px-10 sm:py-8">
+        <div className="border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/80 via-white to-white px-5 py-6 sm:px-10 sm:py-8">
           <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-white px-2.5 py-0.5 text-label-xs sm:text-label-sm font-bold text-primary">
               <MaterialIcon className="text-[13px] sm:text-[14px]" name="article" />
@@ -55,13 +55,13 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
               · {post.timeAgo}
             </span>
           </div>
-          <h1 className="max-w-3xl text-xl sm:text-headline-lg md:text-headline-xl font-extrabold tracking-tight text-on-surface leading-tight">
+          <h1 className="text-xl sm:text-headline-lg md:text-headline-xl font-extrabold tracking-tight text-on-surface leading-tight">
             {post.title}
           </h1>
         </div>
 
-        <div className="px-4 py-6 sm:px-10 sm:py-8">
-          <div className="max-w-3xl whitespace-pre-wrap text-body-md sm:text-body-lg leading-relaxed text-on-surface">
+        <div className="px-5 py-6 sm:px-10 sm:py-8">
+          <div className="w-full whitespace-pre-wrap text-body-md sm:text-body-lg leading-relaxed text-on-surface">
             {post.content}
           </div>
         </div>
