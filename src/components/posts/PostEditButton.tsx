@@ -12,6 +12,7 @@ type PostEditButtonProps = {
     content: string;
     tag: string;
     tagTone?: string;
+    isImportant?: boolean;
   };
 };
 
@@ -20,6 +21,7 @@ const SUGGESTED_TAGS = [
   "Thể thao",
   "Sự kiện",
   "Thông báo",
+  "Thông báo quan trọng",
   "Khẩn cấp",
   "Thi đua",
 ];
@@ -32,6 +34,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   const [title, setTitle] = useState(post.title);
   const [content, setContent] = useState(post.content);
   const [tag, setTag] = useState(post.tag || "Thông báo");
+  const [isImportant, setIsImportant] = useState(Boolean(post.isImportant));
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -41,6 +44,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
     setTitle(post.title);
     setContent(post.content);
     setTag(post.tag || "Thông báo");
+    setIsImportant(Boolean(post.isImportant));
     setErrorMsg(null);
     setIsOpen(true);
   }
@@ -71,7 +75,8 @@ export function PostEditButton({ post }: PostEditButtonProps) {
           title: title.trim(),
           content: content.trim(),
           tag: tag.trim() || "Thông báo",
-          tagTone: tag.trim() === "Khẩn cấp" ? "error" : "primary",
+          tagTone: isImportant ? "error" : tag.trim() === "Khẩn cấp" ? "error" : "primary",
+          isImportant,
         }),
       });
 
@@ -185,6 +190,31 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                   className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-700 focus:border-[#173A67] focus:outline-hidden"
                 />
               </div>
+
+              {/* Checkbox: Thông báo quan trọng */}
+              <label className="flex items-start gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50/70 cursor-pointer hover:bg-amber-100/60 transition select-none">
+                <input
+                  type="checkbox"
+                  checked={isImportant}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsImportant(checked);
+                    if (checked && tag === "Thông báo") {
+                      setTag("Thông báo quan trọng");
+                    }
+                  }}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-amber-950">
+                    <MaterialIcon className="text-[16px] text-amber-700" name="campaign" />
+                    <span>Đánh dấu là Thông báo quan trọng</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800/80 leading-normal mt-0.5">
+                    Bài viết sẽ xuất hiện ở khối <strong>&ldquo;Thông báo quan trọng&rdquo;</strong> trên trang chủ. Nếu không chọn, bài viết sẽ hiển thị ở mục Tin tức thường.
+                  </p>
+                </div>
+              </label>
 
               {/* 3. Nội dung bài viết */}
               <div className="flex-1">

@@ -5,6 +5,7 @@ export type Announcement = {
   timeAgo: string;
   title: string;
   excerpt: string;
+  isImportant?: boolean;
 };
 
 export type Activity = {

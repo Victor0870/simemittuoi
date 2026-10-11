@@ -15,14 +15,22 @@ export function PostCard({ post }: PostCardProps) {
       href={`/posts/${post.id}`}
     >
       <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-dusty-light px-2.5 py-0.5 text-label-xs sm:text-label-sm font-bold text-primary">
-          {isUrgent ? (
-            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
-          ) : (
-            <MaterialIcon className="text-[13px] sm:text-[14px]" name="article" />
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-dusty-light px-2.5 py-0.5 text-label-xs sm:text-label-sm font-bold text-primary">
+            {isUrgent ? (
+              <span className="h-1.5 w-1.5 animate-ping rounded-full bg-primary" />
+            ) : (
+              <MaterialIcon className="text-[13px] sm:text-[14px]" name="article" />
+            )}
+            {post.tag}
+          </span>
+          {post.isImportant && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error-container/80 px-2 py-0.5 text-label-xs font-bold text-error">
+              <MaterialIcon className="text-[12px]" name="priority_high" />
+              Ưu tiên
+            </span>
           )}
-          {post.tag}
-        </span>
+        </div>
         <span className="flex shrink-0 items-center gap-1 text-xs text-on-surface-variant">
           <MaterialIcon className="text-[13px] sm:text-[14px]" name="calendar_today" />
           {post.timeAgo}

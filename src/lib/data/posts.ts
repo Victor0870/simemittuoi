@@ -7,6 +7,7 @@ export type PostSummary = {
   excerpt: string;
   tag: string;
   tagTone: "primary" | "error";
+  isImportant: boolean;
   imageUrl: string | null;
   publishedAt: string;
   timeAgo: string;
@@ -38,6 +39,7 @@ function mapRow(row: {
   content: string;
   tag: string | null;
   tag_tone: string | null;
+  is_important?: boolean | null;
   image_url: string | null;
   published_at: string;
 }): PostDetail {
@@ -48,6 +50,7 @@ function mapRow(row: {
     excerpt: excerptFrom(row.content),
     tag: row.tag ?? "Thông báo",
     tagTone: row.tag_tone === "error" ? "error" : "primary",
+    isImportant: Boolean(row.is_important),
     imageUrl: row.image_url,
     publishedAt: row.published_at,
     timeAgo: formatTimeAgo(row.published_at),
@@ -58,7 +61,7 @@ export async function getPosts(limit = 50): Promise<PostSummary[]> {
   const db = createPublicClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
-    .select("id, title, content, tag, tag_tone, image_url, published_at")
+    .select("id, title, content, tag, tag_tone, is_important, image_url, published_at")
     .order("published_at", { ascending: false })
     .limit(limit);
 
@@ -74,7 +77,7 @@ export async function getPostById(id: string): Promise<PostDetail | null> {
   const db = createPublicClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
-    .select("id, title, content, tag, tag_tone, image_url, published_at")
+    .select("id, title, content, tag, tag_tone, is_important, image_url, published_at")
     .eq("id", id)
     .maybeSingle();
 
@@ -93,7 +96,7 @@ export async function getRelatedPosts(
   const db = createPublicClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
-    .select("id, title, content, tag, tag_tone, image_url, published_at")
+    .select("id, title, content, tag, tag_tone, is_important, image_url, published_at")
     .neq("id", excludeId)
     .order("published_at", { ascending: false })
     .limit(limit);

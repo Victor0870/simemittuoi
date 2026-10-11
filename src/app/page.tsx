@@ -2,6 +2,7 @@ import { ActivitiesSection } from "@/components/home/ActivitiesSection";
 import { AnnouncementsSection } from "@/components/home/AnnouncementsSection";
 import { HeroWelcome } from "@/components/home/HeroWelcome";
 import { HomeLeaderboardSection } from "@/components/home/HomeLeaderboardSection";
+import { NewsSection } from "@/components/home/NewsSection";
 import { getHomePageData } from "@/lib/data/home";
 
 export const revalidate = 30;
@@ -27,6 +28,7 @@ export default async function HomePage() {
       />
 
       <AnnouncementsSection announcements={data.announcements} />
+      <NewsSection posts={data.newsPosts} />
       <ActivitiesSection activities={data.activities} />
     </div>
   );

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, tag, tagTone } = body;
+    const { id, title, content, tag, tagTone, isImportant } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -71,6 +71,10 @@ export async function POST(request: NextRequest) {
 
     if (tagTone !== undefined && typeof tagTone === "string") {
       updatePayload.tag_tone = tagTone.trim() || "primary";
+    }
+
+    if (isImportant !== undefined) {
+      updatePayload.is_important = Boolean(isImportant);
     }
 
     const { data: updatedPost, error: updateErr } = await publicDb

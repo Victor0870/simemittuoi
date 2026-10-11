@@ -18,6 +18,7 @@ export type DashboardUser = {
 export type HomePageData = {
   user: DashboardUser;
   announcements: Announcement[];
+  newsPosts: Announcement[];
   activities: Activity[];
   leaderboard: LeaderboardEntry[];
   goal: typeof MOCK_GOAL;
@@ -62,9 +63,9 @@ export async function getHomePageData(): Promise<HomePageData> {
       await Promise.all([
         publicDb
           .from(CDILV_TABLE.posts)
-          .select("id, title, content, tag, tag_tone, published_at")
+          .select("id, title, content, tag, tag_tone, is_important, published_at")
           .order("published_at", { ascending: false })
-          .limit(4),
+          .limit(10),
         publicDb
           .from(CDILV_TABLE.activities)
           .select(
@@ -114,14 +115,21 @@ export async function getHomePageData(): Promise<HomePageData> {
       }
     }
 
-    const announcements: Announcement[] = posts.map((post) => ({
+    const allMappedPosts: Announcement[] = posts.map((post) => ({
       id: post.id,
       tag: post.tag ?? "Thông báo",
       tagTone: post.tag_tone === "error" ? "error" : "primary",
       timeAgo: formatTimeAgo(post.published_at),
       title: post.title,
       excerpt: post.content,
+      isImportant: Boolean(post.is_important),
     }));
+
+    // Chỉ những bài nào được Admin đánh dấu là Quan trọng mới đưa vào announcements
+    const announcements = allMappedPosts.filter((p) => p.isImportant).slice(0, 4);
+
+    // Các bài viết còn lại đưa vào mục tin tức thường
+    const newsPosts = allMappedPosts.filter((p) => !p.isImportant).slice(0, 4);
 
     let authUser: any = null;
 
@@ -221,7 +229,8 @@ export async function getHomePageData(): Promise<HomePageData> {
 
     return {
       user,
-      announcements: announcements.slice(0, 4),
+      announcements,
+      newsPosts,
       activities: activityItems.slice(0, 4),
       leaderboard,
       goal: MOCK_GOAL,
@@ -235,6 +244,7 @@ export async function getHomePageData(): Promise<HomePageData> {
     return {
       user: emptyUser(true),
       announcements: [],
+      newsPosts: [],
       activities: [],
       leaderboard: [],
       goal: MOCK_GOAL,
