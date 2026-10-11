@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
+import { PostEditButton } from "@/components/posts/PostEditButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/posts";
 
@@ -42,18 +43,21 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 
       <article className="overflow-hidden rounded-2xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm">
         <div className="border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/80 via-white to-white px-5 py-6 sm:px-10 sm:py-8">
-          <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-white px-2.5 py-0.5 text-label-xs sm:text-label-sm font-bold text-primary">
-              <MaterialIcon className="text-[13px] sm:text-[14px]" name="article" />
-              {post.tag}
-            </span>
-            <span className="inline-flex items-center gap-1 text-xs sm:text-body-sm text-on-surface-variant">
-              <MaterialIcon className="text-[14px] sm:text-[16px]" name="schedule" />
-              {publishedLabel}
-            </span>
-            <span className="text-xs sm:text-body-sm text-on-surface-variant">
-              · {post.timeAgo}
-            </span>
+          <div className="mb-3 sm:mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-white px-2.5 py-0.5 text-label-xs sm:text-label-sm font-bold text-primary">
+                <MaterialIcon className="text-[13px] sm:text-[14px]" name="article" />
+                {post.tag}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs sm:text-body-sm text-on-surface-variant">
+                <MaterialIcon className="text-[14px] sm:text-[16px]" name="schedule" />
+                {publishedLabel}
+              </span>
+              <span className="text-xs sm:text-body-sm text-on-surface-variant">
+                · {post.timeAgo}
+              </span>
+            </div>
+            <PostEditButton post={post} />
           </div>
           <h1 className="text-xl sm:text-headline-lg md:text-headline-xl font-extrabold tracking-tight text-on-surface leading-tight">
             {post.title}
