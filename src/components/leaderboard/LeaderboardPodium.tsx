@@ -27,7 +27,7 @@ type PlaceConfig = {
 const PLACES: PlaceConfig[] = [
   {
     place: 2,
-    label: "Á Quân",
+    label: "Á quân",
     medal: "workspace_premium",
     barHeight: "h-24 md:h-28",
     barHeightHome: "h-32 sm:h-40",
@@ -56,7 +56,7 @@ const PLACES: PlaceConfig[] = [
   },
   {
     place: 3,
-    label: "Quý Quân",
+    label: "",
     medal: "military_tech",
     barHeight: "h-20 md:h-24",
     barHeightHome: "h-24 sm:h-32",
@@ -255,17 +255,19 @@ export function LeaderboardPodium({
                     điểm
                   </span>
                 </div>
-                <div
-                  className={`mb-3 rounded px-2 py-0.5 text-[11px] font-semibold ${
-                    isFirst
-                      ? "rounded-full border border-amber-300 bg-amber-light text-amber-900"
-                      : cfg.place === 2
-                        ? "border border-dusty-border bg-dusty-light text-primary"
-                        : "border border-amber-200 bg-amber-50 text-amber-900"
-                  }`}
-                >
-                  {cfg.label}
-                </div>
+                {cfg.label ? (
+                  <div
+                    className={`mb-3 rounded px-2 py-0.5 text-[11px] font-semibold ${
+                      isFirst
+                        ? "rounded-full border border-amber-300 bg-amber-light text-amber-900"
+                        : "border border-dusty-border bg-dusty-light text-primary"
+                    }`}
+                  >
+                    {cfg.label}
+                  </div>
+                ) : (
+                  <div className="mb-3 h-[21px]" />
+                )}
               </div>
 
               <div
@@ -280,8 +282,8 @@ export function LeaderboardPodium({
                 >
                   {cfg.place}
                 </span>
-                <span className="text-[11px] font-bold tracking-widest uppercase opacity-80">
-                  {cfg.place === 1 ? "QUÁN QUÂN" : cfg.place === 2 ? "BẠC" : "ĐỒNG"}
+                <span className="min-h-[16px] text-[11px] font-bold tracking-widest uppercase opacity-80">
+                  {cfg.place === 1 ? "QUÁN QUÂN" : cfg.place === 2 ? "Á QUÂN" : ""}
                 </span>
               </div>
             </div>
