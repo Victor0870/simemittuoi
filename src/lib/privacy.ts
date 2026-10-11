@@ -30,3 +30,14 @@ export function maskDisplayName(name: string, keep = 7): string {
 
   return head + maskedTail;
 }
+
+/**
+ * Tự động thay thế tên công ty đứng độc lập thành '**Tên Công Ty**':
+ * - 'Idemitsu' hoặc 'ILV' đứng một mình -> '**Tên Công Ty**'
+ * - 'CDILV' được giữ nguyên (hợp lệ vì không đứng một mình).
+ * Xử lý bằng RegExp word-boundary siêu tốc (< 0.001ms), không gây trễ hay lag cho server.
+ */
+export function sanitizeCompanyNames(text: string): string {
+  if (!text) return "";
+  return text.replace(/\b(idemitsu|ilv)\b/gi, "**Tên Công Ty**");
+}

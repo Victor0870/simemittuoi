@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { sanitizeCompanyNames } from "@/lib/privacy";
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,13 +63,14 @@ export async function POST(request: NextRequest) {
     }
 
     const displayName = adminName?.trim() || me?.full_name || "Chủ tịch Công đoàn";
+    const finalReplyContent = sanitizeCompanyNames(replyContent);
 
     // Cập nhật phản hồi -> Chuyển status = 'replied'
     // Điều này sẽ giảm số lượng pending của tác giả, cho phép họ gửi thêm góp ý!
     const { error: updateErr } = await publicDb
       .from(CDILV_TABLE.feedbacks)
       .update({
-        admin_reply: replyContent,
+        admin_reply: finalReplyContent,
         admin_replied_at: new Date().toISOString(),
         admin_replied_by: user.id,
         admin_name: displayName,

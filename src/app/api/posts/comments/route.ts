@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { sanitizeCompanyNames } from "@/lib/privacy";
 
 export async function GET(request: NextRequest) {
   try {
@@ -219,13 +220,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Auto sanitize company names: 'Idemitsu' or standalone 'ILV' -> '**Tên Công Ty**'
+    const finalContent = sanitizeCompanyNames(trimmedContent);
+
     // Insert comment
     const { data: newComment, error: insertError } = await publicDb
       .from(CDILV_TABLE.postComments)
       .insert({
         post_id: postId,
         user_id: user.id,
-        content: trimmedContent,
+        content: finalContent,
       })
       .select()
       .single();

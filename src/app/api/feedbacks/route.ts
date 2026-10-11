@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { sanitizeCompanyNames } from "@/lib/privacy";
 
 export async function GET(request: NextRequest) {
   try {
@@ -171,12 +172,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Chèn ý kiến mới vào database
+    // 2. Chèn ý kiến mới vào database (tự động chuẩn hóa tên công ty đứng độc lập)
+    const finalContent = sanitizeCompanyNames(content);
+
     const { data: inserted, error: insErr } = await publicDb
       .from(CDILV_TABLE.feedbacks)
       .insert({
         user_id: user.id,
-        content,
+        content: finalContent,
         status: "pending",
       })
       .select()
