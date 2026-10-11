@@ -8,11 +8,7 @@ const nextConfig: NextConfig = {
         hostname: "lh3.googleusercontent.com",
       },
       {
-        protocol: "https",
-        hostname: "qpaoucyjitbmfcahxrqu.supabase.co",
-      },
-      {
-        // BizMate shared project (khi gộp CDILV)
+        // BizMate shared project (CDILV)
         protocol: "https",
         hostname: "pzcwwylxrojvcoihtxep.supabase.co",
       },
