@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
         admin_replied_by,
         admin_name,
         created_at,
-        cdilv_profiles (
+        cdilv_profiles!user_id (
           id,
           full_name,
           avatar_url,
