@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
-import { LeaderboardPodium } from "@/components/leaderboard/LeaderboardPodium";
+import { LeaderboardInteractiveView } from "@/components/leaderboard/LeaderboardInteractiveView";
 import { MyRankSummary } from "@/components/leaderboard/MyRankSummary";
 import {
   LeaderboardViewTabs,
   type LeaderboardTab,
 } from "@/components/leaderboard/LeaderboardViewTabs";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import {
   getLeaderboardPageData,
@@ -85,35 +83,17 @@ export default async function LeaderboardPage({
           <Link className="font-bold text-primary hover:underline" href="/login">
             Đăng nhập
           </Link>{" "}
-          để xem đầy đủ.
+          để xem đầy đủ và lịch sử cộng điểm.
         </p>
       ) : null}
 
-      <LeaderboardPodium entries={visible} maskIdentity={data.isGuest} />
-
-      <section className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-headline-md text-primary">
-              {tab === "45" ? "Hạng 4 – 45" : "Hạng 4 – 10"}
-            </h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              Danh sách tiếp theo sau bục trao huy chương
-            </p>
-          </div>
-          <MaterialIcon
-            className="text-[#173A67] material-symbols-filled"
-            filled
-            name="format_list_numbered"
-          />
-        </div>
-
-        <LeaderboardList
-          entries={rest}
-          highlightId={highlightId}
-          maskIdentity={data.isGuest}
-        />
-      </section>
+      <LeaderboardInteractiveView
+        visibleEntries={visible}
+        restEntries={rest}
+        highlightId={highlightId}
+        isGuest={data.isGuest}
+        tab={tab}
+      />
 
       {showMyRank ? (
         <MyRankSummary rank={data.currentRank} score={data.currentScore} />

@@ -5,12 +5,14 @@ type LeaderboardListProps = {
   entries: LeaderboardEntry[];
   maskIdentity?: boolean;
   highlightId?: string | null;
+  onSelectMember?: (entry: LeaderboardEntry) => void;
 };
 
 export function LeaderboardList({
   entries,
   maskIdentity = false,
   highlightId = null,
+  onSelectMember,
 }: LeaderboardListProps) {
   if (entries.length === 0) {
     return (
@@ -33,7 +35,11 @@ export function LeaderboardList({
                 : undefined
             }
           >
-            <LeaderboardRow entry={entry} maskIdentity={maskIdentity} />
+            <LeaderboardRow
+              entry={entry}
+              maskIdentity={maskIdentity}
+              onSelectMember={onSelectMember}
+            />
           </div>
         );
       })}

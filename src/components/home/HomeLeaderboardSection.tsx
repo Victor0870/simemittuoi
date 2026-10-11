@@ -1,6 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { LeaderboardRow } from "@/components/home/LeaderboardRow";
 import { LeaderboardPodium } from "@/components/leaderboard/LeaderboardPodium";
+import { MemberScoreHistoryModal } from "@/components/leaderboard/MemberScoreHistoryModal";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 
@@ -13,6 +17,7 @@ export function HomeLeaderboardSection({
   entries,
   maskIdentity = false,
 }: HomeLeaderboardSectionProps) {
+  const [selectedMember, setSelectedMember] = useState<LeaderboardEntry | null>(null);
   const nextThree = entries.filter((entry) => entry.rank > 3).slice(0, 3);
 
   return (
@@ -47,6 +52,7 @@ export function HomeLeaderboardSection({
             entries={entries}
             maskIdentity={maskIdentity}
             variant="home"
+            onSelectMember={setSelectedMember}
           />
         </div>
 
@@ -89,6 +95,7 @@ export function HomeLeaderboardSection({
                     key={entry.id}
                     entry={entry}
                     maskIdentity={maskIdentity}
+                    onSelectMember={setSelectedMember}
                   />
                 ))}
               </div>
@@ -110,6 +117,13 @@ export function HomeLeaderboardSection({
           </div>
         </div>
       </div>
+
+      <MemberScoreHistoryModal
+        member={selectedMember}
+        isOpen={Boolean(selectedMember)}
+        onClose={() => setSelectedMember(null)}
+        isGuest={maskIdentity}
+      />
     </section>
   );
 }

@@ -31,6 +31,8 @@ export type LeaderboardEntry = {
   score: number;
   avatarUrl: string;
   isTop?: boolean;
+  employeeCode?: string | null;
+  userId?: string | null;
 };
 
 export const MOCK_USER = {

@@ -7,6 +7,7 @@ type LeaderboardPodiumProps = {
   maskIdentity?: boolean;
   /** Trang chủ: bục lớn hơn, không tiêu đề Top 3 / nhãn giải */
   variant?: "default" | "home";
+  onSelectMember?: (entry: LeaderboardEntry) => void;
 };
 
 type PlaceConfig = {
@@ -106,6 +107,7 @@ export function LeaderboardPodium({
   entries,
   maskIdentity = false,
   variant = "default",
+  onSelectMember,
 }: LeaderboardPodiumProps) {
   const isHome = variant === "home";
   const byRank = new Map(entries.map((e) => [e.rank, e]));
@@ -150,7 +152,7 @@ export function LeaderboardPodium({
               Top 3 xuất sắc
             </h2>
             <p className="mt-1 text-sm text-on-surface-variant">
-              Giải Nhất · Nhì · Ba theo tổng điểm thi đua
+              Giải Nhất · Nhì · Ba theo tổng điểm thi đua (bấm vào để xem lịch sử điểm)
             </p>
           </>
         )}
@@ -179,7 +181,25 @@ export function LeaderboardPodium({
                 isFirst && isHome ? "-mt-8" : ""
               }`}
             >
-              <div className="mb-3 flex flex-col items-center">
+              <div
+                onClick={onSelectMember ? () => onSelectMember(entry) : undefined}
+                className={`mb-3 flex flex-col items-center ${
+                  onSelectMember ? "cursor-pointer group/podium" : ""
+                }`}
+                title="Bấm để xem lịch sử cộng điểm"
+                role={onSelectMember ? "button" : undefined}
+                tabIndex={onSelectMember ? 0 : undefined}
+                onKeyDown={
+                  onSelectMember
+                    ? (e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          onSelectMember(entry);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 <div
                   className={`relative mb-3 transition-transform duration-200 ${
                     isFirst ? "group-hover:-translate-y-2" : "group-hover:-translate-y-1"
@@ -209,14 +229,20 @@ export function LeaderboardPodium({
                   </div>
                 </div>
 
-                <h3
-                  className={`mt-2 line-clamp-1 font-bold text-on-surface ${
-                    isFirst ? "text-headline-sm" : "text-body-md"
-                  }`}
-                  title={entry.name}
-                >
-                  {displayName}
-                </h3>
+                <div className="mt-2 flex items-center justify-center gap-1 group-hover/podium:text-primary transition-colors">
+                  <h3
+                    className={`line-clamp-1 font-bold text-on-surface group-hover/podium:text-primary ${
+                      isFirst ? "text-headline-sm" : "text-body-md"
+                    }`}
+                    title={entry.name}
+                  >
+                    {displayName}
+                  </h3>
+                  <MaterialIcon
+                    className="text-[14px] text-amber-honor opacity-80 group-hover/podium:opacity-100 group-hover/podium:scale-110 transition-all"
+                    name="history_edu"
+                  />
+                </div>
                 <div className="my-1 inline-flex items-center gap-1">
                   <span
                     className={`font-extrabold text-primary ${

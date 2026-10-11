@@ -135,6 +135,8 @@ export async function getHomePageData(): Promise<HomePageData> {
         score: Number(row.total_score) || 0,
         avatarUrl: row.avatar_url ?? "",
         isTop: index === 0 || Number(row.rank) === 1,
+        employeeCode: row.employee_code ?? null,
+        userId: row.id ?? null,
       }));
 
     let isGuest = true;
