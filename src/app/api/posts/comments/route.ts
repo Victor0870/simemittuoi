@@ -188,9 +188,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (trimmedContent.length > 1000) {
+    if (trimmedContent.length > 2500) {
       return NextResponse.json(
-        { error: "Bình luận quá dài (tối đa 1000 ký tự)." },
+        { error: "Bình luận quá dài (tối đa 2500 ký tự)." },
         { status: 400 },
       );
     }

@@ -302,10 +302,10 @@ export function PostCommentsSection({
         : `[Ảnh thiết kế Logo]: ${attachedImageUrl}`
       : trimmed;
 
-    if (fullContent.length > 2000) {
+    if (fullContent.length > 2500) {
       setNotice({
         type: "error",
-        text: "Bình luận quá dài (tối đa 2000 ký tự).",
+        text: "Bình luận quá dài (tối đa 2500 ký tự).",
       });
       return;
     }
