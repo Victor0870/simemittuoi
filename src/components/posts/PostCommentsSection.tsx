@@ -197,6 +197,91 @@ export function PostCommentsSection({
     }
   }
 
+  // Thả biểu tượng cảm xúc (Like, Tim, Haha)
+  async function handleReact(commentId: string, reactionType: "like" | "heart" | "haha") {
+    if (!user) {
+      setNotice({
+        type: "error",
+        text: "Vui lòng đăng nhập để bày tỏ cảm xúc với bình luận.",
+      });
+      return;
+    }
+
+    if (!isApproved) {
+      setNotice({
+        type: "error",
+        text: "Tài khoản của bạn đang chờ phê duyệt để tương tác.",
+      });
+      return;
+    }
+
+    // Cập nhật giao diện tức thì (Optimistic update)
+    const prevComments = [...comments];
+    setComments((prev) =>
+      prev.map((c) => {
+        if (c.id !== commentId) return c;
+
+        const currentReaction = c.userReaction;
+        const currentReactions = { ...(c.reactions || { like: 0, heart: 0, haha: 0 }) };
+
+        let nextUserReaction: "like" | "heart" | "haha" | null = reactionType;
+
+        if (currentReaction === reactionType) {
+          // Bấm lại biểu tượng đã chọn -> Bỏ thả cảm xúc
+          nextUserReaction = null;
+          currentReactions[reactionType] = Math.max(0, (currentReactions[reactionType] || 0) - 1);
+        } else {
+          // Nếu trước đó đã thả cảm xúc khác, giảm cảm xúc cũ
+          if (currentReaction && currentReactions[currentReaction]) {
+            currentReactions[currentReaction] = Math.max(0, currentReactions[currentReaction] - 1);
+          }
+          // Tăng cảm xúc mới
+          currentReactions[reactionType] = (currentReactions[reactionType] || 0) + 1;
+        }
+
+        return {
+          ...c,
+          userReaction: nextUserReaction,
+          reactions: currentReactions,
+        };
+      }),
+    );
+
+    try {
+      const res = await fetch("/api/posts/comments/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId, reactionType }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Không thể gửi cảm xúc.");
+      }
+
+      // Đồng bộ dữ liệu chính xác từ máy chủ
+      if (data.reactions) {
+        setComments((prev) =>
+          prev.map((c) =>
+            c.id === commentId
+              ? {
+                  ...c,
+                  userReaction: data.userReaction,
+                  reactions: data.reactions,
+                }
+              : c,
+          ),
+        );
+      }
+    } catch (err: any) {
+      // Khôi phục trạng thái cũ nếu lỗi
+      setComments(prevComments);
+      setNotice({
+        type: "error",
+        text: err?.message || "Lỗi khi thả cảm xúc.",
+      });
+    }
+  }
+
   // Sao chép link ảnh vào clipboard
   async function handleCopyLink(url: string) {
     try {
@@ -958,6 +1043,96 @@ export function PostCommentsSection({
                               );
                             })}
                           </div>
+                        )}
+                      </div>
+
+                      {/* Thanh biểu tượng cảm xúc (Like, Tim, Haha) */}
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5 sm:gap-2 pl-0 sm:pl-[52px] pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleReact(comment.id, "like")}
+                          title="Thích"
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold transition-all ${
+                            comment.userReaction === "like"
+                              ? "border border-blue-400 bg-blue-50 text-blue-700 shadow-2xs font-bold scale-105"
+                              : "border border-dusty-border/70 bg-surface-container-lowest text-on-surface-variant hover:bg-dusty-light hover:text-blue-600"
+                          }`}
+                        >
+                          <span className="text-[14px]">👍</span>
+                          <span>Thích</span>
+                          {(comment.reactions?.like ?? 0) > 0 && (
+                            <span
+                              className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[11px] ${
+                                comment.userReaction === "like"
+                                  ? "bg-blue-200/80 text-blue-900 font-bold"
+                                  : "bg-dusty-light text-on-surface font-semibold"
+                              }`}
+                            >
+                              {comment.reactions?.like}
+                            </span>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleReact(comment.id, "heart")}
+                          title="Yêu thích"
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold transition-all ${
+                            comment.userReaction === "heart"
+                              ? "border border-rose-400 bg-rose-50 text-rose-700 shadow-2xs font-bold scale-105"
+                              : "border border-dusty-border/70 bg-surface-container-lowest text-on-surface-variant hover:bg-dusty-light hover:text-rose-600"
+                          }`}
+                        >
+                          <span className="text-[14px]">❤️</span>
+                          <span>Tim</span>
+                          {(comment.reactions?.heart ?? 0) > 0 && (
+                            <span
+                              className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[11px] ${
+                                comment.userReaction === "heart"
+                                  ? "bg-rose-200/80 text-rose-900 font-bold"
+                                  : "bg-dusty-light text-on-surface font-semibold"
+                              }`}
+                            >
+                              {comment.reactions?.heart}
+                            </span>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleReact(comment.id, "haha")}
+                          title="Haha"
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 sm:px-3 py-1 text-xs font-semibold transition-all ${
+                            comment.userReaction === "haha"
+                              ? "border border-amber-400 bg-amber-50 text-amber-700 shadow-2xs font-bold scale-105"
+                              : "border border-dusty-border/70 bg-surface-container-lowest text-on-surface-variant hover:bg-dusty-light hover:text-amber-600"
+                          }`}
+                        >
+                          <span className="text-[14px]">😆</span>
+                          <span>Haha</span>
+                          {(comment.reactions?.haha ?? 0) > 0 && (
+                            <span
+                              className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[11px] ${
+                                comment.userReaction === "haha"
+                                  ? "bg-amber-200/80 text-amber-900 font-bold"
+                                  : "bg-dusty-light text-on-surface font-semibold"
+                              }`}
+                            >
+                              {comment.reactions?.haha}
+                            </span>
+                          )}
+                        </button>
+
+                        {/* Tổng số lượt tương tác nếu > 0 */}
+                        {((comment.reactions?.like ?? 0) +
+                          (comment.reactions?.heart ?? 0) +
+                          (comment.reactions?.haha ?? 0)) > 0 && (
+                          <span className="ml-auto text-[11px] font-medium text-on-surface-variant/70">
+                            {(comment.reactions?.like ?? 0) +
+                              (comment.reactions?.heart ?? 0) +
+                              (comment.reactions?.haha ?? 0)}{" "}
+                            tương tác
+                          </span>
                         )}
                       </div>
                     </li>

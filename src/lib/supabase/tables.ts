@@ -20,6 +20,7 @@ export const CDILV_TABLE = {
   postComments: "cdilv_post_comments",
   activityRegistrations: "cdilv_activity_registrations",
   feedbacks: "cdilv_feedbacks",
+  commentReactions: "cdilv_comment_reactions",
 } as const;
 
 export const CDILV_RPC = {

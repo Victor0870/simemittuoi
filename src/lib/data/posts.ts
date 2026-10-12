@@ -108,6 +108,12 @@ export async function getRelatedPosts(
   return (data ?? []).map(mapRow);
 }
 
+export type CommentReactions = {
+  like: number;
+  heart: number;
+  haha: number;
+};
+
 export type PostComment = {
   id: string;
   postId: string;
@@ -120,6 +126,8 @@ export type PostComment = {
   content: string;
   createdAt: string;
   timeAgo: string;
+  reactions?: CommentReactions;
+  userReaction?: "like" | "heart" | "haha" | null;
 };
 
 export async function getPostComments(postId: string): Promise<PostComment[]> {
@@ -149,6 +157,26 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
     return [];
   }
 
+  const commentIds = (data ?? []).map((row: any) => row.id);
+  const reactionsMap = new Map<string, CommentReactions>();
+
+  if (commentIds.length > 0) {
+    const { data: rawReactions } = await db
+      .from(CDILV_TABLE.commentReactions)
+      .select("comment_id, reaction_type")
+      .in("comment_id", commentIds);
+
+    for (const r of rawReactions ?? []) {
+      if (!reactionsMap.has(r.comment_id)) {
+        reactionsMap.set(r.comment_id, { like: 0, heart: 0, haha: 0 });
+      }
+      const curr = reactionsMap.get(r.comment_id)!;
+      if (r.reaction_type === "like") curr.like++;
+      else if (r.reaction_type === "heart") curr.heart++;
+      else if (r.reaction_type === "haha") curr.haha++;
+    }
+  }
+
   return (data ?? []).map((row: any) => {
     const prof = Array.isArray(row.cdilv_profiles)
       ? row.cdilv_profiles[0]
@@ -165,6 +193,7 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
       content: row.content,
       createdAt: row.created_at,
       timeAgo: formatTimeAgo(row.created_at),
+      reactions: reactionsMap.get(row.id) || { like: 0, heart: 0, haha: 0 },
     };
   });
 }

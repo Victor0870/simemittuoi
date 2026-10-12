@@ -96,10 +96,50 @@ export async function GET(request: NextRequest) {
 
     const canComment = isAdmin || myCommentCount < 3;
 
+    // Load reactions for comments
+    const commentIds = (rawComments ?? []).map((c: any) => c.id);
+    const reactionsMap = new Map<
+      string,
+      { like: number; heart: number; haha: number; userReaction: string | null }
+    >();
+
+    if (commentIds.length > 0) {
+      const { data: rawReactions } = await publicDb
+        .from(CDILV_TABLE.commentReactions)
+        .select("comment_id, user_id, reaction_type")
+        .in("comment_id", commentIds);
+
+      for (const r of rawReactions ?? []) {
+        if (!reactionsMap.has(r.comment_id)) {
+          reactionsMap.set(r.comment_id, {
+            like: 0,
+            heart: 0,
+            haha: 0,
+            userReaction: null,
+          });
+        }
+        const curr = reactionsMap.get(r.comment_id)!;
+        if (r.reaction_type === "like") curr.like++;
+        else if (r.reaction_type === "heart") curr.heart++;
+        else if (r.reaction_type === "haha") curr.haha++;
+
+        if (user && r.user_id === user.id) {
+          curr.userReaction = r.reaction_type;
+        }
+      }
+    }
+
     const comments = (rawComments ?? []).map((row: any) => {
       const prof = Array.isArray(row.cdilv_profiles)
         ? row.cdilv_profiles[0]
         : row.cdilv_profiles;
+      const rInfo = reactionsMap.get(row.id) || {
+        like: 0,
+        heart: 0,
+        haha: 0,
+        userReaction: null,
+      };
+
       return {
         id: row.id,
         postId: row.post_id,
@@ -111,6 +151,12 @@ export async function GET(request: NextRequest) {
         authorCode: prof?.employee_code || null,
         content: row.content,
         createdAt: row.created_at,
+        reactions: {
+          like: rInfo.like,
+          heart: rInfo.heart,
+          haha: rInfo.haha,
+        },
+        userReaction: rInfo.userReaction,
       };
     });
 
