@@ -193,18 +193,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Award voter participation reward points if applicable
+    // Award voter participation reward points if applicable via secure RPC
     if (user && poll.voter_reward_points > 0) {
-      const awardLabel = `poll_vote_${pollId}`;
       try {
-        await publicDb.from(CDILV_TABLE.scoreEvents).insert({
-          user_id: user.id,
-          points: poll.voter_reward_points,
-          note: `Thưởng tham gia bình chọn: ${poll.title} (+${poll.voter_reward_points}đ)`,
-          award_label: awardLabel,
+        await publicDb.rpc("cdilv_award_poll_vote_score", {
+          p_poll_id: pollId,
+          p_user_id: user.id,
         });
-      } catch {
-        // ignore unique violation
+      } catch (pollScoreErr) {
+        console.error("[api/polls/vote] score award RPC error:", pollScoreErr);
       }
     }
 

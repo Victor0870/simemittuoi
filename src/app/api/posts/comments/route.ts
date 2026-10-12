@@ -238,25 +238,14 @@ export async function POST(request: NextRequest) {
       throw insertError;
     }
 
-    // Award +1 score point for union member
-    const { data: post } = await publicDb
-      .from(CDILV_TABLE.posts)
-      .select("title")
-      .eq("id", postId)
-      .maybeSingle();
-
-    const postTitle = post?.title
-      ? `"${post.title.length > 35 ? post.title.slice(0, 35) + "..." : post.title}"`
-      : "Bài viết";
-
+    // Award +1 score point for union member via secure RPC
     try {
-      const awardLabel = `post_comment_${newComment.id}`;
-      await publicDb.from(CDILV_TABLE.scoreEvents).insert({
-        user_id: user.id,
-        points: 1,
-        note: `Thưởng bình luận bài viết: ${postTitle} (+1đ)`,
-        award_label: awardLabel,
+      const { error: rpcErr } = await publicDb.rpc("cdilv_award_comment_score", {
+        p_comment_id: newComment.id,
       });
+      if (rpcErr) {
+        console.error("[api/posts/comments] score award RPC error:", rpcErr.message);
+      }
     } catch (scoreErr) {
       console.error("[api/posts/comments] score award error:", scoreErr);
     }
@@ -347,12 +336,14 @@ export async function DELETE(request: NextRequest) {
       throw delErr;
     }
 
-    // Revoke awarded score point
+    // Revoke awarded score point via RPC
     try {
-      await publicDb
-        .from(CDILV_TABLE.scoreEvents)
-        .delete()
-        .eq("award_label", `post_comment_${commentId}`);
+      const { error: rpcRevokeErr } = await publicDb.rpc("cdilv_revoke_comment_score", {
+        p_comment_id: commentId,
+      });
+      if (rpcRevokeErr) {
+        console.error("[api/posts/comments] score revoke RPC error:", rpcRevokeErr.message);
+      }
     } catch (scoreDelErr) {
       console.error("[api/posts/comments] score revoke error:", scoreDelErr);
     }
