@@ -8,6 +8,7 @@ export type PostSummary = {
   tag: string;
   tagTone: "primary" | "error";
   isImportant: boolean;
+  isActive: boolean;
   imageUrl: string | null;
   publishedAt: string;
   timeAgo: string;
@@ -40,6 +41,7 @@ function mapRow(row: {
   tag: string | null;
   tag_tone: string | null;
   is_important?: boolean | null;
+  is_active?: boolean | null;
   image_url: string | null;
   published_at: string;
 }): PostDetail {
@@ -51,19 +53,32 @@ function mapRow(row: {
     tag: row.tag ?? "Thông báo",
     tagTone: row.tag_tone === "error" ? "error" : "primary",
     isImportant: Boolean(row.is_important),
+    isActive: row.is_active !== false,
     imageUrl: row.image_url,
     publishedAt: row.published_at,
     timeAgo: formatTimeAgo(row.published_at),
   };
 }
 
-export async function getPosts(limit = 50): Promise<PostSummary[]> {
+const POST_COLUMNS =
+  "id, title, content, tag, tag_tone, is_important, is_active, image_url, published_at";
+
+export async function getPosts(
+  limit = 50,
+  options?: { includeInactive?: boolean },
+): Promise<PostSummary[]> {
   const db = createPublicClient();
-  const { data, error } = await db
+  let query = db
     .from(CDILV_TABLE.posts)
-    .select("id, title, content, tag, tag_tone, is_important, image_url, published_at")
+    .select(POST_COLUMNS)
     .order("published_at", { ascending: false })
     .limit(limit);
+
+  if (!options?.includeInactive) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[posts] list:", error.message);
@@ -77,7 +92,7 @@ export async function getPostById(id: string): Promise<PostDetail | null> {
   const db = createPublicClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
-    .select("id, title, content, tag, tag_tone, is_important, image_url, published_at")
+    .select(POST_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
@@ -96,7 +111,8 @@ export async function getRelatedPosts(
   const db = createPublicClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
-    .select("id, title, content, tag, tag_tone, is_important, image_url, published_at")
+    .select(POST_COLUMNS)
+    .eq("is_active", true)
     .neq("id", excludeId)
     .order("published_at", { ascending: false })
     .limit(limit);

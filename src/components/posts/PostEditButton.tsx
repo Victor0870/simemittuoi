@@ -13,6 +13,7 @@ type PostEditButtonProps = {
     tag: string;
     tagTone?: string;
     isImportant?: boolean;
+    isActive?: boolean;
   };
 };
 
@@ -35,6 +36,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   const [content, setContent] = useState(post.content);
   const [tag, setTag] = useState(post.tag || "Thông báo");
   const [isImportant, setIsImportant] = useState(Boolean(post.isImportant));
+  const [isActive, setIsActive] = useState(post.isActive !== false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -45,6 +47,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
     setContent(post.content);
     setTag(post.tag || "Thông báo");
     setIsImportant(Boolean(post.isImportant));
+    setIsActive(post.isActive !== false);
     setErrorMsg(null);
     setIsOpen(true);
   }
@@ -77,6 +80,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
           tag: tag.trim() || "Thông báo",
           tagTone: isImportant ? "error" : tag.trim() === "Khẩn cấp" ? "error" : "primary",
           isImportant,
+          isActive,
         }),
       });
 
@@ -190,6 +194,24 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                   className="w-full rounded-xl border border-slate-300 p-2 text-xs text-slate-700 focus:border-[#173A67] focus:outline-hidden"
                 />
               </div>
+
+              <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition select-none">
+                <input
+                  type="checkbox"
+                  checked={isActive}
+                  onChange={(e) => setIsActive(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#173A67] focus:ring-[#173A67] cursor-pointer"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800">
+                    <MaterialIcon className="text-[16px] text-[#173A67]" name="visibility" />
+                    <span>Active — hiện bài cho mọi người</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-normal mt-0.5">
+                    Bỏ chọn để giữ Inactive. Bài Inactive chỉ quản trị viên xem và sửa được.
+                  </p>
+                </div>
+              </label>
 
               {/* Checkbox: Thông báo quan trọng */}
               <label className="flex items-start gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50/70 cursor-pointer hover:bg-amber-100/60 transition select-none">

@@ -24,6 +24,12 @@ export function PostCard({ post }: PostCardProps) {
             )}
             {post.tag}
           </span>
+          {post.isActive === false && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-label-xs font-bold text-amber-900">
+              <MaterialIcon className="text-[12px]" name="visibility_off" />
+              Inactive
+            </span>
+          )}
           {post.isImportant && (
             <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error-container/80 px-2 py-0.5 text-label-xs font-bold text-error">
               <MaterialIcon className="text-[12px]" name="priority_high" />

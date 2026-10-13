@@ -3,6 +3,31 @@ import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
+function normalizeEmployeeCode(raw: unknown): string | null {
+  const code = String(raw ?? "").trim().toUpperCase();
+  return code.length > 0 ? code : null;
+}
+
+async function shiftOptionVoteCount(
+  publicDb: ReturnType<typeof createPublicClient>,
+  optionId: string,
+  delta: number,
+) {
+  if (!delta) return;
+  const { data: opt, error } = await publicDb
+    .from(CDILV_TABLE.pollOptions)
+    .select("vote_count")
+    .eq("id", optionId)
+    .single();
+  if (error) throw error;
+  const next = Math.max(0, (opt?.vote_count || 0) + delta);
+  const { error: updateError } = await publicDb
+    .from(CDILV_TABLE.pollOptions)
+    .update({ vote_count: next })
+    .eq("id", optionId);
+  if (updateError) throw updateError;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -13,6 +38,7 @@ export async function POST(request: NextRequest) {
       predictedCount,
       predictorName,
       predictorContact,
+      employeeCode,
     } = body;
 
     if (!pollId || !Array.isArray(optionIds) || optionIds.length === 0) {
@@ -59,13 +85,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Auth check
+    // Auth check — đoàn viên đã duyệt không cần nhập mã; người chưa là thành viên (free) thì bắt buộc.
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (poll.access_type === "members_only" && !user) {
+    let memberEmployeeCode: string | null = null;
+    let isApprovedMember = false;
+    if (user) {
+      const { data: profile } = await supabase
+        .from(CDILV_TABLE.profiles)
+        .select("approval_status, employee_code")
+        .eq("id", user.id)
+        .maybeSingle();
+      isApprovedMember = profile?.approval_status === "approved";
+      memberEmployeeCode = normalizeEmployeeCode(profile?.employee_code);
+    }
+
+    if (poll.access_type === "members_only" && !isApprovedMember) {
       return NextResponse.json(
         {
           error: "Chương trình này chỉ dành riêng cho đoàn viên đã đăng nhập.",
@@ -74,23 +112,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const needsEmployeeCode = poll.access_type === "free" && !isApprovedMember;
+    const voterEmployeeCode = needsEmployeeCode
+      ? normalizeEmployeeCode(employeeCode)
+      : memberEmployeeCode;
+
+    if (needsEmployeeCode && !voterEmployeeCode) {
+      return NextResponse.json(
+        {
+          error:
+            "Vui lòng nhập đầy đủ thông tin. Bạn cần nhập mã nhân viên trước khi bình chọn.",
+        },
+        { status: 400 },
+      );
+    }
+
     // Safety limit check for free polls: max guest votes (default 250)
     const maxGuestVotes = poll.max_guest_votes ?? 250;
     const currentGuestVotes = poll.guest_vote_count ?? 0;
 
-    if (!user) {
-      if (poll.access_type === "free" && currentGuestVotes >= maxGuestVotes) {
-        return NextResponse.json(
-          {
-            error: "Chương trình hiện chỉ mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập. Quý đoàn viên vui lòng đăng nhập để bình chọn!",
-            guestLimitReached: true,
-          },
-          { status: 403 },
-        );
-      }
-    }
-
-    // IP & anti-spam check (1 vote / 30 minutes in free mode)
     const clientIp =
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") ||
@@ -98,8 +138,30 @@ export async function POST(request: NextRequest) {
 
     const fingerprint = deviceFingerprint || clientIp;
 
-    if (!user) {
-      // Check last 30 minutes
+    let priorVotes: { id: string; option_id: string }[] = [];
+    if (voterEmployeeCode) {
+      const { data: existingByCode, error: priorError } = await publicDb
+        .from(CDILV_TABLE.pollVotes)
+        .select("id, option_id")
+        .eq("poll_id", pollId)
+        .eq("employee_code", voterEmployeeCode);
+      if (priorError) throw priorError;
+      priorVotes = existingByCode ?? [];
+    }
+    const isReplacement = priorVotes.length > 0;
+
+    if (needsEmployeeCode && !isReplacement && currentGuestVotes >= maxGuestVotes) {
+      return NextResponse.json(
+        {
+          error: "Chương trình hiện chỉ mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập. Quý đoàn viên vui lòng đăng nhập để bình chọn!",
+          guestLimitReached: true,
+        },
+        { status: 403 },
+      );
+    }
+
+    if (needsEmployeeCode && !isReplacement) {
+      // IP & anti-spam check (1 phiếu mới / 30 phút). Phiếu trùng mã được ghi đè, không chặn.
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: recentVotes } = await publicDb
         .from(CDILV_TABLE.pollVotes)
@@ -118,8 +180,7 @@ export async function POST(request: NextRequest) {
           { status: 429 },
         );
       }
-    } else {
-      // Check if user already voted in this poll
+    } else if (isApprovedMember && user) {
       const { data: existingUserVotes } = await publicDb
         .from(CDILV_TABLE.pollVotes)
         .select("id")
@@ -135,12 +196,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (isReplacement) {
+      const removedByOption = new Map<string, number>();
+      for (const row of priorVotes) {
+        removedByOption.set(row.option_id, (removedByOption.get(row.option_id) ?? 0) + 1);
+      }
+      for (const [optId, count] of removedByOption) {
+        await shiftOptionVoteCount(publicDb, optId, -count);
+      }
+      const { error: deleteError } = await publicDb
+        .from(CDILV_TABLE.pollVotes)
+        .delete()
+        .in(
+          "id",
+          priorVotes.map((row) => row.id),
+        );
+      if (deleteError) throw deleteError;
+    }
+
     // Insert votes
     const submissionId = crypto.randomUUID();
     const voteInserts = optionIds.map((optId: string) => ({
       poll_id: pollId,
       option_id: optId,
       user_id: user?.id || null,
+      employee_code: voterEmployeeCode,
       ip_address: clientIp,
       device_fingerprint: fingerprint,
       submission_id: submissionId,
@@ -154,8 +234,8 @@ export async function POST(request: NextRequest) {
       throw insertVotesError;
     }
 
-    // If guest vote, increment guest_vote_count on poll
-    if (!user) {
+    // Phiếu khách mới thì tăng bộ đếm; phiếu ghi đè cùng mã nhân viên không tính thêm lượt.
+    if (needsEmployeeCode && !isReplacement) {
       await publicDb
         .from(CDILV_TABLE.polls)
         .update({ guest_vote_count: currentGuestVotes + 1 })
@@ -207,7 +287,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Bình chọn thành công! Cảm ơn bạn đã tham gia.",
+      replaced: isReplacement,
+      message: isReplacement
+        ? "Đã ghi nhận bình chọn mới. Mã nhân viên này đã có phiếu trước đó nên hệ thống lấy kết quả lần bình chọn sau."
+        : "Bình chọn thành công! Cảm ơn bạn đã tham gia.",
     });
   } catch (err: any) {
     console.error("[api/polls/vote] error:", err);

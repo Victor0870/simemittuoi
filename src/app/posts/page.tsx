@@ -2,11 +2,27 @@ import Link from "next/link";
 import { PostCard } from "@/components/posts/PostCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPosts } from "@/lib/data/posts";
+import { createClient } from "@/lib/supabase/server";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const revalidate = 60;
 
 export default async function PostsPage() {
-  const posts = await getPosts();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let isAdmin = false;
+  if (user) {
+    const { data: me } = await supabase
+      .from(CDILV_TABLE.profiles)
+      .select("role, approval_status")
+      .eq("id", user.id)
+      .maybeSingle();
+    isAdmin = me?.role === "admin" && me?.approval_status === "approved";
+  }
+
+  const posts = await getPosts(50, { includeInactive: isAdmin });
 
   return (
     <div className="space-y-8">

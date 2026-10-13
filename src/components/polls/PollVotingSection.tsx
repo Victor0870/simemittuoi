@@ -12,6 +12,9 @@ type Props = {
   poll: PollDetail;
 };
 
+const MISSING_EMPLOYEE_CODE_MESSAGE =
+  "Vui lòng nhập đầy đủ thông tin. Bạn cần nhập mã nhân viên trước khi bình chọn.";
+
 function getOrCreateDeviceFingerprint(): string {
   if (typeof window === "undefined") return "browser";
   const key = "cdilv_device_fp";
@@ -31,6 +34,7 @@ export function PollVotingSection({ poll }: Props) {
   const [predictedCount, setPredictedCount] = useState<string>("");
   const [predictorName, setPredictorName] = useState<string>("");
   const [predictorContact, setPredictorContact] = useState<string>("");
+  const [employeeCode, setEmployeeCode] = useState<string>("");
 
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -49,6 +53,7 @@ export function PollVotingSection({ poll }: Props) {
   const isGuestLimitReached =
     poll.accessType === "free" && currentGuestVotes >= maxGuestVotes;
   const isBlockedForGuest = isGuest && isGuestLimitReached;
+  const needsEmployeeCode = poll.accessType === "free" && isGuest;
 
   function handleToggleOption(optionId: string) {
     if (isClosed || isInactive) return;
@@ -100,6 +105,15 @@ export function PollVotingSection({ poll }: Props) {
       return;
     }
 
+    if (needsEmployeeCode && !employeeCode.trim()) {
+      setErrorMessage(MISSING_EMPLOYEE_CODE_MESSAGE);
+      const input = document.getElementById("voter-employee-code");
+      input?.focus();
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+      alert(MISSING_EMPLOYEE_CODE_MESSAGE);
+      return;
+    }
+
     if (poll.hasPrediction) {
       if (!predictedCount || isNaN(parseInt(predictedCount, 10))) {
         setErrorMessage("Vui lòng nhập số người dự đoán cho tác phẩm đạt giải nhất.");
@@ -125,6 +139,7 @@ export function PollVotingSection({ poll }: Props) {
           predictedCount: poll.hasPrediction ? parseInt(predictedCount, 10) : undefined,
           predictorName: predictorName.trim(),
           predictorContact: predictorContact.trim(),
+          employeeCode: needsEmployeeCode ? employeeCode.trim() : undefined,
         }),
       });
 
@@ -138,6 +153,7 @@ export function PollVotingSection({ poll }: Props) {
       setPredictedCount("");
       setPredictorName("");
       setPredictorContact("");
+      setEmployeeCode("");
       router.refresh();
     } catch (err: any) {
       setErrorMessage(err?.message || "Đã xảy ra lỗi khi gửi bình chọn.");
@@ -405,6 +421,44 @@ export function PollVotingSection({ poll }: Props) {
           <p className="text-sm sm:text-body-md text-amber-900">
             Bạn đang chọn <strong>{selectedOptionIds.length}</strong> / {maxVotes} tác phẩm.
           </p>
+
+          {needsEmployeeCode ? (
+            <div className="space-y-2 rounded-xl border border-amber-300 bg-white p-3.5 sm:p-5 shadow-2xs">
+              <label className="text-label-md font-bold text-[#173A67]" htmlFor="voter-employee-code">
+                Mã nhân viên <span className="text-error">*</span>
+              </label>
+              <input
+                id="voter-employee-code"
+                className={`mt-1 w-full max-w-sm rounded-xl border bg-surface-container-low px-4 py-2.5 text-body-md font-semibold text-[#173A67] focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+                  errorMessage === MISSING_EMPLOYEE_CODE_MESSAGE
+                    ? "border-error ring-2 ring-error/30"
+                    : "border-outline-variant"
+                }`}
+                placeholder="Nhập mã nhân viên"
+                type="text"
+                autoComplete="off"
+                aria-invalid={errorMessage === MISSING_EMPLOYEE_CODE_MESSAGE}
+                value={employeeCode}
+                onChange={(e) => {
+                  setEmployeeCode(e.target.value);
+                  if (e.target.value.trim()) {
+                    setErrorMessage((current) =>
+                      current === MISSING_EMPLOYEE_CODE_MESSAGE ? null : current,
+                    );
+                  }
+                }}
+              />
+              {errorMessage === MISSING_EMPLOYEE_CODE_MESSAGE ? (
+                <p className="text-sm font-bold text-error" role="alert">
+                  {MISSING_EMPLOYEE_CODE_MESSAGE}
+                </p>
+              ) : null}
+              <p className="text-label-sm text-on-surface-variant leading-relaxed">
+                Người chưa là đoàn viên cần nhập mã nhân viên. Không nhập thì phiếu không được tính.
+                Nếu mã này đã có phiếu trước đó, hệ thống lấy kết quả lần bình chọn sau.
+              </p>
+            </div>
+          ) : null}
 
           {/* Prediction Question Section */}
           {poll.hasPrediction ? (

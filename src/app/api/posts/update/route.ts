@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, tag, tagTone, isImportant } = body;
+    const { id, title, content, tag, tagTone, isImportant, isActive } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -75,6 +75,10 @@ export async function POST(request: NextRequest) {
 
     if (isImportant !== undefined) {
       updatePayload.is_important = Boolean(isImportant);
+    }
+
+    if (isActive !== undefined) {
+      updatePayload.is_active = Boolean(isActive);
     }
 
     const { data: updatedPost, error: updateErr } = await publicDb

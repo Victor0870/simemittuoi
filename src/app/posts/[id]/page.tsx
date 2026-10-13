@@ -5,6 +5,8 @@ import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { PostEditButton } from "@/components/posts/PostEditButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/posts";
+import { createClient } from "@/lib/supabase/server";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const revalidate = 60;
 
@@ -16,6 +18,23 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const { id } = await params;
   const post = await getPostById(id);
   if (!post) notFound();
+
+  if (!post.isActive) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    let isAdmin = false;
+    if (user) {
+      const { data: me } = await supabase
+        .from(CDILV_TABLE.profiles)
+        .select("role, approval_status")
+        .eq("id", user.id)
+        .maybeSingle();
+      isAdmin = me?.role === "admin" && me?.approval_status === "approved";
+    }
+    if (!isAdmin) notFound();
+  }
 
   const [related, commentCount] = await Promise.all([
     getRelatedPosts(post.id, 6),
@@ -59,6 +78,12 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
             </div>
             <PostEditButton post={post} />
           </div>
+          {!post.isActive ? (
+            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-950">
+              <MaterialIcon className="text-[16px]" name="visibility_off" />
+              Đang Inactive — chưa hiện với đoàn viên. Sửa bài rồi bật Active khi muốn đăng.
+            </p>
+          ) : null}
           <h1 className="text-xl sm:text-headline-lg md:text-headline-xl font-extrabold tracking-tight text-on-surface leading-tight">
             {post.title}
           </h1>

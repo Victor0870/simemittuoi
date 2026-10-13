@@ -691,7 +691,7 @@ export function PollEditorModal({
                     value={accessType}
                     onChange={(e) => setAccessType(e.target.value as any)}
                   >
-                    <option value="free">Công khai / Free (Giới hạn IP 30 phút chống spam)</option>
+                    <option value="free">Công khai / Free (người chưa là đoàn viên phải nhập mã nhân viên)</option>
                     <option value="members_only">Dành riêng cho đoàn viên đã duyệt</option>
                   </select>
                 </div>

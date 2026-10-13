@@ -81,7 +81,8 @@ create table if not exists public.cdilv_posts (
   tag_tone text not null default 'primary' check (tag_tone in ('primary', 'error')),
   image_url text,
   author_id uuid references public.cdilv_profiles(id),
-  published_at timestamptz not null default now()
+  published_at timestamptz not null default now(),
+  is_active boolean not null default true
 );
 
 create table if not exists public.cdilv_post_comments (
