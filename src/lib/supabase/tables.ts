@@ -21,6 +21,7 @@ export const CDILV_TABLE = {
   activityRegistrations: "cdilv_activity_registrations",
   feedbacks: "cdilv_feedbacks",
   commentReactions: "cdilv_comment_reactions",
+  notifications: "cdilv_notifications",
 } as const;
 
 export const CDILV_RPC = {

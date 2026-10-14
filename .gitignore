@@ -5,7 +5,8 @@ out
 .env
 *.log
 .DS_Store
-.nova_agent*
+.nova_*
+.nova_agy*
 cursor_feedback_*.txt
 pas data.txt
 pas data

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -46,13 +47,7 @@ export function TopNavAuth() {
           <span>Admin</span>
         </Link>
       ) : null}
-      <button
-        aria-label="Thông báo"
-        className="cursor-pointer rounded-full p-2 text-on-surface-variant hover:bg-surface-container-high"
-        type="button"
-      >
-        <MaterialIcon name="notifications" />
-      </button>
+      <NotificationBell />
       <Link
         aria-label={isAdmin ? "Trang quản trị" : "Cài đặt hồ sơ"}
         className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-dusty-light font-bold text-primary transition hover:opacity-90"
