@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { sanitizeCompanyNames } from "@/lib/privacy";
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const publicDb = createPublicClient();
+    const publicDb = createServiceClient();
 
     const {
       data: { user },

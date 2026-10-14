@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 function normalizeEmployeeCode(raw: unknown): string | null {
@@ -9,7 +9,7 @@ function normalizeEmployeeCode(raw: unknown): string | null {
 }
 
 async function shiftOptionVoteCount(
-  publicDb: ReturnType<typeof createPublicClient>,
+  publicDb: ReturnType<typeof createServiceClient>,
   optionId: string,
   delta: number,
 ) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
+    const publicDb = createServiceClient();
     const { data: poll, error: pollError } = await publicDb
       .from(CDILV_TABLE.polls)
       .select("*")

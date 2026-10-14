@@ -1,4 +1,5 @@
 import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type PostSummary = {
@@ -67,7 +68,7 @@ export async function getPosts(
   limit = 50,
   options?: { includeInactive?: boolean },
 ): Promise<PostSummary[]> {
-  const db = createPublicClient();
+  const db = options?.includeInactive ? createServiceClient() : createPublicClient();
   let query = db
     .from(CDILV_TABLE.posts)
     .select(POST_COLUMNS)
@@ -89,7 +90,7 @@ export async function getPosts(
 }
 
 export async function getPostById(id: string): Promise<PostDetail | null> {
-  const db = createPublicClient();
+  const db = createServiceClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
     .select(POST_COLUMNS)

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -17,14 +17,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
-    const { data: me } = await publicDb
+    const { data: me, error: profileError } = await supabase
       .from(CDILV_TABLE.profiles)
       .select("approval_status")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (me?.approval_status !== "approved") {
+    if (profileError) {
+      throw profileError;
+    }
+
+    if (!me) {
+      return NextResponse.json(
+        { error: "Tài khoản không tồn tại trong hệ thống." },
+        { status: 403 },
+      );
+    }
+
+    if (me.approval_status !== "approved") {
       return NextResponse.json(
         { error: "Tài khoản của bạn cần được phê duyệt để tương tác." },
         { status: 403 },
@@ -42,6 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Kiểm tra xem user đã thả cảm xúc cho bình luận này chưa
+    const publicDb = createServiceClient();
     const { data: existing } = await publicDb
       .from(CDILV_TABLE.commentReactions)
       .select("id, reaction_type")

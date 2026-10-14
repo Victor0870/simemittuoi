@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function DELETE(request: NextRequest) {
@@ -18,7 +18,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
+    const publicDb = createServiceClient();
 
     // Check admin role
     const { data: me } = await publicDb

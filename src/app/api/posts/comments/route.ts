@@ -1,9 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { sanitizeCompanyNames } from "@/lib/privacy";
+
+type MemberProfile = {
+  role: string;
+  full_name: string | null;
+  approval_status: string;
+};
+
+/**
+ * Hồ sơ đoàn viên đọc bằng phiên đăng nhập (role authenticated đã được GRANT SELECT).
+ * service_role hiện không có quyền đọc cdilv_profiles — nếu dùng service client,
+ * lỗi permission bị nuốt và hiện nhầm "Tài khoản không tồn tại".
+ */
+async function loadMemberProfile(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+) {
+  const { data, error } = await supabase
+    .from(CDILV_TABLE.profiles)
+    .select("role, full_name, approval_status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as MemberProfile | null;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +45,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
     const supabase = await createClient();
     const {
       data: { user },
@@ -29,18 +56,14 @@ export async function GET(request: NextRequest) {
     let myCommentCount = 0;
 
     if (user) {
-      const { data: me } = await publicDb
-        .from(CDILV_TABLE.profiles)
-        .select("role, approval_status")
-        .eq("id", user.id)
-        .maybeSingle();
+      const me = await loadMemberProfile(supabase, user.id);
 
       isApproved = me?.approval_status === "approved";
       isAdmin = isApproved && me?.role === "admin";
     }
 
     // Get total comment count for this post
-    const { count: totalCommentsCount, error: countErr } = await publicDb
+    const { count: totalCommentsCount, error: countErr } = await supabase
       .from(CDILV_TABLE.postComments)
       .select("id", { count: "exact", head: true })
       .eq("post_id", postId);
@@ -64,7 +87,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Query comments with author profile for members
-    const { data: rawComments, error } = await publicDb
+    const { data: rawComments, error } = await supabase
       .from(CDILV_TABLE.postComments)
       .select(`
         id,
@@ -104,7 +127,7 @@ export async function GET(request: NextRequest) {
     >();
 
     if (commentIds.length > 0) {
-      const { data: rawReactions } = await publicDb
+      const { data: rawReactions } = await supabase
         .from(CDILV_TABLE.commentReactions)
         .select("comment_id, user_id, reaction_type")
         .in("comment_id", commentIds);
@@ -192,12 +215,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
-    const { data: me } = await publicDb
-      .from(CDILV_TABLE.profiles)
-      .select("role, full_name, approval_status")
-      .eq("id", user.id)
-      .maybeSingle();
+    const me = await loadMemberProfile(supabase, user.id);
 
     if (!me) {
       return NextResponse.json(
@@ -244,8 +262,10 @@ export async function POST(request: NextRequest) {
     const isAdmin = me.role === "admin";
 
     // Enforce 3 comments limit for regular union members
+    const writer = createServiceClient();
+
     if (!isAdmin) {
-      const { count, error: countErr } = await publicDb
+      const { count, error: countErr } = await writer
         .from(CDILV_TABLE.postComments)
         .select("id", { count: "exact", head: true })
         .eq("post_id", postId)
@@ -270,7 +290,7 @@ export async function POST(request: NextRequest) {
     const finalContent = sanitizeCompanyNames(trimmedContent);
 
     // Insert comment
-    const { data: newComment, error: insertError } = await publicDb
+    const { data: newComment, error: insertError } = await writer
       .from(CDILV_TABLE.postComments)
       .insert({
         post_id: postId,
@@ -286,7 +306,7 @@ export async function POST(request: NextRequest) {
 
     // Award +1 score point for union member via secure RPC
     try {
-      const { error: rpcErr } = await publicDb.rpc("cdilv_award_comment_score", {
+      const { error: rpcErr } = await writer.rpc("cdilv_award_comment_score", {
         p_comment_id: newComment.id,
       });
       if (rpcErr) {
@@ -339,19 +359,12 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
-
-    // Check user role
-    const { data: me } = await publicDb
-      .from(CDILV_TABLE.profiles)
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const isAdmin = me?.role === "admin";
+    const me = await loadMemberProfile(supabase, user.id);
+    const isAdmin = me?.role === "admin" && me?.approval_status === "approved";
+    const writer = createServiceClient();
 
     // Fetch existing comment
-    const { data: comment, error: fetchErr } = await publicDb
+    const { data: comment, error: fetchErr } = await writer
       .from(CDILV_TABLE.postComments)
       .select("id, post_id, user_id")
       .eq("id", commentId)
@@ -373,7 +386,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete comment
-    const { error: delErr } = await publicDb
+    const { error: delErr } = await writer
       .from(CDILV_TABLE.postComments)
       .delete()
       .eq("id", commentId);
@@ -384,7 +397,7 @@ export async function DELETE(request: NextRequest) {
 
     // Revoke awarded score point via RPC
     try {
-      const { error: rpcRevokeErr } = await publicDb.rpc("cdilv_revoke_comment_score", {
+      const { error: rpcRevokeErr } = await writer.rpc("cdilv_revoke_comment_score", {
         p_comment_id: commentId,
       });
       if (rpcRevokeErr) {
