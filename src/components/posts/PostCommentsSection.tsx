@@ -75,6 +75,20 @@ export function PostCommentsSection({
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
+  // Popup hiển thị quy định bình luận (khi bình luận lần thứ 4 hoặc bấm xem quy định)
+  const [showRulePopup, setShowRulePopup] = useState(false);
+
+  // Đóng modal quy định bình luận khi nhấn Escape
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && showRulePopup) {
+        setShowRulePopup(false);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showRulePopup]);
+
   // Fetch comments only when user is an approved member
   useEffect(() => {
     if (authLoading) return;
@@ -396,10 +410,7 @@ export function PostCommentsSection({
     }
 
     if (!isAdmin && myCommentCount >= 3) {
-      setNotice({
-        type: "error",
-        text: "Bạn đã đạt tối đa 3 bình luận cho bài viết này.",
-      });
+      setShowRulePopup(true);
       return;
     }
 
@@ -416,6 +427,10 @@ export function PostCommentsSection({
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.error && data.error.includes("tối đa 3 bình luận")) {
+          setShowRulePopup(true);
+          return;
+        }
         throw new Error(data.error || "Gửi bình luận không thành công.");
       }
 
@@ -511,24 +526,19 @@ export function PostCommentsSection({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-label-xs sm:text-label-sm font-bold text-amber-900 shadow-xs">
+          <button
+            type="button"
+            onClick={() => setShowRulePopup(true)}
+            className="cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-label-xs sm:text-label-sm font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition"
+            title="Bấm để xem quy định bình luận"
+          >
             <MaterialIcon className="text-[16px] text-amber-600" name="military_tech" />
             +1đ thi đua / bình luận
-          </span>
+            <MaterialIcon className="text-[14px] text-amber-700/70 ml-0.5" name="info" />
+          </button>
           <span className="rounded-full bg-dusty-light px-3 py-1 text-label-xs sm:text-label-sm font-semibold text-primary">
             {commentCount} bình luận
           </span>
-        </div>
-      </div>
-
-      {/* Rules Notice Pill */}
-      <div className="flex items-start gap-2.5 rounded-xl border border-dusty-border/70 bg-gradient-to-r from-dusty-light/40 via-white to-white p-3 text-xs sm:text-body-sm text-on-surface-variant">
-        <MaterialIcon className="shrink-0 text-[18px] text-primary" name="info" />
-        <div className="leading-relaxed">
-          <strong className="text-on-surface">Quy định bình luận: </strong>
-          Đoàn viên được cộng <strong>+1 điểm thi đua</strong> cho mỗi bình luận. Giới hạn{" "}
-          <strong>tối đa 3 bình luận</strong> cho mỗi đoàn viên trên một bài viết (cho phép gửi tối
-          đa 3 mẫu thiết kế khác nhau). Quản trị viên không bị giới hạn.
         </div>
       </div>
 
@@ -652,10 +662,15 @@ export function PostCommentsSection({
               {!isAdmin && (
                 <div className="flex items-center gap-1.5 font-medium">
                   {isLimitReached ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-label-xs font-bold text-red-800">
+                    <button
+                      type="button"
+                      onClick={() => setShowRulePopup(true)}
+                      className="cursor-pointer inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-label-xs font-bold text-red-800 hover:bg-red-200 transition"
+                      title="Bấm để xem quy định bình luận"
+                    >
                       <MaterialIcon className="text-[13px]" name="block" />
-                      Đã đạt tối đa 3/3 bình luận
-                    </span>
+                      Đã đạt tối đa 3/3 bình luận (Xem quy định)
+                    </button>
                   ) : (
                     <span className="text-on-surface-variant">
                       Đã bình luận:{" "}
@@ -667,116 +682,124 @@ export function PostCommentsSection({
               )}
             </div>
 
-            {/* Form or Max Reached Banner */}
-            {isLimitReached ? (
-              <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-emerald-950">
-                <MaterialIcon className="shrink-0 text-[24px] text-emerald-600" name="task_alt" />
-                <div className="text-xs sm:text-body-sm">
-                  <p className="font-bold">Bạn đã đăng đủ 3 bình luận cho bài viết này!</p>
-                  <p className="text-emerald-800">
-                    Toàn bộ điểm thi đua (+3đ) đã được ghi nhận. Cảm ơn sự tích cực đóng góp và chia
-                    sẻ sáng tạo của bạn!
-                  </p>
+            {/* Form bình luận */}
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div className="relative">
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  onClick={() => {
+                    if (isLimitReached) {
+                      setShowRulePopup(true);
+                    }
+                  }}
+                  placeholder={
+                    isLimitReached
+                      ? "Bạn đã đăng đủ 3/3 bình luận. Bấm vào đây hoặc bấm Gửi để xem quy định..."
+                      : "Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
+                  }
+                  rows={3}
+                  maxLength={1500}
+                  disabled={submitting || uploadingImage}
+                  className="w-full rounded-2xl border border-dusty-border bg-white p-3.5 sm:p-4 text-body-sm sm:text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container"
+                />
+                <div className="absolute bottom-3 right-3 text-[11px] text-on-surface-variant">
+                  {content.length}/1500
                 </div>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="relative">
-                  <textarea
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    placeholder="Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
-                    rows={3}
-                    maxLength={1500}
-                    disabled={submitting || uploadingImage}
-                    className="w-full rounded-2xl border border-dusty-border bg-white p-3.5 sm:p-4 text-body-sm sm:text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container"
-                  />
-                  <div className="absolute bottom-3 right-3 text-[11px] text-on-surface-variant">
-                    {content.length}/1500
+
+              {/* Khung xem trước ảnh đính kèm (nếu có) */}
+              {attachedImageUrl && (
+                <div className="relative inline-flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/[0.03] p-2.5 shadow-2xs">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-dusty-border bg-white shadow-xs">
+                    <img
+                      src={attachedImageUrl}
+                      alt="Ảnh đính kèm"
+                      className="h-full w-full object-contain"
+                    />
                   </div>
-                </div>
-
-                {/* Khung xem trước ảnh đính kèm (nếu có) */}
-                {attachedImageUrl && (
-                  <div className="relative inline-flex items-center gap-3 rounded-2xl border border-primary/30 bg-primary/[0.03] p-2.5 shadow-2xs">
-                    <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-dusty-border bg-white shadow-xs">
-                      <img
-                        src={attachedImageUrl}
-                        alt="Ảnh đính kèm"
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                    <div className="text-xs">
-                      <p className="font-bold text-on-surface">Đã đính kèm ảnh thiết kế Logo</p>
-                      <p className="text-on-surface-variant">Ảnh sẽ được đăng cùng bình luận</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setAttachedImageUrl(null)}
-                      title="Gỡ ảnh"
-                      className="ml-2 rounded-full p-1 text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition"
-                    >
-                      <MaterialIcon className="text-[18px]" name="close" />
-                    </button>
+                  <div className="text-xs">
+                    <p className="font-bold text-on-surface">Đã đính kèm ảnh thiết kế Logo</p>
+                    <p className="text-on-surface-variant">Ảnh sẽ được đăng cùng bình luận</p>
                   </div>
-                )}
-
-                {/* Input file ẩn */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <div className="flex items-center gap-2">
-                    {/* Nút đính kèm ảnh Logo */}
-                    <button
-                      type="button"
-                      disabled={uploadingImage || submitting}
-                      onClick={() => fileInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-dusty-border bg-white px-3.5 py-2 text-xs sm:text-label-sm font-semibold text-on-surface transition hover:bg-dusty-light disabled:opacity-50"
-                    >
-                      {uploadingImage ? (
-                        <>
-                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                          <span>Đang tải ảnh...</span>
-                        </>
-                      ) : (
-                        <>
-                          <MaterialIcon className="text-[18px] text-primary" name="add_photo_alternate" />
-                          <span>Đính kèm ảnh Logo</span>
-                        </>
-                      )}
-                    </button>
-
-                    <span className="text-xs text-on-surface-variant hidden sm:inline">
-                      Mỗi bình luận tích lũy ngay <strong>+1 điểm thi đua</strong>
-                    </span>
-                  </div>
-
                   <button
-                    type="submit"
-                    disabled={submitting || uploadingImage || (!content.trim() && !attachedImageUrl)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 sm:px-5 sm:py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    onClick={() => setAttachedImageUrl(null)}
+                    title="Gỡ ảnh"
+                    className="ml-2 rounded-full p-1 text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition"
                   >
-                    {submitting ? (
+                    <MaterialIcon className="text-[18px]" name="close" />
+                  </button>
+                </div>
+              )}
+
+              {/* Input file ẩn */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-2">
+                  {/* Nút đính kèm ảnh Logo */}
+                  <button
+                    type="button"
+                    disabled={uploadingImage || submitting}
+                    onClick={() => {
+                      if (isLimitReached) {
+                        setShowRulePopup(true);
+                        return;
+                      }
+                      fileInputRef.current?.click();
+                    }}
+                    className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl border border-dusty-border bg-white px-3.5 py-2 text-xs sm:text-label-sm font-semibold text-on-surface transition hover:bg-dusty-light disabled:opacity-50"
+                  >
+                    {uploadingImage ? (
                       <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        <span>Đang gửi...</span>
+                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                        <span>Đang tải ảnh...</span>
                       </>
                     ) : (
                       <>
-                        <MaterialIcon className="text-[18px]" name="send" />
-                        <span>Gửi bình luận (+1đ)</span>
+                        <MaterialIcon className="text-[18px] text-primary" name="add_photo_alternate" />
+                        <span>Đính kèm ảnh Logo</span>
                       </>
                     )}
                   </button>
+
+                  <span className="text-xs text-on-surface-variant hidden sm:inline">
+                    Mỗi bình luận tích lũy ngay <strong>+1 điểm thi đua</strong>
+                  </span>
                 </div>
-              </form>
-            )}
+
+                <button
+                  type="submit"
+                  disabled={submitting || uploadingImage || (!content.trim() && !attachedImageUrl && !isLimitReached)}
+                  onClick={(e) => {
+                    if (isLimitReached) {
+                      e.preventDefault();
+                      setShowRulePopup(true);
+                    }
+                  }}
+                  className="cursor-pointer inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 sm:px-5 sm:py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Đang gửi...</span>
+                    </>
+                  ) : (
+                    <>
+                      <MaterialIcon className="text-[18px]" name="send" />
+                      <span>Gửi bình luận (+1đ)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
 
           {/* ADMIN TOOLBAR: TỔNG HỢP & TẢI TOÀN BỘ ẢNH THIẾT KẾ ĐỂ TẠO BÌNH CHỌN */}
@@ -1140,6 +1163,80 @@ export function PostCommentsSection({
                 })}
               </ul>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Popup: Quy định bình luận (khi thành viên bình luận lần thứ 4 hoặc bấm xem quy định) */}
+      {showRulePopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowRulePopup(false);
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="comment-rule-modal-title"
+        >
+          <div className="relative w-full max-w-md rounded-3xl border border-dusty-border bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Nút đóng góc phải */}
+            <button
+              type="button"
+              onClick={() => setShowRulePopup(false)}
+              className="cursor-pointer absolute right-4 top-4 rounded-full p-1.5 text-on-surface-variant transition hover:bg-surface-container hover:text-on-surface"
+              aria-label="Đóng"
+            >
+              <MaterialIcon name="close" />
+            </button>
+
+            {/* Icon & Tiêu đề */}
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                <MaterialIcon className="text-[26px]" name="info" />
+              </div>
+              <div>
+                <h3 id="comment-rule-modal-title" className="text-title-md font-bold text-on-surface">
+                  Quy định bình luận
+                </h3>
+                <p className="text-body-xs text-on-surface-variant">
+                  Thông tin giới hạn lượt bình luận bài viết
+                </p>
+              </div>
+            </div>
+
+            {/* Nội dung quy định theo đúng nguyên văn */}
+            <div className="mt-4 space-y-3 rounded-2xl border border-dusty-border/80 bg-surface-container-lowest/60 p-4 text-xs sm:text-body-sm leading-relaxed text-on-surface-variant">
+              <p>
+                Đoàn viên được cộng{" "}
+                <strong className="font-bold text-amber-700">+1 điểm thi đua</strong> cho mỗi bình luận.
+              </p>
+              <p>
+                Giới hạn{" "}
+                <strong className="font-bold text-on-surface">tối đa 3 bình luận</strong> cho mỗi đoàn viên trên một bài viết (cho phép gửi tối đa 3 mẫu thiết kế khác nhau). Quản trị viên không bị giới hạn.
+              </p>
+              {isLimitReached && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-900">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-950">
+                    <MaterialIcon className="text-[17px] text-emerald-600" name="task_alt" />
+                    Bạn đã đăng đủ 3/3 bình luận
+                  </div>
+                  <p className="mt-1 text-emerald-800">
+                    Toàn bộ điểm thi đua (+3đ) đã được ghi nhận. Xin cảm ơn sự tích cực tham gia và đóng góp của bạn!
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Nút hành động */}
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowRulePopup(false)}
+                className="cursor-pointer rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-dusty-dark hover:shadow-md"
+              >
+                Đã hiểu
+              </button>
+            </div>
           </div>
         </div>
       )}
