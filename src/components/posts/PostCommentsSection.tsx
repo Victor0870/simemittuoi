@@ -517,10 +517,10 @@ export function PostCommentsSection({
           </div>
           <div>
             <h2 className="text-title-lg sm:text-headline-sm font-bold text-on-surface">
-              Bình luận trao đổi & Tác phẩm dự thi
+              Bình luận trao đổi
             </h2>
             <p className="text-body-xs sm:text-body-sm text-on-surface-variant">
-              Giao lưu, đóng góp ý kiến, gửi ảnh thiết kế và nhận điểm thi đua
+              Giao lưu, đóng góp ý kiến và nhận điểm thi đua
             </p>
           </div>
         </div>
