@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 export type NotificationItem = {
   id: string;
-  type: "new_post" | "comment_reaction" | "user_approved" | "system" | string;
+  type: "new_post" | "comment_reaction" | "user_approved" | "new_comment" | "system" | string;
   title: string;
   message: string;
   link: string | null;
@@ -134,6 +134,11 @@ export function NotificationBell() {
         return {
           name: "verified",
           bg: "bg-emerald-100 text-emerald-800",
+        };
+      case "new_comment":
+        return {
+          name: "forum",
+          bg: "bg-amber-100 text-amber-800",
         };
       default:
         return {
