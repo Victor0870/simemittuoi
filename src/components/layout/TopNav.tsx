@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminNavLinks } from "@/components/layout/AdminNavLinks";
+import { MemberNavLinks } from "@/components/layout/MemberNavLinks";
 import { TopNavAuth } from "@/components/layout/TopNavAuth";
 import { BRAND } from "@/lib/brand";
 import { NAV_ITEMS } from "@/lib/constants";
@@ -36,6 +37,7 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
             </Link>
           );
         })}
+        <MemberNavLinks activeHref={activeHref} />
         <AdminNavLinks activeHref={activeHref} />
       </div>
 

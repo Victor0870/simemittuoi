@@ -15,6 +15,7 @@ function resolveActiveHref(pathname: string): string {
     ...MOBILE_NAV_ITEMS.map((item) => item.href),
     "/posts",
     "/polls",
+    "/albums",
     "/settings",
     "/score-history",
     "/campaigns",

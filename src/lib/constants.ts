@@ -15,6 +15,11 @@ export const NAV_ITEMS = [
   { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
 ] as const;
 
+/** Chỉ hiển thị cho thành viên đã được phê duyệt. */
+export const MEMBER_NAV_ITEMS = [
+  { href: "/albums", label: "Album ảnh", shortLabel: "Album", icon: "photo_library" },
+] as const;
+
 export const MOBILE_NAV_ITEMS = [
   { href: "/", label: "Trang chủ", icon: "home" },
   { href: "/posts", label: "Bài viết", icon: "article" },

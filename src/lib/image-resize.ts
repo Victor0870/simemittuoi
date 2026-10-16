@@ -21,7 +21,7 @@ export async function resizeImageFile(
             width = maxWidth;
           } else {
             width = Math.round((width * maxHeight) / height);
-            maxHeight = height;
+            height = maxHeight;
           }
         }
 
@@ -45,4 +45,47 @@ export async function resizeImageFile(
     reader.onerror = (err) => reject(err);
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * Nén ảnh thành Blob JPEG (cạnh dài tối đa `maxSide`) để upload lên Storage.
+ * GIF giữ nguyên để không mất ảnh động.
+ */
+export async function resizeImageToBlob(
+  file: File,
+  maxSide = 2048,
+  quality = 0.85,
+): Promise<Blob> {
+  if (file.type === "image/gif") return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = objectUrl;
+    });
+
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const width = Math.round(image.width * scale);
+    const height = Math.round(image.height * scale);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality),
+    );
+    return blob ?? file;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
 }

@@ -2,6 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
+function isMemberOnlyPath(pathname: string) {
+  return pathname.startsWith("/admin") || pathname === "/albums" || pathname.startsWith("/albums/");
+}
+
 function isAuthExemptPath(pathname: string) {
   return (
     pathname === "/login" ||
@@ -26,7 +30,7 @@ export async function updateSession(request: NextRequest) {
     .some((c) => c.name.includes("auth-token") || c.name.startsWith("sb-"));
 
   if (!hasAuthCookie) {
-    if (pathname.startsWith("/admin")) {
+    if (isMemberOnlyPath(pathname)) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = "/login";
       redirectUrl.searchParams.set("next", pathname);
@@ -60,7 +64,7 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      if (pathname.startsWith("/admin")) {
+      if (isMemberOnlyPath(pathname)) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/login";
         redirectUrl.searchParams.set("next", pathname);
@@ -71,7 +75,7 @@ export async function updateSession(request: NextRequest) {
 
     // Tối ưu 2: Chỉ truy vấn database profiles khi cần kiểm tra quyền Admin hoặc trang đặc biệt
     const requiresProfileCheck =
-      pathname.startsWith("/admin") ||
+      isMemberOnlyPath(pathname) ||
       pathname === "/pending" ||
       pathname === "/login" ||
       pathname === "/register";

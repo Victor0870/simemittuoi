@@ -372,6 +372,26 @@ export default async function AdminDashboardPage() {
 
         <div className="space-y-2.5">
           <Link
+            href="/albums"
+            className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-light text-primary">
+                <MaterialIcon className="text-[20px]" name="photo_library" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-on-surface">
+                  Quản lý Album ảnh
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  Tạo album, cài đặt quyền đăng ảnh, giới hạn số ảnh và điểm thưởng
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
+          </Link>
+
+          <Link
             href="/admin/employees"
             className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
           >

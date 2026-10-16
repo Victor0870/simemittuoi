@@ -22,6 +22,10 @@ export const CDILV_TABLE = {
   feedbacks: "cdilv_feedbacks",
   commentReactions: "cdilv_comment_reactions",
   notifications: "cdilv_notifications",
+  albums: "cdilv_albums",
+  albumPhotos: "cdilv_album_photos",
+  albumPhotoReactions: "cdilv_album_photo_reactions",
+  albumPhotoComments: "cdilv_album_photo_comments",
 } as const;
 
 export const CDILV_RPC = {
@@ -29,11 +33,14 @@ export const CDILV_RPC = {
   transferEmployeeScores: "cdilv_transfer_employee_scores",
   updateMyAvatar: "cdilv_update_my_avatar",
   refreshLeaderboardCache: "cdilv_refresh_leaderboard_cache",
+  awardAlbumPhotoScore: "cdilv_award_album_photo_score",
+  awardAlbumCommentScore: "cdilv_award_album_comment_score",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */
 export const CDILV_STORAGE = {
   avatars: "cdilv-avatars",
+  albums: "cdilv-albums",
 } as const;
 
 /** Gắn vào auth.signUp options.data để trigger BizMate bỏ qua user CDILV. */
