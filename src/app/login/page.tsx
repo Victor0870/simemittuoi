@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { normalizeEmail, translateAuthError } from "@/lib/auth-errors";
 import { BRAND } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -20,14 +22,24 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+    const normalizedEmail = normalizeEmail(email);
+    let { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
       password,
     });
 
+    // Bàn phím điện thoại hay tự chèn dấu cách vào cuối (gợi ý từ / dán)
+    const trimmedPassword = password.trim();
+    if (signInError?.code === "invalid_credentials" && trimmedPassword && trimmedPassword !== password) {
+      ({ data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: trimmedPassword,
+      }));
+    }
+
     if (signInError) {
       setLoading(false);
-      setError(signInError.message);
+      setError(translateAuthError(signInError));
       return;
     }
 
@@ -79,6 +91,10 @@ export default function LoginPage() {
           <input
             required
             autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            inputMode="email"
             className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 outline-none focus:border-[#173A67]"
             id="email"
             type="email"
@@ -94,14 +110,11 @@ export default function LoginPage() {
           >
             Mật khẩu
           </label>
-          <input
-            required
+          <PasswordInput
             autoComplete="current-password"
-            className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 outline-none focus:border-[#173A67]"
             id="password"
-            type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
           />
         </div>
 

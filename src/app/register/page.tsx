@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { normalizeEmail, translateAuthError } from "@/lib/auth-errors";
 import { BRAND } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_AUTH_APP, CDILV_RPC } from "@/lib/supabase/tables";
@@ -55,8 +57,14 @@ export default function RegisterPage() {
 
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (password !== password.trim()) {
+      setError("Mật khẩu không được có dấu cách ở đầu hoặc cuối. Bấm biểu tượng con mắt để kiểm tra lại.");
+      return;
+    }
+
+    setLoading(true);
 
     const validated = await validateCode();
     if (!validated?.ok) {
@@ -70,7 +78,7 @@ export default function RegisterPage() {
     const dept = department.trim() || validated.department || "";
 
     const { error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
+      email: normalizeEmail(email),
       password,
       options: {
         data: {
@@ -85,7 +93,7 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (signUpError) {
-      setError(signUpError.message);
+      setError(translateAuthError(signUpError));
       return;
     }
 
@@ -153,6 +161,10 @@ export default function RegisterPage() {
             <input
               required
               autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              inputMode="email"
               className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 outline-none focus:border-[#173A67]"
               id="email"
               type="email"
@@ -165,16 +177,16 @@ export default function RegisterPage() {
             <label className="mb-1 block text-label-md" htmlFor="password">
               Mật khẩu
             </label>
-            <input
-              required
-              minLength={6}
+            <PasswordInput
               autoComplete="new-password"
-              className="w-full rounded-xl border border-outline-variant bg-surface px-4 py-3 outline-none focus:border-[#173A67]"
               id="password"
-              type="password"
+              minLength={6}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
             />
+            <p className="mt-1 text-xs text-on-surface-variant">
+              Tối thiểu 6 ký tự. Nên tắt bộ gõ tiếng Việt khi nhập mật khẩu và ghi nhớ chính xác chữ HOA/thường.
+            </p>
           </div>
 
           {error ? (
