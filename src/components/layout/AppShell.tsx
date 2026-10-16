@@ -22,6 +22,7 @@ function resolveActiveHref(pathname: string): string {
     "/register",
     "/pending",
     "/admin/users",
+    "/admin/employees",
     "/admin/scores",
     "/admin/polls",
   ];

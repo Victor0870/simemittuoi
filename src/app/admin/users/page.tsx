@@ -65,6 +65,13 @@ export default async function AdminUsersPage() {
               <MaterialIcon className="text-[18px]" name="manage_accounts" />
               <span>Duyệt đoàn viên</span>
             </span>
+            <Link
+              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+              href="/admin/employees"
+            >
+              <MaterialIcon className="text-[18px] text-[#173A67]" name="badge" />
+              <span>Danh sách nhân viên</span>
+            </Link>
           </div>
           <h1 className="text-headline-md font-bold text-[#173A67]">Quản lý & Duyệt đoàn viên</h1>
           <p className="text-body-md text-[#27496D]">

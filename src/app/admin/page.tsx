@@ -37,6 +37,7 @@ export default async function AdminDashboardPage() {
     { count: totalActivitiesCount },
     { count: openActivitiesCount },
     { count: pendingFeedbackCount },
+    { count: activeWhitelistCount },
   ] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
@@ -64,6 +65,10 @@ export default async function AdminDashboardPage() {
       .from(CDILV_TABLE.feedbacks)
       .select("id", { count: "exact", head: true })
       .is("admin_reply", null),
+    supabase
+      .from(CDILV_TABLE.employeeWhitelist)
+      .select("employee_code", { count: "exact", head: true })
+      .eq("is_active", true),
   ]);
 
   const initial = (me.full_name || user.email || "A").slice(0, 1).toUpperCase();
@@ -366,6 +371,26 @@ export default async function AdminDashboardPage() {
         </h2>
 
         <div className="space-y-2.5">
+          <Link
+            href="/admin/employees"
+            className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-light text-primary">
+                <MaterialIcon className="text-[20px]" name="badge" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-on-surface">
+                  Danh sách nhân viên được phép đăng ký
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  {activeWhitelistCount ?? 0} mã đang hoạt động · Thêm nhân viên mới, sửa thông tin, ngừng cấp quyền
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
+          </Link>
+
           <Link
             href="/settings"
             className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
