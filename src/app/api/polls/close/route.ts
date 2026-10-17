@@ -62,72 +62,99 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If poll has judges, re-rank options based on weightedScore (BGK + Khác)
-    if (poll.has_judges) {
-      const { data: votesData } = await publicDb
-        .from(CDILV_TABLE.pollVotes)
-        .select("option_id, is_judge, employee_code, user_id, submission_id")
-        .eq("poll_id", pollId);
+    // Query votes to compute weighted scores & timestamps for tie-breaking
+    const { data: votesData } = await publicDb
+      .from(CDILV_TABLE.pollVotes)
+      .select("option_id, is_judge, employee_code, user_id, submission_id, created_at")
+      .eq("poll_id", pollId);
 
-      const judgesVotedSet = new Set<string>();
-      const othersVotedSet = new Set<string>();
-      const judgeVotesByOpt = new Map<string, number>();
-      const otherVotesByOpt = new Map<string, number>();
+    const judgesVotedSet = new Set<string>();
+    const othersVotedSet = new Set<string>();
+    const judgeVotesByOpt = new Map<string, number>();
+    const otherVotesByOpt = new Map<string, number>();
+    const lastVoteAtByOpt = new Map<string, string>();
 
-      for (const v of votesData ?? []) {
-        const isJ = Boolean(v.is_judge);
-        const voterKey = v.employee_code || v.user_id || v.submission_id;
+    for (const v of votesData ?? []) {
+      const isJ = Boolean(v.is_judge);
+      const voterKey = v.employee_code || v.user_id || v.submission_id;
 
-        if (isJ) {
-          if (voterKey) judgesVotedSet.add(voterKey);
-          judgeVotesByOpt.set(
-            v.option_id,
-            (judgeVotesByOpt.get(v.option_id) || 0) + 1,
-          );
-        } else {
-          if (voterKey) othersVotedSet.add(voterKey);
-          otherVotesByOpt.set(
-            v.option_id,
-            (otherVotesByOpt.get(v.option_id) || 0) + 1,
-          );
-        }
+      if (isJ) {
+        if (voterKey) judgesVotedSet.add(voterKey);
+        judgeVotesByOpt.set(
+          v.option_id,
+          (judgeVotesByOpt.get(v.option_id) || 0) + 1,
+        );
+      } else {
+        if (voterKey) othersVotedSet.add(voterKey);
+        otherVotesByOpt.set(
+          v.option_id,
+          (otherVotesByOpt.get(v.option_id) || 0) + 1,
+        );
       }
 
-      const totalJudgesVoted = judgesVotedSet.size;
-      const totalOthersVoted = othersVotedSet.size;
-      const judgeWeightPercent = poll.judge_weight_percent ?? 30;
-      const judgeWeight = judgeWeightPercent / 10;
-      const otherWeight = (100 - judgeWeightPercent) / 10;
+      if (v.created_at) {
+        const curLast = lastVoteAtByOpt.get(v.option_id);
+        if (!curLast || new Date(v.created_at).getTime() > new Date(curLast).getTime()) {
+          lastVoteAtByOpt.set(v.option_id, v.created_at);
+        }
+      }
+    }
 
-      options = options
-        .map((opt) => {
-          const judgeVotes = judgeVotesByOpt.get(opt.id) || 0;
-          const otherVotes = otherVotesByOpt.get(opt.id) || 0;
+    const totalJudgesVoted = judgesVotedSet.size;
+    const totalOthersVoted = othersVotedSet.size;
+    const judgeWeightPercent = poll.judge_weight_percent ?? 30;
+    const judgeWeight = judgeWeightPercent / 10;
+    const otherWeight = (100 - judgeWeightPercent) / 10;
+
+    options = options
+      .map((opt) => {
+        let judgeVotes = 0;
+        let otherVotes = 0;
+        let judgeScore = 0;
+        let otherScore = 0;
+        let weightedScore = 0;
+
+        if (poll.has_judges) {
+          judgeVotes = judgeVotesByOpt.get(opt.id) || 0;
+          otherVotes = otherVotesByOpt.get(opt.id) || 0;
           const judgeRatio = totalJudgesVoted > 0 ? judgeVotes / totalJudgesVoted : 0;
           const otherRatio = totalOthersVoted > 0 ? otherVotes / totalOthersVoted : 0;
-          const judgeScore = Math.round(judgeRatio * judgeWeight * 100) / 100;
-          const otherScore = Math.round(otherRatio * otherWeight * 100) / 100;
-          const weightedScore = Math.round((judgeScore + otherScore) * 100) / 100;
+          judgeScore = Math.round(judgeRatio * judgeWeight * 100) / 100;
+          otherScore = Math.round(otherRatio * otherWeight * 100) / 100;
+          weightedScore = Math.round((judgeScore + otherScore) * 100) / 100;
+        }
 
-          return {
-            ...opt,
-            judge_votes: judgeVotes,
-            other_votes: otherVotes,
-            judge_score: judgeScore,
-            other_score: otherScore,
-            weighted_score: weightedScore,
-          };
-        })
-        .sort((a: any, b: any) => {
+        return {
+          ...opt,
+          judge_votes: judgeVotes,
+          other_votes: otherVotes,
+          judge_score: judgeScore,
+          other_score: otherScore,
+          weighted_score: weightedScore,
+          last_vote_at: lastVoteAtByOpt.get(opt.id) || null,
+        };
+      })
+      .sort((a: any, b: any) => {
+        if (poll.has_judges) {
           if (b.weighted_score !== a.weighted_score) {
             return b.weighted_score - a.weighted_score;
           }
-          if (b.vote_count !== a.vote_count) {
-            return b.vote_count - a.vote_count;
+        }
+        if (b.vote_count !== a.vote_count) {
+          return b.vote_count - a.vote_count;
+        }
+        // Khi bằng điểm/phiếu nhau: người nào nhận điểm trước sẽ ưu tiên vị trí cao hơn
+        if (a.last_vote_at || b.last_vote_at) {
+          if (!a.last_vote_at) return 1;
+          if (!b.last_vote_at) return -1;
+          const timeA = new Date(a.last_vote_at).getTime();
+          const timeB = new Date(b.last_vote_at).getTime();
+          if (timeA !== timeB) {
+            return timeA - timeB;
           }
-          return a.order_num - b.order_num;
-        });
-    }
+        }
+        return a.order_num - b.order_num;
+      });
 
     // 2. Assign final ranks
     const updatedOptions = [];

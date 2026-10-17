@@ -31,6 +31,8 @@ export type PollOption = {
   judgeScore?: number;
   otherScore?: number;
   weightedScore?: number;
+  lastVoteAt?: string | null;
+  firstVoteAt?: string | null;
 };
 
 export type PollSummary = {
@@ -184,46 +186,58 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     ? JSON.parse(pollRow.judge_list || "[]")
     : [];
 
-  // If poll has judges, fetch vote rows to compute weighted score per option
+  // Fetch vote rows to compute weighted score & timestamps per option
   let totalJudgesVoted = 0;
   let totalOthersVoted = 0;
   const judgeVotesByOpt = new Map<string, number>();
   const otherVotesByOpt = new Map<string, number>();
+  const lastVoteAtByOpt = new Map<string, string>();
+  const firstVoteAtByOpt = new Map<string, string>();
 
-  if (hasJudges) {
-    const { data: votesData, error: votesError } = await db
-      .from(CDILV_TABLE.pollVotes)
-      .select("option_id, is_judge, employee_code, user_id, submission_id")
-      .eq("poll_id", id);
+  const { data: votesData, error: votesError } = await db
+    .from(CDILV_TABLE.pollVotes)
+    .select("option_id, is_judge, employee_code, user_id, submission_id, created_at")
+    .eq("poll_id", id);
 
-    if (votesError) {
-      console.error("[polls] getVotes error:", votesError.message);
-    } else {
-      const judgesVotedSet = new Set<string>();
-      const othersVotedSet = new Set<string>();
+  if (votesError) {
+    console.error("[polls] getVotes error:", votesError.message);
+  } else {
+    const judgesVotedSet = new Set<string>();
+    const othersVotedSet = new Set<string>();
 
-      for (const v of votesData ?? []) {
-        const isJ = Boolean(v.is_judge);
-        const voterKey = v.employee_code || v.user_id || v.submission_id;
+    for (const v of votesData ?? []) {
+      const isJ = Boolean(v.is_judge);
+      const voterKey = v.employee_code || v.user_id || v.submission_id;
 
-        if (isJ) {
-          if (voterKey) judgesVotedSet.add(voterKey);
-          judgeVotesByOpt.set(
-            v.option_id,
-            (judgeVotesByOpt.get(v.option_id) || 0) + 1,
-          );
-        } else {
-          if (voterKey) othersVotedSet.add(voterKey);
-          otherVotesByOpt.set(
-            v.option_id,
-            (otherVotesByOpt.get(v.option_id) || 0) + 1,
-          );
-        }
+      if (isJ) {
+        if (voterKey) judgesVotedSet.add(voterKey);
+        judgeVotesByOpt.set(
+          v.option_id,
+          (judgeVotesByOpt.get(v.option_id) || 0) + 1,
+        );
+      } else {
+        if (voterKey) othersVotedSet.add(voterKey);
+        otherVotesByOpt.set(
+          v.option_id,
+          (otherVotesByOpt.get(v.option_id) || 0) + 1,
+        );
       }
 
-      totalJudgesVoted = judgesVotedSet.size;
-      totalOthersVoted = othersVotedSet.size;
+      // Track first and last vote timestamps per option
+      if (v.created_at) {
+        const curLast = lastVoteAtByOpt.get(v.option_id);
+        if (!curLast || new Date(v.created_at).getTime() > new Date(curLast).getTime()) {
+          lastVoteAtByOpt.set(v.option_id, v.created_at);
+        }
+        const curFirst = firstVoteAtByOpt.get(v.option_id);
+        if (!curFirst || new Date(v.created_at).getTime() < new Date(curFirst).getTime()) {
+          firstVoteAtByOpt.set(v.option_id, v.created_at);
+        }
+      }
     }
+
+    totalJudgesVoted = judgesVotedSet.size;
+    totalOthersVoted = othersVotedSet.size;
   }
 
   const judgeWeight = judgeWeightPercent / 10; // e.g. 30% -> 3.0
@@ -268,6 +282,8 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
       judgeScore,
       otherScore,
       weightedScore,
+      lastVoteAt: lastVoteAtByOpt.get(row.id) || null,
+      firstVoteAt: firstVoteAtByOpt.get(row.id) || null,
     };
   });
 

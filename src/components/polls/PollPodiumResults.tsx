@@ -16,7 +16,8 @@ export function PollPodiumResults({ poll }: Props) {
   // Guest can only see results when poll is closed
   const canSeeResults = isClosed || !isGuest;
 
-  // Sort options by weightedScore desc (if poll has judges), then vote_count desc, order_num asc
+  // Sort options by weightedScore desc (if poll has judges), then vote_count desc,
+  // Khi bằng điểm: Người nào nhận điểm trước sẽ ưu tiên vị trí cao hơn (lastVoteAt asc)
   const sortedOptions = useMemo(() => {
     return [...poll.options].sort((a, b) => {
       if (poll.hasJudges) {
@@ -28,6 +29,16 @@ export function PollPodiumResults({ poll }: Props) {
       }
       if (b.voteCount !== a.voteCount) {
         return b.voteCount - a.voteCount;
+      }
+      // Khi bằng điểm/phiếu nhau: người nhận điểm trước đứng trước
+      if (a.lastVoteAt || b.lastVoteAt) {
+        if (!a.lastVoteAt) return 1;
+        if (!b.lastVoteAt) return -1;
+        const timeA = new Date(a.lastVoteAt).getTime();
+        const timeB = new Date(b.lastVoteAt).getTime();
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
       }
       return a.orderNum - b.orderNum;
     });
