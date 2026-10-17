@@ -19,6 +19,8 @@ type PostCommentsSectionProps = {
  * Trích xuất các URL ảnh trong nội dung bình luận để hiển thị ảnh trực quan
  */
 function parseCommentContent(text: string): { cleanText: string; imageUrls: string[] } {
+  if (!text) return { cleanText: "", imageUrls: [] };
+
   // Nhận diện các link ảnh thông dụng hoặc link upload từ Supabase Storage
   const imgUrlRegex =
     /(https?:\/\/[^\s]+?\.(?:png|jpe?g|webp|gif|svg)(?:\?[^\s]*)?|https?:\/\/[^\s]+?\/storage\/v1\/object\/public\/[^\s]+)/gi;
@@ -33,16 +35,18 @@ function parseCommentContent(text: string): { cleanText: string; imageUrls: stri
     }
   });
 
-  // Loại bỏ các dòng gắn nhãn link ảnh thô để phần chữ hiển thị gãy gọn
+  // Loại bỏ các dòng gắn nhãn link ảnh đính kèm mà KHÔNG ảnh hưởng đến chữ 'ảnh' trong văn bản của người dùng
   let cleanText = text;
   imageUrls.forEach((url) => {
-    cleanText = cleanText
-      .replace(new RegExp(`\\[?Ảnh[^\\]]*\\]?:?\\s*${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "gi"), "")
-      .replace(url, "")
-      .trim();
+    const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Chỉ loại bỏ tiền tố [Ảnh ...]: đi liền trên cùng một dòng với link ảnh
+    cleanText = cleanText.replace(new RegExp(`\\[Ảnh[^\\]\\r\\n]*\\]:\\s*${escapedUrl}`, "gi"), "");
+    // Loại bỏ link ảnh đứng riêng dòng hoặc còn sót lại
+    cleanText = cleanText.replace(new RegExp(`^\\s*${escapedUrl}\\s*$`, "gim"), "");
+    cleanText = cleanText.replace(new RegExp(`\\s*${escapedUrl}`, "gi"), "");
   });
 
-  return { cleanText, imageUrls };
+  return { cleanText: cleanText.trim(), imageUrls };
 }
 
 export function PostCommentsSection({
@@ -401,10 +405,10 @@ export function PostCommentsSection({
         : `[Ảnh thiết kế Logo]: ${attachedImageUrl}`
       : trimmed;
 
-    if (fullContent.length > 2500) {
+    if (fullContent.length > 3500) {
       setNotice({
         type: "error",
-        text: "Bình luận quá dài (tối đa 2500 ký tự).",
+        text: "Bình luận quá dài (tối đa 3500 ký tự).",
       });
       return;
     }
@@ -699,12 +703,12 @@ export function PostCommentsSection({
                       : "Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
                   }
                   rows={3}
-                  maxLength={1500}
+                  maxLength={3000}
                   disabled={submitting || uploadingImage}
                   className="w-full rounded-2xl border border-dusty-border bg-white p-3.5 sm:p-4 text-body-sm sm:text-body-md text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-container"
                 />
                 <div className="absolute bottom-3 right-3 text-[11px] text-on-surface-variant">
-                  {content.length}/1500
+                  {content.length}/3000
                 </div>
               </div>
 
