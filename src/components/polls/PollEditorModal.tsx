@@ -284,7 +284,7 @@ export function PollEditorModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-6 overflow-y-auto">
       <div className="relative w-full max-w-4xl max-h-[96vh] sm:max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-surface-container-lowest shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-outline-variant/70 bg-[#F4F9F8] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="flex shrink-0 items-center justify-between border-b border-outline-variant/70 bg-[#F4F9F8] px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <span className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-[#173A67] text-white shadow-xs">
               <MaterialIcon className="text-[18px] sm:text-[22px]" name="settings" />
@@ -307,44 +307,53 @@ export function PollEditorModal({
           </button>
         </div>
 
-        {/* Tab Navigation (Scrollable on mobile) */}
-        <div className="flex overflow-x-auto border-b border-outline-variant bg-surface-container-low px-3 sm:px-6 gap-1 sm:gap-2 whitespace-nowrap">
-          <button
-            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
-              activeTab === "options"
-                ? "border-primary text-primary"
-                : "border-transparent text-on-surface-variant hover:text-on-surface"
-            }`}
-            type="button"
-            onClick={() => setActiveTab("options")}
-          >
-            <MaterialIcon className="text-[16px] sm:text-[18px]" name="collections" />
-            <span>Tác Phẩm & Đoàn Viên ({options.length})</span>
-          </button>
-          <button
-            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
-              activeTab === "general"
-                ? "border-primary text-primary"
-                : "border-transparent text-on-surface-variant hover:text-on-surface"
-            }`}
-            type="button"
-            onClick={() => setActiveTab("general")}
-          >
-            <MaterialIcon className="text-[16px] sm:text-[18px]" name="tune" />
-            <span>Cài Đặt Vote & Thể Lệ</span>
-          </button>
-          <button
-            className={`flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm font-bold transition cursor-pointer ${
-              activeTab === "prizes"
-                ? "border-primary text-primary"
-                : "border-transparent text-on-surface-variant hover:text-on-surface"
-            }`}
-            type="button"
-            onClick={() => setActiveTab("prizes")}
-          >
-            <MaterialIcon className="text-[16px] sm:text-[18px]" name="emoji_events" />
-            <span>Giải Thưởng & Dự Đoán</span>
-          </button>
+        {/* Tab Navigation (High contrast, crystal clear, never squished) */}
+        <div className="shrink-0 border-b border-slate-200 bg-[#EDF3F7] p-2.5 sm:px-6 sm:py-3 shadow-inner">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+            <button
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === "options"
+                  ? "bg-[#173A67] text-white shadow-md ring-1 ring-[#173A67]"
+                  : "bg-white text-slate-700 hover:bg-white hover:text-[#173A67] border border-slate-300/80 shadow-2xs"
+              }`}
+              type="button"
+              onClick={() => setActiveTab("options")}
+            >
+              <MaterialIcon className={`text-[18px] ${activeTab === "options" ? "text-amber-300" : "text-[#173A67]"}`} name="collections" />
+              <span>1. Tác Phẩm & Đoàn Viên</span>
+              <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${
+                activeTab === "options" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700 border border-slate-200"
+              }`}>
+                {options.length}
+              </span>
+            </button>
+
+            <button
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === "general"
+                  ? "bg-[#173A67] text-white shadow-md ring-1 ring-[#173A67]"
+                  : "bg-white text-slate-700 hover:bg-white hover:text-[#173A67] border border-slate-300/80 shadow-2xs"
+              }`}
+              type="button"
+              onClick={() => setActiveTab("general")}
+            >
+              <MaterialIcon className={`text-[18px] ${activeTab === "general" ? "text-amber-300" : "text-[#173A67]"}`} name="tune" />
+              <span>2. Cài Đặt Vote & Thể Lệ</span>
+            </button>
+
+            <button
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                activeTab === "prizes"
+                  ? "bg-[#173A67] text-white shadow-md ring-1 ring-[#173A67]"
+                  : "bg-white text-slate-700 hover:bg-white hover:text-[#173A67] border border-slate-300/80 shadow-2xs"
+              }`}
+              type="button"
+              onClick={() => setActiveTab("prizes")}
+            >
+              <MaterialIcon className={`text-[18px] ${activeTab === "prizes" ? "text-amber-300" : "text-[#173A67]"}`} name="emoji_events" />
+              <span>3. Giải Thưởng & Dự Đoán</span>
+            </button>
+          </div>
         </div>
 
         {/* Banners */}
