@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Fetch options sorted by vote_count desc, order_num asc (tie-break by original order)
+    // 1. Fetch options
     const { data: optionsData } = await publicDb
       .from(CDILV_TABLE.pollOptions)
       .select("*")
@@ -54,12 +54,79 @@ export async function POST(request: NextRequest) {
       .order("vote_count", { ascending: false })
       .order("order_num", { ascending: true });
 
-    const options = optionsData ?? [];
+    let options = optionsData ?? [];
     if (options.length === 0) {
       return NextResponse.json(
         { error: "Chương trình chưa có lựa chọn/tác phẩm nào." },
         { status: 400 },
       );
+    }
+
+    // If poll has judges, re-rank options based on weightedScore (BGK + Khác)
+    if (poll.has_judges) {
+      const { data: votesData } = await publicDb
+        .from(CDILV_TABLE.pollVotes)
+        .select("option_id, is_judge, employee_code, user_id, submission_id")
+        .eq("poll_id", pollId);
+
+      const judgesVotedSet = new Set<string>();
+      const othersVotedSet = new Set<string>();
+      const judgeVotesByOpt = new Map<string, number>();
+      const otherVotesByOpt = new Map<string, number>();
+
+      for (const v of votesData ?? []) {
+        const isJ = Boolean(v.is_judge);
+        const voterKey = v.employee_code || v.user_id || v.submission_id;
+
+        if (isJ) {
+          if (voterKey) judgesVotedSet.add(voterKey);
+          judgeVotesByOpt.set(
+            v.option_id,
+            (judgeVotesByOpt.get(v.option_id) || 0) + 1,
+          );
+        } else {
+          if (voterKey) othersVotedSet.add(voterKey);
+          otherVotesByOpt.set(
+            v.option_id,
+            (otherVotesByOpt.get(v.option_id) || 0) + 1,
+          );
+        }
+      }
+
+      const totalJudgesVoted = judgesVotedSet.size;
+      const totalOthersVoted = othersVotedSet.size;
+      const judgeWeightPercent = poll.judge_weight_percent ?? 30;
+      const judgeWeight = judgeWeightPercent / 10;
+      const otherWeight = (100 - judgeWeightPercent) / 10;
+
+      options = options
+        .map((opt) => {
+          const judgeVotes = judgeVotesByOpt.get(opt.id) || 0;
+          const otherVotes = otherVotesByOpt.get(opt.id) || 0;
+          const judgeRatio = totalJudgesVoted > 0 ? judgeVotes / totalJudgesVoted : 0;
+          const otherRatio = totalOthersVoted > 0 ? otherVotes / totalOthersVoted : 0;
+          const judgeScore = Math.round(judgeRatio * judgeWeight * 100) / 100;
+          const otherScore = Math.round(otherRatio * otherWeight * 100) / 100;
+          const weightedScore = Math.round((judgeScore + otherScore) * 100) / 100;
+
+          return {
+            ...opt,
+            judge_votes: judgeVotes,
+            other_votes: otherVotes,
+            judge_score: judgeScore,
+            other_score: otherScore,
+            weighted_score: weightedScore,
+          };
+        })
+        .sort((a: any, b: any) => {
+          if (b.weighted_score !== a.weighted_score) {
+            return b.weighted_score - a.weighted_score;
+          }
+          if (b.vote_count !== a.vote_count) {
+            return b.vote_count - a.vote_count;
+          }
+          return a.order_num - b.order_num;
+        });
     }
 
     // 2. Assign final ranks
@@ -74,7 +141,7 @@ export async function POST(request: NextRequest) {
       updatedOptions.push({ ...opt, final_rank: rank });
     }
 
-    const winnerOpt = updatedOptions[0]; // Hạng 1
+    const winnerOpt = updatedOptions[0]; // Hạng 1 (cao điểm nhất)
     const actualWinningVotes = winnerOpt.vote_count;
 
     // 3. Find closest predictor

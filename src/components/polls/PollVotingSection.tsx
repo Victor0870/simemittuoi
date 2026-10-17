@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -28,13 +28,20 @@ function getOrCreateDeviceFingerprint(): string {
 
 export function PollVotingSection({ poll }: Props) {
   const router = useRouter();
-  const { user, isGuest } = useAuth();
+  const { user, profile, isGuest } = useAuth();
 
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [predictedCount, setPredictedCount] = useState<string>("");
   const [predictorName, setPredictorName] = useState<string>("");
   const [predictorContact, setPredictorContact] = useState<string>("");
   const [employeeCode, setEmployeeCode] = useState<string>("");
+
+  const isCurrentUserJudge = useMemo(() => {
+    if (!poll.hasJudges || !poll.judgeList || poll.judgeList.length === 0) return false;
+    const currentCode = (profile?.employee_code || "").trim().toUpperCase();
+    if (!currentCode) return false;
+    return poll.judgeList.some((j) => j.employeeCode.toUpperCase() === currentCode);
+  }, [poll.hasJudges, poll.judgeList, profile?.employee_code]);
 
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -241,6 +248,39 @@ export function PollVotingSection({ poll }: Props) {
         </div>
       ) : null}
 
+      {/* Judge scoring rules & voter role indicator */}
+      {poll.hasJudges && (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#173A67] text-white">
+                <MaterialIcon className="text-[20px]" name="gavel" />
+              </span>
+              <div>
+                <h4 className="text-sm sm:text-base font-extrabold text-[#173A67]">
+                  Cuộc thi áp dụng chấm điểm Ban Giám Khảo ({poll.judgeWeightPercent ?? 30}%) & Đoàn viên ({100 - (poll.judgeWeightPercent ?? 30)}%)
+                </h4>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Điểm tổng kết thang 10 tính theo tỉ lệ số người thực tế tham gia bình chọn của từng nhóm.
+                </p>
+              </div>
+            </div>
+
+            {isCurrentUserJudge ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500 text-white px-3 py-1 text-xs font-black shadow-xs">
+                <MaterialIcon className="text-[16px]" name="verified" />
+                <span>Bạn là Giám khảo ({profile?.employee_code})</span>
+              </span>
+            ) : user ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-200 text-slate-800 px-3 py-1 text-xs font-bold">
+                <MaterialIcon className="text-[16px]" name="person" />
+                <span>Bình chọn đoàn viên</span>
+              </span>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       {/* Options List / Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {poll.options.map((opt) => {
@@ -421,6 +461,22 @@ export function PollVotingSection({ poll }: Props) {
           <p className="text-sm sm:text-body-md text-amber-900">
             Bạn đang chọn <strong>{selectedOptionIds.length}</strong> / {maxVotes} tác phẩm.
           </p>
+
+          {poll.hasJudges && (
+            <div className="rounded-xl bg-white/90 border border-amber-300/80 p-3 text-xs text-amber-950 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+              <span className="flex items-center gap-1.5 font-medium">
+                <MaterialIcon className="text-[18px] text-amber-700" name="gavel" />
+                <span>
+                  {isCurrentUserJudge
+                    ? "Phiếu của bạn sẽ được tự động tính vào nhóm Ban Giám Khảo."
+                    : "Phiếu của bạn sẽ được tính vào nhóm Bình chọn khác."}
+                </span>
+              </span>
+              <span className="font-extrabold text-[#173A67] bg-amber-100 px-2 py-0.5 rounded-md">
+                Trọng số: {isCurrentUserJudge ? `${poll.judgeWeightPercent ?? 30}% (Hệ số ${((poll.judgeWeightPercent ?? 30) / 10).toFixed(1)} đ)` : `${100 - (poll.judgeWeightPercent ?? 30)}% (Hệ số ${((100 - (poll.judgeWeightPercent ?? 30)) / 10).toFixed(1)} đ)`}
+              </span>
+            </div>
+          )}
 
           {needsEmployeeCode ? (
             <div className="space-y-2 rounded-xl border border-amber-300 bg-white p-3.5 sm:p-5 shadow-2xs">

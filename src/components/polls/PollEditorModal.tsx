@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { resizeImageFile } from "@/lib/image-resize";
-import type { PollDetail, PollOption } from "@/lib/data/polls";
+import type { JudgeMember, PollDetail, PollOption } from "@/lib/data/polls";
 
 export type OptionFormState = {
   id?: string;
@@ -43,6 +43,14 @@ export function PollEditorModal({
   const [voterRewardPoints, setVoterRewardPoints] = useState(10);
   const [predictorRewardPoints, setPredictorRewardPoints] = useState(50);
 
+  // Judge state
+  const [hasJudges, setHasJudges] = useState(false);
+  const [judgeWeightPercent, setJudgeWeightPercent] = useState(30);
+  const [judgeList, setJudgeList] = useState<JudgeMember[]>([]);
+  const [judgeCodeInput, setJudgeCodeInput] = useState("");
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+
   // Union Contest points
   const [isUnionContest, setIsUnionContest] = useState(true);
   const [firstPrizePoints, setFirstPrizePoints] = useState(50);
@@ -68,6 +76,8 @@ export function PollEditorModal({
     if (!isOpen) return;
     setError(null);
     setSuccess(null);
+    setLookupError(null);
+    setJudgeCodeInput("");
 
     if (initialPoll && mode === "edit") {
       setTitle(initialPoll.title || "");
@@ -85,6 +95,9 @@ export function PollEditorModal({
       );
       setVoterRewardPoints(initialPoll.voterRewardPoints ?? 10);
       setPredictorRewardPoints(initialPoll.predictorRewardPoints ?? 50);
+      setHasJudges(Boolean(initialPoll.hasJudges));
+      setJudgeWeightPercent(initialPoll.judgeWeightPercent ?? 30);
+      setJudgeList(initialPoll.judgeList || []);
       setIsUnionContest(Boolean(initialPoll.isUnionContest));
       setFirstPrizePoints(initialPoll.firstPrizePoints ?? 50);
       setSecondPrizePoints(initialPoll.secondPrizePoints ?? 40);
@@ -117,6 +130,9 @@ export function PollEditorModal({
       setContentType("image");
       setMaxVotesPerUser(3);
       setHasPrediction(true);
+      setHasJudges(false);
+      setJudgeWeightPercent(30);
+      setJudgeList([]);
       setOptions([
         { title: "Tác phẩm 01", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
         { title: "Tác phẩm 02", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
@@ -210,6 +226,51 @@ export function PollEditorModal({
     });
   }
 
+  // Judge management
+  async function handleLookupAndAddJudge() {
+    const code = judgeCodeInput.trim().toUpperCase();
+    if (!code) {
+      setLookupError("Vui lòng nhập mã số nhân viên của Giám khảo.");
+      return;
+    }
+
+    if (judgeList.some((j) => j.employeeCode.toUpperCase() === code)) {
+      setLookupError(`Giám khảo có mã ${code} đã tồn tại trong danh sách.`);
+      return;
+    }
+
+    setLookupLoading(true);
+    setLookupError(null);
+    try {
+      const res = await fetch(`/api/employees/lookup?code=${encodeURIComponent(code)}`);
+      const data = await res.json();
+      if (!res.ok || !data.found) {
+        setLookupError(data.error || `Không tìm thấy nhân viên với mã ${code}.`);
+        return;
+      }
+
+      setJudgeList((prev) => [
+        ...prev,
+        {
+          employeeCode: data.employeeCode,
+          fullName: data.fullName,
+          department: data.department || null,
+          userId: data.userId || null,
+        },
+      ]);
+      setJudgeCodeInput("");
+      setLookupError(null);
+    } catch {
+      setLookupError("Lỗi kết nối khi tra cứu mã nhân viên.");
+    } finally {
+      setLookupLoading(false);
+    }
+  }
+
+  function handleRemoveJudge(index: number) {
+    setJudgeList((prev) => prev.filter((_, i) => i !== index));
+  }
+
   // Save changes
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -233,6 +294,12 @@ export function PollEditorModal({
       }
     }
 
+    if (hasJudges && judgeList.length === 0) {
+      setError("Bạn đang bật tính năng Ban Giám Khảo. Vui lòng thêm ít nhất 1 thành viên Ban Giám Khảo.");
+      setActiveTab("general");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -249,6 +316,9 @@ export function PollEditorModal({
         predictionQuestion,
         voterRewardPoints,
         predictorRewardPoints,
+        hasJudges,
+        judgeWeightPercent,
+        judgeList,
         isUnionContest,
         firstPrizePoints,
         secondPrizePoints,
@@ -780,6 +850,247 @@ export function PollEditorModal({
                         onChange={(e) => setMaxGuestVotes(Number(e.target.value) || 250)}
                       />
                       <span className="text-xs font-bold text-amber-900">lượt</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* KHỐI CẤU HÌNH BAN GIÁM KHẢO (BGK) */}
+              <div className="rounded-2xl border-2 border-[#173A67]/30 bg-gradient-to-b from-[#173A67]/5 to-transparent p-5 space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#173A67]/20 pb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#173A67] text-white shadow-xs">
+                      <MaterialIcon className="text-[22px]" name="gavel" />
+                    </span>
+                    <div>
+                      <h4 className="text-base font-extrabold text-[#173A67] leading-tight">
+                        Quy Định Ban Giám Khảo (BGK)
+                      </h4>
+                      <p className="text-xs text-on-surface-variant mt-0.5">
+                        Tính điểm kết hợp theo trọng số giữa Ban Giám Khảo và người bình chọn khác.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center rounded-xl bg-white p-1 border border-outline-variant shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setHasJudges(true)}
+                      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                        hasJudges
+                          ? "bg-[#173A67] text-white shadow-xs"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      <MaterialIcon className="text-[16px]" name="check_circle" />
+                      <span>Có Ban Giám Khảo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHasJudges(false)}
+                      className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                        !hasJudges
+                          ? "bg-slate-700 text-white shadow-xs"
+                          : "text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      <MaterialIcon className="text-[16px]" name="cancel" />
+                      <span>Không áp dụng</span>
+                    </button>
+                  </div>
+                </div>
+
+                {hasJudges && (
+                  <div className="space-y-5 animate-in fade-in duration-200">
+                    {/* Tỉ lệ điểm của Ban Giám Khảo */}
+                    <div className="rounded-xl border border-primary/20 bg-white p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <label className="text-sm font-bold text-[#173A67] block">
+                            Tỉ lệ điểm của Ban Giám Khảo (%):
+                          </label>
+                          <p className="text-xs text-on-surface-variant">
+                            Phần còn lại sẽ dành cho bình chọn của đoàn viên/người tham gia khác.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            className="w-24 rounded-xl border-2 border-primary bg-primary/5 px-3 py-1.5 text-center text-lg font-black text-primary"
+                            max={95}
+                            min={5}
+                            step={5}
+                            type="number"
+                            value={judgeWeightPercent}
+                            onChange={(e) => {
+                              const val = Math.min(95, Math.max(5, Number(e.target.value) || 30));
+                              setJudgeWeightPercent(val);
+                            }}
+                          />
+                          <span className="text-sm font-extrabold text-[#173A67]">%</span>
+                        </div>
+                      </div>
+
+                      {/* Trực quan tỉ lệ & Trọng số thang 10 */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <div className="rounded-xl border border-amber-300 bg-amber-50/70 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-amber-950 flex items-center gap-1.5">
+                              <MaterialIcon className="text-[16px] text-amber-700" name="gavel" />
+                              Ban Giám Khảo ({judgeWeightPercent}%)
+                            </span>
+                            <span className="text-xs font-black text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full">
+                              Hệ số {(judgeWeightPercent / 10).toFixed(1)} đ
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-amber-900 mt-1">
+                            Chiếm {judgeWeightPercent}% tổng điểm. Trọng số tối đa là {(judgeWeightPercent / 10).toFixed(1)} / 10 điểm.
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-blue-300 bg-blue-50/70 p-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-extrabold text-blue-950 flex items-center gap-1.5">
+                              <MaterialIcon className="text-[16px] text-blue-700" name="how_to_vote" />
+                              Bình chọn khác ({100 - judgeWeightPercent}%)
+                            </span>
+                            <span className="text-xs font-black text-blue-900 bg-blue-200/80 px-2 py-0.5 rounded-full">
+                              Hệ số {((100 - judgeWeightPercent) / 10).toFixed(1)} đ
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-blue-900 mt-1">
+                            Chiếm {100 - judgeWeightPercent}% tổng điểm. Trọng số tối đa là {((100 - judgeWeightPercent) / 10).toFixed(1)} / 10 điểm.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Box giải thích công thức */}
+                      <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-xs text-slate-700 space-y-1">
+                        <div className="font-bold text-[#173A67] flex items-center gap-1">
+                          <MaterialIcon className="text-[16px] text-primary" name="info" />
+                          <span>Quy tắc tính điểm theo trọng số (Thang 10 điểm):</span>
+                        </div>
+                        <p>
+                          • <strong>Điểm BGK</strong> = (Số phiếu BGK bầu cho tác phẩm / <em>Tổng số BGK thực tế tham gia bình chọn</em>) × {(judgeWeightPercent / 10).toFixed(1)}
+                        </p>
+                        <p>
+                          • <strong>Điểm Khác</strong> = (Số phiếu khác bầu cho tác phẩm / <em>Tổng số người khác thực tế tham gia bình chọn</em>) × {((100 - judgeWeightPercent) / 10).toFixed(1)}
+                        </p>
+                        <p className="text-amber-800 font-medium">
+                          ✦ Tính theo số người thực tế tham gia bình chọn chứ không chia theo toàn bộ danh sách.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Danh sách thành viên Ban Giám Khảo */}
+                    <div className="rounded-xl border border-primary/20 bg-white p-4 space-y-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h5 className="text-sm font-extrabold text-[#173A67] flex items-center gap-2">
+                            <span>Danh Sách Ban Giám Khảo</span>
+                            <span className="rounded-full bg-[#173A67] px-2 py-0.5 text-[11px] font-bold text-white">
+                              {judgeList.length} người
+                            </span>
+                          </h5>
+                          <p className="text-xs text-on-surface-variant mt-0.5">
+                            Thêm giám khảo bằng cách nhập Mã số nhân viên để hệ thống tự động nhận diện phiếu bầu.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Input tra cứu & thêm */}
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="relative flex-1 min-w-[200px]">
+                            <input
+                              className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3.5 py-2 text-xs sm:text-sm font-semibold text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:bg-white"
+                              placeholder="Nhập mã nhân viên giám khảo (VD: NV0123)..."
+                              type="text"
+                              value={judgeCodeInput}
+                              onChange={(e) => {
+                                setJudgeCodeInput(e.target.value.toUpperCase());
+                                setLookupError(null);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleLookupAndAddJudge();
+                                }
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled={lookupLoading || !judgeCodeInput.trim()}
+                            onClick={() => handleLookupAndAddJudge()}
+                            className="flex items-center gap-1.5 rounded-xl bg-[#173A67] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-dusty-dark transition cursor-pointer disabled:opacity-50"
+                          >
+                            <MaterialIcon className={`text-[16px] ${lookupLoading ? "animate-spin" : ""}`} name={lookupLoading ? "sync" : "person_add"} />
+                            <span>{lookupLoading ? "Đang tra cứu..." : "+ Thêm Giám Khảo"}</span>
+                          </button>
+                        </div>
+
+                        {lookupError && (
+                          <p className="text-xs font-bold text-error flex items-center gap-1">
+                            <MaterialIcon className="text-[14px]" name="error" />
+                            <span>{lookupError}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Bảng danh sách BGK */}
+                      {judgeList.length === 0 ? (
+                        <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-slate-500">
+                          <MaterialIcon className="text-[32px] text-slate-400 mx-auto mb-1" name="groups" />
+                          <p className="text-xs font-bold text-slate-700">Chưa có thành viên Ban Giám Khảo nào</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Vui lòng nhập Mã nhân viên ở trên rồi bấm &ldquo;+ Thêm Giám Khảo&rdquo; để thiết lập danh sách.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-xl border border-outline-variant">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-[#EDF3F7] text-[#173A67] font-extrabold uppercase">
+                              <tr>
+                                <th className="px-3 py-2 text-center w-12">STT</th>
+                                <th className="px-3 py-2 w-28">Mã NV</th>
+                                <th className="px-3 py-2">Họ Và Tên</th>
+                                <th className="px-3 py-2">Phòng Ban / Đơn Vị</th>
+                                <th className="px-3 py-2 text-center w-16">Xóa</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-outline-variant/60 bg-white">
+                              {judgeList.map((j, idx) => (
+                                <tr key={j.employeeCode} className="hover:bg-slate-50 transition">
+                                  <td className="px-3 py-2 text-center font-bold text-slate-500">
+                                    #{idx + 1}
+                                  </td>
+                                  <td className="px-3 py-2 font-mono font-bold text-[#173A67]">
+                                    <span className="rounded-md bg-primary/10 px-2 py-0.5 text-primary font-black">
+                                      {j.employeeCode}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 font-bold text-on-surface">
+                                    {j.fullName}
+                                  </td>
+                                  <td className="px-3 py-2 text-on-surface-variant">
+                                    {j.department || "Chưa cập nhật"}
+                                  </td>
+                                  <td className="px-3 py-2 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveJudge(idx)}
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-error hover:bg-error-container/30 transition cursor-pointer"
+                                      title="Xóa giám khảo"
+                                    >
+                                      <MaterialIcon className="text-[16px]" name="delete" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

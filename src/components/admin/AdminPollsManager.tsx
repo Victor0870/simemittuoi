@@ -282,6 +282,14 @@ export function AdminPollsManager({ polls, currentAdminName }: Props) {
                           </span>
                         ) : null}
                       </div>
+                      {p.hasJudges && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-900 border border-amber-300">
+                            <MaterialIcon className="text-[12px]" name="gavel" />
+                            <span>BGK {p.judgeWeightPercent ?? 30}% ({p.judgeList?.length || 0} GK)</span>
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 text-on-surface-variant">
                       {p.pollType === "vote" ? "Vote tác phẩm" : "Trắc nghiệm"}

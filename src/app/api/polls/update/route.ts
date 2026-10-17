@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
       consolationPrizeCount = 2,
       maxGuestVotes = 250,
       isActive,
+      hasJudges,
+      judgeWeightPercent,
+      judgeList,
       options = [],
     } = body;
 
@@ -90,6 +93,19 @@ export async function POST(request: NextRequest) {
       consolation_prize_points: parseInt(String(consolationPrizePoints), 10) || 0,
       consolation_prize_count: parseInt(String(consolationPrizeCount), 10) || 2,
     };
+
+    if (typeof hasJudges === "boolean") {
+      updateData.has_judges = hasJudges;
+    }
+    if (typeof judgeWeightPercent !== "undefined") {
+      updateData.judge_weight_percent = Math.min(
+        95,
+        Math.max(5, parseInt(String(judgeWeightPercent), 10) || 30),
+      );
+    }
+    if (Array.isArray(judgeList)) {
+      updateData.judge_list = judgeList;
+    }
 
     if (typeof isActive === "boolean") {
       updateData.is_active = isActive;

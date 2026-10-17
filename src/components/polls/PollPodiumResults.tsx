@@ -16,15 +16,22 @@ export function PollPodiumResults({ poll }: Props) {
   // Guest can only see results when poll is closed
   const canSeeResults = isClosed || !isGuest;
 
-  // Sort options by vote_count desc, then order_num asc
+  // Sort options by weightedScore desc (if poll has judges), then vote_count desc, order_num asc
   const sortedOptions = useMemo(() => {
     return [...poll.options].sort((a, b) => {
+      if (poll.hasJudges) {
+        const scoreA = a.weightedScore ?? 0;
+        const scoreB = b.weightedScore ?? 0;
+        if (scoreB !== scoreA) {
+          return scoreB - scoreA;
+        }
+      }
       if (b.voteCount !== a.voteCount) {
         return b.voteCount - a.voteCount;
       }
       return a.orderNum - b.orderNum;
     });
-  }, [poll.options]);
+  }, [poll.options, poll.hasJudges]);
 
   if (!canSeeResults) {
     return (
@@ -63,7 +70,7 @@ export function PollPodiumResults({ poll }: Props) {
               <p className="text-xs sm:text-label-sm text-on-surface-variant">
                 {isClosed
                   ? "Chương trình đã kết thúc – Điểm số và các giải thưởng chính thức"
-                  : "Cập nhật theo lượt bình chọn mới nhất (Điểm chi tiết sẽ công bố khi đóng bình chọn)"}
+                  : "Cập nhật theo thứ hạng mới nhất (Điểm chi tiết và giải thưởng sẽ chốt khi đóng bình chọn)"}
               </p>
             </div>
           </div>
@@ -79,6 +86,22 @@ export function PollPodiumResults({ poll }: Props) {
             {isClosed ? "Đã có kết quả chính thức" : "Đang bình chọn realtime"}
           </span>
         </div>
+
+        {/* Banner thông báo tính điểm Ban Giám Khảo */}
+        {poll.hasJudges && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/80 border border-amber-300/80 px-3 py-2 text-xs text-amber-950">
+            <div className="flex items-center gap-1.5">
+              <MaterialIcon className="text-[18px] text-amber-700" name="gavel" />
+              <span>
+                Tính điểm theo trọng số: <strong>Ban Giám Khảo ({poll.judgeWeightPercent ?? 30}%)</strong> +{" "}
+                <strong>Bình chọn khác ({100 - (poll.judgeWeightPercent ?? 30)}%)</strong> (Thang 10 điểm).
+              </span>
+            </div>
+            <span className="text-[11px] font-semibold text-slate-600">
+              Thực tế đã tham gia: <strong>{poll.totalJudgesVoted ?? 0}</strong> Giám khảo · <strong>{poll.totalOthersVoted ?? 0}</strong> người bình chọn khác
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="p-3 sm:p-6 space-y-5 sm:space-y-8">
@@ -108,9 +131,20 @@ export function PollPodiumResults({ poll }: Props) {
                   </p>
                 ) : null}
                 {isClosed ? (
-                  <span className="inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-slate-800">
-                    {top2.voteCount} phiếu
-                  </span>
+                  poll.hasJudges ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="inline-block rounded-full bg-slate-700 px-2.5 py-0.5 text-[10px] sm:text-xs font-black text-white shadow-2xs">
+                        ⭐ {top2.weightedScore?.toFixed(2)} đ
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-slate-600 font-semibold">
+                        BGK: {top2.judgeVotes ?? 0} · Khác: {top2.otherVotes ?? 0}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-slate-800">
+                      {top2.voteCount} phiếu
+                    </span>
+                  )
                 ) : null}
               </div>
             ) : null}
@@ -144,9 +178,20 @@ export function PollPodiumResults({ poll }: Props) {
                   </p>
                 ) : null}
                 {isClosed ? (
-                  <span className="inline-block rounded-full bg-amber-400 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-amber-950 shadow-2xs">
-                    {top1.voteCount} phiếu (Vô địch)
-                  </span>
+                  poll.hasJudges ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="inline-block rounded-full bg-amber-500 px-3 py-0.5 text-[10px] sm:text-xs font-black text-white shadow-xs">
+                        🏆 {top1.weightedScore?.toFixed(2)} đ (Vô địch)
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-amber-900 font-bold">
+                        BGK: {top1.judgeVotes ?? 0} · Khác: {top1.otherVotes ?? 0}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="inline-block rounded-full bg-amber-400 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-amber-950 shadow-2xs">
+                      {top1.voteCount} phiếu (Vô địch)
+                    </span>
+                  )
                 ) : null}
               </div>
             ) : null}
@@ -179,9 +224,20 @@ export function PollPodiumResults({ poll }: Props) {
                   </p>
                 ) : null}
                 {isClosed ? (
-                  <span className="inline-block rounded-full bg-amber-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-amber-900">
-                    {top3.voteCount} phiếu
-                  </span>
+                  poll.hasJudges ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="inline-block rounded-full bg-amber-800 px-2.5 py-0.5 text-[10px] sm:text-xs font-black text-white shadow-2xs">
+                        ⭐ {top3.weightedScore?.toFixed(2)} đ
+                      </span>
+                      <span className="text-[9px] sm:text-[10px] text-amber-900 font-semibold">
+                        BGK: {top3.judgeVotes ?? 0} · Khác: {top3.otherVotes ?? 0}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="inline-block rounded-full bg-amber-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-amber-900">
+                      {top3.voteCount} phiếu
+                    </span>
+                  )
                 ) : null}
               </div>
             ) : null}
@@ -218,9 +274,20 @@ export function PollPodiumResults({ poll }: Props) {
                     </div>
                   </div>
                   {isClosed ? (
-                    <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary border border-outline-variant shrink-0">
-                      {opt.voteCount} phiếu
-                    </span>
+                    poll.hasJudges ? (
+                      <div className="text-right">
+                        <span className="rounded-lg bg-[#173A67] px-2.5 py-1 text-xs font-bold text-white shadow-2xs">
+                          ⭐ {opt.weightedScore?.toFixed(2)} đ
+                        </span>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          BGK: {opt.judgeVotes ?? 0} · Khác: {opt.otherVotes ?? 0}
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary border border-outline-variant shrink-0">
+                        {opt.voteCount} phiếu
+                      </span>
+                    )
                   ) : null}
                 </div>
               ))}

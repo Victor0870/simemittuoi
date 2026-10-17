@@ -1,6 +1,13 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
+export type JudgeMember = {
+  employeeCode: string;
+  fullName: string;
+  department?: string | null;
+  userId?: string | null;
+};
+
 export type PollMember = {
   id: string;
   fullName: string;
@@ -19,6 +26,11 @@ export type PollOption = {
   finalRank: number | null;
   isActive?: boolean;
   members: PollMember[];
+  judgeVotes?: number;
+  otherVotes?: number;
+  judgeScore?: number;
+  otherScore?: number;
+  weightedScore?: number;
 };
 
 export type PollSummary = {
@@ -43,6 +55,11 @@ export type PollSummary = {
   thirdPrizePoints: number;
   consolationPrizePoints: number;
   consolationPrizeCount: number;
+  hasJudges?: boolean;
+  judgeWeightPercent?: number;
+  judgeList?: JudgeMember[];
+  totalJudgesVoted?: number;
+  totalOthersVoted?: number;
   winningOptionId: string | null;
   winningPredictorInfo: any | null;
   createdAt: string;
@@ -90,6 +107,13 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     thirdPrizePoints: row.third_prize_points ?? 0,
     consolationPrizePoints: row.consolation_prize_points ?? 0,
     consolationPrizeCount: row.consolation_prize_count ?? 2,
+    hasJudges: Boolean(row.has_judges),
+    judgeWeightPercent: row.judge_weight_percent ?? 30,
+    judgeList: Array.isArray(row.judge_list)
+      ? row.judge_list
+      : typeof row.judge_list === "string"
+      ? JSON.parse(row.judge_list || "[]")
+      : [],
     winningOptionId: row.winning_option_id,
     winningPredictorInfo: row.winning_predictor_info,
     createdAt: row.created_at,
@@ -152,22 +176,100 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     membersByOption.set(m.option_id, list);
   }
 
-  const options: PollOption[] = (optionsData ?? []).map((row) => ({
-    id: row.id,
-    pollId: row.poll_id,
-    orderNum: row.order_num,
-    title: row.title,
-    description: row.description,
-    imageUrls: Array.isArray(row.image_urls)
-      ? row.image_urls
-      : typeof row.image_urls === "string"
-      ? JSON.parse(row.image_urls || "[]")
-      : [],
-    voteCount: row.vote_count ?? 0,
-    finalRank: row.final_rank,
-    isActive: row.is_active !== false,
-    members: membersByOption.get(row.id) || [],
-  }));
+  const hasJudges = Boolean(pollRow.has_judges);
+  const judgeWeightPercent = pollRow.judge_weight_percent ?? 30;
+  const judgeList = Array.isArray(pollRow.judge_list)
+    ? pollRow.judge_list
+    : typeof pollRow.judge_list === "string"
+    ? JSON.parse(pollRow.judge_list || "[]")
+    : [];
+
+  // If poll has judges, fetch vote rows to compute weighted score per option
+  let totalJudgesVoted = 0;
+  let totalOthersVoted = 0;
+  const judgeVotesByOpt = new Map<string, number>();
+  const otherVotesByOpt = new Map<string, number>();
+
+  if (hasJudges) {
+    const { data: votesData, error: votesError } = await db
+      .from(CDILV_TABLE.pollVotes)
+      .select("option_id, is_judge, employee_code, user_id, submission_id")
+      .eq("poll_id", id);
+
+    if (votesError) {
+      console.error("[polls] getVotes error:", votesError.message);
+    } else {
+      const judgesVotedSet = new Set<string>();
+      const othersVotedSet = new Set<string>();
+
+      for (const v of votesData ?? []) {
+        const isJ = Boolean(v.is_judge);
+        const voterKey = v.employee_code || v.user_id || v.submission_id;
+
+        if (isJ) {
+          if (voterKey) judgesVotedSet.add(voterKey);
+          judgeVotesByOpt.set(
+            v.option_id,
+            (judgeVotesByOpt.get(v.option_id) || 0) + 1,
+          );
+        } else {
+          if (voterKey) othersVotedSet.add(voterKey);
+          otherVotesByOpt.set(
+            v.option_id,
+            (otherVotesByOpt.get(v.option_id) || 0) + 1,
+          );
+        }
+      }
+
+      totalJudgesVoted = judgesVotedSet.size;
+      totalOthersVoted = othersVotedSet.size;
+    }
+  }
+
+  const judgeWeight = judgeWeightPercent / 10; // e.g. 30% -> 3.0
+  const otherWeight = (100 - judgeWeightPercent) / 10; // e.g. 70% -> 7.0
+
+  const options: PollOption[] = (optionsData ?? []).map((row) => {
+    let judgeVotes = 0;
+    let otherVotes = 0;
+    let judgeScore = 0;
+    let otherScore = 0;
+    let weightedScore = 0;
+
+    if (hasJudges) {
+      judgeVotes = judgeVotesByOpt.get(row.id) || 0;
+      otherVotes = otherVotesByOpt.get(row.id) || 0;
+
+      const judgeRatio = totalJudgesVoted > 0 ? judgeVotes / totalJudgesVoted : 0;
+      const otherRatio = totalOthersVoted > 0 ? otherVotes / totalOthersVoted : 0;
+
+      judgeScore = Math.round(judgeRatio * judgeWeight * 100) / 100;
+      otherScore = Math.round(otherRatio * otherWeight * 100) / 100;
+      weightedScore = Math.round((judgeScore + otherScore) * 100) / 100;
+    }
+
+    return {
+      id: row.id,
+      pollId: row.poll_id,
+      orderNum: row.order_num,
+      title: row.title,
+      description: row.description,
+      imageUrls: Array.isArray(row.image_urls)
+        ? row.image_urls
+        : typeof row.image_urls === "string"
+        ? JSON.parse(row.image_urls || "[]")
+        : [],
+      voteCount: row.vote_count ?? 0,
+      finalRank: row.final_rank,
+      isActive: row.is_active !== false,
+      members: membersByOption.get(row.id) || [],
+      judgeVotes,
+      otherVotes,
+      judgeScore,
+      otherScore,
+      weightedScore,
+    };
+  });
 
   const totalVotes = options.reduce((sum, o) => sum + (o.voteCount || 0), 0);
 
@@ -195,6 +297,11 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     thirdPrizePoints: pollRow.third_prize_points ?? 0,
     consolationPrizePoints: pollRow.consolation_prize_points ?? 0,
     consolationPrizeCount: pollRow.consolation_prize_count ?? 2,
+    hasJudges,
+    judgeWeightPercent,
+    judgeList,
+    totalJudgesVoted,
+    totalOthersVoted,
     winningOptionId: pollRow.winning_option_id,
     winningPredictorInfo: pollRow.winning_predictor_info,
     createdAt: pollRow.created_at,

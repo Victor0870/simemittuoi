@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
       consolationPrizeCount = 2,
       maxGuestVotes = 250,
       isActive = true,
+      hasJudges = false,
+      judgeWeightPercent = 30,
+      judgeList = [],
       options = [],
     } = body;
 
@@ -90,6 +93,12 @@ export async function POST(request: NextRequest) {
         third_prize_points: parseInt(String(thirdPrizePoints), 10) || 0,
         consolation_prize_points: parseInt(String(consolationPrizePoints), 10) || 0,
         consolation_prize_count: parseInt(String(consolationPrizeCount), 10) || 2,
+        has_judges: Boolean(hasJudges),
+        judge_weight_percent: Math.min(
+          95,
+          Math.max(5, parseInt(String(judgeWeightPercent), 10) || 30),
+        ),
+        judge_list: Array.isArray(judgeList) ? judgeList : [],
         created_by: user.id,
       })
       .select("id")

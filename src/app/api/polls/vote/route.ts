@@ -214,6 +214,26 @@ export async function POST(request: NextRequest) {
       if (deleteError) throw deleteError;
     }
 
+    // Determine if voter belongs to the poll's judge list
+    let isJudge = false;
+    if (poll.has_judges && voterEmployeeCode) {
+      const rawList = Array.isArray(poll.judge_list)
+        ? poll.judge_list
+        : typeof poll.judge_list === "string"
+        ? JSON.parse(poll.judge_list || "[]")
+        : [];
+
+      const judgeCodes = new Set(
+        rawList
+          .map((j: any) => normalizeEmployeeCode(j?.employeeCode))
+          .filter(Boolean),
+      );
+
+      if (judgeCodes.has(voterEmployeeCode)) {
+        isJudge = true;
+      }
+    }
+
     // Insert votes
     const submissionId = crypto.randomUUID();
     const voteInserts = optionIds.map((optId: string) => ({
@@ -224,6 +244,7 @@ export async function POST(request: NextRequest) {
       ip_address: clientIp,
       device_fingerprint: fingerprint,
       submission_id: submissionId,
+      is_judge: isJudge,
     }));
 
     const { error: insertVotesError } = await publicDb

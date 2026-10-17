@@ -41,6 +41,13 @@ export function PollCard({ poll }: Props) {
             <span className="rounded-full bg-surface-container-high px-2 py-0.5 text-[11px] sm:text-label-xs font-semibold text-on-surface-variant">
               {poll.accessType === "free" ? "Công khai (Free)" : "Đoàn viên"}
             </span>
+
+            {poll.hasJudges ? (
+              <span className="rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[11px] sm:text-label-xs font-bold text-amber-900 inline-flex items-center gap-1">
+                <MaterialIcon className="text-[13px] text-amber-700" name="gavel" />
+                <span>Có BGK ({poll.judgeWeightPercent ?? 30}%)</span>
+              </span>
+            ) : null}
           </div>
 
           <span className="text-[11px] sm:text-label-xs text-on-surface-variant">
