@@ -7,6 +7,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TopNav } from "@/components/layout/TopNav";
+import { QuizEventPopup } from "@/components/quiz/QuizEventPopup";
 import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "@/lib/constants";
 
 function resolveActiveHref(pathname: string): string {
@@ -16,6 +17,7 @@ function resolveActiveHref(pathname: string): string {
     "/posts",
     "/polls",
     "/albums",
+    "/quiz",
     "/settings",
     "/score-history",
     "/campaigns",
@@ -26,6 +28,7 @@ function resolveActiveHref(pathname: string): string {
     "/admin/employees",
     "/admin/scores",
     "/admin/polls",
+    "/admin/quiz",
   ];
 
   const unique = [...new Set(candidates)];
@@ -53,6 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </main>
           <Footer />
           <MobileBottomNav activeHref={activeHref} />
+          <QuizEventPopup />
         </div>
       </ApprovalGate>
     </AuthProvider>

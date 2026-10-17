@@ -38,6 +38,7 @@ export default async function AdminDashboardPage() {
     { count: openActivitiesCount },
     { count: pendingFeedbackCount },
     { count: activeWhitelistCount },
+    { count: quizQuestionsCount },
   ] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
@@ -69,6 +70,9 @@ export default async function AdminDashboardPage() {
       .from(CDILV_TABLE.employeeWhitelist)
       .select("employee_code", { count: "exact", head: true })
       .eq("is_active", true),
+    supabase
+      .from(CDILV_TABLE.quizQuestions)
+      .select("id", { count: "exact", head: true }),
   ]);
 
   const initial = (me.full_name || user.email || "A").slice(0, 1).toUpperCase();
@@ -313,6 +317,39 @@ export default async function AdminDashboardPage() {
 
             <div className="mt-4 flex items-center justify-between border-t border-dusty-border/60 pt-3 text-label-sm font-bold text-primary">
               <span>Vào quản lý hoạt động</span>
+              <MaterialIcon
+                className="text-[18px] transition-transform group-hover:translate-x-1"
+                name="arrow_forward"
+              />
+            </div>
+          </Link>
+
+          {/* Card Thi trắc nghiệm */}
+          <Link
+            href="/admin/quiz"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-emerald-300/80 bg-gradient-to-br from-emerald-50/60 via-white to-white p-5 shadow-xs transition-all hover:border-emerald-400 hover:shadow-md"
+          >
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
+                  <MaterialIcon className="text-[22px]" name="quiz" />
+                </div>
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-label-xs font-bold text-emerald-800 border border-emerald-300">
+                  {quizQuestionsCount ?? 0} câu hỏi
+                </span>
+              </div>
+
+              <h3 className="mt-3.5 text-title-md font-bold text-on-surface transition-colors group-hover:text-emerald-800">
+                Thi trắc nghiệm hàng tuần
+              </h3>
+
+              <p className="mt-1 text-body-sm text-on-surface-variant leading-relaxed">
+                Quản lý ngân hàng câu hỏi (thêm, sửa, xóa, nhập Excel), bật/tắt hoặc hẹn giờ tự động, tổng kết cộng điểm và đăng bài kết quả.
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-emerald-200/60 pt-3 text-label-sm font-bold text-emerald-800">
+              <span>Vào quản lý trắc nghiệm</span>
               <MaterialIcon
                 className="text-[18px] transition-transform group-hover:translate-x-1"
                 name="arrow_forward"

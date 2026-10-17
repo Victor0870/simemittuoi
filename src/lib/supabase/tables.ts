@@ -26,6 +26,10 @@ export const CDILV_TABLE = {
   albumPhotos: "cdilv_album_photos",
   albumPhotoReactions: "cdilv_album_photo_reactions",
   albumPhotoComments: "cdilv_album_photo_comments",
+  quizQuestions: "cdilv_quiz_questions",
+  quizSettings: "cdilv_quiz_settings",
+  quizSessions: "cdilv_quiz_sessions",
+  quizAttempts: "cdilv_quiz_attempts",
 } as const;
 
 export const CDILV_RPC = {
