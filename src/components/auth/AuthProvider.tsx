@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useMemo,
   type ReactNode,
@@ -48,8 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadedUserIdRef = useRef<string | null | undefined>(undefined);
 
   async function loadProfile(u: User | null) {
+    loadedUserIdRef.current = u?.id ?? null;
     if (!u) {
       setUser(null);
       setProfile(null);
@@ -78,14 +81,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const supabase = createClient();
 
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled) void loadProfile(data.user);
-    });
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!cancelled) void loadProfile(session?.user ?? null);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUser = session?.user ?? null;
+      const sameUser =
+        loadedUserIdRef.current !== undefined &&
+        loadedUserIdRef.current === (nextUser?.id ?? null);
+      if (sameUser && event !== "USER_UPDATED") return;
+      loadedUserIdRef.current = nextUser?.id ?? null;
+      // Không gọi Supabase trực tiếp trong callback để tránh khóa auth (deadlock)
+      setTimeout(() => {
+        if (!cancelled) void loadProfile(nextUser);
+      }, 0);
     });
 
     return () => {

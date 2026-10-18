@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
@@ -12,17 +13,19 @@ export type LeaderboardPageData = {
   currentScore: number;
 };
 
-function mapRows(
-  rows: Array<{
-    id: string | null;
-    full_name: string;
-    department: string | null;
-    avatar_url: string | null;
-    employee_code: string | null;
-    total_score: number;
-    rank: number | string;
-  }>,
-): LeaderboardEntry[] {
+const LEADERBOARD_CACHE_SECONDS = 30;
+
+type LeaderboardRow = {
+  id: string | null;
+  full_name: string;
+  department: string | null;
+  avatar_url: string | null;
+  employee_code: string | null;
+  total_score: number;
+  rank: number | string;
+};
+
+function mapRows(rows: LeaderboardRow[]): LeaderboardEntry[] {
   return rows.map((row, index) => ({
     id: row.id ?? row.employee_code ?? `rank-${row.rank}`,
     rank: Number(row.rank),
@@ -34,6 +37,55 @@ function mapRows(
     employeeCode: row.employee_code ?? null,
     userId: row.id ?? null,
   }));
+}
+
+async function loadLeaderboardRows(limit: number): Promise<{
+  rows: LeaderboardRow[];
+  error: string | null;
+}> {
+  const publicDb = createPublicClient();
+  const { data, error } = await publicDb
+    .from(CDILV_TABLE.leaderboard)
+    .select(
+      "id, full_name, department, avatar_url, employee_code, total_score, rank",
+    )
+    .order("rank", { ascending: true })
+    .limit(limit);
+
+  if (!error && data?.length) return { rows: data, error: null };
+
+  const cache = await publicDb
+    .from(CDILV_TABLE.leaderboardCache)
+    .select(
+      "id, full_name, department, avatar_url, employee_code, total_score, rank",
+    )
+    .gt("total_score", 0)
+    .order("rank", { ascending: true })
+    .limit(limit);
+  if (!cache.error && cache.data?.length) return { rows: cache.data, error: null };
+
+  return { rows: data ?? [], error: error?.message ?? null };
+}
+
+const getCachedLeaderboardRows = unstable_cache(
+  async (limit: number) => {
+    const result = await loadLeaderboardRows(limit);
+    // Không lưu cache kết quả lỗi, để lần sau truy vấn lại ngay
+    if (result.error) throw new Error(result.error);
+    return result.rows;
+  },
+  ["leaderboard-rows"],
+  { revalidate: LEADERBOARD_CACHE_SECONDS, tags: ["leaderboard-rows"] },
+);
+
+async function getLeaderboardRows(limit: number): Promise<LeaderboardRow[]> {
+  try {
+    return await getCachedLeaderboardRows(limit);
+  } catch {
+    const result = await loadLeaderboardRows(limit);
+    if (result.error) console.error("[leaderboard]", result.error);
+    return result.rows;
+  }
 }
 
 export async function getLeaderboardPageData(
@@ -50,31 +102,8 @@ export async function getLeaderboardPageData(
 
   try {
     const publicDb = createPublicClient();
-    let { data: rows, error } = await publicDb
-      .from(CDILV_TABLE.leaderboard)
-      .select(
-        "id, full_name, department, avatar_url, employee_code, total_score, rank",
-      )
-      .order("rank", { ascending: true })
-      .limit(limit);
-
-    if (error || !rows?.length) {
-      const cache = await publicDb
-        .from(CDILV_TABLE.leaderboardCache)
-        .select(
-          "id, full_name, department, avatar_url, employee_code, total_score, rank",
-        )
-        .gt("total_score", 0)
-        .order("rank", { ascending: true })
-        .limit(limit);
-      if (!cache.error && cache.data?.length) {
-        rows = cache.data;
-      } else if (error) {
-        console.error("[leaderboard]", error.message);
-      }
-    }
-
-    const entries = mapRows(rows ?? []);
+    const rows = await getLeaderboardRows(limit);
+    const entries = mapRows(rows);
 
     let isGuest = true;
     let currentUserId: string | null = null;

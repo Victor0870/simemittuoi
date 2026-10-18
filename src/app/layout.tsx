@@ -25,8 +25,11 @@ export default function RootLayout({
   return (
     <html className="light" lang="vi">
       <head>
+        <link href="https://fonts.googleapis.com" rel="preconnect" />
+        <link crossOrigin="anonymous" href="https://fonts.gstatic.com" rel="preconnect" />
+        {/* Chỉ tải đúng trục biến thể đang dùng trong globals.css (opsz 24, wght 400, GRAD 0) */}
         <link
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&display=swap"
           rel="stylesheet"
         />
       </head>

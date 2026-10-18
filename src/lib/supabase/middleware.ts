@@ -59,11 +59,11 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // getClaims() xác thực JWT cục bộ (signing key bất đối xứng), chỉ gọi Auth server khi cần
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const userId = claimsData?.claims?.sub ?? null;
 
-    if (!user) {
+    if (!userId) {
       if (isMemberOnlyPath(pathname)) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/login";
@@ -87,7 +87,7 @@ export async function updateSession(request: NextRequest) {
     const { data: profile } = await supabase
       .from(CDILV_TABLE.profiles)
       .select("role, approval_status")
-      .eq("id", user.id)
+      .eq("id", userId)
       .maybeSingle();
 
     const status = profile?.approval_status ?? "pending";
