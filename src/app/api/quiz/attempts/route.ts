@@ -47,13 +47,13 @@ export async function GET(request: NextRequest) {
     const userIds = Array.from(new Set((attempts ?? []).map((a) => a.user_id)));
     const profilesMap = new Map<
       string,
-      { full_name: string; department: string | null; avatar_url: string | null; email?: string | null }
+      { full_name: string; department: string | null; avatar_url: string | null; employee_code?: string | null }
     >();
 
     if (userIds.length > 0) {
       const { data: profiles, error: pErr } = await db
         .from(CDILV_TABLE.profiles)
-        .select("id, full_name, department, avatar_url, email")
+        .select("id, full_name, department, avatar_url, employee_code")
         .in("id", userIds);
       if (pErr) throw pErr;
       for (const p of profiles ?? []) {

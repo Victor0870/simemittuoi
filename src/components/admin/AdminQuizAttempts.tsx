@@ -21,7 +21,7 @@ type AttemptItem = {
     full_name: string;
     department: string | null;
     avatar_url: string | null;
-    email?: string | null;
+    employee_code?: string | null;
   };
   awardedPoints: number | null;
 };
@@ -204,7 +204,7 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
                               {a.profile.full_name}
                             </p>
                             <p className="truncate text-xs text-on-surface-variant">
-                              {a.profile.department ?? "—"}
+                              {a.profile.department ?? "—"}{a.profile.employee_code ? ` · MS: ${a.profile.employee_code}` : ""}
                             </p>
                           </div>
                         </div>
