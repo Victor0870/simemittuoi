@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ActivityCard } from "@/components/home/ActivityCard";
+import { WeeklyQuizActivityCard } from "@/components/home/WeeklyQuizActivityCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ActivityEditorModal } from "@/components/activities/ActivityEditorModal";
@@ -44,33 +45,17 @@ export function ActivitiesSection({ activities }: ActivitiesSectionProps) {
             href="#nhiem-vu"
             className="flex items-center gap-1 text-label-md font-semibold text-primary transition-colors hover:text-dusty-dark"
           >
-            Tất cả hoạt động ({activities.length})
+            Tất cả hoạt động ({activities.length + 1})
           </a>
         </div>
       </div>
 
-      {activities.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-dusty-border bg-white px-4 py-8 text-center text-sm text-on-surface-variant">
-          <MaterialIcon className="mx-auto mb-2 text-[36px] text-on-surface-variant/40" name="event_busy" />
-          <p className="font-semibold text-on-surface">Chưa có hoạt động phong trào nào.</p>
-          {isAdmin && (
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="mt-3 inline-flex items-center gap-1 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white"
-              type="button"
-            >
-              <MaterialIcon className="text-[16px]" name="add" />
-              Tạo hoạt động đầu tiên ngay
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-gutter md:grid-cols-2">
-          {activities.map((activity) => (
-            <ActivityCard key={activity.id} activity={activity} />
-          ))}
-        </div>
-      )}
+      <div className="grid grid-cols-1 gap-gutter md:grid-cols-2">
+        <WeeklyQuizActivityCard />
+        {activities.map((activity) => (
+          <ActivityCard key={activity.id} activity={activity} />
+        ))}
+      </div>
 
       {/* Admin Create Modal */}
       {isAdmin && (
