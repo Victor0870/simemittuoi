@@ -45,7 +45,13 @@ export async function POST(request: NextRequest) {
     const correctCount = late
       ? 0
       : answers.reduce<number>((sum, a, i) => (a !== null && a === correctOptions[i] ? sum + 1 : sum), 0);
-    const durationMs = Math.max(0, Math.min(now, deadlineMs) - startedMs);
+
+    const clientSubmittedMs = typeof body.clientSubmittedAt === "number" ? body.clientSubmittedAt : null;
+    const effectiveSubmitTime =
+      clientSubmittedMs && clientSubmittedMs >= startedMs && clientSubmittedMs <= now + 2000
+        ? Math.min(clientSubmittedMs, now)
+        : now;
+    const durationMs = Math.max(0, Math.min(effectiveSubmitTime, deadlineMs) - startedMs);
 
     const { data: updated, error: updErr } = await db
       .from(CDILV_TABLE.quizAttempts)
@@ -53,7 +59,7 @@ export async function POST(request: NextRequest) {
         answers,
         correct_count: correctCount,
         status: late ? "expired" : "submitted",
-        submitted_at: new Date(now).toISOString(),
+        submitted_at: new Date(effectiveSubmitTime).toISOString(),
         duration_ms: durationMs,
       })
       .eq("id", attempt.id)

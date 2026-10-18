@@ -17,13 +17,15 @@ export default async function QuizPage() {
   } = await supabase.auth.getUser();
 
   let isApproved = false;
+  let isAdmin = false;
   if (user) {
     const { data: me } = await supabase
       .from(CDILV_TABLE.profiles)
-      .select("approval_status")
+      .select("approval_status, role")
       .eq("id", user.id)
       .maybeSingle();
     isApproved = me?.approval_status === "approved";
+    isAdmin = me?.role === "admin" && isApproved;
   }
 
   const db = createServiceClient();
@@ -55,6 +57,7 @@ export default async function QuizPage() {
         isApproved={isApproved}
         isLoggedIn={Boolean(user)}
         pointRules={describePointRules(settings)}
+        isAdmin={isAdmin}
       />
 
       {displaySession && board ? (
@@ -67,6 +70,8 @@ export default async function QuizPage() {
           resultPostId={displaySession.result_post_id}
           title={displaySession.title}
           totalQuestions={settings.questions_per_attempt}
+          isAdmin={isAdmin}
+          sessionId={displaySession.id}
         />
       ) : null}
     </div>

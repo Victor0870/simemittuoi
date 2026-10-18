@@ -38,17 +38,20 @@ type Props = {
   isLoggedIn: boolean;
   isApproved: boolean;
   pointRules: string;
+  isAdmin?: boolean;
 };
 
 const OPTION_LABELS = ["1", "2", "3", "4"];
 
-export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRules }: Props) {
+export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRules, isAdmin }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [play, setPlay] = useState<PlayData | null>(null);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [current, setCurrent] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const [freezeTime, setFreezeTime] = useState<number | null>(null);
+  const [lastAttemptId, setLastAttemptId] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +63,10 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
   }, [initialStatus]);
 
   useEffect(() => {
-    if (!play) return;
+    if (!play || freezeTime !== null) return;
     const timer = window.setInterval(() => setNow(Date.now()), 200);
     return () => window.clearInterval(timer);
-  }, [play]);
+  }, [play, freezeTime]);
 
   useEffect(() => {
     if (!play) return;
@@ -78,21 +81,31 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
     async (data: PlayData, chosen: (number | null)[]) => {
       if (submittingRef.current) return;
       submittingRef.current = true;
+      const freeze = Date.now();
+      setFreezeTime(freeze);
       setBusy(true);
       setError(null);
       try {
+        const clientEstimatedServerNow = freeze + data.offsetMs;
         const res = await fetch("/api/quiz/submit", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ attemptId: data.attemptId, answers: chosen }),
+          body: JSON.stringify({
+            attemptId: data.attemptId,
+            answers: chosen,
+            clientSubmittedAt: clientEstimatedServerNow,
+          }),
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || "Không thể nộp bài.");
+        setLastAttemptId(data.attemptId);
         setResult(json as SubmitResult);
         setPlay(null);
+        setFreezeTime(null);
         setStatus((s) => ({ ...s, attemptsUsed: json.attemptsUsed, hasInProgress: false }));
         router.refresh();
       } catch (err) {
+        setFreezeTime(null);
         setError(err instanceof Error ? err.message : "Không thể nộp bài.");
       } finally {
         submittingRef.current = false;
@@ -102,16 +115,17 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
     [router],
   );
 
-  const serverNow = play ? now + play.offsetMs : now;
-  const remainingMs = play ? new Date(play.deadlineAt).getTime() - serverNow : 0;
+  const currentEffectiveNow = freezeTime !== null ? freezeTime : now;
+  const serverNow = play ? currentEffectiveNow + play.offsetMs : currentEffectiveNow;
+  const remainingMs = play ? Math.max(0, new Date(play.deadlineAt).getTime() - serverNow) : 0;
   const elapsedMs = play ? Math.max(0, serverNow - new Date(play.startedAt).getTime()) : 0;
 
   useEffect(() => {
-    if (play && remainingMs <= 0 && autoSubmittedRef.current !== play.attemptId) {
+    if (play && remainingMs <= 0 && freezeTime === null && autoSubmittedRef.current !== play.attemptId) {
       autoSubmittedRef.current = play.attemptId;
       void submit(play, answers);
     }
-  }, [play, remainingMs, answers, submit]);
+  }, [play, remainingMs, answers, submit, freezeTime]);
 
   async function start() {
     setBusy(true);
@@ -136,6 +150,36 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể bắt đầu lượt thi.");
       router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteLastTest() {
+    if (!lastAttemptId) return;
+    if (
+      !window.confirm(
+        "Xác nhận xóa lượt thi thử nghiệm này khỏi hệ thống? (Kết quả sẽ được hủy hoàn toàn và thu hồi điểm nếu có)",
+      )
+    )
+      return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/quiz/attempts?attemptId=${lastAttemptId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Không thể xóa lượt thi.");
+      setResult(null);
+      setLastAttemptId(null);
+      setStatus((s) => ({
+        ...s,
+        attemptsUsed: Math.max(0, s.attemptsUsed - 1),
+        hasInProgress: false,
+      }));
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể xóa lượt thi.");
     } finally {
       setBusy(false);
     }
@@ -167,6 +211,7 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
     const answeredCount = answers.filter((a) => a !== null).length;
     const isLast = current === play.questions.length - 1;
     const lowTime = remainingMs <= 15_000;
+    const isFreezing = freezeTime !== null;
 
     return (
       <div className="rounded-2xl border border-dusty-border/80 bg-white p-4 shadow-xs sm:p-6">
@@ -175,18 +220,33 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
             Lượt {play.attemptNo}/{play.maxAttempts} · Câu {current + 1}/{play.questions.length}
           </span>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 text-xs font-bold text-[#173A67]">
-              <MaterialIcon className="text-[16px]" name="timer" />
-              {formatQuizDuration(elapsedMs)}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
-                lowTime ? "animate-pulse bg-red-100 text-red-700" : "bg-amber-50 text-amber-800"
-              }`}
-            >
-              <MaterialIcon className="text-[16px]" name="hourglass_bottom" />
-              Còn {Math.max(0, Math.ceil(remainingMs / 1000))} giây
-            </span>
+            {isFreezing ? (
+              <>
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
+                  <MaterialIcon className="text-[16px] text-emerald-600" name="check_circle" />
+                  Đã chốt: {formatQuizDuration(elapsedMs)}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1 text-xs font-bold text-[#173A67]">
+                  <span className="h-2 w-2 animate-spin rounded-full border-2 border-[#173A67] border-t-transparent" />
+                  Đang nộp...
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1 text-xs font-bold text-[#173A67]">
+                  <MaterialIcon className="text-[16px]" name="timer" />
+                  {formatQuizDuration(elapsedMs)}
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
+                    lowTime ? "animate-pulse bg-red-100 text-red-700" : "bg-amber-50 text-amber-800"
+                  }`}
+                >
+                  <MaterialIcon className="text-[16px]" name="hourglass_bottom" />
+                  Còn {Math.max(0, Math.ceil(remainingMs / 1000))} giây
+                </span>
+              </>
+            )}
           </div>
         </div>
 
@@ -212,7 +272,7 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
                     ? "border-primary bg-primary/[0.08]"
                     : "border-dusty-border/80 hover:border-primary/60 hover:bg-surface-container-low"
                 }`}
-                disabled={busy}
+                disabled={busy || isFreezing}
                 type="button"
                 onClick={() =>
                   setAnswers((prev) => prev.map((a, idx) => (idx === current ? i + 1 : a)))
@@ -243,6 +303,7 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
                     ? "bg-primary/20 text-primary"
                     : "bg-surface-container text-on-surface-variant"
               }`}
+              disabled={busy || isFreezing}
               type="button"
               onClick={() => setCurrent(i)}
             >
@@ -256,7 +317,7 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <button
             className="rounded-xl border border-dusty-border px-4 py-2 text-sm font-bold text-on-surface-variant disabled:opacity-40"
-            disabled={current === 0 || busy}
+            disabled={current === 0 || busy || isFreezing}
             type="button"
             onClick={() => setCurrent((c) => c - 1)}
           >
@@ -264,8 +325,8 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
           </button>
           {isLast ? (
             <button
-              className="rounded-xl bg-tertiary px-5 py-2 font-bold text-on-tertiary shadow-xs disabled:opacity-60"
-              disabled={busy}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-tertiary px-5 py-2 font-bold text-on-tertiary shadow-xs disabled:opacity-60"
+              disabled={busy || isFreezing}
               type="button"
               onClick={() => {
                 if (
@@ -279,12 +340,19 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
                 void submit(play, answers);
               }}
             >
-              {busy ? "Đang nộp..." : "Nộp bài"}
+              {busy || isFreezing ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span>Đang nộp...</span>
+                </>
+              ) : (
+                "Nộp bài"
+              )}
             </button>
           ) : (
             <button
               className="rounded-xl bg-primary px-5 py-2 font-bold text-white disabled:opacity-60"
-              disabled={busy}
+              disabled={busy || isFreezing}
               type="button"
               onClick={() => setCurrent((c) => c + 1)}
             >
@@ -334,6 +402,20 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
               bạn.
             </p>
           )}
+
+          {isAdmin && lastAttemptId ? (
+            <div className="mt-4 flex justify-center border-t border-dusty-border/60 pt-3">
+              <button
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-white px-3.5 py-1.5 text-xs font-bold text-red-700 shadow-2xs transition hover:bg-red-50 disabled:opacity-50"
+                disabled={busy}
+                type="button"
+                onClick={() => void handleDeleteLastTest()}
+              >
+                <MaterialIcon className="text-[16px] text-red-600" name="delete_forever" />
+                <span>Xóa lượt test này (Admin)</span>
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatQuizDuration, formatQuizTime, type QuizRankingRow } from "@/lib/quiz-shared";
 
@@ -11,6 +15,8 @@ type Props = {
   participantsCount: number;
   resultPostId?: string | null;
   currentUserId?: string | null;
+  isAdmin?: boolean;
+  sessionId?: string;
 };
 
 const MEDAL_CLASS = [
@@ -28,7 +34,35 @@ export function QuizLeaderboard({
   participantsCount,
   resultPostId,
   currentUserId,
+  isAdmin,
+  sessionId,
 }: Props) {
+  const router = useRouter();
+  const [busyUser, setBusyUser] = useState<string | null>(null);
+
+  async function handleDeleteUserResult(userId: string, fullName: string) {
+    if (!sessionId) return;
+    if (
+      !window.confirm(
+        `Xác nhận xóa kết quả đợt thi của đoàn viên "${fullName}"? (Lượt làm bài sẽ bị xóa khỏi hệ thống và thu hồi điểm nếu đã tổng kết)`,
+      )
+    ) {
+      return;
+    }
+    setBusyUser(userId);
+    try {
+      const res = await fetch(`/api/quiz/attempts?sessionId=${sessionId}&userId=${userId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Không thể xóa kết quả.");
+      router.refresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Không thể xóa kết quả.");
+    } finally {
+      setBusyUser(null);
+    }
+  }
   return (
     <section
       className="rounded-2xl border border-dusty-border/80 bg-white p-4 shadow-xs sm:p-6"
@@ -101,11 +135,28 @@ export function QuizLeaderboard({
                     {r.department ?? "—"} · bắt đầu {formatQuizTime(r.started_at)}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-[#173A67]">{formatQuizDuration(r.duration_ms)}</p>
-                  <p className="text-xs font-semibold text-amber-700">
-                    +{r.points} điểm{finalized ? "" : " (dự kiến)"}
-                  </p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-[#173A67]">{formatQuizDuration(r.duration_ms)}</p>
+                    <p className="text-xs font-semibold text-amber-700">
+                      +{r.points} điểm{finalized ? "" : " (dự kiến)"}
+                    </p>
+                  </div>
+                  {isAdmin && sessionId ? (
+                    <button
+                      type="button"
+                      disabled={busyUser === r.user_id}
+                      onClick={() => void handleDeleteUserResult(r.user_id, r.full_name)}
+                      title={`Xóa kết quả thi của ${r.full_name}`}
+                      className="rounded-lg p-1.5 text-on-surface-variant/40 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                    >
+                      {busyUser === r.user_id ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                      ) : (
+                        <MaterialIcon className="text-[18px]" name="delete_forever" />
+                      )}
+                    </button>
+                  ) : null}
                 </div>
               </li>
             );

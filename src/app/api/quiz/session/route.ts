@@ -65,6 +65,115 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: "Đã tắt đợt thi trắc nghiệm." });
     }
 
+    if (action === "delete") {
+      const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
+      if (!sessionId) {
+        return NextResponse.json({ error: "Thiếu mã đợt thi cần xóa." }, { status: 400 });
+      }
+
+      const { data: session, error: sErr } = await writer
+        .from(CDILV_TABLE.quizSessions)
+        .select("id, result_post_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (sErr) throw sErr;
+      if (!session) {
+        return NextResponse.json({ error: "Không tìm thấy đợt thi." }, { status: 404 });
+      }
+
+      // Thu hồi điểm thưởng (nếu có)
+      await writer
+        .from(CDILV_TABLE.scoreEvents)
+        .delete()
+        .eq("award_label", `quiz_${sessionId}`);
+
+      // Xóa bài viết kết quả (nếu có)
+      if (session.result_post_id) {
+        await writer
+          .from(CDILV_TABLE.posts)
+          .delete()
+          .eq("id", session.result_post_id);
+      }
+
+      // Xóa tất cả các lượt thi thuộc đợt này
+      await writer
+        .from(CDILV_TABLE.quizAttempts)
+        .delete()
+        .eq("session_id", sessionId);
+
+      // Xóa đợt thi
+      const { error: delErr } = await writer
+        .from(CDILV_TABLE.quizSessions)
+        .delete()
+        .eq("id", sessionId);
+      if (delErr) throw delErr;
+
+      revalidatePath("/admin/quiz");
+      revalidatePath("/quiz");
+      revalidatePath("/leaderboard");
+      revalidatePath("/score-history");
+      revalidatePath("/posts");
+      revalidatePath("/");
+
+      return NextResponse.json({
+        success: true,
+        message: "Đã xóa hoàn toàn đợt thi, các lượt thi và thu hồi điểm (nếu có).",
+      });
+    }
+
+    if (action === "cancel_finalize") {
+      const sessionId = typeof body.sessionId === "string" ? body.sessionId : "";
+      if (!sessionId) {
+        return NextResponse.json({ error: "Thiếu mã đợt thi." }, { status: 400 });
+      }
+
+      const { data: session, error: sErr } = await writer
+        .from(CDILV_TABLE.quizSessions)
+        .select("id, result_post_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (sErr) throw sErr;
+      if (!session) {
+        return NextResponse.json({ error: "Không tìm thấy đợt thi." }, { status: 404 });
+      }
+
+      // Thu hồi điểm thưởng đã cộng cho session này
+      await writer
+        .from(CDILV_TABLE.scoreEvents)
+        .delete()
+        .eq("award_label", `quiz_${sessionId}`);
+
+      // Xóa bài viết kết quả nếu có
+      if (session.result_post_id) {
+        await writer
+          .from(CDILV_TABLE.posts)
+          .delete()
+          .eq("id", session.result_post_id);
+      }
+
+      // Reset trạng thái tổng kết về null
+      const { error: updErr } = await writer
+        .from(CDILV_TABLE.quizSessions)
+        .update({
+          finalized_at: null,
+          result_post_id: null,
+        })
+        .eq("id", sessionId);
+      if (updErr) throw updErr;
+
+      revalidatePath("/admin/quiz");
+      revalidatePath("/quiz");
+      revalidatePath("/leaderboard");
+      revalidatePath("/score-history");
+      revalidatePath("/posts");
+      revalidatePath("/");
+
+      return NextResponse.json({
+        success: true,
+        message: "Đã hủy tổng kết, xóa bài viết và thu hồi toàn bộ điểm của đợt thi.",
+      });
+    }
+
     return NextResponse.json({ error: "Thao tác không hợp lệ." }, { status: 400 });
   } catch (err: any) {
     console.error("[api/quiz/session] POST error:", err);

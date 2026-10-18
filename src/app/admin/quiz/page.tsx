@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AdminQuizControl } from "@/components/admin/AdminQuizControl";
+import { AdminQuizAttempts } from "@/components/admin/AdminQuizAttempts";
 import { AdminQuizQuestions } from "@/components/admin/AdminQuizQuestions";
 import { QuizLeaderboard } from "@/components/quiz/QuizLeaderboard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -115,8 +116,15 @@ export default async function AdminQuizPage() {
           resultPostId={displaySession.result_post_id}
           title={displaySession.title}
           totalQuestions={settings.questions_per_attempt}
+          isAdmin={true}
+          sessionId={displaySession.id}
         />
       ) : null}
+
+      <AdminQuizAttempts
+        sessions={(sessions ?? []) as QuizSessionRow[]}
+        initialSessionId={displaySession?.id ?? sessions?.[0]?.id}
+      />
 
       <AdminQuizQuestions questions={questions} />
     </div>
