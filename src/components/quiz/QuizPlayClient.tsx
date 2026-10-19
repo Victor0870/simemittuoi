@@ -27,6 +27,7 @@ type SubmitResult = {
   total: number;
   durationMs: number;
   perfect: boolean;
+  earnedPoints?: number;
   attemptsUsed: number;
   maxAttempts: number;
   currentRank: number | null;
@@ -402,6 +403,13 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
               bạn.
             </p>
           )}
+
+          {result.earnedPoints !== undefined && result.earnedPoints > 0 ? (
+            <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100/90 px-3.5 py-1 text-xs font-bold text-amber-950 shadow-2xs">
+              <MaterialIcon className="text-[16px] text-amber-700" name="stars" />
+              <span>+{result.earnedPoints} điểm thi đua cho lượt thi này!</span>
+            </div>
+          ) : null}
 
           {isAdmin && lastAttemptId ? (
             <div className="mt-4 flex justify-center border-t border-dusty-border/60 pt-3">

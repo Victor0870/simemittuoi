@@ -24,6 +24,7 @@ type AttemptItem = {
     employee_code?: string | null;
   };
   awardedPoints: number | null;
+  rankingBonus?: number | null;
 };
 
 type Props = {
@@ -247,16 +248,27 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
                         )}
                       </td>
                       <td className="py-3 pr-3">
-                        {a.awardedPoints !== null ? (
-                          <span className="inline-flex items-center gap-0.5 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                            <MaterialIcon className="text-[14px] text-amber-600" name="stars" />
-                            +{a.awardedPoints}đ (Đã cộng)
-                          </span>
-                        ) : isPerfect ? (
-                          <span className="text-xs text-on-surface-variant">Chờ tổng kết</span>
-                        ) : (
-                          <span className="text-xs text-on-surface-variant/60">0đ</span>
-                        )}
+                        <div className="flex flex-col gap-1 items-start">
+                          {a.awardedPoints !== null ? (
+                            <span className="inline-flex items-center gap-0.5 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              <MaterialIcon className="text-[14px] text-amber-600" name="stars" />
+                              +{a.awardedPoints}đ (Lượt thi)
+                            </span>
+                          ) : a.status === "submitted" ? (
+                            <span className="text-xs text-on-surface-variant/70">Đã nộp</span>
+                          ) : (
+                            <span className="text-xs text-on-surface-variant/60">0đ</span>
+                          )}
+
+                          {a.rankingBonus ? (
+                            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                              <MaterialIcon className="text-[12px] text-emerald-600" name="emoji_events" />
+                              +{a.rankingBonus}đ (Top)
+                            </span>
+                          ) : isPerfect ? (
+                            <span className="text-[11px] text-on-surface-variant italic">Chờ tổng kết Top</span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="py-3 pr-3 text-xs text-on-surface-variant">
                         <div>{formatQuizTime(a.started_at)}</div>

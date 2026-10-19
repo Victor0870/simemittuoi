@@ -93,7 +93,7 @@ export function WeeklyQuizActivityCard() {
         <div className="absolute top-3 left-3 flex flex-col gap-1.5 items-start z-20">
           <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/95 px-2.5 py-1 text-label-sm font-bold text-white backdrop-blur-xs shadow-xs">
             <MaterialIcon className="text-[14px]" name="stars" />
-            +5 đến +15 điểm
+            +2đ/lượt · Thưởng Top đến +15đ
           </span>
 
           {isOpen ? (

@@ -70,6 +70,30 @@ export async function POST(request: NextRequest) {
     if (!updated) return NextResponse.json({ error: "Lượt thi này đã được nộp." }, { status: 400 });
 
     const settings = await loadQuizSettings(db);
+    const attemptPoints = !late ? Number(settings.points_per_attempt ?? 2) : 0;
+
+    if (attemptPoints > 0) {
+      const awardLabel = `quiz_attempt_${attempt.id}`;
+      const { data: existingEvent } = await db
+        .from(CDILV_TABLE.scoreEvents)
+        .select("id")
+        .eq("award_label", awardLabel)
+        .maybeSingle();
+
+      if (!existingEvent) {
+        const { error: scoreErr } = await db.from(CDILV_TABLE.scoreEvents).insert({
+          user_id: userId,
+          points: attemptPoints,
+          note: `Thi trắc nghiệm – Lượt ${attempt.attempt_no} (+${attemptPoints}đ)`,
+          award_label: awardLabel,
+          created_by: userId,
+        });
+        if (scoreErr) {
+          console.error("[api/quiz/submit] Lỗi khi cộng điểm lượt thi:", scoreErr);
+        }
+      }
+    }
+
     const [{ count: attemptsUsed }, { ranking }] = await Promise.all([
       db
         .from(CDILV_TABLE.quizAttempts)
@@ -81,6 +105,10 @@ export async function POST(request: NextRequest) {
     const mine = ranking.find((r) => r.user_id === userId);
 
     revalidatePath("/quiz");
+    revalidatePath("/score-history");
+    revalidatePath("/leaderboard");
+    revalidatePath("/");
+
     return NextResponse.json({
       success: true,
       late,
@@ -88,6 +116,7 @@ export async function POST(request: NextRequest) {
       total,
       durationMs,
       perfect: !late && correctCount === total,
+      earnedPoints: attemptPoints,
       attemptsUsed: attemptsUsed ?? attempt.attempt_no,
       maxAttempts: settings.max_attempts,
       currentRank: mine?.rank ?? null,

@@ -32,6 +32,7 @@ type NumberField =
   | "questions_per_attempt"
   | "max_attempts"
   | "time_limit_seconds"
+  | "points_per_attempt"
   | "base_points"
   | "top1_bonus"
   | "top2_5_bonus"
@@ -41,6 +42,7 @@ const NUMBER_FIELDS: { key: NumberField; label: string; min: number; max: number
   { key: "questions_per_attempt", label: "Số câu mỗi lượt", min: 1, max: 20 },
   { key: "max_attempts", label: "Số lượt chơi tối đa", min: 1, max: 20 },
   { key: "time_limit_seconds", label: "Thời gian mỗi lượt (giây)", min: 10, max: 1800 },
+  { key: "points_per_attempt", label: "Điểm mỗi lượt thi", min: 0, max: 100 },
   { key: "base_points", label: "Điểm khi đúng hết", min: 0, max: 100 },
   { key: "top1_bonus", label: "Thưởng thêm Hạng 1", min: 0, max: 100 },
   { key: "top2_5_bonus", label: "Thưởng thêm Hạng 2–5", min: 0, max: 100 },
@@ -415,9 +417,9 @@ export function AdminQuizControl({
             ))}
           </div>
           <p className="text-xs text-on-surface-variant">
-            Ví dụ mặc định: đúng hết được {form.base_points} điểm; Hạng 1 tổng {form.base_points + form.top1_bonus}{" "}
-            điểm, Hạng 2–5 tổng {form.base_points + form.top2_5_bonus} điểm, Hạng 6–10 tổng{" "}
-            {form.base_points + form.top6_10_bonus} điểm, ngoài Top 10 được {form.base_points} điểm.
+            Ví dụ mặc định: mỗi lượt thi hoàn thành được {form.points_per_attempt} điểm; đúng hết được cộng thêm {form.base_points} điểm; Hạng 1 tổng thêm {form.base_points + form.top1_bonus}{" "}
+            điểm, Hạng 2–5 tổng thêm {form.base_points + form.top2_5_bonus} điểm, Hạng 6–10 tổng{" "}
+            {form.base_points + form.top6_10_bonus} điểm.
           </p>
 
           <div className="flex flex-wrap gap-5">

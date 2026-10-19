@@ -30,6 +30,7 @@ create table if not exists public.cdilv_quiz_settings (
   questions_per_attempt smallint not null default 5 check (questions_per_attempt between 1 and 20),
   max_attempts smallint not null default 5 check (max_attempts between 1 and 20),
   time_limit_seconds integer not null default 120 check (time_limit_seconds between 10 and 1800),
+  points_per_attempt integer not null default 2 check (points_per_attempt between 0 and 100),
   base_points integer not null default 5 check (base_points between 0 and 100),
   top1_bonus integer not null default 5 check (top1_bonus between 0 and 100),
   top2_5_bonus integer not null default 3 check (top2_5_bonus between 0 and 100),

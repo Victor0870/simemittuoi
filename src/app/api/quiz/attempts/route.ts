@@ -62,29 +62,41 @@ export async function GET(request: NextRequest) {
     }
 
     // Check award points if any
+    const attemptIds = (attempts ?? []).map((a) => a.id);
+    const attemptLabels = attemptIds.map((id) => `quiz_attempt_${id}`);
     const sessionIds = Array.from(new Set((attempts ?? []).map((a) => a.session_id)));
     const awardLabels = sessionIds.map((sid) => `quiz_${sid}`);
-    const scoreMap = new Map<string, number>();
+    const allLabels = [...attemptLabels, ...awardLabels];
 
-    if (awardLabels.length > 0) {
+    const attemptScoreMap = new Map<string, number>();
+    const sessionScoreMap = new Map<string, number>();
+
+    if (allLabels.length > 0) {
       const { data: scores } = await db
         .from(CDILV_TABLE.scoreEvents)
         .select("user_id, points, award_label")
-        .in("award_label", awardLabels);
+        .in("award_label", allLabels);
 
       for (const s of scores ?? []) {
-        const sid = s.award_label.replace("quiz_", "");
-        scoreMap.set(`${s.user_id}_${sid}`, s.points);
+        if (s.award_label.startsWith("quiz_attempt_")) {
+          const aid = s.award_label.replace("quiz_attempt_", "");
+          attemptScoreMap.set(aid, s.points);
+        } else if (s.award_label.startsWith("quiz_")) {
+          const sid = s.award_label.replace("quiz_", "");
+          sessionScoreMap.set(`${s.user_id}_${sid}`, s.points);
+        }
       }
     }
 
     const enriched = (attempts ?? []).map((a) => {
       const profile = profilesMap.get(a.user_id);
-      const points = scoreMap.get(`${a.user_id}_${a.session_id}`) ?? null;
+      const attemptPoints = attemptScoreMap.get(a.id) ?? null;
+      const rankBonus = sessionScoreMap.get(`${a.user_id}_${a.session_id}`) ?? null;
       return {
         ...a,
         profile: profile ?? { full_name: "Đoàn viên", department: null, avatar_url: null },
-        awardedPoints: points,
+        awardedPoints: attemptPoints,
+        rankingBonus: rankBonus,
       };
     });
 
@@ -132,6 +144,12 @@ export async function DELETE(request: NextRequest) {
         .eq("id", attemptId);
       if (delErr) throw delErr;
 
+      // Thu hồi điểm của riêng lượt thi này (nếu đã cộng)
+      await db
+        .from(CDILV_TABLE.scoreEvents)
+        .delete()
+        .eq("award_label", `quiz_attempt_${attemptId}`);
+
       // Kiểm tra xem người này còn lượt nào khác đúng 100% không
       const { data: otherAttempts } = await db
         .from(CDILV_TABLE.quizAttempts)
@@ -144,7 +162,7 @@ export async function DELETE(request: NextRequest) {
         (o) => o.total_questions > 0 && o.correct_count === o.total_questions,
       );
 
-      // Nếu không còn lượt nào đúng hết, thu hồi điểm đã cộng cho session này (nếu có)
+      // Nếu không còn lượt nào đúng hết, thu hồi điểm thưởng xếp hạng đã cộng cho session này (nếu có)
       if (!hasOtherPerfect) {
         await db
           .from(CDILV_TABLE.scoreEvents)
@@ -172,11 +190,21 @@ export async function DELETE(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: "Đã xóa lượt thi và cập nhật kết quả.",
+        message: "Đã xóa lượt thi và thu hồi điểm liên quan.",
       });
     }
 
     if (sessionId && userId) {
+      // Tìm các lượt thi của user trong session này để thu hồi điểm
+      const { data: userAttempts } = await db
+        .from(CDILV_TABLE.quizAttempts)
+        .select("id")
+        .eq("session_id", sessionId)
+        .eq("user_id", userId);
+
+      const attemptLabels = (userAttempts ?? []).map((u) => `quiz_attempt_${u.id}`);
+      attemptLabels.push(`quiz_${sessionId}`);
+
       // Xóa tất cả các lượt của user trong session này
       await db
         .from(CDILV_TABLE.quizAttempts)
@@ -184,11 +212,11 @@ export async function DELETE(request: NextRequest) {
         .eq("session_id", sessionId)
         .eq("user_id", userId);
 
-      // Thu hồi điểm nếu có
+      // Thu hồi toàn bộ điểm (lượt thi + thưởng xếp hạng nếu có)
       await db
         .from(CDILV_TABLE.scoreEvents)
         .delete()
-        .eq("award_label", `quiz_${sessionId}`)
+        .in("award_label", attemptLabels)
         .eq("user_id", userId);
 
       // Cập nhật session stats

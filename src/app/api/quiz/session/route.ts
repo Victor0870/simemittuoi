@@ -81,11 +81,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Không tìm thấy đợt thi." }, { status: 404 });
       }
 
-      // Thu hồi điểm thưởng (nếu có)
+      // Tìm tất cả các lượt thi thuộc đợt này để thu hồi điểm từng lượt
+      const { data: sessAttempts } = await writer
+        .from(CDILV_TABLE.quizAttempts)
+        .select("id")
+        .eq("session_id", sessionId);
+
+      const allLabels = (sessAttempts ?? []).map((a) => `quiz_attempt_${a.id}`);
+      allLabels.push(`quiz_${sessionId}`);
+
+      // Thu hồi điểm (điểm lượt thi + thưởng xếp hạng)
       await writer
         .from(CDILV_TABLE.scoreEvents)
         .delete()
-        .eq("award_label", `quiz_${sessionId}`);
+        .in("award_label", allLabels);
 
       // Xóa bài viết kết quả (nếu có)
       if (session.result_post_id) {

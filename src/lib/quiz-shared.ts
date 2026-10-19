@@ -20,6 +20,7 @@ export type QuizSettings = {
   questions_per_attempt: number;
   max_attempts: number;
   time_limit_seconds: number;
+  points_per_attempt: number;
   base_points: number;
   top1_bonus: number;
   top2_5_bonus: number;
@@ -87,6 +88,7 @@ export const DEFAULT_QUIZ_SETTINGS: QuizSettings = {
   questions_per_attempt: 5,
   max_attempts: 5,
   time_limit_seconds: 120,
+  points_per_attempt: 2,
   base_points: 5,
   top1_bonus: 5,
   top2_5_bonus: 3,
@@ -122,9 +124,12 @@ export const QUIZ_TEMPLATE_PLACEHOLDERS = [
 ] as const;
 
 export function describePointRules(
-  s: Pick<QuizSettings, "questions_per_attempt" | "base_points" | "top1_bonus" | "top2_5_bonus" | "top6_10_bonus">,
+  s: Pick<QuizSettings, "questions_per_attempt" | "base_points" | "top1_bonus" | "top2_5_bonus" | "top6_10_bonus"> & {
+    points_per_attempt?: number;
+  },
 ) {
-  return `mỗi đoàn viên trả lời đúng cả ${s.questions_per_attempt} câu được cộng ${s.base_points} điểm; Hạng 1 được cộng thêm ${s.top1_bonus} điểm, Hạng 2–5 cộng thêm ${s.top2_5_bonus} điểm, Hạng 6–10 cộng thêm ${s.top6_10_bonus} điểm.`;
+  const attemptText = (s.points_per_attempt ?? 2) > 0 ? `mỗi lượt thi hoàn thành được cộng ${s.points_per_attempt ?? 2} điểm; ` : "";
+  return `${attemptText}đoàn viên trả lời đúng cả ${s.questions_per_attempt} câu được cộng ${s.base_points} điểm; Hạng 1 được cộng thêm ${s.top1_bonus} điểm, Hạng 2–5 cộng thêm ${s.top2_5_bonus} điểm, Hạng 6–10 cộng thêm ${s.top6_10_bonus} điểm.`;
 }
 
 /** Điểm sự kiện cho người đúng hết theo hạng: điểm cơ bản + thưởng thêm Top 1 / 2–5 / 6–10. */
