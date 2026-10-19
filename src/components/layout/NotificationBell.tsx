@@ -16,6 +16,7 @@ export type NotificationItem = {
     | "new_album"
     | "album_new_photos"
     | "album_comment"
+    | "comment_reply"
     | "photo_reaction"
     | "life_event_new"
     | "life_event_ack"
@@ -152,6 +153,11 @@ export function NotificationBell() {
         return {
           name: "forum",
           bg: "bg-amber-100 text-amber-800",
+        };
+      case "comment_reply":
+        return {
+          name: "reply",
+          bg: "bg-sky-100 text-sky-800",
         };
       case "new_album":
       case "album_new_photos":

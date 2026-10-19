@@ -64,6 +64,12 @@ export function PhotoViewerModal({
   const [deletingPhoto, setDeletingPhoto] = useState(false);
   const [reacting, setReacting] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [replyTarget, setReplyTarget] = useState<{ rootId: string; commentId: string; authorName: string } | null>(
+    null,
+  );
+  const [replyText, setReplyText] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   const hasPrev = index > 0;
   const hasNext = index < photos.length - 1;
@@ -93,6 +99,7 @@ export function PhotoViewerModal({
     setComments([]);
     setContent("");
     setNotice(null);
+    setReplyTarget(null);
     setLoadingComments(true);
 
     fetch(`/api/albums/photos/comments?photoId=${encodeURIComponent(photoId)}`)
@@ -113,8 +120,51 @@ export function PhotoViewerModal({
   if (!photo) return null;
 
   const isOwner = photo.userId === currentUserId;
-  const myCommentCount = comments.filter((c) => c.userId === currentUserId).length;
+  const rootComments = comments.filter((c) => !c.parentId);
+  const nameByUser = new Map(comments.map((c) => [c.userId, c.authorName]));
+  const myCommentCount = rootComments.filter((c) => c.userId === currentUserId).length;
   const isLimitReached = !canManage && myCommentCount >= ALBUM_COMMENT_LIMIT;
+
+  async function reloadComments(id: string) {
+    const listRes = await fetch(`/api/albums/photos/comments?photoId=${encodeURIComponent(id)}`);
+    const listData = await listRes.json();
+    if (Array.isArray(listData.comments)) {
+      setComments(listData.comments);
+      onPhotoChange(id, { commentCount: listData.comments.length });
+    }
+  }
+
+  function startReply(c: AlbumPhotoComment) {
+    setReplyTarget({ rootId: c.parentId ?? c.id, commentId: c.id, authorName: c.authorName });
+    setReplyText("");
+    setReplyError(null);
+  }
+
+  async function handleSubmitReply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!replyTarget || replySubmitting) return;
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
+
+    setReplySubmitting(true);
+    setReplyError(null);
+    try {
+      const res = await fetch("/api/albums/photos/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoId: photo.id, content: trimmed, parentId: replyTarget.commentId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gửi phản hồi không thành công.");
+      await reloadComments(photo.id);
+      setReplyTarget(null);
+      setReplyText("");
+    } catch (err: any) {
+      setReplyError(err?.message || "Đã xảy ra lỗi khi gửi phản hồi.");
+    } finally {
+      setReplySubmitting(false);
+    }
+  }
 
   async function handleReact(type: ReactionType) {
     if (reacting) return;
@@ -177,12 +227,7 @@ export function PhotoViewerModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gửi bình luận không thành công.");
 
-      const listRes = await fetch(`/api/albums/photos/comments?photoId=${encodeURIComponent(photo.id)}`);
-      const listData = await listRes.json();
-      if (Array.isArray(listData.comments)) {
-        setComments(listData.comments);
-        onPhotoChange(photo.id, { commentCount: listData.comments.length });
-      }
+      await reloadComments(photo.id);
 
       setContent("");
       setNotice({ type: "success", text: data.message || "Gửi bình luận thành công!" });
@@ -195,7 +240,11 @@ export function PhotoViewerModal({
 
   async function handleDeleteComment(commentId: string) {
     if (deletingCommentId) return;
-    if (!window.confirm("Xóa bình luận này? Điểm thi đua (+1đ) tương ứng (nếu có) sẽ được thu hồi.")) {
+    const isReply = Boolean(comments.find((c) => c.id === commentId)?.parentId);
+    const confirmText = isReply
+      ? "Xóa phản hồi này?"
+      : "Xóa bình luận này? Điểm thi đua (+1đ) tương ứng (nếu có) và các phản hồi bên dưới sẽ bị xóa theo.";
+    if (!window.confirm(confirmText)) {
       return;
     }
 
@@ -207,10 +256,13 @@ export function PhotoViewerModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Không thể xóa bình luận.");
 
-      const next = comments.filter((c) => c.id !== commentId);
+      const next = comments.filter((c) => c.id !== commentId && c.parentId !== commentId);
       setComments(next);
       onPhotoChange(photo.id, { commentCount: next.length });
-      setNotice({ type: "success", text: data.message || "Đã xóa bình luận." });
+      if (replyTarget && (replyTarget.commentId === commentId || replyTarget.rootId === commentId)) {
+        setReplyTarget(null);
+      }
+      if (!isReply) setNotice({ type: "success", text: data.message || "Đã xóa bình luận." });
     } catch (err: any) {
       setNotice({ type: "error", text: err?.message || "Đã xảy ra lỗi khi xóa bình luận." });
     } finally {
@@ -238,6 +290,56 @@ export function PhotoViewerModal({
       setNotice({ type: "error", text: err?.message || "Đã xảy ra lỗi khi xóa ảnh." });
       setDeletingPhoto(false);
     }
+  }
+
+  function renderComment(c: AlbumPhotoComment) {
+    const canDelete = canManage || c.userId === currentUserId;
+    const replyToName =
+      c.parentId && c.replyToUserId && c.replyToUserId !== c.userId ? nameByUser.get(c.replyToUserId) : null;
+    return (
+      <div
+        key={c.id}
+        className={`rounded-xl border ${c.parentId ? "p-2.5" : "p-3"} ${
+          c.userId === currentUserId ? "border-primary/30 bg-primary/[0.03]" : "border-dusty-border/70 bg-white"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <Avatar name={c.authorName} url={c.authorAvatar} size={c.parentId ? "h-6 w-6" : "h-7 w-7"} />
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-on-surface">
+                {c.authorName}
+                {c.authorRole === "admin" && <span className="ml-1 text-[10px] font-bold text-amber-700">· Admin</span>}
+              </p>
+              <p className="text-[10px] text-on-surface-variant">{c.timeAgo}</p>
+            </div>
+          </div>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => handleDeleteComment(c.id)}
+              disabled={deletingCommentId === c.id}
+              title={c.parentId ? "Xóa phản hồi" : "Xóa bình luận"}
+              className="rounded-lg p-1 text-on-surface-variant/60 transition hover:bg-red-50 hover:text-red-600"
+            >
+              <MaterialIcon className="text-[16px]" name="delete_outline" />
+            </button>
+          )}
+        </div>
+        <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-on-surface sm:text-body-sm">
+          {replyToName && <span className="mr-1 font-semibold text-primary">@{replyToName}</span>}
+          {c.content}
+        </p>
+        <button
+          type="button"
+          onClick={() => startReply(c)}
+          className="mt-1 inline-flex items-center gap-0.5 text-[11px] font-semibold text-on-surface-variant transition hover:text-primary"
+        >
+          <MaterialIcon className="text-[14px]" name="reply" />
+          Trả lời
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -413,45 +515,62 @@ export function PhotoViewerModal({
                 </p>
               ) : (
                 <ul className="space-y-2.5">
-                  {comments.map((c) => {
-                    const canDelete = canManage || c.userId === currentUserId;
+                  {rootComments.map((c) => {
+                    const replies = comments.filter((r) => r.parentId === c.id);
+                    const replying = replyTarget?.rootId === c.id;
                     return (
-                      <li
-                        key={c.id}
-                        className={`rounded-xl border p-3 ${
-                          c.userId === currentUserId
-                            ? "border-primary/30 bg-primary/[0.03]"
-                            : "border-dusty-border/70 bg-white"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex min-w-0 items-center gap-2">
-                            <Avatar name={c.authorName} url={c.authorAvatar} size="h-7 w-7" />
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-bold text-on-surface">
-                                {c.authorName}
-                                {c.authorRole === "admin" && (
-                                  <span className="ml-1 text-[10px] font-bold text-amber-700">· Admin</span>
-                                )}
-                              </p>
-                              <p className="text-[10px] text-on-surface-variant">{c.timeAgo}</p>
-                            </div>
+                      <li key={c.id} className="space-y-2">
+                        {renderComment(c)}
+                        {(replies.length > 0 || replying) && (
+                          <div className="ml-4 space-y-2 border-l-2 border-dusty-border/70 pl-2.5">
+                            {replies.map((r) => renderComment(r))}
+                            {replying && (
+                              <form onSubmit={handleSubmitReply} className="space-y-1.5">
+                                <div className="flex items-end gap-2">
+                                  <textarea
+                                    autoFocus
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Escape") {
+                                        e.stopPropagation();
+                                        setReplyTarget(null);
+                                      }
+                                    }}
+                                    rows={2}
+                                    maxLength={1500}
+                                    disabled={replySubmitting}
+                                    placeholder={`Trả lời ${replyTarget.authorName}...`}
+                                    className="flex-1 resize-none rounded-xl border border-dusty-border bg-white p-2 text-xs text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:bg-surface-container sm:text-sm"
+                                  />
+                                  <div className="flex shrink-0 flex-col gap-1">
+                                    <button
+                                      type="submit"
+                                      disabled={replySubmitting || !replyText.trim()}
+                                      aria-label="Gửi phản hồi"
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {replySubmitting ? (
+                                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                      ) : (
+                                        <MaterialIcon className="text-[16px]" name="send" />
+                                      )}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setReplyTarget(null)}
+                                      aria-label="Hủy trả lời"
+                                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-dusty-border text-on-surface-variant transition hover:bg-surface-container"
+                                    >
+                                      <MaterialIcon className="text-[16px]" name="close" />
+                                    </button>
+                                  </div>
+                                </div>
+                                {replyError && <p className="text-[11px] font-semibold text-red-700">{replyError}</p>}
+                              </form>
+                            )}
                           </div>
-                          {canDelete && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteComment(c.id)}
-                              disabled={deletingCommentId === c.id}
-                              title="Xóa bình luận"
-                              className="rounded-lg p-1 text-on-surface-variant/60 transition hover:bg-red-50 hover:text-red-600"
-                            >
-                              <MaterialIcon className="text-[16px]" name="delete_outline" />
-                            </button>
-                          )}
-                        </div>
-                        <p className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-relaxed text-on-surface sm:text-body-sm">
-                          {c.content}
-                        </p>
+                        )}
                       </li>
                     );
                   })}

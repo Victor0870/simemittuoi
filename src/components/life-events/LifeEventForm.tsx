@@ -128,7 +128,7 @@ export function LifeEventForm({ category, today }: Props) {
 
       const failed: string[] = [];
       for (let i = 0; i < files.length; i++) {
-        setProgress(`Đang tải giấy tờ ${i + 1}/${files.length}...`);
+        setProgress(`Đang tải ảnh ${i + 1}/${files.length}...`);
         const err = await uploadAttachment(data.id, files[i].file);
         if (err) failed.push(err);
       }
@@ -256,13 +256,20 @@ export function LifeEventForm({ category, today }: Props) {
             />
           </label>
 
-          <div className="space-y-2">
-            <p className="text-sm font-bold text-[#173A67]">Ảnh giấy tờ</p>
-            <p className="text-xs text-on-surface-variant">
-              {type.attachmentHint}. Chụp trực tiếp bằng điện thoại hoặc chọn ảnh / PDF (tối đa{" "}
-              {LIFE_EVENT_LIMITS.maxAttachments} tệp). Chỉ Ban chấp hành xem được.
-            </p>
-            <div className="flex flex-wrap gap-2">
+        </div>
+      ) : null}
+
+      <div className="space-y-2 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+        <p className="flex items-center gap-1.5 text-sm font-bold text-[#173A67]">
+          <MaterialIcon className="text-[20px]" name="attach_file" />
+          Ảnh đính kèm (bằng chứng)
+        </p>
+        <p className="text-xs text-on-surface-variant">
+          {type ? type.attachmentHint : "Ảnh giấy tờ, ảnh hiện trường hoặc giấy xác nhận liên quan"}. Chụp trực tiếp
+          bằng điện thoại hoặc chọn ảnh / PDF (tối đa {LIFE_EVENT_LIMITS.maxAttachments} tệp). Chỉ Ban chấp hành xem
+          được.
+        </p>
+        <div className="flex flex-wrap gap-2">
               {files.map((f) => (
                 <div
                   key={f.key}
@@ -318,10 +325,8 @@ export function LifeEventForm({ category, today }: Props) {
                   </label>
                 </>
               ) : null}
-            </div>
-          </div>
         </div>
-      ) : null}
+      </div>
 
       {errors.length ? (
         <div className="rounded-xl border border-error/30 bg-error-container/40 px-4 py-3 text-sm text-on-error-container">

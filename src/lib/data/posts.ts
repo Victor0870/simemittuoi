@@ -143,6 +143,9 @@ export type PostComment = {
   content: string;
   createdAt: string;
   timeAgo: string;
+  /** Bình luận gốc (null nếu đây là bình luận gốc). */
+  parentId?: string | null;
+  replyToUserId?: string | null;
   reactions?: CommentReactions;
   userReaction?: "like" | "heart" | "haha" | null;
 };
@@ -157,7 +160,9 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
       user_id,
       content,
       created_at,
-      cdilv_profiles (
+      parent_id,
+      reply_to_user_id,
+      cdilv_profiles!cdilv_post_comments_user_id_fkey (
         id,
         full_name,
         avatar_url,
@@ -210,6 +215,8 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
       content: row.content,
       createdAt: row.created_at,
       timeAgo: formatTimeAgo(row.created_at),
+      parentId: row.parent_id ?? null,
+      replyToUserId: row.reply_to_user_id ?? null,
       reactions: reactionsMap.get(row.id) || { like: 0, heart: 0, haha: 0 },
     };
   });

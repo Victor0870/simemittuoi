@@ -82,6 +82,13 @@ export function PostCommentsSection({
   // Popup hiển thị quy định bình luận (khi bình luận lần thứ 4 hoặc bấm xem quy định)
   const [showRulePopup, setShowRulePopup] = useState(false);
 
+  const [replyTarget, setReplyTarget] = useState<{ rootId: string; commentId: string; authorName: string } | null>(
+    null,
+  );
+  const [replyText, setReplyText] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+
   // Đóng modal quy định bình luận khi nhấn Escape
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -132,15 +139,26 @@ export function PostCommentsSection({
     };
   }, [postId, authLoading, isApproved]);
 
+  const rootComments = useMemo(() => comments.filter((c) => !c.parentId), [comments]);
+  const repliesByRoot = useMemo(() => {
+    const map = new Map<string, PostComment[]>();
+    for (const c of comments) {
+      if (!c.parentId) continue;
+      map.set(c.parentId, [...(map.get(c.parentId) ?? []), c]);
+    }
+    return map;
+  }, [comments]);
+  const nameByUser = useMemo(() => new Map(comments.map((c) => [c.userId, c.authorName])), [comments]);
+
   // Comments submitted by the current user for this post
-  const myComments = user ? comments.filter((c) => c.userId === user.id) : [];
+  const myComments = user ? rootComments.filter((c) => c.userId === user.id) : [];
   const myCommentCount = myComments.length;
   const isLimitReached = !isAdmin && myCommentCount >= 3;
   const remainingCount = Math.max(0, 3 - myCommentCount);
 
   // Danh sách toàn bộ tác phẩm logo được gửi qua bình luận (cho Admin tổng hợp và tải về)
   const allContestSubmissions = useMemo(() => {
-    return comments.flatMap((c) => {
+    return rootComments.flatMap((c) => {
       const { imageUrls } = parseCommentContent(c.content);
       return imageUrls.map((url, idx) => ({
         url,
@@ -152,7 +170,7 @@ export function PostCommentsSection({
         filename: `Logo_CDILV_${(c.authorName || "tac_gia").replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]/g, "_")}_${c.id.slice(0, 6)}.png`,
       }));
     });
-  }, [comments]);
+  }, [rootComments]);
 
   function clearNoticeAfterTimeout() {
     setTimeout(() => {
@@ -472,11 +490,68 @@ export function PostCommentsSection({
     }
   }
 
+  function startReply(comment: PostComment) {
+    setReplyTarget({
+      rootId: comment.parentId ?? comment.id,
+      commentId: comment.id,
+      authorName: comment.authorName,
+    });
+    setReplyText("");
+    setReplyError(null);
+  }
+
+  async function handleSubmitReply(e: React.FormEvent) {
+    e.preventDefault();
+    if (!replyTarget || replySubmitting || !user) return;
+    const trimmed = replyText.trim();
+    if (!trimmed) return;
+
+    setReplySubmitting(true);
+    setReplyError(null);
+    try {
+      const res = await fetch("/api/posts/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, content: trimmed, parentId: replyTarget.commentId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gửi phản hồi không thành công.");
+
+      const reply: PostComment = {
+        id: data.comment.id,
+        postId: data.comment.post_id,
+        userId: user.id,
+        authorName: profile?.full_name || "Đoàn viên",
+        authorAvatar: profile?.avatar_url || null,
+        authorRole: profile?.role || "user",
+        authorDepartment: profile?.department || null,
+        authorCode: profile?.employee_code || null,
+        content: data.comment.content,
+        createdAt: data.comment.created_at,
+        timeAgo: "Vừa xong",
+        parentId: data.comment.parent_id,
+        replyToUserId: data.comment.reply_to_user_id,
+      };
+      setComments((prev) => [...prev, reply]);
+      setCommentCount((prev) => prev + 1);
+      setReplyTarget(null);
+      setReplyText("");
+    } catch (err: any) {
+      setReplyError(err?.message || "Đã xảy ra lỗi khi gửi phản hồi.");
+    } finally {
+      setReplySubmitting(false);
+    }
+  }
+
   async function handleDelete(commentId: string) {
     if (deletingId) return;
 
+    const target = comments.find((c) => c.id === commentId);
+    const isReply = Boolean(target?.parentId);
     const confirmed = window.confirm(
-      "Bạn có chắc chắn muốn xóa bình luận này? Điểm thi đua (+1đ) tương ứng sẽ được thu hồi.",
+      isReply
+        ? "Bạn có chắc chắn muốn xóa phản hồi này?"
+        : "Bạn có chắc chắn muốn xóa bình luận này? Điểm thi đua (+1đ) tương ứng và các phản hồi bên dưới sẽ bị xóa theo.",
     );
     if (!confirmed) return;
 
@@ -494,13 +569,19 @@ export function PostCommentsSection({
         throw new Error(data.error || "Không thể xóa bình luận.");
       }
 
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
-      setCommentCount((prev) => Math.max(0, prev - 1));
-      setNotice({
-        type: "success",
-        text: data.message || "Đã xóa bình luận thành công.",
-      });
-      clearNoticeAfterTimeout();
+      const removed = comments.filter((c) => c.id === commentId || c.parentId === commentId).length;
+      setComments((prev) => prev.filter((c) => c.id !== commentId && c.parentId !== commentId));
+      setCommentCount((prev) => Math.max(0, prev - Math.max(1, removed)));
+      if (replyTarget && (replyTarget.commentId === commentId || replyTarget.rootId === commentId)) {
+        setReplyTarget(null);
+      }
+      if (!isReply) {
+        setNotice({
+          type: "success",
+          text: data.message || "Đã xóa bình luận thành công.",
+        });
+        clearNoticeAfterTimeout();
+      }
     } catch (err: any) {
       setNotice({
         type: "error",
@@ -511,8 +592,151 @@ export function PostCommentsSection({
     }
   }
 
+  function renderReply(reply: PostComment) {
+    const isAuthor = user?.id === reply.userId;
+    const replyToName =
+      reply.replyToUserId && reply.replyToUserId !== reply.userId ? nameByUser.get(reply.replyToUserId) : null;
+    const parsed = parseCommentContent(reply.content);
+    const reactionButtons: { type: "like" | "heart" | "haha"; emoji: string; active: string }[] = [
+      { type: "like", emoji: "👍", active: "border-blue-400 bg-blue-50 text-blue-700" },
+      { type: "heart", emoji: "❤️", active: "border-rose-400 bg-rose-50 text-rose-700" },
+      { type: "haha", emoji: "😆", active: "border-amber-400 bg-amber-50 text-amber-700" },
+    ];
+
+    return (
+      <div
+        key={reply.id}
+        className={`rounded-xl border p-3 ${isAuthor ? "border-primary/25 bg-primary/[0.02]" : "border-dusty-border/60 bg-white"}`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dusty-border bg-dusty-light text-xs font-bold text-primary">
+              {reply.authorAvatar ? (
+                <img src={reply.authorAvatar} alt={reply.authorName} className="h-full w-full object-cover" />
+              ) : (
+                <span>{(reply.authorName || "?").slice(0, 1).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-1 text-xs font-bold text-on-surface">
+                {reply.authorName}
+                {reply.authorRole === "admin" && <span className="text-[10px] text-amber-700">· Quản trị viên</span>}
+                {isAuthor && (
+                  <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary">Bạn</span>
+                )}
+              </p>
+              <p className="text-[10px] text-on-surface-variant">{reply.timeAgo}</p>
+            </div>
+          </div>
+          {(isAdmin || isAuthor) && (
+            <button
+              onClick={() => handleDelete(reply.id)}
+              disabled={deletingId === reply.id}
+              title="Xóa phản hồi"
+              className="rounded-lg p-1 text-on-surface-variant/60 transition hover:bg-red-50 hover:text-red-600"
+              type="button"
+            >
+              <MaterialIcon className="text-[16px]" name="delete_outline" />
+            </button>
+          )}
+        </div>
+
+        <p className="mt-1.5 whitespace-pre-wrap break-words text-body-sm leading-relaxed text-on-surface">
+          {replyToName && <span className="mr-1 font-semibold text-primary">@{replyToName}</span>}
+          {parsed.cleanText}
+        </p>
+        {parsed.imageUrls.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-2">
+            {parsed.imageUrls.map((url) => (
+              <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                <img src={url} alt="Ảnh trong phản hồi" className="max-h-40 rounded-lg border border-dusty-border" loading="lazy" />
+              </a>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {reactionButtons.map((r) => {
+            const count = reply.reactions?.[r.type] ?? 0;
+            const active = reply.userReaction === r.type;
+            return (
+              <button
+                key={r.type}
+                type="button"
+                onClick={() => handleReact(reply.id, r.type)}
+                className={`inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition ${
+                  active ? r.active : "border-dusty-border/70 bg-surface-container-lowest text-on-surface-variant hover:bg-dusty-light"
+                }`}
+              >
+                <span>{r.emoji}</span>
+                {count > 0 && <span>{count}</span>}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => startReply(reply)}
+            className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold text-on-surface-variant transition hover:text-primary"
+          >
+            <MaterialIcon className="text-[14px]" name="reply" />
+            Trả lời
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function renderReplyForm() {
+    if (!replyTarget) return null;
+    return (
+      <form onSubmit={handleSubmitReply} className="space-y-2">
+        <div className="flex items-end gap-2">
+          <textarea
+            autoFocus
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setReplyTarget(null);
+            }}
+            rows={2}
+            maxLength={3000}
+            disabled={replySubmitting}
+            placeholder={`Trả lời ${replyTarget.authorName}...`}
+            className="flex-1 resize-none rounded-xl border border-dusty-border bg-white p-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none disabled:bg-surface-container"
+          />
+          <div className="flex shrink-0 flex-col gap-1.5">
+            <button
+              type="submit"
+              disabled={replySubmitting || !replyText.trim()}
+              aria-label="Gửi phản hồi"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {replySubmitting ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <MaterialIcon className="text-[18px]" name="send" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setReplyTarget(null)}
+              aria-label="Hủy trả lời"
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-dusty-border text-on-surface-variant transition hover:bg-surface-container"
+            >
+              <MaterialIcon className="text-[18px]" name="close" />
+            </button>
+          </div>
+        </div>
+        {replyError && <p className="text-xs font-semibold text-red-700">{replyError}</p>}
+      </form>
+    );
+  }
+
   return (
-    <section className="space-y-6 rounded-2xl border border-dusty-border/80 bg-surface-container-lowest p-5 sm:p-8 shadow-sm">
+    <section
+      id="comments"
+      className="scroll-mt-24 space-y-6 rounded-2xl border border-dusty-border/80 bg-surface-container-lowest p-5 sm:p-8 shadow-sm"
+    >
       {/* Header bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dusty-border/70 pb-4">
         <div className="flex items-center gap-2.5">
@@ -884,7 +1108,7 @@ export function PostCommentsSection({
               </div>
             ) : (
               <ul className="space-y-4">
-                {comments.map((comment) => {
+                {rootComments.map((comment) => {
                   const isAuthor = user && user.id === comment.userId;
                   const canDelete = isAdmin || isAuthor;
                   const isCommentAdmin = comment.authorRole === "admin";
@@ -1150,6 +1374,15 @@ export function PostCommentsSection({
                           )}
                         </button>
 
+                        <button
+                          type="button"
+                          onClick={() => startReply(comment)}
+                          className="inline-flex items-center gap-1 rounded-full border border-dusty-border/70 bg-surface-container-lowest px-2.5 sm:px-3 py-1 text-xs font-semibold text-on-surface-variant transition hover:bg-dusty-light hover:text-primary"
+                        >
+                          <MaterialIcon className="text-[15px]" name="reply" />
+                          <span>Trả lời</span>
+                        </button>
+
                         {/* Tổng số lượt tương tác nếu > 0 */}
                         {((comment.reactions?.like ?? 0) +
                           (comment.reactions?.heart ?? 0) +
@@ -1162,6 +1395,13 @@ export function PostCommentsSection({
                           </span>
                         )}
                       </div>
+
+                      {(repliesByRoot.get(comment.id)?.length || replyTarget?.rootId === comment.id) && (
+                        <div className="mt-3 space-y-2.5 border-l-2 border-dusty-border/70 pl-3 sm:ml-[52px]">
+                          {(repliesByRoot.get(comment.id) ?? []).map((reply) => renderReply(reply))}
+                          {replyTarget?.rootId === comment.id && renderReplyForm()}
+                        </div>
+                      )}
                     </li>
                   );
                 })}

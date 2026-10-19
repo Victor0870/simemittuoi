@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await ctx.supabase
       .from(CDILV_TABLE.albumPhotoComments)
       .select(
-        "id, photo_id, user_id, content, created_at, cdilv_profiles ( full_name, avatar_url, role, department, employee_code )",
+        "id, photo_id, user_id, content, created_at, parent_id, reply_to_user_id, cdilv_profiles!cdilv_album_photo_comments_user_id_fkey ( full_name, avatar_url, role, department, employee_code )",
       )
       .eq("photo_id", photoId)
       .order("created_at", { ascending: true });
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const comments = (data ?? []).map(mapPhotoComment);
-    const myCommentCount = comments.filter((c) => c.userId === ctx.user!.id).length;
+    const myCommentCount = comments.filter((c) => c.userId === ctx.user!.id && !c.parentId).length;
 
     return NextResponse.json({
       comments,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { photoId, content } = await request.json();
+    const { photoId, content, parentId } = await request.json();
     if (!photoId) {
       return NextResponse.json({ error: "Thiếu mã ảnh." }, { status: 400 });
     }
@@ -97,12 +97,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã bị xóa." }, { status: 404 });
     }
 
-    if (!ctx.canManage) {
+    let replyFields: { parent_id: string; reply_to_user_id: string } | null = null;
+    if (parentId) {
+      const { data: parent, error: parentErr } = await writer
+        .from(CDILV_TABLE.albumPhotoComments)
+        .select("id, photo_id, parent_id, user_id")
+        .eq("id", parentId)
+        .maybeSingle();
+      if (parentErr) throw parentErr;
+      if (!parent || parent.photo_id !== photoId) {
+        return NextResponse.json(
+          { error: "Bình luận được trả lời không tồn tại hoặc đã bị xóa." },
+          { status: 404 },
+        );
+      }
+      replyFields = { parent_id: parent.parent_id ?? parent.id, reply_to_user_id: parent.user_id };
+    }
+
+    if (!ctx.canManage && !replyFields) {
       const { count, error: countErr } = await writer
         .from(CDILV_TABLE.albumPhotoComments)
         .select("id", { count: "exact", head: true })
         .eq("photo_id", photoId)
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .is("parent_id", null);
       if (countErr) throw countErr;
 
       if ((count ?? 0) >= ALBUM_COMMENT_LIMIT) {
@@ -118,10 +136,14 @@ export async function POST(request: NextRequest) {
 
     const { data: inserted, error: insertErr } = await writer
       .from(CDILV_TABLE.albumPhotoComments)
-      .insert({ photo_id: photoId, user_id: userId, content: sanitizeCompanyNames(trimmed) })
-      .select("id, photo_id, user_id, content, created_at")
+      .insert({ photo_id: photoId, user_id: userId, content: sanitizeCompanyNames(trimmed), ...replyFields })
+      .select("id, photo_id, user_id, content, created_at, parent_id, reply_to_user_id")
       .single();
     if (insertErr) throw insertErr;
+
+    if (replyFields) {
+      return NextResponse.json({ success: true, pointsAwarded: 0, comment: inserted });
+    }
 
     let pointsAwarded = 0;
     const { data: awarded, error: rpcErr } = await writer.rpc(CDILV_RPC.awardAlbumCommentScore, {

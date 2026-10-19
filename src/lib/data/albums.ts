@@ -75,6 +75,9 @@ export type AlbumPhotoComment = {
   content: string;
   createdAt: string;
   timeAgo: string;
+  /** Bình luận gốc (null nếu đây là bình luận gốc). */
+  parentId: string | null;
+  replyToUserId: string | null;
 };
 
 type AlbumRow = {
@@ -150,6 +153,8 @@ export function mapPhotoComment(row: {
   user_id: string;
   content: string;
   created_at: string;
+  parent_id?: string | null;
+  reply_to_user_id?: string | null;
   cdilv_profiles?: unknown;
 }): AlbumPhotoComment {
   const prof = pickProfile(row.cdilv_profiles);
@@ -165,6 +170,8 @@ export function mapPhotoComment(row: {
     content: row.content,
     createdAt: row.created_at,
     timeAgo: formatTimeAgo(row.created_at),
+    parentId: row.parent_id ?? null,
+    replyToUserId: row.reply_to_user_id ?? null,
   };
 }
 

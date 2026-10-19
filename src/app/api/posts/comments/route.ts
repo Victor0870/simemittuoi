@@ -95,7 +95,9 @@ export async function GET(request: NextRequest) {
         user_id,
         content,
         created_at,
-        cdilv_profiles (
+        parent_id,
+        reply_to_user_id,
+        cdilv_profiles!cdilv_post_comments_user_id_fkey (
           id,
           full_name,
           avatar_url,
@@ -113,7 +115,7 @@ export async function GET(request: NextRequest) {
 
     if (user) {
       myCommentCount = (rawComments ?? []).filter(
-        (c: any) => c.user_id === user.id,
+        (c: any) => c.user_id === user.id && !c.parent_id,
       ).length;
     }
 
@@ -174,6 +176,8 @@ export async function GET(request: NextRequest) {
         authorCode: prof?.employee_code || null,
         content: row.content,
         createdAt: row.created_at,
+        parentId: row.parent_id ?? null,
+        replyToUserId: row.reply_to_user_id ?? null,
         reactions: {
           like: rInfo.like,
           heart: rInfo.heart,
@@ -235,7 +239,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { postId, content } = body;
+    const { postId, content, parentId } = body;
 
     if (!postId) {
       return NextResponse.json(
@@ -260,16 +264,33 @@ export async function POST(request: NextRequest) {
     }
 
     const isAdmin = me.role === "admin";
-
-    // Enforce 3 comments limit for regular union members
     const writer = createServiceClient();
 
-    if (!isAdmin) {
+    let replyFields: { parent_id: string; reply_to_user_id: string } | null = null;
+    if (parentId) {
+      const { data: parent, error: parentErr } = await writer
+        .from(CDILV_TABLE.postComments)
+        .select("id, post_id, parent_id, user_id")
+        .eq("id", parentId)
+        .maybeSingle();
+      if (parentErr) throw parentErr;
+      if (!parent || parent.post_id !== postId) {
+        return NextResponse.json(
+          { error: "Bình luận được trả lời không tồn tại hoặc đã bị xóa." },
+          { status: 404 },
+        );
+      }
+      replyFields = { parent_id: parent.parent_id ?? parent.id, reply_to_user_id: parent.user_id };
+    }
+
+    // Enforce 3 comments limit for regular union members (phản hồi không tính)
+    if (!isAdmin && !replyFields) {
       const { count, error: countErr } = await writer
         .from(CDILV_TABLE.postComments)
         .select("id", { count: "exact", head: true })
         .eq("post_id", postId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .is("parent_id", null);
 
       if (countErr) {
         throw countErr;
@@ -296,12 +317,18 @@ export async function POST(request: NextRequest) {
         post_id: postId,
         user_id: user.id,
         content: finalContent,
+        ...replyFields,
       })
       .select()
       .single();
 
     if (insertError) {
       throw insertError;
+    }
+
+    if (replyFields) {
+      revalidatePath(`/posts/${postId}`);
+      return NextResponse.json({ success: true, comment: newComment });
     }
 
     // Award +1 score point for union member via secure RPC

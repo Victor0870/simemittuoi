@@ -151,11 +151,11 @@ export function LifeEventDetailView({ detail, userId, isOwner, isOffice, canHand
 
       <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-title-md font-bold text-[#173A67]">Giấy tờ ({detail.attachments.length})</h2>
+          <h2 className="text-title-md font-bold text-[#173A67]">Ảnh đính kèm ({detail.attachments.length})</h2>
           {canAddFiles ? (
             <label className="inline-flex cursor-pointer items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]">
               <MaterialIcon className="text-[18px]" name={busy === "upload" ? "progress_activity" : "add_a_photo"} />
-              {busy === "upload" ? "Đang tải..." : "Bổ sung"}
+              {busy === "upload" ? "Đang tải..." : "Thêm ảnh"}
               <input
                 multiple
                 accept="image/*,application/pdf"
@@ -172,7 +172,7 @@ export function LifeEventDetailView({ detail, userId, isOwner, isOffice, canHand
         </div>
         {detail.attachments.length === 0 ? (
           <p className="text-sm text-on-surface-variant">
-            Chưa có giấy tờ.{type ? ` Gợi ý: ${type.attachmentHint.toLowerCase()}.` : ""}
+            Chưa có ảnh đính kèm.{type ? ` Gợi ý: ${type.attachmentHint.toLowerCase()}.` : ""}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
