@@ -28,6 +28,8 @@ export const PERMISSIONS = {
   postsManage: "posts.manage",
   pollsManage: "polls.manage",
   giftsChildren: "gifts.children",
+  lifeEventsView: "life_events.view",
+  lifeEventsHandle: "life_events.handle",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -119,6 +121,25 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Lọc, in & xuất danh sách",
         description:
           "Lọc con của đoàn viên dưới độ tuổi quy định tại mốc ngày chọn (họ tên, ngày sinh, giới tính cháu; họ tên, mã NV, bộ phận của bố/mẹ), in và xuất Excel.",
+      },
+    ],
+  },
+  {
+    key: "life_events",
+    name: "Tin báo của đoàn viên",
+    icon: "campaign",
+    permissions: [
+      {
+        code: PERMISSIONS.lifeEventsView,
+        name: "Xem tin báo",
+        description:
+          "Xem mọi tin vui / tin buồn / tin ốm đoàn viên gửi lên, kèm ảnh giấy tờ, và nhận thông báo khi có tin mới.",
+      },
+      {
+        code: PERMISSIONS.lifeEventsHandle,
+        name: "Tiếp nhận & ghi chú",
+        description: "Bấm “Tiếp nhận” (đoàn viên được báo lại), ghi chú xử lý, bổ sung ảnh giấy tờ.",
+        requires: [PERMISSIONS.lifeEventsView],
       },
     ],
   },
@@ -235,6 +256,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Một nút lọc con đoàn viên dưới 16 tuổi theo mốc ngày, in danh sách ký nhận và xuất Excel.",
     icon: "redeem",
     permission: PERMISSIONS.giftsChildren,
+  },
+  {
+    href: "/office/life-events",
+    title: "Tin báo của đoàn viên",
+    description: "Tin vui, tin buồn, tin ốm đoàn viên gửi lên: xem giấy tờ, tiếp nhận, ghi chú.",
+    icon: "campaign",
+    permission: PERMISSIONS.lifeEventsView,
   },
   {
     href: "/albums",

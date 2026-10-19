@@ -17,6 +17,7 @@ export const NAV_ITEMS = [
 
 /** Chỉ hiển thị cho thành viên đã được phê duyệt. */
 export const MEMBER_NAV_ITEMS = [
+  { href: "/life-events", label: "Báo tin", shortLabel: "Báo tin", icon: "campaign" },
   { href: "/albums", label: "Album ảnh", shortLabel: "Album", icon: "photo_library" },
   { href: "/quiz", label: "Trắc nghiệm", shortLabel: "Trắc nghiệm", icon: "quiz" },
 ] as const;

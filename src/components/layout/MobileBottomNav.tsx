@@ -13,7 +13,7 @@ type MobileBottomNavProps = {
 
 type NavItem = { href: string; label: string; icon: string };
 
-const SECTION_PREFIXES = ["/admin", "/office", "/feedback", "/albums"];
+const SECTION_PREFIXES = ["/admin", "/office", "/feedback", "/albums", "/life-events"];
 
 export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
   const pathname = usePathname();

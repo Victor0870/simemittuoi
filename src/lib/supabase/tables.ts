@@ -39,6 +39,9 @@ export const CDILV_TABLE = {
   memberIdentity: "cdilv_member_identity",
   memberChangeLogs: "cdilv_member_change_logs",
   sensitiveAccessLogs: "cdilv_sensitive_access_logs",
+  lifeEvents: "cdilv_life_events",
+  lifeEventAttachments: "cdilv_life_event_attachments",
+  lifeEventLogs: "cdilv_life_event_logs",
 } as const;
 
 export const CDILV_RPC = {
@@ -51,12 +54,16 @@ export const CDILV_RPC = {
   resyncAlbumPhotoScores: "cdilv_resync_album_photo_scores",
   hasPermission: "cdilv_has_permission",
   myPermissions: "cdilv_my_permissions",
+  lifeEventTransition: "cdilv_life_event_transition",
+  lifeEventLog: "cdilv_life_event_log",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */
 export const CDILV_STORAGE = {
   avatars: "cdilv-avatars",
   albums: "cdilv-albums",
+  /** Riêng tư – chỉ mở qua signed URL. */
+  lifeEvents: "cdilv-life-events",
 } as const;
 
 /** Gắn vào auth.signUp options.data để trigger BizMate bỏ qua user CDILV. */

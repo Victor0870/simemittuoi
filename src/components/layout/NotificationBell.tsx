@@ -17,6 +17,8 @@ export type NotificationItem = {
     | "album_new_photos"
     | "album_comment"
     | "photo_reaction"
+    | "life_event_new"
+    | "life_event_ack"
     | "system"
     | string;
   title: string;
@@ -161,6 +163,16 @@ export function NotificationBell() {
         return {
           name: "favorite",
           bg: "bg-rose-100 text-rose-700",
+        };
+      case "life_event_new":
+        return {
+          name: "campaign",
+          bg: "bg-amber-100 text-amber-800",
+        };
+      case "life_event_ack":
+        return {
+          name: "task_alt",
+          bg: "bg-emerald-100 text-emerald-800",
         };
       default:
         return {
