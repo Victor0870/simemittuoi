@@ -1,274 +1,55 @@
-"use client";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { AccountInfo } from "@/components/account/AccountInfo";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { createServiceClient } from "@/lib/supabase/service";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { PROFILE_ITEM_COUNT, PROFILE_POINTS_PER_ITEM } from "@/lib/members/profile-shared";
-import { createClient } from "@/lib/supabase/client";
-import {
-  CDILV_RPC,
-  CDILV_STORAGE,
-  CDILV_TABLE,
-} from "@/lib/supabase/tables";
-
-type AvatarRpcResult = {
-  ok: boolean;
-  message?: string;
-  awarded?: boolean;
-  points?: number;
-  avatar_url?: string;
+export const metadata: Metadata = {
+  title: "Thông tin tài khoản | CDILV.VN",
 };
 
-export default function SettingsPage() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [hasAvatarBonus, setHasAvatarBonus] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+export const dynamic = "force-dynamic";
 
-  useEffect(() => {
-    let cancelled = false;
+export default async function SettingsPage() {
+  const access = await getCurrentAccess();
+  if (!access) redirect("/login?next=/settings");
 
-    async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+  const db = createServiceClient();
+  const [{ data: profile }, { data: bonus }, { data: board }] = await Promise.all([
+    db
+      .from(CDILV_TABLE.profiles)
+      .select("full_name, employee_code, department, avatar_url, total_score, rank")
+      .eq("id", access.userId)
+      .maybeSingle(),
+    db
+      .from(CDILV_TABLE.scoreEvents)
+      .select("id")
+      .eq("user_id", access.userId)
+      .eq("award_label", "avatar_bonus")
+      .maybeSingle(),
+    db.from(CDILV_TABLE.leaderboard).select("total_score, rank").eq("id", access.userId).maybeSingle(),
+  ]);
 
-      if (!user) {
-        if (!cancelled) setLoading(false);
-        return;
-      }
-
-      const [{ data: profile }, { data: bonus }] = await Promise.all([
-        supabase
-          .from(CDILV_TABLE.profiles)
-          .select("full_name, avatar_url, role")
-          .eq("id", user.id)
-          .maybeSingle(),
-        supabase
-          .from(CDILV_TABLE.scoreEvents)
-          .select("id")
-          .eq("user_id", user.id)
-          .eq("award_label", "avatar_bonus")
-          .maybeSingle(),
-      ]);
-
-      if (cancelled) return;
-
-      setUserId(user.id);
-      setFullName(profile?.full_name ?? "");
-      setAvatarUrl(profile?.avatar_url ?? null);
-      setIsAdmin(profile?.role === "admin");
-      setHasAvatarBonus(Boolean(bonus?.id));
-      setLoading(false);
-    }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !userId) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Vui lòng chọn file ảnh (JPG, PNG, WEBP, GIF).");
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setError("Ảnh tối đa 2MB.");
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    setMessage(null);
-
-    const supabase = createClient();
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `${userId}/avatar.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from(CDILV_STORAGE.avatars)
-      .upload(path, file, { upsert: true, contentType: file.type });
-
-    if (uploadError) {
-      setSaving(false);
-      setError(uploadError.message);
-      return;
-    }
-
-    const { data: pub } = supabase.storage
-      .from(CDILV_STORAGE.avatars)
-      .getPublicUrl(path);
-    const publicUrl = `${pub.publicUrl}?t=${Date.now()}`;
-
-    const { data, error: rpcError } = await supabase.rpc(
-      CDILV_RPC.updateMyAvatar,
-      {
-        p_avatar_url: publicUrl,
-      },
-    );
-
-    setSaving(false);
-
-    if (rpcError) {
-      setError(rpcError.message);
-      return;
-    }
-
-    const result = data as AvatarRpcResult;
-    if (!result?.ok) {
-      setError(result?.message ?? "Không cập nhật được ảnh đại diện.");
-      return;
-    }
-
-    setAvatarUrl(result.avatar_url ?? publicUrl);
-    if (result.awarded) {
-      setHasAvatarBonus(true);
-      setMessage("Đã cập nhật ảnh đại diện và nhận +10 điểm thưởng.");
-    } else {
-      setMessage("Đã cập nhật ảnh đại diện.");
-    }
-  }
-
-  if (loading) {
-    return <div className="h-40 animate-pulse rounded-3xl bg-surface-container" />;
-  }
-
-  if (!userId) {
-    return (
-      <div className="mx-auto max-w-lg rounded-3xl border border-outline-variant bg-surface-container-lowest p-8 text-center">
-        <h1 className="mb-2 text-headline-md text-[#173A67]">Cài đặt</h1>
-        <p className="mb-6 text-on-surface-variant">
-          Đăng nhập để cập nhật ảnh đại diện và nhận điểm thưởng.
-        </p>
-        <Link
-          className="inline-flex rounded-xl bg-tertiary px-5 py-3 font-bold text-on-tertiary"
-          href="/login"
-        >
-          Đăng nhập
-        </Link>
-      </div>
-    );
-  }
+  const score = Number(board?.total_score ?? profile?.total_score ?? 0) || 0;
+  const rank = Number(board?.rank ?? profile?.rank ?? 0) || 0;
+  const levels = [
+    ...(access.isAdmin ? ["Quản trị viên"] : []),
+    ...access.roles.map((r) => r.name),
+  ];
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
-      {isAdmin ? (
-        <Link
-          href="/admin"
-          className="flex items-center justify-between rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-900 transition hover:bg-amber-100 shadow-xs"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-xs">
-              <MaterialIcon className="text-[22px]" name="shield" />
-            </div>
-            <div>
-              <p className="font-bold text-sm sm:text-base">Trung tâm Quản trị (Admin)</p>
-              <p className="text-xs text-amber-800">
-                Quản lý vote, duyệt thành viên và cộng điểm thi đua
-              </p>
-            </div>
-          </div>
-          <MaterialIcon className="text-[20px] text-amber-700" name="arrow_forward" />
-        </Link>
-      ) : null}
-
-      <Link
-        href="/profile"
-        className="flex items-center justify-between rounded-2xl border border-[#173A67]/30 bg-[#D9F2EC] p-4 text-[#173A67] shadow-xs transition hover:bg-[#c6eae1]"
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#173A67] text-white shadow-xs">
-            <MaterialIcon className="text-[22px]" name="contact_page" />
-          </div>
-          <div>
-            <p className="text-sm font-bold sm:text-base">Hồ sơ đoàn viên</p>
-            <p className="text-xs text-[#27496D]">
-              Ngày sinh, CCCD, địa chỉ, ngân hàng, thông tin con – phục vụ giấy tờ công đoàn
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-[#1B7F5C]">
-              +{PROFILE_POINTS_PER_ITEM} điểm thi đua cho mỗi mục hoàn thành (tối đa{" "}
-              {PROFILE_POINTS_PER_ITEM * PROFILE_ITEM_COUNT} điểm)
-            </p>
-          </div>
-        </div>
-        <MaterialIcon className="text-[20px]" name="arrow_forward" />
-      </Link>
-
-      <div>
-        <h1 className="text-headline-xl font-extrabold text-[#173A67]">Cài đặt</h1>
-        <p className="mt-2 text-body-md text-on-surface-variant">
-          Cập nhật ảnh đại diện để nhận thưởng điểm (một lần).
-        </p>
-      </div>
-
-      <section className="tonal-elevation-1 rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 md:p-8">
-        <div className="mb-6 flex items-center gap-4">
-          <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-4 border-primary-fixed bg-primary-fixed text-3xl font-extrabold text-[#173A67]">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                alt={fullName || "Avatar"}
-                className="h-full w-full object-cover"
-                src={avatarUrl}
-              />
-            ) : (
-              (fullName || "?").slice(0, 1)
-            )}
-          </div>
-          <div>
-            <p className="font-bold text-on-surface">{fullName || "Đoàn viên"}</p>
-            <p className="text-sm text-on-surface-variant">
-              {hasAvatarBonus
-                ? "Bạn đã nhận thưởng cập nhật avatar."
-                : "Lần đầu cập nhật avatar: +10 điểm."}
-            </p>
-          </div>
-        </div>
-
-        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-outline-variant bg-surface-container-low px-4 py-8 transition-colors hover:border-tertiary hover:bg-tertiary-container/40">
-          <MaterialIcon className="text-3xl text-[#173A67]" name="add_a_photo" />
-          <span className="font-bold text-on-surface">
-            {saving ? "Đang tải lên..." : "Chọn ảnh đại diện"}
-          </span>
-          <span className="text-xs text-on-surface-variant">
-            JPG, PNG, WEBP, GIF · tối đa 2MB
-          </span>
-          <input
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            disabled={saving}
-            type="file"
-            onChange={handleAvatarChange}
-          />
-        </label>
-
-        {error ? (
-          <p className="mt-4 rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container">
-            {error}
-          </p>
-        ) : null}
-        {message ? (
-          <p className="mt-4 rounded-xl bg-tertiary-container px-4 py-3 text-sm text-on-tertiary-container">
-            {message}
-          </p>
-        ) : null}
-      </section>
-
-      <p className="text-sm text-on-surface-variant">
-        Thưởng đăng ký tài khoản (+10) được cộng tự động khi bạn đăng ký thành
-        công.
-      </p>
-    </div>
+    <AccountInfo
+      avatarUrl={profile?.avatar_url ?? null}
+      department={profile?.department ?? null}
+      employeeCode={profile?.employee_code ?? null}
+      fullName={profile?.full_name ?? ""}
+      hasAvatarBonus={Boolean(bonus?.id)}
+      isApproved={access.isApproved}
+      levels={levels.length ? levels : [access.isApproved ? "Đoàn viên" : "Chờ phê duyệt"]}
+      rank={rank}
+      score={score}
+      userId={access.userId}
+    />
   );
 }

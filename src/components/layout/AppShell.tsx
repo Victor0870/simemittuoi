@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { isAccountPath } from "@/components/account/AccountShell";
 import { ApprovalGate } from "@/components/auth/ApprovalGate";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Footer } from "@/components/layout/Footer";
@@ -11,13 +12,13 @@ import { QuizEventPopup } from "@/components/quiz/QuizEventPopup";
 import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "@/lib/constants";
 
 function resolveActiveHref(pathname: string): string {
+  if (isAccountPath(pathname)) return "/settings";
   const candidates = [
     ...NAV_ITEMS.map((item) => item.href),
     ...MOBILE_NAV_ITEMS.map((item) => item.href),
     "/posts",
     "/polls",
     "/albums",
-    "/life-events",
     "/quiz",
     "/settings",
     "/score-history",

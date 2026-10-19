@@ -19,10 +19,10 @@ export default async function LifeEventsPage() {
   const items = await loadLifeEventList(createServiceClient(), access.userId, 100);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 pb-10">
+    <div className="max-w-4xl space-y-6 pb-10">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-headline-md font-extrabold text-[#173A67]">Báo tin cho Công đoàn</h1>
+          <h1 className="text-headline-md font-extrabold text-[#173A67]">Báo tin</h1>
           <p className="text-sm text-on-surface-variant">
             Gia đình có tin vui, tin buồn hay ốm đau — bấm một nút để báo, kèm ảnh giấy tờ. Ban chấp hành sẽ tiếp nhận và
             báo lại cho bạn.

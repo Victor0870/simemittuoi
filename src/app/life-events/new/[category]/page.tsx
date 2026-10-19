@@ -16,7 +16,7 @@ export default async function NewLifeEventPage({ params }: PageProps) {
   if (!access.isApproved) redirect("/pending");
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-10">
+    <div className="max-w-2xl space-y-4 pb-10">
       <Link
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
         href="/life-events"

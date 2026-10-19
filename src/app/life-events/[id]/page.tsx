@@ -32,7 +32,7 @@ export default async function LifeEventDetailPage({ params, searchParams }: Page
   const visible = isOffice ? detail : { ...detail, logs: detail.logs.filter((l) => l.action !== "note") };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 pb-10">
+    <div className="max-w-3xl space-y-4 pb-10">
       <Link
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
         href={isOffice && !isOwner ? "/office/life-events" : "/life-events"}

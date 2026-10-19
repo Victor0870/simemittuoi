@@ -1,0 +1,187 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { type ChangeEvent, useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { createClient } from "@/lib/supabase/client";
+import { CDILV_RPC, CDILV_STORAGE } from "@/lib/supabase/tables";
+
+type AvatarRpcResult = {
+  ok: boolean;
+  message?: string;
+  awarded?: boolean;
+  points?: number;
+  avatar_url?: string;
+};
+
+type Props = {
+  userId: string;
+  fullName: string;
+  employeeCode: string | null;
+  department: string | null;
+  avatarUrl: string | null;
+  hasAvatarBonus: boolean;
+  levels: string[];
+  score: number;
+  rank: number;
+  isApproved: boolean;
+};
+
+export function AccountInfo(props: Props) {
+  const router = useRouter();
+  const { refreshProfile } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState(props.avatarUrl);
+  const [hasAvatarBonus, setHasAvatarBonus] = useState(props.hasAvatarBonus);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Vui lòng chọn file ảnh (JPG, PNG, WEBP, GIF).");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Ảnh tối đa 2MB.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+
+    const supabase = createClient();
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${props.userId}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(CDILV_STORAGE.avatars)
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadError) {
+      setSaving(false);
+      setError(uploadError.message);
+      return;
+    }
+
+    const { data: pub } = supabase.storage.from(CDILV_STORAGE.avatars).getPublicUrl(path);
+    const publicUrl = `${pub.publicUrl}?t=${Date.now()}`;
+    const { data, error: rpcError } = await supabase.rpc(CDILV_RPC.updateMyAvatar, { p_avatar_url: publicUrl });
+    setSaving(false);
+
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    const result = data as AvatarRpcResult;
+    if (!result?.ok) {
+      setError(result?.message ?? "Không cập nhật được ảnh đại diện.");
+      return;
+    }
+
+    setAvatarUrl(result.avatar_url ?? publicUrl);
+    if (result.awarded) {
+      setHasAvatarBonus(true);
+      setMessage("Đã cập nhật ảnh đại diện và nhận +10 điểm thưởng.");
+    } else {
+      setMessage("Đã cập nhật ảnh đại diện.");
+    }
+    void refreshProfile();
+    router.refresh();
+  }
+
+  const name = props.fullName || "Đoàn viên";
+
+  return (
+    <div className="space-y-5 pb-10">
+      <h1 className="text-headline-md font-extrabold text-[#173A67]">Thông tin tài khoản</h1>
+
+      <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 sm:p-6">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+          <label className="group relative h-24 w-24 shrink-0 cursor-pointer" title="Đổi ảnh đại diện">
+            <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-4 border-primary-fixed bg-primary-fixed text-3xl font-extrabold text-[#173A67]">
+              {avatarUrl ? (
+                <img alt={name} className="h-full w-full object-cover" src={avatarUrl} />
+              ) : (
+                name.slice(0, 1)
+              )}
+            </span>
+            <span className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#173A67] text-white shadow-md transition group-hover:scale-110">
+              <MaterialIcon className="text-[18px]" name={saving ? "progress_activity" : "photo_camera"} />
+            </span>
+            <input
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              disabled={saving}
+              type="file"
+              onChange={handleAvatarChange}
+            />
+          </label>
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <p className="text-xl font-extrabold text-[#173A67]">{name}</p>
+            <p className="text-sm text-on-surface-variant">
+              {[props.employeeCode ? `Mã NV ${props.employeeCode}` : null, props.department]
+                .filter(Boolean)
+                .join(" · ") || "Chưa có mã nhân viên"}
+            </p>
+            <div className="flex flex-wrap justify-center gap-1.5 sm:justify-start">
+              {props.levels.map((l) => (
+                <span
+                  key={l}
+                  className="inline-flex items-center gap-1 rounded-full bg-[#D9F2EC] px-2.5 py-0.5 text-xs font-bold text-[#173A67]"
+                >
+                  <MaterialIcon className="text-[14px]" name="military_tech" />
+                  {l}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+        <p className="mt-4 text-xs text-on-surface-variant">
+          Bấm vào ảnh để đổi ảnh đại diện (JPG, PNG, WEBP, GIF · tối đa 2MB).{" "}
+          {hasAvatarBonus ? "Bạn đã nhận thưởng cập nhật ảnh đại diện." : "Lần đầu cập nhật: +10 điểm."}
+        </p>
+        {error ? (
+          <p className="mt-3 rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container">{error}</p>
+        ) : null}
+        {message ? (
+          <p className="mt-3 rounded-xl bg-tertiary-container px-4 py-3 text-sm text-on-tertiary-container">{message}</p>
+        ) : null}
+      </section>
+
+      {props.isApproved ? (
+        <section className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+            <p className="flex items-center gap-1 text-xs font-semibold text-on-surface-variant">
+              <MaterialIcon className="text-[16px]" name="stars" />
+              Điểm thi đua
+            </p>
+            <p className="text-headline-md font-extrabold text-[#173A67]">{props.score.toLocaleString("vi-VN")}</p>
+            <Link className="text-xs font-semibold text-primary hover:underline" href="/score-history">
+              Xem lịch sử điểm →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+            <p className="flex items-center gap-1 text-xs font-semibold text-on-surface-variant">
+              <MaterialIcon className="text-[16px]" name="leaderboard" />
+              Xếp hạng
+            </p>
+            <p className="text-headline-md font-extrabold text-[#173A67]">{props.rank > 0 ? `#${props.rank}` : "—"}</p>
+            <Link className="text-xs font-semibold text-primary hover:underline" href="/leaderboard">
+              Xem bảng xếp hạng →
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      <p className="text-sm text-on-surface-variant">
+        Thưởng đăng ký tài khoản (+10) được cộng tự động khi bạn đăng ký thành công.
+      </p>
+    </div>
+  );
+}
