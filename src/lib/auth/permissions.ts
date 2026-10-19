@@ -133,7 +133,7 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         code: PERMISSIONS.lifeEventsView,
         name: "Xem tin báo",
         description:
-          "Xem mọi tin vui / tin buồn / tin ốm đoàn viên gửi lên, kèm ảnh giấy tờ, và nhận thông báo khi có tin mới.",
+          "Xem mọi tin vui / tin ốm / tin khó khăn đoàn viên gửi lên, kèm ảnh giấy tờ, và nhận thông báo khi có tin mới.",
       },
       {
         code: PERMISSIONS.lifeEventsHandle,
@@ -260,7 +260,7 @@ export const OFFICE_TOOLS: OfficeTool[] = [
   {
     href: "/office/life-events",
     title: "Tin báo của đoàn viên",
-    description: "Tin vui, tin buồn, tin ốm đoàn viên gửi lên: xem giấy tờ, tiếp nhận, ghi chú.",
+    description: "Tin vui, tin ốm, khó khăn đoàn viên gửi lên: xem giấy tờ, tiếp nhận, ghi chú.",
     icon: "campaign",
     permission: PERMISSIONS.lifeEventsView,
   },

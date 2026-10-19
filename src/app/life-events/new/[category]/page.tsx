@@ -3,13 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { LifeEventForm } from "@/components/life-events/LifeEventForm";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { isLifeEventCategory, todayInVietnam } from "@/lib/life-events/registry";
+import { isMemberSubmittableCategory, todayInVietnam } from "@/lib/life-events/registry";
 
 type PageProps = { params: Promise<{ category: string }> };
 
 export default async function NewLifeEventPage({ params }: PageProps) {
   const { category } = await params;
-  if (!isLifeEventCategory(category)) notFound();
+  if (!isMemberSubmittableCategory(category)) notFound();
 
   const access = await getCurrentAccess();
   if (!access) redirect(`/login?next=/life-events/new/${category}`);

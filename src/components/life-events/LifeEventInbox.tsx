@@ -105,7 +105,7 @@ export function LifeEventInbox({ items }: Props) {
           onChange={(e) => setCategory(e.target.value as LifeEventCategory | "all")}
         >
           <option value="all">Mọi nhóm tin</option>
-          {LIFE_EVENT_CATEGORIES.map((c) => (
+          {LIFE_EVENT_CATEGORIES.filter((c) => c.memberSubmittable || items.some((i) => i.category === c.key)).map((c) => (
             <option key={c.key} value={c.key}>
               {c.short}
             </option>

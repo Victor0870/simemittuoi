@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { parseLifeEventInput, todayInVietnam } from "@/lib/life-events/registry";
+import { isMemberSubmittableCategory, parseLifeEventInput, todayInVietnam } from "@/lib/life-events/registry";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
     if (!body) return NextResponse.json({ error: "Dữ liệu không hợp lệ." }, { status: 400 });
     const parsed = parseLifeEventInput(body, todayInVietnam());
     if (!parsed.ok) return NextResponse.json({ error: parsed.errors.join(" ") }, { status: 400 });
+    if (!isMemberSubmittableCategory(parsed.value.category)) {
+      return NextResponse.json({ error: "Nhóm tin này không nhận báo trực tuyến." }, { status: 400 });
+    }
 
     const db = createServiceClient();
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();

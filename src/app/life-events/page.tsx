@@ -4,7 +4,7 @@ import { CategoryBadge, StatusBadge } from "@/components/life-events/LifeEventBa
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { formatDateTimeVi } from "@/lib/data/albums";
-import { LIFE_EVENT_CATEGORIES, TYPE_BY_CODE, describeSubject } from "@/lib/life-events/registry";
+import { MEMBER_LIFE_EVENT_CATEGORIES, TYPE_BY_CODE, describeSubject } from "@/lib/life-events/registry";
 import { canViewAllLifeEvents, loadLifeEventList } from "@/lib/life-events/server";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -24,8 +24,8 @@ export default async function LifeEventsPage() {
         <div>
           <h1 className="text-headline-md font-extrabold text-[#173A67]">Báo tin</h1>
           <p className="text-sm text-on-surface-variant">
-            Gia đình có tin vui, tin buồn hay ốm đau — bấm một nút để báo, kèm ảnh giấy tờ. Ban chấp hành sẽ tiếp nhận và
-            báo lại cho bạn.
+            Gia đình có tin vui, ốm đau hay khó khăn — bấm một nút để báo, kèm ảnh giấy tờ. Ban chấp hành sẽ tiếp nhận
+            và báo lại cho bạn.
           </p>
         </div>
         {canViewAllLifeEvents(access) ? (
@@ -40,7 +40,7 @@ export default async function LifeEventsPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {LIFE_EVENT_CATEGORIES.map((c) => (
+        {MEMBER_LIFE_EVENT_CATEGORIES.map((c) => (
           <Link
             key={c.key}
             className={`group flex items-center gap-4 rounded-2xl border-2 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${c.tone}`}

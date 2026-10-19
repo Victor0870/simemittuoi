@@ -36,7 +36,7 @@ export const ACCOUNT_ITEMS: AccountItem[] = [
     href: "/life-events",
     label: "Báo tin",
     shortLabel: "Báo tin",
-    hint: "Tin vui, tin buồn, tin ốm",
+    hint: "Tin vui, tin ốm, khó khăn",
     icon: "campaign",
     memberOnly: true,
   },

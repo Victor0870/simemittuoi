@@ -35,6 +35,8 @@ export type CategoryDef = {
   hint: string;
   /** Lớp màu cho thẻ / nhãn. */
   tone: string;
+  /** Đoàn viên được tự báo trực tuyến (tin buồn do công đoàn nắm và xử lý trực tiếp). */
+  memberSubmittable: boolean;
 };
 
 export const LIFE_EVENT_CATEGORIES: CategoryDef[] = [
@@ -45,6 +47,7 @@ export const LIFE_EVENT_CATEGORIES: CategoryDef[] = [
     icon: "celebration",
     hint: "Kết hôn, sinh con…",
     tone: "bg-rose-50 text-rose-700 border-rose-200",
+    memberSubmittable: true,
   },
   {
     key: "sad",
@@ -53,6 +56,7 @@ export const LIFE_EVENT_CATEGORIES: CategoryDef[] = [
     icon: "local_florist",
     hint: "Hiếu: tứ thân phụ mẫu, vợ / chồng, con",
     tone: "bg-slate-100 text-slate-700 border-slate-300",
+    memberSubmittable: false,
   },
   {
     key: "sick",
@@ -61,6 +65,7 @@ export const LIFE_EVENT_CATEGORIES: CategoryDef[] = [
     icon: "medical_services",
     hint: "Ốm đau, nằm viện, tai nạn (kèm giấy ốm / giấy ra viện)",
     tone: "bg-sky-50 text-sky-700 border-sky-200",
+    memberSubmittable: true,
   },
   {
     key: "other",
@@ -69,8 +74,11 @@ export const LIFE_EVENT_CATEGORIES: CategoryDef[] = [
     icon: "campaign",
     hint: "Khó khăn đột xuất, thiên tai, hỏa hoạn…",
     tone: "bg-amber-50 text-amber-800 border-amber-200",
+    memberSubmittable: true,
   },
 ];
+
+export const MEMBER_LIFE_EVENT_CATEGORIES = LIFE_EVENT_CATEGORIES.filter((c) => c.memberSubmittable);
 
 export const CATEGORY_BY_KEY = Object.fromEntries(LIFE_EVENT_CATEGORIES.map((c) => [c.key, c])) as Record<
   LifeEventCategory,
@@ -186,6 +194,10 @@ export function typesOfCategory(category: LifeEventCategory): LifeEventTypeDef[]
 
 export function isLifeEventCategory(value: unknown): value is LifeEventCategory {
   return typeof value === "string" && value in CATEGORY_BY_KEY;
+}
+
+export function isMemberSubmittableCategory(value: unknown): value is LifeEventCategory {
+  return isLifeEventCategory(value) && CATEGORY_BY_KEY[value].memberSubmittable;
 }
 
 export const STATUS_LABEL: Record<LifeEventStatus, string> = {

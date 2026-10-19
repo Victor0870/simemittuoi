@@ -481,7 +481,7 @@ export default async function AdminDashboardPage() {
                   Hộp tin báo
                 </p>
                 <p className="text-xs text-on-surface-variant">
-                  Tin vui, tin buồn, tin ốm đoàn viên gửi lên: xem giấy tờ, tiếp nhận
+                  Tin vui, tin ốm, khó khăn đoàn viên gửi lên: xem giấy tờ, tiếp nhận
                 </p>
               </div>
             </div>

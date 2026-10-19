@@ -21,7 +21,7 @@ export default async function OfficeLifeEventsPage() {
         <div>
           <h1 className="text-headline-md font-extrabold text-[#173A67]">Hộp tin báo</h1>
           <p className="text-sm text-on-surface-variant">
-            Tin vui, tin buồn, tin ốm đoàn viên gửi lên. Bấm vào từng tin để xem giấy tờ và tiếp nhận.
+            Tin vui, tin ốm, khó khăn đoàn viên gửi lên. Bấm vào từng tin để xem giấy tờ và tiếp nhận.
           </p>
         </div>
         <Link
