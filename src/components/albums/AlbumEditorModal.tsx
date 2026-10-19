@@ -258,7 +258,8 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
                     </span>
                     <p className="mt-1.5 text-[11px] text-on-surface-variant">
                       Tối đa {maxPhotosPerMember} ảnh đầu tiên của mỗi người được cộng điểm (tối đa{" "}
-                      <strong>{maxPhotosPerMember * uploadPoints} điểm</strong>/người). Xóa ảnh sẽ thu hồi điểm.
+                      <strong>{maxPhotosPerMember * uploadPoints} điểm</strong>/người). Xóa ảnh sẽ thu hồi điểm. Đổi
+                      mức điểm sẽ áp dụng lại cho cả các ảnh đã đăng.
                     </p>
                   </div>
                 )}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAlbumMemberContext, parseAlbumSettings } from "@/lib/album-access";
 import { createServiceClient } from "@/lib/supabase/service";
-import { CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_RPC, CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
 
 async function requireAdmin() {
   const ctx = await getAlbumMemberContext();
@@ -81,9 +81,26 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
+    let message = "Đã cập nhật album.";
+    if (body.coverOnly !== true) {
+      const { data: resync, error: resyncError } = await writer.rpc(CDILV_RPC.resyncAlbumPhotoScores, {
+        p_album_id: id,
+      });
+      if (resyncError) {
+        console.error("[api/albums] resync scores error:", resyncError.message);
+      } else {
+        const { updated = 0, added = 0 } = (resync ?? {}) as { updated?: number; added?: number };
+        if (updated + added > 0) {
+          revalidatePath("/leaderboard");
+          revalidatePath("/");
+          message += ` Đã áp dụng điểm mới cho ${updated + added} ảnh đã đăng.`;
+        }
+      }
+    }
+
     revalidatePath("/albums");
     revalidatePath(`/albums/${id}`);
-    return NextResponse.json({ success: true, message: "Đã cập nhật album." });
+    return NextResponse.json({ success: true, message });
   } catch (err: any) {
     console.error("[api/albums] PATCH error:", err);
     return NextResponse.json(

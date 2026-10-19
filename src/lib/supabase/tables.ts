@@ -34,6 +34,11 @@ export const CDILV_TABLE = {
   rolePermissions: "cdilv_role_permissions",
   userRoles: "cdilv_user_roles",
   permissionLogs: "cdilv_permission_logs",
+  memberDetails: "cdilv_member_details",
+  memberChildren: "cdilv_member_children",
+  memberIdentity: "cdilv_member_identity",
+  memberChangeLogs: "cdilv_member_change_logs",
+  sensitiveAccessLogs: "cdilv_sensitive_access_logs",
 } as const;
 
 export const CDILV_RPC = {
@@ -43,6 +48,7 @@ export const CDILV_RPC = {
   refreshLeaderboardCache: "cdilv_refresh_leaderboard_cache",
   awardAlbumPhotoScore: "cdilv_award_album_photo_score",
   awardAlbumCommentScore: "cdilv_award_album_comment_score",
+  resyncAlbumPhotoScores: "cdilv_resync_album_photo_scores",
   hasPermission: "cdilv_has_permission",
   myPermissions: "cdilv_my_permissions",
 } as const;
