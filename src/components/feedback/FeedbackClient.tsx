@@ -194,7 +194,7 @@ export function FeedbackClient() {
   const repliedTotal = feedbacks.filter((f) => !!f.adminReply).length;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 pb-16">
+    <div className="max-w-4xl space-y-8 pb-16">
       {/* 1. Header trang */}
       <header className="rounded-3xl border border-dusty-border/80 bg-gradient-to-br from-[#173A67] via-[#1E4A7D] to-[#0E2849] p-6 text-white shadow-md sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

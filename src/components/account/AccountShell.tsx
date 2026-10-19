@@ -18,6 +18,7 @@ export const ACCOUNT_ITEMS: AccountItem[] = [
   { href: "/settings", label: "Thông tin tài khoản", hint: "Cấp bậc, ảnh đại diện, điểm số", icon: "manage_accounts" },
   { href: "/profile", label: "Thông tin cá nhân", hint: "Hồ sơ đoàn viên", icon: "contact_page", memberOnly: true },
   { href: "/life-events", label: "Báo tin", hint: "Tin vui, tin buồn, tin ốm", icon: "campaign", memberOnly: true },
+  { href: "/feedback", label: "Góp ý", hint: "Ý kiến, nguyện vọng", icon: "rate_review" },
 ];
 
 export function isAccountPath(pathname: string): boolean {

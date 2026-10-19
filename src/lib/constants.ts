@@ -11,7 +11,6 @@ export const NAV_ITEMS = [
   { href: "/posts", label: "Bài viết", icon: "article" },
   { href: "/polls", label: "Bình chọn", icon: "how_to_vote" },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: "leaderboard" },
-  { href: "/feedback", label: "Góp ý", icon: "rate_review" },
 ] as const;
 
 /** Chỉ hiển thị cho thành viên đã được phê duyệt. */
@@ -25,5 +24,4 @@ export const MOBILE_NAV_ITEMS = [
   { href: "/posts", label: "Bài viết", icon: "article" },
   { href: "/polls", label: "Bình chọn", icon: "how_to_vote" },
   { href: "/leaderboard", label: "Xếp hạng", icon: "leaderboard" },
-  { href: "/feedback", label: "Góp ý", icon: "rate_review" },
 ] as const;
