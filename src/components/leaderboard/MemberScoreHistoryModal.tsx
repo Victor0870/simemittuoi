@@ -118,7 +118,7 @@ export function MemberScoreHistoryModal({
   if (!isOpen || !member) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
@@ -127,7 +127,7 @@ export function MemberScoreHistoryModal({
 
       {/* Modal Dialog */}
       <div
-        className="relative z-10 w-full max-w-xl max-h-[90vh] flex flex-col rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative z-10 w-full max-w-xl max-h-[90dvh] flex flex-col rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
         role="dialog"
         aria-modal="true"
       >
@@ -149,7 +149,7 @@ export function MemberScoreHistoryModal({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 space-y-6">
           {isGuest ? (
             /* TRƯỜNG HỢP: KHÁCH CHƯA ĐĂNG NHẬP / CHƯA ĐĂNG KÝ */
             <div className="py-4 text-center space-y-5">

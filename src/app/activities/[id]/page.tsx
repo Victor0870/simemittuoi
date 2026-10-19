@@ -240,11 +240,6 @@ export default async function ActivityDetailPage({ params }: Props) {
                                   Bạn
                                 </span>
                               )}
-                              {participant.role === "admin" && (
-                                <span className="rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-bold text-amber-900 border border-amber-300">
-                                  Admin
-                                </span>
-                              )}
                             </div>
                             {/* Mobile only subline */}
                             <p className="text-[11px] text-on-surface-variant sm:hidden">

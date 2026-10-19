@@ -122,8 +122,8 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs animate-in fade-in duration-200 sm:p-5">
-      <div className="relative flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-dusty-border bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs animate-in fade-in duration-200 sm:p-5">
+      <div className="relative flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-dusty-border bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/60 to-white px-5 py-4 sm:px-6">
           <div className="flex items-center gap-2.5">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
@@ -148,7 +148,7 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto p-5 sm:p-6">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-5 sm:p-6">
           {errorMessage && (
             <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs font-semibold text-red-900 sm:text-sm">
               {errorMessage}

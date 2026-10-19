@@ -429,11 +429,6 @@ export function FeedbackClient() {
                           <span className="text-sm font-bold text-slate-900">
                             {fb.author.fullName}
                           </span>
-                          {fb.author.role === "admin" && (
-                            <span className="rounded-sm bg-amber-100 px-1.5 py-0.2 text-[10px] font-bold text-amber-900 border border-amber-300">
-                              BCH
-                            </span>
-                          )}
                         </div>
                         <div className="flex items-center gap-2 text-[11px] text-slate-500">
                           {fb.author.department && <span>{fb.author.department}</span>}
@@ -594,7 +589,7 @@ export function FeedbackClient() {
 
       {/* 4. MODAL POPUP QUÁ TẢI (THEO ĐÚNG YÊU CẦU: TỐI ĐA 5 Ý KIẾN CHƯA PHẢN HỒI) */}
       {showOverloadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-full max-w-md rounded-3xl border border-dusty-border bg-white p-6 sm:p-7 shadow-2xl text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 shadow-inner">
               <MaterialIcon className="text-[36px]" name="hourglass_top" />

@@ -147,8 +147,8 @@ export function ActivityEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-3xl bg-white shadow-2xl overflow-hidden border border-dusty-border">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-3xl bg-white shadow-2xl overflow-hidden border border-dusty-border">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-dusty-border/70 px-5 py-4 sm:px-6 bg-gradient-to-r from-dusty-light/60 to-white">
           <div className="flex items-center gap-2.5">
@@ -175,7 +175,7 @@ export function ActivityEditorModal({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6 space-y-4">
           {errorMessage && (
             <div className="rounded-xl border border-red-300 bg-red-50 p-3 text-xs sm:text-sm font-semibold text-red-900">
               {errorMessage}

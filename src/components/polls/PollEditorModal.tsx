@@ -351,8 +351,8 @@ export function PollEditorModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-6 overflow-y-auto">
-      <div className="relative w-full max-w-4xl max-h-[96vh] sm:max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-surface-container-lowest shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-xs p-2 sm:p-6 overflow-y-auto">
+      <div className="relative w-full max-w-4xl max-h-[96dvh] sm:max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl bg-surface-container-lowest shadow-2xl border border-outline-variant overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-outline-variant/70 bg-[#F4F9F8] px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-center gap-2.5 sm:gap-3">
@@ -442,7 +442,7 @@ export function PollEditorModal({
         ) : null}
 
         {/* Form Body */}
-        <form className="flex-1 overflow-y-auto p-6 space-y-6" onSubmit={handleSubmit}>
+        <form className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 space-y-6" onSubmit={handleSubmit}>
           {/* TAB 1: OPTIONS & MEMBERS & IMAGES */}
           {activeTab === "options" && (
             <div className="space-y-6">

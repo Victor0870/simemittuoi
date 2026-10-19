@@ -29,7 +29,7 @@ export function ImageLightboxModal({ imageUrl, title, onClose }: Props) {
   return (
     <div
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-xs transition-opacity animate-in fade-in"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 backdrop-blur-xs transition-opacity animate-in fade-in"
       role="dialog"
       onClick={onClose}
     >

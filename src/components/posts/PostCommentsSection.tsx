@@ -620,7 +620,6 @@ export function PostCommentsSection({
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-1 text-xs font-bold text-on-surface">
                 {reply.authorName}
-                {reply.authorRole === "admin" && <span className="text-[10px] text-amber-700">· Quản trị viên</span>}
                 {isAuthor && (
                   <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary">Bạn</span>
                 )}
@@ -1111,7 +1110,6 @@ export function PostCommentsSection({
                 {rootComments.map((comment) => {
                   const isAuthor = user && user.id === comment.userId;
                   const canDelete = isAdmin || isAuthor;
-                  const isCommentAdmin = comment.authorRole === "admin";
                   const initial = (comment.authorName || "?").slice(0, 1).toUpperCase();
                   const parsed = parseCommentContent(comment.content);
 
@@ -1147,12 +1145,7 @@ export function PostCommentsSection({
                                 {comment.authorName}
                               </span>
 
-                              {isCommentAdmin ? (
-                                <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.2 text-[10px] sm:text-label-xs font-bold text-amber-900">
-                                  <MaterialIcon className="text-[12px] text-amber-600" name="shield" />
-                                  Quản trị viên
-                                </span>
-                              ) : comment.authorDepartment ? (
+                              {comment.authorDepartment ? (
                                 <span className="inline-flex items-center rounded-full border border-dusty-border bg-dusty-light px-2 py-0.2 text-[10px] sm:text-label-xs font-medium text-on-surface-variant">
                                   {comment.authorDepartment}
                                 </span>
@@ -1414,7 +1407,7 @@ export function PostCommentsSection({
       {/* Modal Popup: Quy định bình luận (khi thành viên bình luận lần thứ 4 hoặc bấm xem quy định) */}
       {showRulePopup && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowRulePopup(false);
           }}

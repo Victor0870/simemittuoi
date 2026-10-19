@@ -354,9 +354,7 @@ export function PhotoViewerModal({
             <Avatar name={c.authorName} url={c.authorAvatar} size={c.parentId ? "h-6 w-6" : "h-7 w-7"} />
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-on-surface">
-                {c.authorName}
-                {c.authorRole === "admin" && <span className="ml-1 text-[10px] font-bold text-amber-700">· Admin</span>}
-              </p>
+                {c.authorName}              </p>
               <p className="text-[10px] text-on-surface-variant">{c.timeAgo}</p>
             </div>
           </div>
@@ -476,12 +474,6 @@ export function PhotoViewerModal({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="truncate text-sm font-bold text-on-surface">{photo.authorName}</span>
-                  {photo.authorRole === "admin" && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 text-[10px] font-bold text-amber-900">
-                      <MaterialIcon className="text-[11px] text-amber-600" name="shield" />
-                      Admin
-                    </span>
-                  )}
                   {isOwner && (
                     <span className="rounded-full bg-primary/10 px-1.5 text-[10px] font-bold text-primary">
                       Bạn
