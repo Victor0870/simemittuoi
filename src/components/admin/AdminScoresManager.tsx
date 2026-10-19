@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { readableAwardLabel } from "@/lib/score-labels";
-import { createClient } from "@/lib/supabase/client";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type AdminProfileItem = {
   id: string;
@@ -45,7 +43,6 @@ export type AdminWhitelistItem = {
 };
 
 type Props = {
-  currentAdminId: string;
   currentAdminName: string;
   profiles: AdminProfileItem[];
   activities: AdminActivityItem[];
@@ -64,7 +61,6 @@ const QUICK_POINTS = [
 ];
 
 export function AdminScoresManager({
-  currentAdminId,
   currentAdminName,
   profiles,
   activities,
@@ -192,38 +188,28 @@ export function AdminScoresManager({
     }
 
     setSubmitting(true);
-    const supabase = createClient();
 
     try {
-      if (selectedUser) {
-        // Cộng trực tiếp vào cdilv_score_events
-        const { error } = await supabase.from(CDILV_TABLE.scoreEvents).insert({
-          user_id: selectedUser.id,
-          employee_code: selectedUser.employee_code || null,
+      const res = await fetch("/api/admin/scores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser?.id ?? null,
+          employeeCode: selectedUser ? null : selectedWhitelist?.employee_code ?? null,
           points: Number(points),
           note: note.trim(),
-          award_label: awardLabel.trim() || null,
-          activity_id: selectedActivityId || null,
-          created_by: currentAdminId,
-        });
+          awardLabel: awardLabel.trim() || null,
+          activityId: selectedUser ? selectedActivityId || null : null,
+        }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || "Có lỗi xảy ra khi thực hiện cộng điểm.");
 
-        if (error) throw error;
-
+      if (selectedUser) {
         setSuccessMessage(
           `Đã cộng thành công ${points > 0 ? `+${points}` : points} điểm cho đoàn viên ${selectedUser.full_name}! Hệ thống đã tự động tính lại thứ hạng.`,
         );
       } else if (selectedWhitelist) {
-        // Cộng vào cdilv_employee_score_events cho nhân viên chưa có tài khoản
-        const { error } = await supabase.from(CDILV_TABLE.employeeScoreEvents).insert({
-          employee_code: selectedWhitelist.employee_code,
-          points: Number(points),
-          note: note.trim(),
-          award_label: awardLabel.trim() || null,
-          source: "admin_manual",
-        });
-
-        if (error) throw error;
-
         setSuccessMessage(
           `Đã cộng ${points > 0 ? `+${points}` : points} điểm cho nhân viên ${selectedWhitelist.full_name} (${selectedWhitelist.employee_code}). Điểm sẽ tự động chuyển khi người này đăng ký tài khoản!`,
         );
@@ -251,10 +237,10 @@ export function AdminScoresManager({
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    const supabase = createClient();
     try {
-      const { error } = await supabase.from(CDILV_TABLE.scoreEvents).delete().eq("id", eventId);
-      if (error) throw error;
+      const res = await fetch(`/api/admin/scores?id=${encodeURIComponent(eventId)}`, { method: "DELETE" });
+      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(json.error || "Không thể xóa lượt cộng điểm.");
 
       setSuccessMessage(`Đã thu hồi thành công lượt cộng điểm của ${userName}. Bảng xếp hạng đã được cập nhật.`);
       router.refresh();

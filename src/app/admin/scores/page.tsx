@@ -98,7 +98,6 @@ export default async function AdminScoresPage() {
   return (
     <AdminScoresManager
       activities={activities}
-      currentAdminId={me.id}
       currentAdminName={me.full_name || "Quản trị viên"}
       profiles={profiles}
       recentEvents={recentEvents}
