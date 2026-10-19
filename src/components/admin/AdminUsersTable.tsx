@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TempPasswordDialog, useTempPasswordReset } from "@/components/admin/TempPasswordReset";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -39,6 +40,7 @@ export function AdminUsersTable({ users }: Props) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const tempReset = useTempPasswordReset();
 
   // Bộ lọc các cột
   const [search, setSearch] = useState("");
@@ -197,11 +199,12 @@ export function AdminUsersTable({ users }: Props) {
 
   return (
     <div className="space-y-4">
-      {error ? (
+      {error || tempReset.error ? (
         <p className="text-sm text-error" role="alert">
-          {error}
+          {error || tempReset.error}
         </p>
       ) : null}
+      <TempPasswordDialog issued={tempReset.issued} onClose={tempReset.clearIssued} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -568,6 +571,16 @@ export function AdminUsersTable({ users }: Props) {
                         onClick={() => void updateStatus(row.id, "rejected")}
                       >
                         Từ chối
+                      </button>
+                      <button
+                        className="inline-flex items-center gap-1 rounded-lg border border-[#173A67]/40 px-2.5 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#173A67]/5 disabled:opacity-50"
+                        disabled={tempReset.busyUserId === row.id}
+                        title="Cấp mật khẩu tạm khi đoàn viên quên mật khẩu"
+                        type="button"
+                        onClick={() => void tempReset.issue(row.id, row.full_name)}
+                      >
+                        <MaterialIcon className="text-[15px]" name="key" />
+                        MK tạm
                       </button>
                     </div>
                   </td>

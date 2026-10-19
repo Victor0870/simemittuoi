@@ -185,6 +185,20 @@ export function AccountInfo(props: Props) {
         </section>
       ) : null}
 
+      <Link
+        className="flex items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition hover:border-[#173A67] sm:p-4"
+        href="/settings/password"
+      >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#D9F2EC] text-[#173A67]">
+          <MaterialIcon className="text-[22px]" name="password" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-[#173A67]">Đổi mật khẩu</span>
+          <span className="block text-xs text-on-surface-variant">Đặt mật khẩu mới cho tài khoản đăng nhập</span>
+        </span>
+        <MaterialIcon className="text-[20px] text-on-surface-variant" name="chevron_right" />
+      </Link>
+
       <p className="text-xs text-on-surface-variant sm:text-sm">
         Thưởng đăng ký tài khoản (+10) được cộng tự động khi bạn đăng ký thành công.
       </p>

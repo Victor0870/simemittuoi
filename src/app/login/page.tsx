@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { normalizeEmail, translateAuthError } from "@/lib/auth-errors";
+import { CHANGE_PASSWORD_PATH, mustChangePassword } from "@/lib/auth/password";
 import { BRAND } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -46,7 +47,9 @@ export default function LoginPage() {
     const userId = data.user?.id;
     let nextPath = "/";
 
-    if (userId) {
+    if (mustChangePassword(data.user?.app_metadata)) {
+      nextPath = CHANGE_PASSWORD_PATH;
+    } else if (userId) {
       const { data: profile } = await supabase
         .from(CDILV_TABLE.profiles)
         .select("approval_status, role")
@@ -104,12 +107,14 @@ export default function LoginPage() {
         </div>
 
         <div>
-          <label
-            className="mb-1 block text-label-md text-on-surface"
-            htmlFor="password"
-          >
-            Mật khẩu
-          </label>
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <label className="block text-label-md text-on-surface" htmlFor="password">
+              Mật khẩu
+            </label>
+            <Link className="text-sm font-semibold text-[#173A67] hover:underline" href="/forgot-password">
+              Quên mật khẩu?
+            </Link>
+          </div>
           <PasswordInput
             autoComplete="current-password"
             id="password"

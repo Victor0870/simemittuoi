@@ -20,6 +20,7 @@ export type NotificationItem = {
     | "photo_reaction"
     | "life_event_new"
     | "life_event_ack"
+    | "password_reset_request"
     | "system"
     | string;
   title: string;
@@ -179,6 +180,11 @@ export function NotificationBell() {
         return {
           name: "task_alt",
           bg: "bg-emerald-100 text-emerald-800",
+        };
+      case "password_reset_request":
+        return {
+          name: "lock_reset",
+          bg: "bg-amber-100 text-amber-800",
         };
       default:
         return {

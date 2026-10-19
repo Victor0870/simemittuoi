@@ -4,8 +4,13 @@ import {
   AdminUsersTable,
   type AdminUserRow,
 } from "@/components/admin/AdminUsersTable";
+import {
+  AdminPasswordResetRequests,
+  type PasswordResetRequestItem,
+} from "@/components/admin/AdminPasswordResetRequests";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export default async function AdminUsersPage() {
@@ -34,6 +39,35 @@ export default async function AdminUsersPage() {
       "id, full_name, employee_code, department, role, approval_status, created_at",
     )
     .order("created_at", { ascending: false });
+
+  const { data: resetRows } = await createServiceClient()
+    .from(CDILV_TABLE.passwordResetRequests)
+    .select("id, user_id, email, contact, email_sent, created_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  const profileById = new Map((users ?? []).map((u) => [u.id, u]));
+  const resetByUser = new Map<string, PasswordResetRequestItem>();
+  for (const r of resetRows ?? []) {
+    const existing = resetByUser.get(r.user_id);
+    if (existing) {
+      existing.requestCount += 1;
+      existing.contact ??= r.contact;
+      continue;
+    }
+    const profile = profileById.get(r.user_id);
+    resetByUser.set(r.user_id, {
+      id: r.id,
+      userId: r.user_id,
+      fullName: profile?.full_name || r.email,
+      employeeCode: profile?.employee_code ?? null,
+      department: profile?.department ?? null,
+      email: r.email,
+      contact: r.contact,
+      emailSent: r.email_sent,
+      createdAt: r.created_at,
+      requestCount: 1,
+    });
+  }
 
   return (
     <>
@@ -89,6 +123,8 @@ export default async function AdminUsersPage() {
       {error ? (
         <p className="mb-4 text-sm text-error">{error.message}</p>
       ) : null}
+
+      <AdminPasswordResetRequests requests={Array.from(resetByUser.values())} />
 
       <AdminUsersTable users={(users ?? []) as AdminUserRow[]} />
     </>

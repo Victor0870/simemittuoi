@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 import { findAdminRoutePermission } from "@/lib/auth/permissions";
+import { CHANGE_PASSWORD_PATH, mustChangePassword } from "@/lib/auth/password";
 
 function isMemberOnlyPath(pathname: string) {
   return (
@@ -81,6 +82,18 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(redirectUrl);
       }
       return supabaseResponse;
+    }
+
+    if (
+      mustChangePassword(claimsData?.claims?.app_metadata) &&
+      pathname !== CHANGE_PASSWORD_PATH &&
+      !pathname.startsWith("/api/") &&
+      !pathname.startsWith("/auth/")
+    ) {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = CHANGE_PASSWORD_PATH;
+      redirectUrl.search = "";
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Tối ưu 2: Chỉ truy vấn database profiles khi cần kiểm tra quyền Admin hoặc trang đặc biệt
