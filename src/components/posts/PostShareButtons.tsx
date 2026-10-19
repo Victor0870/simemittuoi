@@ -33,11 +33,13 @@ export function PostShareButtons({
   className = "",
 }: PostShareButtonsProps) {
   const [copied, setCopied] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [hasNativeShare, setHasNativeShare] = useState(false);
 
   useEffect(() => {
-    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-      setHasNativeShare(true);
+    if (typeof navigator !== "undefined") {
+      setHasNativeShare(typeof navigator.share === "function");
+      setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
     }
   }, []);
 
@@ -53,12 +55,7 @@ export function PostShareButtons({
     return `${BRAND.siteUrl}/posts/${postId}`;
   }
 
-  function handleShareFacebook(e?: React.MouseEvent) {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    const targetUrl = getShareUrl(true);
+  function openFacebookWebDialog(targetUrl: string) {
     const fbShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(targetUrl)}`;
 
     const width = 640;
@@ -77,6 +74,36 @@ export function PostShareButtons({
       "facebook-share-dialog",
       `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`,
     );
+  }
+
+  /**
+   * Chia sẻ bài viết:
+   * - Trên mobile có hỗ trợ Web Share API: Kích hoạt bảng chia sẻ hệ điều hành (iOS / Android)
+   *   -> Người dùng bấm chọn icon Facebook hoặc Zalo là nhảy THẲNG VÀO APP Facebook trên máy đã đăng nhập sẵn tài khoản.
+   * - Trên PC/desktop: Mở popup Web Facebook Dialog (vì người dùng PC hầu như đã đăng nhập sẵn trên browser).
+   */
+  async function handleShareFacebook(e?: React.MouseEvent) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const targetUrl = getShareUrl(true);
+
+    if (isMobile && hasNativeShare) {
+      try {
+        await navigator.share({
+          title: postTitle,
+          url: targetUrl,
+        });
+        return;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    openFacebookWebDialog(targetUrl);
   }
 
   async function handleCopyLink(e?: React.MouseEvent) {
@@ -103,7 +130,6 @@ export function PostShareButtons({
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
-      // Fallback prompt nếu clipboard API bị chặn
       window.prompt("Sao chép liên kết bên dưới:", targetUrl);
     }
   }
@@ -117,7 +143,6 @@ export function PostShareButtons({
     try {
       await navigator.share({
         title: postTitle,
-        text: postExcerpt || postTitle,
         url: targetUrl,
       });
     } catch (err: unknown) {
@@ -134,8 +159,8 @@ export function PostShareButtons({
         <button
           type="button"
           onClick={handleShareFacebook}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dusty-border/80 bg-white text-[#1877F2] transition-colors hover:border-[#1877F2]/50 hover:bg-[#1877F2]/10"
-          title="Chia sẻ lên Facebook"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-dusty-border/80 bg-white text-[#1877F2] transition-colors hover:border-[#1877F2]/50 hover:bg-[#1877F2]/10 cursor-pointer"
+          title={isMobile ? "Chia sẻ qua App Facebook / Zalo" : "Chia sẻ lên Facebook"}
           aria-label="Chia sẻ lên Facebook"
         >
           <FacebookIcon className="h-4 w-4" />
@@ -144,7 +169,7 @@ export function PostShareButtons({
         <button
           type="button"
           onClick={handleCopyLink}
-          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors ${
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition-colors cursor-pointer ${
             copied
               ? "border-emerald-500 bg-emerald-50 text-emerald-600"
               : "border-dusty-border/80 bg-white text-on-surface-variant hover:border-primary/50 hover:bg-dusty-light/60 hover:text-primary"
@@ -168,17 +193,17 @@ export function PostShareButtons({
         <button
           type="button"
           onClick={handleShareFacebook}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-[#1877F2] px-3 py-1.5 text-label-xs sm:text-label-sm font-bold text-white shadow-xs transition-all hover:bg-[#166fe5] hover:shadow-sm active:scale-95"
-          title="Chia sẻ bài viết lên Facebook"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[#1877F2] px-3 py-1.5 text-label-xs sm:text-label-sm font-bold text-white shadow-xs transition-all hover:bg-[#166fe5] hover:shadow-sm active:scale-95 cursor-pointer"
+          title={isMobile ? "Mở app Facebook / Zalo để chia sẻ" : "Chia sẻ bài viết lên Facebook"}
         >
           <FacebookIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          <span>Chia sẻ FB</span>
+          <span>{isMobile ? "Chia sẻ" : "Chia sẻ FB"}</span>
         </button>
 
         <button
           type="button"
           onClick={handleCopyLink}
-          className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-label-xs sm:text-label-sm font-semibold transition-all ${
+          className={`inline-flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-label-xs sm:text-label-sm font-semibold transition-all cursor-pointer ${
             copied
               ? "border-emerald-500 bg-emerald-50 text-emerald-700"
               : "border-dusty-border bg-white text-on-surface-variant hover:border-primary/40 hover:bg-dusty-light/50 hover:text-primary"
@@ -194,11 +219,11 @@ export function PostShareButtons({
           </span>
         </button>
 
-        {hasNativeShare ? (
+        {hasNativeShare && !isMobile ? (
           <button
             type="button"
             onClick={handleNativeShare}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-dusty-border bg-white text-on-surface-variant transition-colors hover:border-primary/40 hover:bg-dusty-light/50 hover:text-primary sm:hidden"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-dusty-border bg-white text-on-surface-variant transition-colors hover:border-primary/40 hover:bg-dusty-light/50 hover:text-primary cursor-pointer"
             title="Chia sẻ khác"
             aria-label="Chia sẻ khác"
           >
@@ -225,48 +250,54 @@ export function PostShareButtons({
             </h3>
           </div>
           <p className="text-xs sm:text-body-sm text-on-surface-variant">
-            Lan tỏa thông tin đến các đoàn viên, đồng nghiệp và mạng xã hội.
+            Lan tỏa thông tin đến các đoàn viên, đồng nghiệp trên mạng xã hội.
           </p>
+          {isMobile ? (
+            <p className="flex items-center gap-1 text-[11px] text-emerald-700 font-medium pt-0.5">
+              <MaterialIcon className="text-[14px]" name="check_circle" />
+              <span>Trên điện thoại: Tự động mở App Facebook/Zalo đã đăng nhập sẵn trên máy</span>
+            </p>
+          ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Nút Facebook Share chính */}
-          <button
-            type="button"
-            onClick={handleShareFacebook}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition-all hover:bg-[#166fe5] hover:shadow-md active:scale-95 cursor-pointer"
-          >
-            <FacebookIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Chia sẻ lên Facebook</span>
-          </button>
-
-          {/* Nút Sao chép liên kết */}
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-label-sm sm:text-label-md font-semibold transition-all cursor-pointer ${
-              copied
-                ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-xs"
-                : "border-dusty-border bg-white text-on-surface hover:border-primary/50 hover:bg-dusty-light/60 hover:text-primary"
-            }`}
-          >
-            <MaterialIcon
-              className={`text-[18px] ${copied ? "text-emerald-600" : ""}`}
-              name={copied ? "check_circle" : "content_copy"}
-            />
-            <span>{copied ? "Đã sao chép liên kết!" : "Sao chép liên kết"}</span>
-          </button>
-
-          {/* Nút Web Share API nếu máy hỗ trợ (điện thoại) */}
-          {hasNativeShare ? (
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Nút Facebook Share chính */}
             <button
               type="button"
-              onClick={handleNativeShare}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-dusty-border bg-white px-3 py-2.5 text-label-sm sm:text-label-md font-semibold text-on-surface-variant transition-colors hover:border-primary/50 hover:bg-dusty-light/60 hover:text-primary cursor-pointer"
-              title="Mở bảng chia sẻ của thiết bị"
+              onClick={handleShareFacebook}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2.5 text-label-sm sm:text-label-md font-bold text-white shadow-xs transition-all hover:bg-[#166fe5] hover:shadow-md active:scale-95 cursor-pointer"
             >
-              <MaterialIcon className="text-[18px]" name="ios_share" />
-              <span className="hidden sm:inline">Khác...</span>
+              <FacebookIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>{isMobile ? "Chia sẻ qua App (FB/Zalo)" : "Chia sẻ lên Facebook"}</span>
+            </button>
+
+            {/* Nút Sao chép liên kết */}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-xl border px-3.5 py-2.5 text-label-sm sm:text-label-md font-semibold transition-all cursor-pointer ${
+                copied
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700 shadow-xs"
+                  : "border-dusty-border bg-white text-on-surface hover:border-primary/50 hover:bg-dusty-light/60 hover:text-primary"
+              }`}
+            >
+              <MaterialIcon
+                className={`text-[18px] ${copied ? "text-emerald-600" : ""}`}
+                name={copied ? "check_circle" : "content_copy"}
+              />
+              <span>{copied ? "Đã sao chép liên kết!" : "Sao chép liên kết"}</span>
+            </button>
+          </div>
+
+          {/* Nếu trên điện thoại muốn mở qua Web Browser thay vì App */}
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={() => openFacebookWebDialog(getShareUrl(true))}
+              className="text-center text-xs text-on-surface-variant hover:text-primary underline cursor-pointer pt-1 sm:pt-0"
+            >
+              Mở bằng Facebook web
             </button>
           ) : null}
         </div>
