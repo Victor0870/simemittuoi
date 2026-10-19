@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { readableAwardLabel } from "@/lib/score-labels";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -752,9 +753,9 @@ export function AdminScoresManager({
                       </td>
                       <td className="px-4 py-3 max-w-xs text-on-surface">
                         <p className="line-clamp-2">{evt.note ?? act?.title ?? "—"}</p>
-                        {evt.award_label ? (
+                        {readableAwardLabel(evt.award_label) ? (
                           <span className="text-[11px] text-on-surface-variant/70 italic">
-                            [{evt.award_label}]
+                            [{readableAwardLabel(evt.award_label)}]
                           </span>
                         ) : null}
                       </td>

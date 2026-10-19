@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
+import { readableAwardLabel } from "@/lib/score-labels";
 
 type MemberScoreEvent = {
   id: string;
@@ -313,7 +314,9 @@ export function MemberScoreHistoryModal({
                 ) : (
                   /* Events List */
                   <div className="space-y-2.5">
-                    {events.map((evt) => (
+                    {events.map((evt) => {
+                      const title = readableAwardLabel(evt.awardLabel) ?? evt.note ?? "Cộng điểm thi đua";
+                      return (
                       <div
                         key={evt.id}
                         className="group flex items-start justify-between gap-3 rounded-2xl border border-dusty-border/60 bg-white p-3.5 transition-all hover:border-primary/50 hover:shadow-xs"
@@ -335,9 +338,9 @@ export function MemberScoreHistoryModal({
 
                           <div className="space-y-0.5">
                             <h6 className="font-extrabold text-body-md text-on-surface group-hover:text-primary transition-colors">
-                              {evt.awardLabel || "Cộng điểm thi đua"}
+                              {title}
                             </h6>
-                            {evt.note ? (
+                            {evt.note && evt.note !== title ? (
                               <p className="text-body-sm text-on-surface-variant leading-snug">
                                 {evt.note}
                               </p>
@@ -360,7 +363,8 @@ export function MemberScoreHistoryModal({
                           </span>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { readableAwardLabel } from "@/lib/score-labels";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -123,6 +124,7 @@ export default async function ScoreHistoryPage() {
             <div className="divide-y divide-outline-variant">
               {scoreEvents.map((evt) => {
                 const isPositive = evt.points >= 0;
+                const label = readableAwardLabel(evt.award_label);
                 const formattedTime = new Date(evt.created_at).toLocaleString("vi-VN", {
                   dateStyle: "medium",
                   timeStyle: "short",
@@ -146,11 +148,11 @@ export default async function ScoreHistoryPage() {
                         </p>
                         <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant mt-0.5">
                           <span>{formattedTime}</span>
-                          {evt.award_label ? (
+                          {label ? (
                             <>
                               <span>·</span>
                               <span className="rounded-md bg-surface-container-high px-1.5 py-0.5 font-medium">
-                                {evt.award_label}
+                                {label}
                               </span>
                             </>
                           ) : null}
