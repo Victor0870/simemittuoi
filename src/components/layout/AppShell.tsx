@@ -52,14 +52,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <ApprovalGate>
-        <div className="flex min-h-screen flex-col bg-surface-bg text-on-surface">
-          <TopNav activeHref={activeHref} />
-          <main className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pt-20 pb-24 md:pt-24 md:pb-12 md:px-margin-desktop">
+        <div className="flex min-h-screen flex-col bg-surface-bg text-on-surface print:min-h-0 print:bg-white">
+          <div className="print:hidden">
+            <TopNav activeHref={activeHref} />
+          </div>
+          <main className="mx-auto w-full max-w-container-max flex-grow px-margin-mobile pt-20 pb-24 md:pt-24 md:pb-12 md:px-margin-desktop print:max-w-none print:p-0">
             {children}
           </main>
-          <Footer />
-          <MobileBottomNav activeHref={activeHref} />
-          <QuizEventPopup />
+          <div className="print:hidden">
+            <Footer />
+            <MobileBottomNav activeHref={activeHref} />
+            <QuizEventPopup />
+          </div>
         </div>
       </ApprovalGate>
     </AuthProvider>

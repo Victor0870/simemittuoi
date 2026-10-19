@@ -27,6 +27,7 @@ export const PERMISSIONS = {
   albumsManage: "albums.manage",
   postsManage: "posts.manage",
   pollsManage: "polls.manage",
+  giftsChildren: "gifts.children",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -105,6 +106,19 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Tạo & quản lý bình chọn",
         description:
           "Tạo chương trình bình chọn, sửa lựa chọn và cơ cấu điểm, mở / đóng, kết thúc và tự động trao điểm thưởng.",
+      },
+    ],
+  },
+  {
+    key: "gifts",
+    name: "Quà thiếu nhi",
+    icon: "redeem",
+    permissions: [
+      {
+        code: PERMISSIONS.giftsChildren,
+        name: "Lọc, in & xuất danh sách",
+        description:
+          "Lọc con của đoàn viên dưới độ tuổi quy định tại mốc ngày chọn (họ tên, ngày sinh, giới tính cháu; họ tên, mã NV, bộ phận của bố/mẹ), in và xuất Excel.",
       },
     ],
   },
@@ -214,6 +228,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Tra cứu hồ sơ, tình trạng khai báo, thông tin con của đoàn viên.",
     icon: "contact_page",
     permission: PERMISSIONS.membersView,
+  },
+  {
+    href: "/office/gifts/children",
+    title: "Quà thiếu nhi",
+    description: "Một nút lọc con đoàn viên dưới 16 tuổi theo mốc ngày, in danh sách ký nhận và xuất Excel.",
+    icon: "redeem",
+    permission: PERMISSIONS.giftsChildren,
   },
   {
     href: "/albums",
