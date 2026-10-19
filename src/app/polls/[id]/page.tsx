@@ -5,6 +5,7 @@ import { getPollById } from "@/lib/data/polls";
 import { PollPodiumResults } from "@/components/polls/PollPodiumResults";
 import { PollVotingSection } from "@/components/polls/PollVotingSection";
 import { PollAdminToolbar } from "@/components/polls/PollAdminToolbar";
+import { PollQrButton } from "@/components/polls/PollQrButton";
 
 export const revalidate = 15;
 
@@ -88,9 +89,12 @@ export default async function PollDetailPage({ params }: Props) {
             </span>
           </div>
 
-          <span className="text-xs sm:text-body-sm text-on-surface-variant">
-            Ngày mở: {new Date(poll.createdAt).toLocaleDateString("vi-VN")}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <PollQrButton pollId={poll.id} pollTitle={poll.title} />
+            <span className="text-xs sm:text-body-sm text-on-surface-variant">
+              Ngày mở: {new Date(poll.createdAt).toLocaleDateString("vi-VN")}
+            </span>
+          </div>
         </div>
 
         <h1 className="text-xl sm:text-headline-md md:text-headline-lg font-extrabold text-[#173A67] tracking-tight leading-tight">
@@ -130,7 +134,10 @@ export default async function PollDetailPage({ params }: Props) {
       </section>
 
       {/* 2. KHU VỰC BÌNH CHỌN / BẦU CHỌN TÁC PHẨM */}
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs">
+      <section
+        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs"
+        id="binh-chon"
+      >
         <PollVotingSection poll={poll} />
       </section>
 
