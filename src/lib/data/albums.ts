@@ -15,10 +15,36 @@ export type AlbumSummary = {
   allowMemberUpload: boolean;
   maxPhotosPerMember: number;
   uploadPoints: number;
+  /** Thời gian thành viên được đăng ảnh (ISO); null = không giới hạn phía đó. */
+  uploadStartsAt: string | null;
+  uploadEndsAt: string | null;
   isActive: boolean;
   createdAt: string;
   photoCount: number;
 };
+
+export type UploadWindowState = "open" | "not_started" | "ended";
+
+export function getUploadWindowState(
+  startsAt: string | null,
+  endsAt: string | null,
+  now: Date = new Date(),
+): UploadWindowState {
+  if (startsAt && now < new Date(startsAt)) return "not_started";
+  if (endsAt && now > new Date(endsAt)) return "ended";
+  return "open";
+}
+
+export function formatDateTimeVi(iso: string): string {
+  return new Date(iso).toLocaleString("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 export type AlbumPhoto = {
   id: string;
@@ -59,6 +85,8 @@ type AlbumRow = {
   allow_member_upload: boolean;
   max_photos_per_member: number;
   upload_points: number;
+  upload_starts_at: string | null;
+  upload_ends_at: string | null;
   is_active: boolean;
   created_at: string;
 };
@@ -72,7 +100,7 @@ type ProfileEmbed = {
 };
 
 const ALBUM_COLUMNS =
-  "id, title, description, cover_url, allow_member_upload, max_photos_per_member, upload_points, is_active, created_at";
+  "id, title, description, cover_url, allow_member_upload, max_photos_per_member, upload_points, upload_starts_at, upload_ends_at, is_active, created_at";
 
 export function formatTimeAgo(isoDate: string): string {
   const diffMs = Date.now() - new Date(isoDate).getTime();
@@ -108,6 +136,8 @@ function mapAlbum(row: AlbumRow, photoCount: number, fallbackCover: string | nul
     allowMemberUpload: row.allow_member_upload,
     maxPhotosPerMember: row.max_photos_per_member,
     uploadPoints: row.upload_points,
+    uploadStartsAt: row.upload_starts_at,
+    uploadEndsAt: row.upload_ends_at,
     isActive: row.is_active,
     createdAt: row.created_at,
     photoCount,

@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 
 type PostEditButtonProps = {
-  post: {
+  /** Không truyền = nút "Đăng bài mới". */
+  post?: {
     id: string;
     title: string;
     content: string;
@@ -28,26 +30,27 @@ const SUGGESTED_TAGS = [
 ];
 
 export function PostEditButton({ post }: PostEditButtonProps) {
-  const { isAdmin } = useAuth();
+  const { can } = useAuth();
   const router = useRouter();
+  const isCreate = !post;
 
   const [isOpen, setIsOpen] = useState(false);
-  const [title, setTitle] = useState(post.title);
-  const [content, setContent] = useState(post.content);
-  const [tag, setTag] = useState(post.tag || "Thông báo");
-  const [isImportant, setIsImportant] = useState(Boolean(post.isImportant));
-  const [isActive, setIsActive] = useState(post.isActive !== false);
+  const [title, setTitle] = useState(post?.title ?? "");
+  const [content, setContent] = useState(post?.content ?? "");
+  const [tag, setTag] = useState(post?.tag || "Thông báo");
+  const [isImportant, setIsImportant] = useState(Boolean(post?.isImportant));
+  const [isActive, setIsActive] = useState(post?.isActive !== false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  if (!isAdmin) return null;
+  if (!can(PERMISSIONS.postsManage)) return null;
 
   function handleOpen() {
-    setTitle(post.title);
-    setContent(post.content);
-    setTag(post.tag || "Thông báo");
-    setIsImportant(Boolean(post.isImportant));
-    setIsActive(post.isActive !== false);
+    setTitle(post?.title ?? "");
+    setContent(post?.content ?? "");
+    setTag(post?.tag || "Thông báo");
+    setIsImportant(Boolean(post?.isImportant));
+    setIsActive(post?.isActive !== false);
     setErrorMsg(null);
     setIsOpen(true);
   }
@@ -70,11 +73,11 @@ export function PostEditButton({ post }: PostEditButtonProps) {
     setErrorMsg(null);
 
     try {
-      const res = await fetch("/api/posts/update", {
+      const res = await fetch(isCreate ? "/api/posts/create" : "/api/posts/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: post.id,
+          id: post?.id,
           title: title.trim(),
           content: content.trim(),
           tag: tag.trim() || "Thông báo",
@@ -86,11 +89,15 @@ export function PostEditButton({ post }: PostEditButtonProps) {
 
       const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.error || "Không thể cập nhật bài viết.");
+        setErrorMsg(data.error || (isCreate ? "Không thể đăng bài viết." : "Không thể cập nhật bài viết."));
         return;
       }
 
       setIsOpen(false);
+      if (isCreate && data.id) {
+        router.push(`/posts/${data.id}`);
+        return;
+      }
       router.refresh();
       // Reload nhẹ để bảo đảm text được update hoàn toàn
       window.location.reload();
@@ -103,15 +110,26 @@ export function PostEditButton({ post }: PostEditButtonProps) {
 
   return (
     <>
-      <button
-        onClick={handleOpen}
-        type="button"
-        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-all active:scale-95 cursor-pointer"
-        title="Quản trị viên: Chỉnh sửa bài viết này"
-      >
-        <MaterialIcon className="text-[16px] text-amber-700" name="edit_note" />
-        <span>Sửa bài viết</span>
-      </button>
+      {isCreate ? (
+        <button
+          onClick={handleOpen}
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#1E4A7D] active:scale-95 cursor-pointer sm:text-label-md"
+        >
+          <MaterialIcon className="text-[18px]" name="post_add" />
+          <span>Đăng bài mới</span>
+        </button>
+      ) : (
+        <button
+          onClick={handleOpen}
+          type="button"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-all active:scale-95 cursor-pointer"
+          title="Chỉnh sửa bài viết này"
+        >
+          <MaterialIcon className="text-[16px] text-amber-700" name="edit_note" />
+          <span>Sửa bài viết</span>
+        </button>
+      )}
 
       {/* MODAL CHỈNH SỬA BÀI VIẾT */}
       {isOpen && (
@@ -125,10 +143,12 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                 </div>
                 <div>
                   <h3 className="text-base sm:text-lg font-bold text-[#173A67]">
-                    Chỉnh sửa bài viết
+                    {isCreate ? "Đăng bài viết mới" : "Chỉnh sửa bài viết"}
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    Cập nhật tiêu đề, phân loại và nội dung bài viết
+                    {isCreate
+                      ? "Nhập tiêu đề, phân loại và nội dung bài viết"
+                      : "Cập nhật tiêu đề, phân loại và nội dung bài viết"}
                   </p>
                 </div>
               </div>
@@ -208,7 +228,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                     <span>Active — hiện bài cho mọi người</span>
                   </div>
                   <p className="text-[11px] text-slate-600 leading-normal mt-0.5">
-                    Bỏ chọn để giữ Inactive. Bài Inactive chỉ quản trị viên xem và sửa được.
+                    Bỏ chọn để giữ Inactive (nháp). Bài Inactive chỉ người quản lý bài viết xem và sửa được.
                   </p>
                 </div>
               </label>
@@ -280,8 +300,8 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                     </>
                   ) : (
                     <>
-                      <MaterialIcon className="text-[16px]" name="save" />
-                      <span>Lưu thay đổi</span>
+                      <MaterialIcon className="text-[16px]" name={isCreate ? "send" : "save"} />
+                      <span>{isCreate ? "Đăng bài" : "Lưu thay đổi"}</span>
                     </>
                   )}
                 </button>

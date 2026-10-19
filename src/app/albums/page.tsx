@@ -19,7 +19,7 @@ export default async function AlbumsPage() {
     redirect(ctx.approvalStatus === "rejected" ? "/pending?status=rejected" : "/pending");
   }
 
-  const albums = await getAlbums(ctx.supabase, ctx.isAdmin);
+  const albums = await getAlbums(ctx.supabase, ctx.canManage);
 
-  return <AlbumsClient albums={albums} isAdmin={ctx.isAdmin} />;
+  return <AlbumsClient albums={albums} canManage={ctx.canManage} />;
 }

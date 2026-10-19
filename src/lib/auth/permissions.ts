@@ -24,6 +24,9 @@ export const PERMISSIONS = {
   employeesManage: "employees.manage",
   membersView: "members.view",
   membersEdit: "members.edit",
+  albumsManage: "albums.manage",
+  postsManage: "posts.manage",
+  pollsManage: "polls.manage",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -63,6 +66,45 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Sửa hồ sơ hộ đoàn viên",
         description: "Cập nhật hồ sơ thay cho đoàn viên (mọi thay đổi đều được ghi lịch sử).",
         requires: [PERMISSIONS.membersView],
+      },
+    ],
+  },
+  {
+    key: "albums",
+    name: "Album ảnh",
+    icon: "photo_library",
+    permissions: [
+      {
+        code: PERMISSIONS.albumsManage,
+        name: "Quản lý album",
+        description:
+          "Tạo / sửa / ẩn / xóa album; cài đặt ai được đăng, số ảnh, điểm thưởng, thời gian đăng ảnh; xóa ảnh và bình luận của người khác; đăng ảnh không giới hạn.",
+      },
+    ],
+  },
+  {
+    key: "posts",
+    name: "Bài viết",
+    icon: "newspaper",
+    permissions: [
+      {
+        code: PERMISSIONS.postsManage,
+        name: "Đăng & sửa bài viết",
+        description:
+          "Đăng bài viết mới, sửa nội dung / phân loại, đánh dấu thông báo quan trọng, ẩn / hiện bài và xem bài đang ẩn.",
+      },
+    ],
+  },
+  {
+    key: "polls",
+    name: "Bình chọn (vote)",
+    icon: "how_to_vote",
+    permissions: [
+      {
+        code: PERMISSIONS.pollsManage,
+        name: "Tạo & quản lý bình chọn",
+        description:
+          "Tạo chương trình bình chọn, sửa lựa chọn và cơ cấu điểm, mở / đóng, kết thúc và tự động trao điểm thưởng.",
       },
     ],
   },
@@ -173,11 +215,33 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     icon: "contact_page",
     permission: PERMISSIONS.membersView,
   },
+  {
+    href: "/albums",
+    title: "Quản lý album ảnh",
+    description: "Tạo album, cài đặt thời gian và điểm thưởng đăng ảnh, kiểm duyệt ảnh và bình luận.",
+    icon: "photo_library",
+    permission: PERMISSIONS.albumsManage,
+  },
+  {
+    href: "/posts",
+    title: "Đăng & sửa bài viết",
+    description: "Đăng bài viết mới, sửa bài, đánh dấu thông báo quan trọng, ẩn / hiện bài.",
+    icon: "newspaper",
+    permission: PERMISSIONS.postsManage,
+  },
+  {
+    href: "/admin/polls",
+    title: "Quản lý bình chọn",
+    description: "Tạo, sửa, mở / đóng chương trình bình chọn và tổng kết trao điểm.",
+    icon: "how_to_vote",
+    permission: PERMISSIONS.pollsManage,
+  },
 ];
 
 /** Các trang trong /admin mở cho người có quyền (trang /admin khác vẫn chỉ dành cho admin). */
 export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCode }[] = [
   { prefix: "/admin/employees", permission: PERMISSIONS.employeesView },
+  { prefix: "/admin/polls", permission: PERMISSIONS.pollsManage },
 ];
 
 export function findAdminRoutePermission(pathname: string): PermissionCode | null {

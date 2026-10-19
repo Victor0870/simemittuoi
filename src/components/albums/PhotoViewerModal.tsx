@@ -15,7 +15,7 @@ type PhotoViewerModalProps = {
   album: AlbumSummary;
   photos: AlbumPhoto[];
   index: number;
-  isAdmin: boolean;
+  canManage: boolean;
   currentUserId: string;
   onNavigate: (index: number) => void;
   onClose: () => void;
@@ -45,7 +45,7 @@ export function PhotoViewerModal({
   album,
   photos,
   index,
-  isAdmin,
+  canManage,
   currentUserId,
   onNavigate,
   onClose,
@@ -114,7 +114,7 @@ export function PhotoViewerModal({
 
   const isOwner = photo.userId === currentUserId;
   const myCommentCount = comments.filter((c) => c.userId === currentUserId).length;
-  const isLimitReached = !isAdmin && myCommentCount >= ALBUM_COMMENT_LIMIT;
+  const isLimitReached = !canManage && myCommentCount >= ALBUM_COMMENT_LIMIT;
 
   async function handleReact(type: ReactionType) {
     if (reacting) return;
@@ -353,7 +353,7 @@ export function PhotoViewerModal({
                 <MaterialIcon className="text-[14px]" name="open_in_new" />
                 Ảnh gốc
               </a>
-              {isAdmin && (
+              {canManage && (
                 <button
                   type="button"
                   onClick={() => onSetCover(photo)}
@@ -363,7 +363,7 @@ export function PhotoViewerModal({
                   Đặt làm ảnh bìa
                 </button>
               )}
-              {(isAdmin || isOwner) && (
+              {(canManage || isOwner) && (
                 <button
                   type="button"
                   onClick={handleDeletePhoto}
@@ -414,7 +414,7 @@ export function PhotoViewerModal({
               ) : (
                 <ul className="space-y-2.5">
                   {comments.map((c) => {
-                    const canDelete = isAdmin || c.userId === currentUserId;
+                    const canDelete = canManage || c.userId === currentUserId;
                     return (
                       <li
                         key={c.id}
@@ -462,7 +462,7 @@ export function PhotoViewerModal({
 
           <form onSubmit={handleSubmitComment} className="space-y-2 border-t border-dusty-border/70 p-4">
             <div className="flex items-center justify-between text-[11px] text-on-surface-variant">
-              {isAdmin ? (
+              {canManage ? (
                 <span className="font-semibold text-amber-800">Quản trị viên (không giới hạn)</span>
               ) : isLimitReached ? (
                 <span className="font-bold text-red-700">

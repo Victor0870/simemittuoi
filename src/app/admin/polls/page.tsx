@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { AdminPollsManager } from "@/components/admin/AdminPollsManager";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { getPolls } from "@/lib/data/polls";
@@ -8,30 +10,27 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminPollsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const access = await getCurrentAccess();
+  if (!access) {
     redirect("/login?next=/admin/polls");
   }
-
-  const { data: me } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("role, approval_status, full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (me?.role !== "admin" || me?.approval_status !== "approved") {
+  if (!hasPermission(access, PERMISSIONS.pollsManage)) {
     redirect("/");
   }
+
+  const supabase = await createClient();
+  const { data: me } = await supabase
+    .from(CDILV_TABLE.profiles)
+    .select("full_name")
+    .eq("id", access.userId)
+    .maybeSingle();
 
   const polls = await getPolls(true);
 
   return (
     <AdminPollsManager
-      currentAdminName={me.full_name || "Quản trị viên"}
+      currentAdminName={me?.full_name || "Quản trị viên"}
+      isAdmin={access.isAdmin}
       polls={polls}
     />
   );

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -15,15 +17,10 @@ export async function POST(request: NextRequest) {
     }
 
     const publicDb = createServiceClient();
-    const { data: me } = await publicDb
-      .from(CDILV_TABLE.profiles)
-      .select("role, approval_status")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (me?.role !== "admin" || me?.approval_status !== "approved") {
+    const access = await getCurrentAccess();
+    if (!access || !hasPermission(access, PERMISSIONS.pollsManage)) {
       return NextResponse.json(
-        { error: "Chỉ Quản trị viên mới có quyền tạo chương trình bình chọn." },
+        { error: "Bạn chưa được phân quyền tạo chương trình bình chọn." },
         { status: 403 },
       );
     }

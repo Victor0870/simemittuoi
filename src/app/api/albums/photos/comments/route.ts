@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       comments,
       myCommentCount,
-      maxComments: ctx.isAdmin ? null : ALBUM_COMMENT_LIMIT,
-      isAdmin: ctx.isAdmin,
+      maxComments: ctx.canManage ? null : ALBUM_COMMENT_LIMIT,
+      canManage: ctx.canManage,
     });
   } catch (err: any) {
     console.error("[api/albums/photos/comments] GET error:", err);
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã bị xóa." }, { status: 404 });
     }
 
-    if (!ctx.isAdmin) {
+    if (!ctx.canManage) {
       const { count, error: countErr } = await writer
         .from(CDILV_TABLE.albumPhotoComments)
         .select("id", { count: "exact", head: true })
@@ -181,7 +181,7 @@ export async function DELETE(request: NextRequest) {
         { status: 404 },
       );
     }
-    if (!ctx.isAdmin && comment.user_id !== ctx.user.id) {
+    if (!ctx.canManage && comment.user_id !== ctx.user.id) {
       return NextResponse.json(
         { error: "Bạn không có quyền xóa bình luận này." },
         { status: 403 },

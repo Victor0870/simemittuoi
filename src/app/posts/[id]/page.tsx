@@ -5,8 +5,8 @@ import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { PostEditButton } from "@/components/posts/PostEditButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/posts";
-import { createClient } from "@/lib/supabase/server";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 
 export const revalidate = 60;
 
@@ -20,20 +20,8 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   if (!post) notFound();
 
   if (!post.isActive) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    let isAdmin = false;
-    if (user) {
-      const { data: me } = await supabase
-        .from(CDILV_TABLE.profiles)
-        .select("role, approval_status")
-        .eq("id", user.id)
-        .maybeSingle();
-      isAdmin = me?.role === "admin" && me?.approval_status === "approved";
-    }
-    if (!isAdmin) notFound();
+    const access = await getCurrentAccess();
+    if (!access || !hasPermission(access, PERMISSIONS.postsManage)) notFound();
   }
 
   const [related, commentCount] = await Promise.all([

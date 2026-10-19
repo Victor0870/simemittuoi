@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { PERMISSIONS } from "@/lib/auth/permissions";
+import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type AlbumMemberContext = {
   supabase: Awaited<ReturnType<typeof createClient>>;
@@ -9,6 +10,8 @@ export type AlbumMemberContext = {
   approvalStatus: string | null;
   isApproved: boolean;
   isAdmin: boolean;
+  /** Admin hoặc cấp được phân quyền albums.manage. */
+  canManage: boolean;
 };
 
 /**
@@ -29,6 +32,7 @@ export async function getAlbumMemberContext(): Promise<AlbumMemberContext> {
       approvalStatus: null,
       isApproved: false,
       isAdmin: false,
+      canManage: false,
     };
   }
 
@@ -41,13 +45,23 @@ export async function getAlbumMemberContext(): Promise<AlbumMemberContext> {
   if (error) throw error;
 
   const isApproved = me?.approval_status === "approved";
+  const isAdmin = isApproved && me?.role === "admin";
+  let canManage = isAdmin;
+  if (isApproved && !isAdmin) {
+    const { data: allowed, error: permError } = await supabase.rpc(CDILV_RPC.hasPermission, {
+      p_code: PERMISSIONS.albumsManage,
+    });
+    if (permError) console.error("[album-access] has_permission:", permError.message);
+    canManage = allowed === true;
+  }
   return {
     supabase,
     user,
     fullName: me?.full_name ?? null,
     approvalStatus: me?.approval_status ?? null,
     isApproved,
-    isAdmin: isApproved && me?.role === "admin",
+    isAdmin,
+    canManage,
   };
 }
 
@@ -72,6 +86,21 @@ export function parseAlbumSettings(body: Record<string, unknown>) {
     return { error: "Điểm thưởng mỗi ảnh phải từ 0 đến 100." } as const;
   }
 
+  const parseTime = (value: unknown): string | null | undefined => {
+    if (value === null || value === undefined || value === "") return null;
+    if (typeof value !== "string") return undefined;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+  };
+  const uploadStartsAt = allowMemberUpload ? parseTime(body.uploadStartsAt) : null;
+  const uploadEndsAt = allowMemberUpload ? parseTime(body.uploadEndsAt) : null;
+  if (uploadStartsAt === undefined || uploadEndsAt === undefined) {
+    return { error: "Thời gian đăng ảnh không hợp lệ." } as const;
+  }
+  if (uploadStartsAt && uploadEndsAt && uploadEndsAt <= uploadStartsAt) {
+    return { error: "Thời gian kết thúc đăng ảnh phải sau thời gian bắt đầu." } as const;
+  }
+
   return {
     values: {
       title,
@@ -79,6 +108,8 @@ export function parseAlbumSettings(body: Record<string, unknown>) {
       allow_member_upload: allowMemberUpload,
       max_photos_per_member: maxPhotosPerMember,
       upload_points: allowMemberUpload ? uploadPoints : 0,
+      upload_starts_at: uploadStartsAt,
+      upload_ends_at: uploadEndsAt,
       is_active: isActive,
     },
   } as const;

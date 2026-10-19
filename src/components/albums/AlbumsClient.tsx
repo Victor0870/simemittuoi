@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AlbumEditorModal } from "@/components/albums/AlbumEditorModal";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import type { AlbumSummary } from "@/lib/data/albums";
+import { formatDateTimeVi, getUploadWindowState, type AlbumSummary } from "@/lib/data/albums";
 
 type AlbumsClientProps = {
   albums: AlbumSummary[];
-  isAdmin: boolean;
+  canManage: boolean;
 };
 
-export function AlbumsClient({ albums, isAdmin }: AlbumsClientProps) {
+export function AlbumsClient({ albums, canManage }: AlbumsClientProps) {
   const router = useRouter();
   const [showCreate, setShowCreate] = useState(false);
 
@@ -33,7 +33,7 @@ export function AlbumsClient({ albums, isAdmin }: AlbumsClientProps) {
           </div>
         </div>
 
-        {isAdmin && (
+        {canManage && (
           <button
             type="button"
             onClick={() => setShowCreate(true)}
@@ -50,7 +50,7 @@ export function AlbumsClient({ albums, isAdmin }: AlbumsClientProps) {
           <MaterialIcon className="mx-auto mb-3 text-[48px] text-on-surface-variant/40" name="folder_open" />
           <h3 className="text-title-md font-bold text-[#173A67]">Chưa có album nào</h3>
           <p className="mt-1 text-body-sm text-on-surface-variant">
-            {isAdmin
+            {canManage
               ? "Bấm “Tạo album mới” để bắt đầu chia sẻ hình ảnh hoạt động."
               : "Ban Chấp hành Công đoàn sẽ sớm cập nhật các album ảnh hoạt động tại đây."}
           </p>
@@ -102,17 +102,33 @@ export function AlbumsClient({ albums, isAdmin }: AlbumsClientProps) {
                 )}
 
                 <div className="mt-auto flex flex-wrap gap-1 pt-1">
-                  {album.allowMemberUpload ? (
-                    <span className="inline-flex items-center gap-0.5 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
-                      <MaterialIcon className="text-[12px]" name="add_a_photo" />
-                      Mời đăng ảnh
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-0.5 rounded-full border border-dusty-border bg-dusty-light px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                      <MaterialIcon className="text-[12px]" name="shield" />
-                      Admin đăng
-                    </span>
-                  )}
+                  {(() => {
+                    const windowState = getUploadWindowState(album.uploadStartsAt, album.uploadEndsAt);
+                    if (!album.allowMemberUpload) {
+                      return (
+                        <span className="inline-flex items-center gap-0.5 rounded-full border border-dusty-border bg-dusty-light px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          <MaterialIcon className="text-[12px]" name="shield" />
+                          Quản lý đăng
+                        </span>
+                      );
+                    }
+                    if (windowState !== "open") {
+                      return (
+                        <span className="inline-flex items-center gap-0.5 rounded-full border border-slate-300 bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">
+                          <MaterialIcon className="text-[12px]" name="schedule" />
+                          {windowState === "ended" ? "Hết hạn đăng ảnh" : "Sắp mở nhận ảnh"}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="inline-flex items-center gap-0.5 rounded-full border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                        <MaterialIcon className="text-[12px]" name="add_a_photo" />
+                        {album.uploadEndsAt
+                          ? `Nhận ảnh đến ${formatDateTimeVi(album.uploadEndsAt)}`
+                          : "Mời đăng ảnh"}
+                      </span>
+                    );
+                  })()}
                   {album.allowMemberUpload && album.uploadPoints > 0 && (
                     <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
                       +{album.uploadPoints}đ/ảnh

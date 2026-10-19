@@ -6,14 +6,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlbumEditorModal } from "@/components/albums/AlbumEditorModal";
 import { PhotoViewerModal } from "@/components/albums/PhotoViewerModal";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import type { AlbumPhoto, AlbumSummary } from "@/lib/data/albums";
+import {
+  formatDateTimeVi,
+  getUploadWindowState,
+  type AlbumPhoto,
+  type AlbumSummary,
+} from "@/lib/data/albums";
 import { resizeImageToBlob } from "@/lib/image-resize";
 
 type AlbumDetailClientProps = {
   album: AlbumSummary;
   initialPhotos: AlbumPhoto[];
   initialPhotoId: string | null;
-  isAdmin: boolean;
+  canManage: boolean;
   currentUserId: string;
 };
 
@@ -34,7 +39,7 @@ export function AlbumDetailClient({
   album,
   initialPhotos,
   initialPhotoId,
-  isAdmin,
+  canManage,
   currentUserId,
 }: AlbumDetailClientProps) {
   const router = useRouter();
@@ -74,8 +79,10 @@ export function AlbumDetailClient({
     () => photos.filter((p) => p.userId === currentUserId).length,
     [photos, currentUserId],
   );
-  const canUpload = isAdmin || album.allowMemberUpload;
-  const remaining = isAdmin
+  const windowState = getUploadWindowState(album.uploadStartsAt, album.uploadEndsAt);
+  const hasWindow = Boolean(album.uploadStartsAt || album.uploadEndsAt);
+  const canUpload = canManage || (album.allowMemberUpload && windowState === "open");
+  const remaining = canManage
     ? Number.POSITIVE_INFINITY
     : Math.max(0, album.maxPhotosPerMember - myPhotoCount);
 
@@ -93,7 +100,7 @@ export function AlbumDetailClient({
     if (files.length === 0) return;
 
     const pendingCount = queue.filter((q) => q.status !== "done").length;
-    const slots = isAdmin ? files.length : Math.max(0, remaining - pendingCount);
+    const slots = canManage ? files.length : Math.max(0, remaining - pendingCount);
     const accepted: PendingUpload[] = [];
     const rejected: string[] = [];
 
@@ -291,7 +298,25 @@ export function AlbumDetailClient({
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full border border-dusty-border bg-white px-2.5 py-0.5 text-[11px] font-semibold text-on-surface-variant">
                   <MaterialIcon className="text-[13px]" name="shield" />
-                  Chỉ Admin đăng ảnh
+                  Chỉ người quản lý album đăng ảnh
+                </span>
+              )}
+              {album.allowMemberUpload && hasWindow && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+                    windowState === "open"
+                      ? "border-sky-300 bg-sky-50 text-sky-900"
+                      : "border-slate-300 bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  <MaterialIcon className="text-[13px]" name="schedule" />
+                  {windowState === "not_started"
+                    ? "Chưa mở nhận ảnh"
+                    : windowState === "ended"
+                      ? "Đã hết hạn đăng ảnh"
+                      : "Đang nhận ảnh"}
+                  {album.uploadStartsAt ? ` · từ ${formatDateTimeVi(album.uploadStartsAt)}` : ""}
+                  {album.uploadEndsAt ? ` · đến ${formatDateTimeVi(album.uploadEndsAt)}` : ""}
                 </span>
               )}
               {album.allowMemberUpload && album.uploadPoints > 0 && (
@@ -307,7 +332,7 @@ export function AlbumDetailClient({
             </div>
           </div>
 
-          {isAdmin && (
+          {canManage && (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -354,9 +379,12 @@ export function AlbumDetailClient({
         <section className="space-y-4 rounded-2xl border border-dusty-border/80 bg-surface-container-lowest p-4 shadow-xs sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-on-surface-variant sm:text-body-sm">
-              {isAdmin ? (
+              {canManage ? (
                 <span className="font-semibold text-amber-800">
-                  Quản trị viên đăng ảnh không giới hạn
+                  Người quản lý album đăng ảnh không giới hạn
+                  {album.allowMemberUpload && windowState !== "open"
+                    ? " (đang ngoài thời gian nhận ảnh: ảnh đăng lúc này không được cộng điểm)"
+                    : ""}
                 </span>
               ) : (
                 <span>
@@ -381,7 +409,7 @@ export function AlbumDetailClient({
             />
             <button
               type="button"
-              disabled={uploading || (!isAdmin && remaining - pendingQueue.length <= 0)}
+              disabled={uploading || (!canManage && remaining - pendingQueue.length <= 0)}
               onClick={() => fileInputRef.current?.click()}
               className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:cursor-not-allowed disabled:opacity-50 sm:text-label-md"
             >
@@ -465,7 +493,12 @@ export function AlbumDetailClient({
       ) : (
         <div className="flex items-center gap-2 rounded-2xl border border-dusty-border/80 bg-dusty-light/40 p-4 text-xs text-on-surface-variant sm:text-body-sm">
           <MaterialIcon className="text-[20px] text-primary" name="info" />
-          Album này chỉ Quản trị viên đăng ảnh. Bạn có thể thả cảm xúc và bình luận để nhận điểm thi đua.
+          {album.allowMemberUpload && windowState === "not_started" && album.uploadStartsAt
+            ? `Album bắt đầu nhận ảnh từ ${formatDateTimeVi(album.uploadStartsAt)}.`
+            : album.allowMemberUpload && windowState === "ended" && album.uploadEndsAt
+              ? `Album đã hết thời gian đăng ảnh (kết thúc ${formatDateTimeVi(album.uploadEndsAt)}).`
+              : "Album này chỉ người quản lý album đăng ảnh."}{" "}
+          Bạn vẫn có thể thả cảm xúc và bình luận để nhận điểm thi đua.
         </div>
       )}
 
@@ -547,7 +580,7 @@ export function AlbumDetailClient({
           album={album}
           photos={visiblePhotos}
           index={viewerIndex}
-          isAdmin={isAdmin}
+          canManage={canManage}
           currentUserId={currentUserId}
           onNavigate={(i) => setViewerPhotoId(visiblePhotos[i]?.id ?? null)}
           onClose={() => setViewerPhotoId(null)}

@@ -1,28 +1,18 @@
 import Link from "next/link";
 import { PostCard } from "@/components/posts/PostCard";
+import { PostEditButton } from "@/components/posts/PostEditButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { getPosts } from "@/lib/data/posts";
-import { createClient } from "@/lib/supabase/server";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const revalidate = 60;
 
 export default async function PostsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  let isAdmin = false;
-  if (user) {
-    const { data: me } = await supabase
-      .from(CDILV_TABLE.profiles)
-      .select("role, approval_status")
-      .eq("id", user.id)
-      .maybeSingle();
-    isAdmin = me?.role === "admin" && me?.approval_status === "approved";
-  }
+  const access = await getCurrentAccess();
+  const canManage = access ? hasPermission(access, PERMISSIONS.postsManage) : false;
 
-  const posts = await getPosts(50, { includeInactive: isAdmin });
+  const posts = await getPosts(50, { includeInactive: canManage });
 
   return (
     <div className="space-y-8">
@@ -40,13 +30,16 @@ export default async function PostsPage() {
             </p>
           </div>
         </div>
-        <Link
-          className="inline-flex items-center gap-1 text-label-md font-semibold text-primary hover:text-dusty-dark"
-          href="/"
-        >
-          <MaterialIcon className="text-[16px]" name="arrow_back" />
-          Về trang chủ
-        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            className="inline-flex items-center gap-1 text-label-md font-semibold text-primary hover:text-dusty-dark"
+            href="/"
+          >
+            <MaterialIcon className="text-[16px]" name="arrow_back" />
+            Về trang chủ
+          </Link>
+          {canManage ? <PostEditButton /> : null}
+        </div>
       </header>
 
       {posts.length === 0 ? (

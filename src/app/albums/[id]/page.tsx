@@ -28,14 +28,14 @@ export default async function AlbumDetailPage({ params, searchParams }: AlbumDet
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const detail = await getAlbumDetail(ctx.supabase, id, ctx.user.id);
-  if (!detail || (!detail.album.isActive && !ctx.isAdmin)) notFound();
+  if (!detail || (!detail.album.isActive && !ctx.canManage)) notFound();
 
   return (
     <AlbumDetailClient
       album={detail.album}
       initialPhotos={detail.photos}
       initialPhotoId={photo ?? null}
-      isAdmin={ctx.isAdmin}
+      canManage={ctx.canManage}
       currentUserId={ctx.user.id}
     />
   );

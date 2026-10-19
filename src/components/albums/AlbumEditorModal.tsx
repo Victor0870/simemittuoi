@@ -15,6 +15,17 @@ type AlbumEditorModalProps = {
 const inputClass =
   "w-full rounded-xl border border-dusty-border px-3.5 py-2.5 text-sm text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
+/** ISO → giá trị ô datetime-local theo giờ máy người dùng. */
+function toLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function fromLocalInput(value: string): string | null {
+  return value ? new Date(value).toISOString() : null;
+}
+
 export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: AlbumEditorModalProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -22,6 +33,8 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
   const [maxPhotosPerMember, setMaxPhotosPerMember] = useState(5);
   const [awardPoints, setAwardPoints] = useState(false);
   const [uploadPoints, setUploadPoints] = useState(1);
+  const [uploadStartsAt, setUploadStartsAt] = useState("");
+  const [uploadEndsAt, setUploadEndsAt] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -36,6 +49,8 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
       setMaxPhotosPerMember(album.maxPhotosPerMember);
       setAwardPoints(album.uploadPoints > 0);
       setUploadPoints(album.uploadPoints > 0 ? album.uploadPoints : 1);
+      setUploadStartsAt(toLocalInput(album.uploadStartsAt));
+      setUploadEndsAt(toLocalInput(album.uploadEndsAt));
       setIsActive(album.isActive);
     } else {
       setTitle("");
@@ -44,6 +59,8 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
       setMaxPhotosPerMember(5);
       setAwardPoints(false);
       setUploadPoints(1);
+      setUploadStartsAt("");
+      setUploadEndsAt("");
       setIsActive(true);
     }
     setErrorMessage(null);
@@ -68,6 +85,10 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
       setErrorMessage("Vui lòng nhập tên album.");
       return;
     }
+    if (allowMemberUpload && uploadStartsAt && uploadEndsAt && uploadEndsAt <= uploadStartsAt) {
+      setErrorMessage("Thời gian kết thúc đăng ảnh phải sau thời gian bắt đầu.");
+      return;
+    }
 
     setSubmitting(true);
     setErrorMessage(null);
@@ -83,6 +104,8 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
           allowMemberUpload,
           maxPhotosPerMember,
           uploadPoints: allowMemberUpload && awardPoints ? uploadPoints : 0,
+          uploadStartsAt: allowMemberUpload ? fromLocalInput(uploadStartsAt) : null,
+          uploadEndsAt: allowMemberUpload ? fromLocalInput(uploadEndsAt) : null,
           isActive,
         }),
       });
@@ -196,7 +219,7 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
                   name="shield_person"
                 />
                 <span>
-                  <span className="block text-sm font-bold text-on-surface">Chỉ Admin đăng</span>
+                  <span className="block text-sm font-bold text-on-surface">Chỉ người quản lý đăng</span>
                   <span className="block text-[11px] text-on-surface-variant">
                     Thành viên chỉ xem, thả cảm xúc và bình luận
                   </span>
@@ -226,6 +249,35 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
                     ảnh / người
                   </span>
                 </div>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs font-bold text-on-surface sm:text-sm">Thời gian nhận ảnh</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">Bắt đầu</span>
+                    <input
+                      type="datetime-local"
+                      value={uploadStartsAt}
+                      onChange={(e) => setUploadStartsAt(e.target.value)}
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">Kết thúc</span>
+                    <input
+                      type="datetime-local"
+                      min={uploadStartsAt || undefined}
+                      value={uploadEndsAt}
+                      onChange={(e) => setUploadEndsAt(e.target.value)}
+                      className={inputClass}
+                    />
+                  </label>
+                </div>
+                <p className="mt-1.5 text-[11px] text-on-surface-variant">
+                  Để trống = không giới hạn. Ngoài thời gian này thành viên không đăng được ảnh (vẫn xem, thả cảm xúc,
+                  bình luận); người quản lý album vẫn đăng được nhưng ảnh không được cộng điểm.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -278,7 +330,7 @@ export function AlbumEditorModal({ isOpen, mode, album, onClose, onSaved }: Albu
               <span>
                 <span className="block text-sm font-bold text-on-surface">Hiển thị album với thành viên</span>
                 <span className="block text-[11px] text-on-surface-variant">
-                  Bỏ chọn để tạm ẩn album (chỉ Admin còn thấy)
+                  Bỏ chọn để tạm ẩn album (chỉ người quản lý album còn thấy)
                 </span>
               </span>
             </label>

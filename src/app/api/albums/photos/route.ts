@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAlbumMemberContext } from "@/lib/album-access";
+import { formatDateTimeVi, getUploadWindowState } from "@/lib/data/albums";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC, CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
 import { sanitizeCompanyNames } from "@/lib/privacy";
@@ -54,21 +55,37 @@ export async function POST(request: NextRequest) {
     const writer = createServiceClient();
     const { data: album, error: albumErr } = await writer
       .from(CDILV_TABLE.albums)
-      .select("id, is_active, allow_member_upload, max_photos_per_member, upload_points")
+      .select(
+        "id, is_active, allow_member_upload, max_photos_per_member, upload_points, upload_starts_at, upload_ends_at",
+      )
       .eq("id", albumId)
       .maybeSingle();
 
     if (albumErr) throw albumErr;
-    if (!album || (!album.is_active && !ctx.isAdmin)) {
+    if (!album || (!album.is_active && !ctx.canManage)) {
       return NextResponse.json({ error: "Album không tồn tại." }, { status: 404 });
     }
 
     const userId = ctx.user.id;
 
-    if (!ctx.isAdmin) {
+    if (!ctx.canManage) {
       if (!album.allow_member_upload) {
         return NextResponse.json(
-          { error: "Album này chỉ Quản trị viên được đăng ảnh." },
+          { error: "Album này chỉ người quản lý album được đăng ảnh." },
+          { status: 403 },
+        );
+      }
+
+      const windowState = getUploadWindowState(album.upload_starts_at, album.upload_ends_at);
+      if (windowState === "not_started") {
+        return NextResponse.json(
+          { error: `Album bắt đầu nhận ảnh từ ${formatDateTimeVi(album.upload_starts_at!)}.` },
+          { status: 403 },
+        );
+      }
+      if (windowState === "ended") {
+        return NextResponse.json(
+          { error: `Album đã hết thời gian đăng ảnh (kết thúc ${formatDateTimeVi(album.upload_ends_at!)}).` },
           { status: 403 },
         );
       }
@@ -177,7 +194,7 @@ export async function DELETE(request: NextRequest) {
     if (!photo) {
       return NextResponse.json({ error: "Ảnh không tồn tại hoặc đã bị xóa." }, { status: 404 });
     }
-    if (!ctx.isAdmin && photo.user_id !== ctx.user.id) {
+    if (!ctx.canManage && photo.user_id !== ctx.user.id) {
       return NextResponse.json({ error: "Bạn không có quyền xóa ảnh này." }, { status: 403 });
     }
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { PollDetail } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
 
@@ -14,7 +15,7 @@ type Props = {
 
 export function PollAdminToolbar({ poll }: Props) {
   const router = useRouter();
-  const { profile, loading } = useAuth();
+  const { can, loading } = useAuth();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -24,8 +25,7 @@ export function PollAdminToolbar({ poll }: Props) {
     setIsActive(poll.isActive);
   }, [poll.isActive]);
 
-  // Only show if user is admin
-  if (loading || profile?.role !== "admin" || profile?.approval_status !== "approved") {
+  if (loading || !can(PERMISSIONS.pollsManage)) {
     return null;
   }
 

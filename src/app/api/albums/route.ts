@@ -4,15 +4,15 @@ import { getAlbumMemberContext, parseAlbumSettings } from "@/lib/album-access";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC, CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
 
-async function requireAdmin() {
+async function requireAlbumManager() {
   const ctx = await getAlbumMemberContext();
   if (!ctx.user) {
     return { response: NextResponse.json({ error: "Vui lòng đăng nhập." }, { status: 401 }) };
   }
-  if (!ctx.isAdmin) {
+  if (!ctx.canManage) {
     return {
       response: NextResponse.json(
-        { error: "Chỉ Quản trị viên mới được quản lý album." },
+        { error: "Bạn chưa được phân quyền quản lý album." },
         { status: 403 },
       ),
     };
@@ -22,7 +22,7 @@ async function requireAdmin() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { ctx, response } = await requireAdmin();
+    const { ctx, response } = await requireAlbumManager();
     if (response) return response;
 
     const parsed = parseAlbumSettings(await request.json());
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const { response } = await requireAdmin();
+    const { response } = await requireAlbumManager();
     if (response) return response;
 
     const body = await request.json();
@@ -112,7 +112,7 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { response } = await requireAdmin();
+    const { response } = await requireAlbumManager();
     if (response) return response;
 
     const id = new URL(request.url).searchParams.get("id");
