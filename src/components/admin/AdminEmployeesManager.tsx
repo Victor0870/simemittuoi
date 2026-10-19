@@ -11,8 +11,13 @@ export type WhitelistEmployeeRow = {
   full_name: string;
   department: string | null;
   is_active: boolean;
+  /** Diện hoàn cảnh khó khăn: chỉ người xem được danh sách nhân viên mới thấy. */
+  is_hardship: boolean;
+  hardship_note: string | null;
   created_at: string;
 };
+
+const HARDSHIP_NOTE_MAX = 500;
 
 type Props = {
   employees: WhitelistEmployeeRow[];
@@ -72,6 +77,7 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
   const [deptFilter, setDeptFilter] = useState("all");
   const [regFilter, setRegFilter] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [hardshipFilter, setHardshipFilter] = useState<"all" | "yes" | "no">("all");
 
   // Sắp xếp cột
   type SortColumn = "code" | "name" | "dept" | "reg" | "status";
@@ -93,7 +99,8 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
       nameFilter.trim() ||
       deptFilter !== "all" ||
       regFilter !== "all" ||
-      activeFilter !== "all",
+      activeFilter !== "all" ||
+      hardshipFilter !== "all",
   );
 
   function clearAllFilters() {
@@ -103,11 +110,14 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
     setDeptFilter("all");
     setRegFilter("all");
     setActiveFilter("all");
+    setHardshipFilter("all");
   }
 
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDept, setEditDept] = useState("");
+  const [editHardship, setEditHardship] = useState(false);
+  const [editHardshipNote, setEditHardshipNote] = useState("");
   const [busyCode, setBusyCode] = useState<string | null>(null);
 
   const departments = useMemo(() => {
@@ -123,7 +133,12 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
     const registered = active.filter(
       (e) => registeredStatus[e.employee_code.toUpperCase()],
     ).length;
-    return { active: active.length, registered, unregistered: active.length - registered };
+    return {
+      active: active.length,
+      registered,
+      unregistered: active.length - registered,
+      hardship: active.filter((e) => e.is_hardship).length,
+    };
   }, [employees, registeredStatus]);
 
   const filtered = useMemo(() => {
@@ -166,6 +181,9 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
       if (activeFilter === "active" && !e.is_active) return false;
       if (activeFilter === "inactive" && e.is_active) return false;
 
+      if (hardshipFilter === "yes" && !e.is_hardship) return false;
+      if (hardshipFilter === "no" && e.is_hardship) return false;
+
       // 6. Tìm kiếm chung (nếu có)
       if (qGlobal) {
         const matchCode = e.employee_code.toLowerCase().includes(qGlobal);
@@ -207,6 +225,7 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
     deptFilter,
     regFilter,
     activeFilter,
+    hardshipFilter,
     sortColumn,
     sortDirection,
   ]);
@@ -268,6 +287,8 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
     setEditingCode(row.employee_code);
     setEditName(row.full_name);
     setEditDept(row.department ?? "");
+    setEditHardship(row.is_hardship);
+    setEditHardshipNote(row.hardship_note ?? "");
     setError(null);
     setSuccess(null);
   }
@@ -278,13 +299,23 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
       setError("Họ tên không được để trống.");
       return;
     }
+    const note = editHardship ? editHardshipNote.trim() : "";
+    if (note.length > HARDSHIP_NOTE_MAX) {
+      setError(`Ghi chú hoàn cảnh tối đa ${HARDSHIP_NOTE_MAX} ký tự.`);
+      return;
+    }
 
     setBusyCode(row.employee_code);
     setError(null);
     const supabase = createClient();
     const { error: updateError } = await supabase
       .from(CDILV_TABLE.employeeWhitelist)
-      .update({ full_name: name, department: editDept.trim() || null })
+      .update({
+        full_name: name,
+        department: editDept.trim() || null,
+        is_hardship: editHardship,
+        hardship_note: note || null,
+      })
       .eq("employee_code", row.employee_code);
     setBusyCode(null);
 
@@ -327,7 +358,7 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
           <p className="text-xs text-on-surface-variant">Đang được phép đăng ký</p>
           <p className="text-headline-sm font-bold text-[#173A67]">{stats.active}</p>
@@ -339,6 +370,10 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
         <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
           <p className="text-xs text-on-surface-variant">Chưa đăng ký</p>
           <p className="text-headline-sm font-bold text-[#173A67]">{stats.unregistered}</p>
+        </div>
+        <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+          <p className="text-xs text-on-surface-variant">Diện khó khăn</p>
+          <p className="text-headline-sm font-bold text-amber-800">{stats.hardship}</p>
         </div>
       </div>
 
@@ -484,6 +519,17 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
             }`}
           >
             Đã ngừng ({employees.length - stats.active})
+          </button>
+          <button
+            type="button"
+            onClick={() => setHardshipFilter((prev) => (prev === "yes" ? "all" : "yes"))}
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition ${
+              hardshipFilter === "yes"
+                ? "bg-amber-700 text-white shadow-xs"
+                : "bg-amber-50 text-amber-900 hover:bg-amber-100"
+            }`}
+          >
+            Diện khó khăn ({employees.filter((e) => e.is_hardship).length})
           </button>
         </div>
 
@@ -633,6 +679,7 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
                   />
                 </button>
               </th>
+              <th className="px-3 py-2.5 font-bold text-[#173A67] whitespace-nowrap">Diện khó khăn</th>
               <th className="px-3 py-2.5 text-right font-bold text-[#173A67] whitespace-nowrap">
                 Thao tác
               </th>
@@ -731,7 +778,20 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
                 </select>
               </th>
 
-              {/* Cột 6: Thao tác & Reset filter */}
+              {/* Cột 6: Lọc Diện khó khăn */}
+              <th className="p-2 font-normal">
+                <select
+                  value={hardshipFilter}
+                  onChange={(e) => setHardshipFilter(e.target.value as typeof hardshipFilter)}
+                  className="w-full min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+                >
+                  <option value="all">Tất cả</option>
+                  <option value="yes">Khó khăn</option>
+                  <option value="no">Bình thường</option>
+                </select>
+              </th>
+
+              {/* Cột 7: Thao tác & Reset filter */}
               <th className="p-2 text-right font-normal">
                 {hasActiveFilters ? (
                   <button
@@ -754,7 +814,7 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={6}>
+                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={7}>
                   Không có nhân viên phù hợp.
                 </td>
               </tr>
@@ -815,6 +875,43 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
                     >
                       {row.is_active ? "Cho phép" : "Đã ngừng"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {isEditing ? (
+                      <div className="min-w-[180px] space-y-1.5">
+                        <label className="flex items-center gap-2 font-semibold">
+                          <input
+                            checked={editHardship}
+                            className="h-4 w-4 accent-amber-700"
+                            type="checkbox"
+                            onChange={(e) => setEditHardship(e.target.checked)}
+                          />
+                          Thuộc diện khó khăn
+                        </label>
+                        {editHardship ? (
+                          <input
+                            className={`${inputClass} text-xs`}
+                            maxLength={HARDSHIP_NOTE_MAX}
+                            placeholder="Ghi chú hoàn cảnh (không bắt buộc)"
+                            value={editHardshipNote}
+                            onChange={(e) => setEditHardshipNote(e.target.value)}
+                          />
+                        ) : null}
+                      </div>
+                    ) : row.is_hardship ? (
+                      <div className="max-w-[220px]">
+                        <span className="rounded-full bg-amber-100 px-2 py-1 font-bold text-amber-900">
+                          Khó khăn
+                        </span>
+                        {row.hardship_note ? (
+                          <p className="mt-1 line-clamp-2 text-on-surface-variant" title={row.hardship_note}>
+                            {row.hardship_note}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="text-on-surface-variant">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">

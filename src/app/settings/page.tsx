@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { PROFILE_ITEM_COUNT, PROFILE_POINTS_PER_ITEM } from "@/lib/members/profile-shared";
 import { createClient } from "@/lib/supabase/client";
 import {
   CDILV_RPC,
@@ -181,6 +182,28 @@ export default function SettingsPage() {
           <MaterialIcon className="text-[20px] text-amber-700" name="arrow_forward" />
         </Link>
       ) : null}
+
+      <Link
+        href="/profile"
+        className="flex items-center justify-between rounded-2xl border border-[#173A67]/30 bg-[#D9F2EC] p-4 text-[#173A67] shadow-xs transition hover:bg-[#c6eae1]"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#173A67] text-white shadow-xs">
+            <MaterialIcon className="text-[22px]" name="contact_page" />
+          </div>
+          <div>
+            <p className="text-sm font-bold sm:text-base">Hồ sơ đoàn viên</p>
+            <p className="text-xs text-[#27496D]">
+              Ngày sinh, CCCD, địa chỉ, ngân hàng, thông tin con – phục vụ giấy tờ công đoàn
+            </p>
+            <p className="mt-0.5 text-xs font-semibold text-[#1B7F5C]">
+              +{PROFILE_POINTS_PER_ITEM} điểm thi đua cho mỗi mục hoàn thành (tối đa{" "}
+              {PROFILE_POINTS_PER_ITEM * PROFILE_ITEM_COUNT} điểm)
+            </p>
+          </div>
+        </div>
+        <MaterialIcon className="text-[20px]" name="arrow_forward" />
+      </Link>
 
       <div>
         <h1 className="text-headline-xl font-extrabold text-[#173A67]">Cài đặt</h1>

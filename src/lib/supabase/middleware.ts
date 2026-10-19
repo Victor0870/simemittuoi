@@ -8,6 +8,7 @@ function isMemberOnlyPath(pathname: string) {
     pathname.startsWith("/admin") ||
     pathname === "/office" ||
     pathname.startsWith("/office/") ||
+    pathname === "/profile" ||
     pathname === "/albums" ||
     pathname.startsWith("/albums/")
   );

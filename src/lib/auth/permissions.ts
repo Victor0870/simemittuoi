@@ -22,6 +22,8 @@ export type PermissionModule = {
 export const PERMISSIONS = {
   employeesView: "employees.view",
   employeesManage: "employees.manage",
+  membersView: "members.view",
+  membersEdit: "members.edit",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -42,6 +44,25 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Thêm / sửa / ngừng",
         description: "Thêm nhân viên mới, sửa họ tên và bộ phận, ngừng hoặc kích hoạt lại mã.",
         requires: [PERMISSIONS.employeesView],
+      },
+    ],
+  },
+  {
+    key: "members",
+    name: "Hồ sơ đoàn viên",
+    icon: "contact_page",
+    permissions: [
+      {
+        code: PERMISSIONS.membersView,
+        name: "Xem hồ sơ",
+        description:
+          "Xem danh sách và chi tiết hồ sơ đoàn viên (ngày sinh, địa chỉ, ngân hàng, con cái). Số CCCD luôn được che.",
+      },
+      {
+        code: PERMISSIONS.membersEdit,
+        name: "Sửa hồ sơ hộ đoàn viên",
+        description: "Cập nhật hồ sơ thay cho đoàn viên (mọi thay đổi đều được ghi lịch sử).",
+        requires: [PERMISSIONS.membersView],
       },
     ],
   },
@@ -144,6 +165,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Tra cứu nhân viên được phép đăng ký và trạng thái tài khoản.",
     icon: "badge",
     permission: PERMISSIONS.employeesView,
+  },
+  {
+    href: "/office/members",
+    title: "Hồ sơ đoàn viên",
+    description: "Tra cứu hồ sơ, tình trạng khai báo, thông tin con của đoàn viên.",
+    icon: "contact_page",
+    permission: PERMISSIONS.membersView,
   },
 ];
 

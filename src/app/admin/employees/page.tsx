@@ -27,7 +27,7 @@ export default async function AdminEmployeesPage() {
   const [{ data: employees, error }, { data: profiles }] = await Promise.all([
     supabase
       .from(CDILV_TABLE.employeeWhitelist)
-      .select("employee_code, full_name, department, is_active, created_at")
+      .select("employee_code, full_name, department, is_active, is_hardship, hardship_note, created_at")
       .order("employee_code", { ascending: true }),
     supabase
       .from(CDILV_TABLE.profiles)
