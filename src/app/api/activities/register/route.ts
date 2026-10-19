@@ -65,7 +65,6 @@ export async function POST(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath(`/activities/${activityId}`);
-    revalidatePath("/missions");
 
     return NextResponse.json({
       success: true,

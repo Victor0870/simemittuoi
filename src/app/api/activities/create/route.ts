@@ -78,7 +78,6 @@ export async function POST(request: NextRequest) {
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath("/admin/activities");
-    revalidatePath("/missions");
 
     return NextResponse.json({
       success: true,

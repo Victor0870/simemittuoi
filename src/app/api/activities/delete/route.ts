@@ -56,7 +56,6 @@ export async function DELETE(request: NextRequest) {
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath("/admin/activities");
-    revalidatePath("/missions");
 
     return NextResponse.json({
       success: true,

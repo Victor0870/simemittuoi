@@ -12,7 +12,6 @@ export const NAV_ITEMS = [
   { href: "/polls", label: "Bình chọn", icon: "how_to_vote" },
   { href: "/leaderboard", label: "Bảng xếp hạng", icon: "leaderboard" },
   { href: "/feedback", label: "Góp ý", icon: "rate_review" },
-  { href: "/missions", label: "Nhiệm vụ", icon: "task_alt" },
 ] as const;
 
 /** Chỉ hiển thị cho thành viên đã được phê duyệt. */
