@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { PostShareButtons } from "@/components/posts/PostShareButtons";
 import type { Announcement } from "@/lib/mock-data";
 
 type AnnouncementCardProps = {
@@ -34,7 +35,13 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
       <p className="mb-4 line-clamp-2 text-body-md text-on-surface-variant">
         {announcement.excerpt}
       </p>
-      <div className="flex items-center justify-end border-t border-dusty-border/70 pt-3">
+      <div className="flex items-center justify-between border-t border-dusty-border/70 pt-3">
+        <PostShareButtons
+          postId={announcement.id}
+          postTitle={announcement.title}
+          postExcerpt={announcement.excerpt}
+          variant="card"
+        />
         <span className="inline-flex items-center gap-1 text-label-md font-bold text-primary">
           Đọc thêm
           <MaterialIcon className="text-[16px]" name="chevron_right" />

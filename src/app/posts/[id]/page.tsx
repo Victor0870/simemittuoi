@@ -1,18 +1,56 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { PostEditButton } from "@/components/posts/PostEditButton";
+import { PostShareButtons } from "@/components/posts/PostShareButtons";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/posts";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { BRAND } from "@/lib/brand";
 
 export const revalidate = 60;
 
 type PostDetailPageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: PostDetailPageProps): Promise<Metadata> {
+  const { id } = await params;
+  const post = await getPostById(id);
+  if (!post) {
+    return {
+      title: `Bài viết | ${BRAND.name}`,
+    };
+  }
+
+  const title = `${post.title} | ${BRAND.name}`;
+  const description = post.excerpt || post.content.slice(0, 160).trim();
+  const canonicalPath = `/posts/${post.id}`;
+  const images = post.imageUrl ? [{ url: post.imageUrl }] : [];
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title: post.title,
+      description,
+      url: canonicalPath,
+      siteName: BRAND.name,
+      type: "article",
+      publishedTime: post.publishedAt,
+      images,
+    },
+    twitter: {
+      card: post.imageUrl ? "summary_large_image" : "summary",
+      title: post.title,
+      description,
+      images: post.imageUrl ? [post.imageUrl] : [],
+    },
+  };
+}
 
 export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const { id } = await params;
@@ -64,7 +102,15 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
                 · {post.timeAgo}
               </span>
             </div>
-            <PostEditButton post={post} />
+            <div className="flex flex-wrap items-center gap-2">
+              <PostShareButtons
+                postId={post.id}
+                postTitle={post.title}
+                postExcerpt={post.excerpt}
+                variant="compact"
+              />
+              <PostEditButton post={post} />
+            </div>
           </div>
           {!post.isActive ? (
             <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-950">
@@ -77,10 +123,17 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
           </h1>
         </div>
 
-        <div className="px-5 py-6 sm:px-10 sm:py-8">
+        <div className="px-5 py-6 sm:px-10 sm:py-8 space-y-8">
           <div className="w-full whitespace-pre-wrap text-body-md sm:text-body-lg leading-relaxed text-on-surface">
             {post.content}
           </div>
+
+          <PostShareButtons
+            postId={post.id}
+            postTitle={post.title}
+            postExcerpt={post.excerpt}
+            variant="full"
+          />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-dusty-border/70 px-4 py-4 sm:px-10 sm:py-5">

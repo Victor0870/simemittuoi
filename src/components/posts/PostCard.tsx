@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { PostShareButtons } from "@/components/posts/PostShareButtons";
 import type { PostSummary } from "@/lib/data/posts";
 
 type PostCardProps = {
@@ -48,7 +49,13 @@ export function PostCard({ post }: PostCardProps) {
       <p className="mb-3 line-clamp-2 sm:line-clamp-3 text-body-sm sm:text-body-md text-on-surface-variant leading-relaxed">
         {post.excerpt}
       </p>
-      <div className="flex items-center justify-end border-t border-dusty-border/70 pt-2.5 sm:pt-3">
+      <div className="flex items-center justify-between border-t border-dusty-border/70 pt-2.5 sm:pt-3">
+        <PostShareButtons
+          postId={post.id}
+          postTitle={post.title}
+          postExcerpt={post.excerpt}
+          variant="card"
+        />
         <span className="inline-flex items-center gap-1 text-label-sm sm:text-label-md font-bold text-primary">
           Đọc thêm
           <MaterialIcon className="text-[16px]" name="chevron_right" />
