@@ -13,6 +13,7 @@ export const CDILV_TABLE = {
   leaderboardCache: "cdilv_leaderboard_cache",
   leaderboard: "cdilv_leaderboard",
   polls: "cdilv_polls",
+  pollJudgeAccess: "cdilv_poll_judge_access",
   pollOptions: "cdilv_poll_options",
   pollOptionMembers: "cdilv_poll_option_members",
   pollVotes: "cdilv_poll_votes",

@@ -283,6 +283,71 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4b. Điểm tham gia dự thi: mỗi mã nhân viên trên tác phẩm được cộng một lần.
+    const entryPoints = parseInt(String(poll.entry_reward_points ?? 0), 10) || 0;
+    if (entryPoints > 0) {
+      const optionIds = updatedOptions.map((opt) => opt.id).filter(Boolean);
+      const { data: entryMembers } = optionIds.length
+        ? await publicDb
+            .from(CDILV_TABLE.pollOptionMembers)
+            .select("id, user_id, employee_code, full_name")
+            .in("option_id", optionIds)
+        : { data: [] };
+
+      const byKey = new Map<
+        string,
+        { user_id: string | null; employee_code: string | null }
+      >();
+      for (const member of entryMembers || []) {
+        const code = String(member.employee_code || "").trim().toUpperCase();
+        const key = code || (member.user_id ? `user:${member.user_id}` : "");
+        if (!key) continue;
+        const previous = byKey.get(key);
+        if (!previous || (!previous.user_id && member.user_id)) {
+          byKey.set(key, { ...member, employee_code: code || member.employee_code });
+        }
+      }
+
+      for (const [key, member] of byKey) {
+        const code = String(member.employee_code || "").trim().toUpperCase();
+
+        const awardLabel = `poll_entry_${pollId}_${key}`;
+        const noteText = `Tham gia dự thi: ${poll.title} (+${entryPoints}đ)`;
+
+        if (member.user_id) {
+          const { error: scoreError } = await publicDb.from(CDILV_TABLE.scoreEvents).insert({
+            user_id: member.user_id,
+            employee_code: code || null,
+            points: entryPoints,
+            note: noteText,
+            award_label: awardLabel,
+            created_by: user.id,
+          });
+          if (scoreError && scoreError.code !== "23505") {
+            console.error("[api/polls/close] entry score:", scoreError.message);
+          }
+        } else if (code) {
+          const { data: existing } = await publicDb
+            .from(CDILV_TABLE.employeeScoreEvents)
+            .select("id")
+            .eq("award_label", awardLabel)
+            .limit(1);
+          if (existing && existing.length > 0) continue;
+          try {
+            await publicDb.from(CDILV_TABLE.employeeScoreEvents).insert({
+              employee_code: code,
+              points: entryPoints,
+              note: noteText,
+              award_label: awardLabel,
+              source: "poll_entry",
+            });
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+
     // 5. Update poll status to closed
     await publicDb
       .from(CDILV_TABLE.polls)

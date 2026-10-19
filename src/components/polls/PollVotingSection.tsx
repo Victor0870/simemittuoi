@@ -35,6 +35,8 @@ export function PollVotingSection({ poll }: Props) {
   const [predictorName, setPredictorName] = useState<string>("");
   const [predictorContact, setPredictorContact] = useState<string>("");
   const [employeeCode, setEmployeeCode] = useState<string>("");
+  const [judgeToken, setJudgeToken] = useState("");
+  const [judgeLinkStatus, setJudgeLinkStatus] = useState<"unknown" | "ok" | "bad">("unknown");
 
   const isCurrentUserJudge = useMemo(() => {
     if (!poll.hasJudges || !poll.judgeList || poll.judgeList.length === 0) return false;
@@ -42,6 +44,29 @@ export function PollVotingSection({ poll }: Props) {
     if (!currentCode) return false;
     return poll.judgeList.some((j) => j.employeeCode.toUpperCase() === currentCode);
   }, [poll.hasJudges, poll.judgeList, profile?.employee_code]);
+
+  useEffect(() => {
+    if (!poll.hasJudges) return;
+    const token = new URLSearchParams(window.location.search).get("gk")?.trim() ?? "";
+    if (!token) return;
+
+    setJudgeToken(token);
+    let cancelled = false;
+    fetch(
+      `/api/polls/judge-link/verify?pollId=${encodeURIComponent(poll.id)}&token=${encodeURIComponent(token)}`,
+    )
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!cancelled) setJudgeLinkStatus(res.ok && data.ok ? "ok" : "bad");
+      })
+      .catch(() => {
+        if (!cancelled) setJudgeLinkStatus("bad");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [poll.hasJudges, poll.id]);
 
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -57,10 +82,12 @@ export function PollVotingSection({ poll }: Props) {
   // Free poll safety limit: max 250 guest votes
   const maxGuestVotes = poll.maxGuestVotes ?? 250;
   const currentGuestVotes = poll.guestVoteCount ?? 0;
+  const judgeLinkPending = Boolean(judgeToken) && judgeLinkStatus === "unknown";
+  const judgeLinkOk = judgeLinkStatus === "ok";
   const isGuestLimitReached =
     poll.accessType === "free" && currentGuestVotes >= maxGuestVotes;
-  const isBlockedForGuest = isGuest && isGuestLimitReached;
-  const needsEmployeeCode = poll.accessType === "free" && isGuest;
+  const isBlockedForGuest = isGuest && isGuestLimitReached && !judgeLinkOk && !judgeLinkPending;
+  const needsEmployeeCode = isGuest && (poll.accessType === "free" || judgeLinkOk || judgeLinkPending);
 
   function handleToggleOption(optionId: string) {
     if (isClosed || isInactive) return;
@@ -107,7 +134,7 @@ export function PollVotingSection({ poll }: Props) {
       return;
     }
 
-    if (poll.accessType === "members_only" && isGuest) {
+    if (poll.accessType === "members_only" && isGuest && !judgeLinkOk && !judgeLinkPending) {
       setErrorMessage("Chương trình này yêu cầu đăng nhập tài khoản đoàn viên để bình chọn.");
       return;
     }
@@ -147,6 +174,7 @@ export function PollVotingSection({ poll }: Props) {
           predictorName: predictorName.trim(),
           predictorContact: predictorContact.trim(),
           employeeCode: needsEmployeeCode ? employeeCode.trim() : undefined,
+          judgeToken: judgeLinkOk || judgeLinkPending ? judgeToken : undefined,
         }),
       });
 
@@ -177,6 +205,21 @@ export function PollVotingSection({ poll }: Props) {
         title={zoomedImage?.title}
         onClose={() => setZoomedImage(null)}
       />
+
+      {judgeLinkOk ? (
+        <div className="rounded-2xl border border-[#173A67]/20 bg-[#173A67]/5 p-4 text-[#173A67]">
+          <p className="text-sm font-extrabold">Link riêng của Ban giám khảo</p>
+          <p className="mt-1 text-xs sm:text-sm leading-relaxed text-on-surface-variant">
+            Nhập đúng mã nhân viên trong danh sách giám khảo. Link công khai không nhận phiếu của giám khảo chưa có tài khoản.
+          </p>
+        </div>
+      ) : null}
+
+      {judgeLinkStatus === "bad" ? (
+        <div className="rounded-2xl border border-error/30 bg-error-container/40 p-4 text-on-error-container">
+          <p className="text-sm font-bold">Link giám khảo không hợp lệ. Hãy dùng đúng đường dẫn do ban tổ chức gửi.</p>
+        </div>
+      ) : null}
 
       {/* Title & Instructions */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-4">
@@ -467,13 +510,13 @@ export function PollVotingSection({ poll }: Props) {
               <span className="flex items-center gap-1.5 font-medium">
                 <MaterialIcon className="text-[18px] text-amber-700" name="gavel" />
                 <span>
-                  {isCurrentUserJudge
-                    ? "Phiếu của bạn sẽ được tự động tính vào nhóm Ban Giám Khảo."
+                  {isCurrentUserJudge || judgeLinkOk
+                    ? "Phiếu của bạn sẽ được tính vào nhóm Ban Giám Khảo khi mã nhân viên đúng danh sách."
                     : "Phiếu của bạn sẽ được tính vào nhóm Bình chọn khác."}
                 </span>
               </span>
               <span className="font-extrabold text-[#173A67] bg-amber-100 px-2 py-0.5 rounded-md">
-                Trọng số: {isCurrentUserJudge ? `${poll.judgeWeightPercent ?? 30}% (Hệ số ${((poll.judgeWeightPercent ?? 30) / 10).toFixed(1)} đ)` : `${100 - (poll.judgeWeightPercent ?? 30)}% (Hệ số ${((100 - (poll.judgeWeightPercent ?? 30)) / 10).toFixed(1)} đ)`}
+                Trọng số: {isCurrentUserJudge || judgeLinkOk ? `${poll.judgeWeightPercent ?? 30}% (Hệ số ${((poll.judgeWeightPercent ?? 30) / 10).toFixed(1)} đ)` : `${100 - (poll.judgeWeightPercent ?? 30)}% (Hệ số ${((100 - (poll.judgeWeightPercent ?? 30)) / 10).toFixed(1)} đ)`}
               </span>
             </div>
           )}
@@ -510,8 +553,9 @@ export function PollVotingSection({ poll }: Props) {
                 </p>
               ) : null}
               <p className="text-label-sm text-on-surface-variant leading-relaxed">
-                Người chưa là đoàn viên cần nhập mã nhân viên. Không nhập thì phiếu không được tính.
-                Nếu mã này đã có phiếu trước đó, hệ thống lấy kết quả lần bình chọn sau.
+                {judgeLinkOk
+                  ? "Chỉ mã trong danh sách Ban giám khảo mới gửi được phiếu qua link này. Nếu mã đã có phiếu, hệ thống lấy kết quả lần bình chọn sau."
+                  : "Người chưa là đoàn viên cần nhập mã nhân viên. Không nhập thì phiếu không được tính. Mã thuộc Ban giám khảo chưa có tài khoản không dùng được trên trang này."}
               </p>
             </div>
           ) : null}

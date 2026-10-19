@@ -13,6 +13,55 @@ export type OptionFormState = {
   members: Array<{ fullName: string; employeeCode: string }>;
 };
 
+function ParticipationPointsFields({
+  voterRewardPoints,
+  entryRewardPoints,
+  onVoterChange,
+  onEntryChange,
+}: {
+  voterRewardPoints: number;
+  entryRewardPoints: number;
+  onVoterChange: (value: number) => void;
+  onEntryChange: (value: number) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+        <span className="block text-sm font-extrabold text-[#173A67]">Điểm tham gia bình chọn</span>
+        <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">
+          Cộng cho đoàn viên đã đăng nhập ngay khi gửi phiếu. Nhập 0 nếu không thưởng.
+        </span>
+        <span className="mt-3 flex items-center gap-2">
+          <input
+            className="w-28 rounded-xl border border-amber-400 bg-white px-3 py-2 text-center text-title-md font-black text-amber-700"
+            min={0}
+            type="number"
+            value={voterRewardPoints}
+            onChange={(e) => onVoterChange(Number(e.target.value))}
+          />
+          <span className="text-xs font-bold text-amber-900">điểm / người</span>
+        </span>
+      </label>
+      <label className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+        <span className="block text-sm font-extrabold text-[#173A67]">Điểm tham gia dự thi</span>
+        <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">
+          Cộng khi tổng kết, theo mã nhân viên gắn trên từng tác phẩm. Mỗi mã được cộng một lần. Nhập 0 nếu không thưởng.
+        </span>
+        <span className="mt-3 flex items-center gap-2">
+          <input
+            className="w-28 rounded-xl border border-primary bg-white px-3 py-2 text-center text-title-md font-black text-primary"
+            min={0}
+            type="number"
+            value={entryRewardPoints}
+            onChange={(e) => onEntryChange(Number(e.target.value))}
+          />
+          <span className="text-xs font-bold text-[#173A67]">điểm / mã NV</span>
+        </span>
+      </label>
+    </div>
+  );
+}
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -41,6 +90,7 @@ export function PollEditorModal({
     "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
   );
   const [voterRewardPoints, setVoterRewardPoints] = useState(10);
+  const [entryRewardPoints, setEntryRewardPoints] = useState(0);
   const [predictorRewardPoints, setPredictorRewardPoints] = useState(50);
 
   // Judge state
@@ -94,6 +144,7 @@ export function PollEditorModal({
           "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
       );
       setVoterRewardPoints(initialPoll.voterRewardPoints ?? 10);
+      setEntryRewardPoints(initialPoll.entryRewardPoints ?? 0);
       setPredictorRewardPoints(initialPoll.predictorRewardPoints ?? 50);
       setHasJudges(Boolean(initialPoll.hasJudges));
       setJudgeWeightPercent(initialPoll.judgeWeightPercent ?? 30);
@@ -129,6 +180,8 @@ export function PollEditorModal({
       setAccessType("free");
       setContentType("image");
       setMaxVotesPerUser(3);
+      setVoterRewardPoints(10);
+      setEntryRewardPoints(0);
       setHasPrediction(true);
       setHasJudges(false);
       setJudgeWeightPercent(30);
@@ -315,6 +368,7 @@ export function PollEditorModal({
         hasPrediction,
         predictionQuestion,
         voterRewardPoints,
+        entryRewardPoints,
         predictorRewardPoints,
         hasJudges,
         judgeWeightPercent,
@@ -464,6 +518,13 @@ export function PollEditorModal({
                   <span>+ Thêm Tác Phẩm Mới</span>
                 </button>
               </div>
+
+              <ParticipationPointsFields
+                entryRewardPoints={entryRewardPoints}
+                voterRewardPoints={voterRewardPoints}
+                onEntryChange={setEntryRewardPoints}
+                onVoterChange={setVoterRewardPoints}
+              />
 
               <div className="space-y-5">
                 {options.map((opt, optIdx) => (
@@ -808,21 +869,12 @@ export function PollEditorModal({
                   />
                 </div>
 
-                <div className="flex items-center justify-between border-t border-outline-variant/60 pt-4">
-                  <div>
-                    <h4 className="text-sm font-bold text-[#173A67]">
-                      Điểm thi đua tặng cho người tham gia bình chọn
-                    </h4>
-                    <p className="text-xs text-on-surface-variant">
-                      Cộng điểm trực tiếp vào tài khoản đoàn viên khi bấm gửi bình chọn
-                    </p>
-                  </div>
-                  <input
-                    className="w-24 rounded-xl border border-outline-variant bg-white px-3 py-2 text-center text-title-md font-bold text-amber-600"
-                    min={0}
-                    type="number"
-                    value={voterRewardPoints}
-                    onChange={(e) => setVoterRewardPoints(Number(e.target.value))}
+                <div className="border-t border-outline-variant/60 pt-4">
+                  <ParticipationPointsFields
+                    entryRewardPoints={entryRewardPoints}
+                    voterRewardPoints={voterRewardPoints}
+                    onEntryChange={setEntryRewardPoints}
+                    onVoterChange={setVoterRewardPoints}
                   />
                 </div>
 
@@ -993,6 +1045,7 @@ export function PollEditorModal({
                           </h5>
                           <p className="text-xs text-on-surface-variant mt-0.5">
                             Thêm giám khảo bằng cách nhập Mã số nhân viên để hệ thống tự động nhận diện phiếu bầu.
+                            Giám khảo chưa có tài khoản không bình chọn được qua link công khai. Trên trang bình chọn, dùng nút QR giám khảo để gửi link riêng.
                           </p>
                         </div>
                       </div>

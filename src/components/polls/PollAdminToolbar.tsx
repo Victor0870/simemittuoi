@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { PollDetail } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
+import { PollQrButton } from "@/components/polls/PollQrButton";
 
 type Props = {
   poll: PollDetail;
@@ -146,6 +147,26 @@ export function PollAdminToolbar({ poll }: Props) {
               />
               <span>{isActive ? "Active" : "Inactive"}</span>
             </button>
+
+            {poll.hasJudges ? (
+              <PollQrButton
+                pollId={poll.id}
+                pollTitle={poll.title}
+                label="QR giám khảo"
+                heading="Mã QR riêng cho Ban giám khảo"
+                description="Chỉ gửi link này cho giám khảo chưa có tài khoản. Link công khai không nhận phiếu của họ, nên người khác không nhập mã giám khảo để đè kết quả."
+                downloadName={`qr-giam-khao-${poll.id}.png`}
+                buttonClassName="flex items-center justify-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#173A67] shadow-xs hover:bg-amber-100 transition cursor-pointer sm:px-3.5 sm:py-2 sm:text-xs"
+                loadUrl={async () => {
+                  const res = await fetch(`/api/polls/judge-link?pollId=${encodeURIComponent(poll.id)}`);
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok || !data.token) {
+                    throw new Error(data.error || "Không tạo được link giám khảo.");
+                  }
+                  return `${window.location.origin}/polls/${poll.id}?gk=${encodeURIComponent(data.token)}#binh-chon`;
+                }}
+              />
+            ) : null}
 
             {/* BUTTON CÀI ĐẶT & CHỈNH SỬA CUỘC THI */}
             <button

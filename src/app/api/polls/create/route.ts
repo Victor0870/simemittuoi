@@ -3,6 +3,7 @@ import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { ensureJudgeToken } from "@/lib/polls/judge-access";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
       hasPrediction = true,
       predictionQuestion,
       voterRewardPoints = 10,
+      entryRewardPoints = 0,
       predictorRewardPoints = 50,
       isUnionContest = true,
       firstPrizePoints = 50,
@@ -83,6 +85,7 @@ export async function POST(request: NextRequest) {
           predictionQuestion?.trim() ||
           "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
         voter_reward_points: parseInt(String(voterRewardPoints), 10) || 0,
+        entry_reward_points: parseInt(String(entryRewardPoints), 10) || 0,
         predictor_reward_points: parseInt(String(predictorRewardPoints), 10) || 0,
         is_union_contest: Boolean(isUnionContest),
         first_prize_points: parseInt(String(firstPrizePoints), 10) || 0,
@@ -104,6 +107,8 @@ export async function POST(request: NextRequest) {
     if (pollError || !poll) {
       throw pollError || new Error("Không thể tạo poll");
     }
+
+    await ensureJudgeToken(publicDb, poll.id);
 
     // 2. Insert options & members
     for (let i = 0; i < options.length; i++) {

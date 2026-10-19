@@ -2,11 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import {
+  approvedAccountOwnsCode,
+  isValidJudgeToken,
+  judgeCodesFromPoll,
+  normalizeEmployeeCode,
+} from "@/lib/polls/judge-access";
 
-function normalizeEmployeeCode(raw: unknown): string | null {
-  const code = String(raw ?? "").trim().toUpperCase();
-  return code.length > 0 ? code : null;
-}
+const PUBLIC_JUDGE_BLOCKED =
+  "Mã này thuộc Ban giám khảo chưa có tài khoản nên không bình chọn được qua link công khai. Vui lòng dùng link riêng do ban tổ chức gửi. Nếu bạn đã có tài khoản đoàn viên, hãy đăng nhập.";
+
+const PRIVATE_JUDGE_ONLY =
+  "Link này chỉ dành cho Ban giám khảo chưa có tài khoản. Mã nhân viên không có trong danh sách giám khảo.";
+
+const PRIVATE_JUDGE_HAS_ACCOUNT =
+  "Giám khảo đã có tài khoản đoàn viên. Vui lòng đăng nhập rồi bình chọn, không dùng link riêng này.";
 
 async function shiftOptionVoteCount(
   publicDb: ReturnType<typeof createServiceClient>,
@@ -39,6 +49,7 @@ export async function POST(request: NextRequest) {
       predictorName,
       predictorContact,
       employeeCode,
+      judgeToken,
     } = body;
 
     if (!pollId || !Array.isArray(optionIds) || optionIds.length === 0) {
@@ -86,6 +97,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Auth check — đoàn viên đã duyệt không cần nhập mã; người chưa là thành viên (free) thì bắt buộc.
+    // Link riêng (?gk=) chỉ mở cho giám khảo chưa có tài khoản đoàn viên đã duyệt.
+    const judgeCodes = judgeCodesFromPoll(poll);
+    const judgeLinkOk =
+      Boolean(poll.has_judges) && (await isValidJudgeToken(publicDb, pollId, judgeToken));
+
     const supabase = await createClient();
     const {
       data: { user },
@@ -103,7 +119,7 @@ export async function POST(request: NextRequest) {
       memberEmployeeCode = normalizeEmployeeCode(profile?.employee_code);
     }
 
-    if (poll.access_type === "members_only" && !isApprovedMember) {
+    if (poll.access_type === "members_only" && !isApprovedMember && !judgeLinkOk) {
       return NextResponse.json(
         {
           error: "Chương trình này chỉ dành riêng cho đoàn viên đã đăng nhập.",
@@ -112,7 +128,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const needsEmployeeCode = poll.access_type === "free" && !isApprovedMember;
+    const needsEmployeeCode = !isApprovedMember && (poll.access_type === "free" || judgeLinkOk);
     const voterEmployeeCode = needsEmployeeCode
       ? normalizeEmployeeCode(employeeCode)
       : memberEmployeeCode;
@@ -126,6 +142,28 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    const codeIsJudge = Boolean(voterEmployeeCode && judgeCodes.has(voterEmployeeCode));
+    const codeHasApprovedAccount =
+      needsEmployeeCode && codeIsJudge && voterEmployeeCode
+        ? await approvedAccountOwnsCode(publicDb, voterEmployeeCode)
+        : false;
+
+    if (needsEmployeeCode && codeIsJudge && !judgeLinkOk) {
+      return NextResponse.json({ error: PUBLIC_JUDGE_BLOCKED }, { status: 403 });
+    }
+
+    if (judgeLinkOk && needsEmployeeCode) {
+      if (!codeIsJudge) {
+        return NextResponse.json({ error: PRIVATE_JUDGE_ONLY }, { status: 403 });
+      }
+      if (codeHasApprovedAccount) {
+        return NextResponse.json({ error: PRIVATE_JUDGE_HAS_ACCOUNT }, { status: 403 });
+      }
+    }
+
+    const isPrivateJudgeVote =
+      judgeLinkOk && needsEmployeeCode && codeIsJudge && !codeHasApprovedAccount;
 
     // Safety limit check for free polls: max guest votes (default 250)
     const maxGuestVotes = poll.max_guest_votes ?? 250;
@@ -150,7 +188,7 @@ export async function POST(request: NextRequest) {
     }
     const isReplacement = priorVotes.length > 0;
 
-    if (needsEmployeeCode && !isReplacement && currentGuestVotes >= maxGuestVotes) {
+    if (needsEmployeeCode && !isReplacement && !isPrivateJudgeVote && currentGuestVotes >= maxGuestVotes) {
       return NextResponse.json(
         {
           error: "Chương trình hiện chỉ mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập. Quý đoàn viên vui lòng đăng nhập để bình chọn!",
@@ -160,8 +198,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (needsEmployeeCode && !isReplacement) {
-      // IP & anti-spam check (1 phiếu mới / 30 phút). Phiếu trùng mã được ghi đè, không chặn.
+    if (needsEmployeeCode && !isReplacement && !isPrivateJudgeVote) {
+      // IP & anti-spam check (1 phiếu mới / 30 phút). Phiếu trùng mã được ghi đè, không chặn. Phiếu link giám khảo không áp dụng.
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: recentVotes } = await publicDb
         .from(CDILV_TABLE.pollVotes)
@@ -214,25 +252,8 @@ export async function POST(request: NextRequest) {
       if (deleteError) throw deleteError;
     }
 
-    // Determine if voter belongs to the poll's judge list
-    let isJudge = false;
-    if (poll.has_judges && voterEmployeeCode) {
-      const rawList = Array.isArray(poll.judge_list)
-        ? poll.judge_list
-        : typeof poll.judge_list === "string"
-        ? JSON.parse(poll.judge_list || "[]")
-        : [];
-
-      const judgeCodes = new Set(
-        rawList
-          .map((j: any) => normalizeEmployeeCode(j?.employeeCode))
-          .filter(Boolean),
-      );
-
-      if (judgeCodes.has(voterEmployeeCode)) {
-        isJudge = true;
-      }
-    }
+    // Phiếu giám khảo: đoàn viên đã duyệt có mã trong danh sách, hoặc khách vào bằng link riêng.
+    const isJudge = codeIsJudge && (!needsEmployeeCode || isPrivateJudgeVote);
 
     // Insert votes
     const submissionId = crypto.randomUUID();
@@ -256,7 +277,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Phiếu khách mới thì tăng bộ đếm; phiếu ghi đè cùng mã nhân viên không tính thêm lượt.
-    if (needsEmployeeCode && !isReplacement) {
+    if (needsEmployeeCode && !isReplacement && !isPrivateJudgeVote) {
       await publicDb
         .from(CDILV_TABLE.polls)
         .update({ guest_vote_count: currentGuestVotes + 1 })

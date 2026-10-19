@@ -50,6 +50,7 @@ export type PollSummary = {
   hasPrediction: boolean;
   predictionQuestion: string;
   voterRewardPoints: number;
+  entryRewardPoints: number;
   predictorRewardPoints: number;
   isUnionContest: boolean;
   firstPrizePoints: number;
@@ -102,6 +103,7 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
       row.prediction_question ||
       "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
     voterRewardPoints: row.voter_reward_points ?? 0,
+    entryRewardPoints: row.entry_reward_points ?? 0,
     predictorRewardPoints: row.predictor_reward_points ?? 0,
     isUnionContest: Boolean(row.is_union_contest),
     firstPrizePoints: row.first_prize_points ?? 0,
@@ -306,6 +308,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
       pollRow.prediction_question ||
       "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
     voterRewardPoints: pollRow.voter_reward_points ?? 0,
+    entryRewardPoints: pollRow.entry_reward_points ?? 0,
     predictorRewardPoints: pollRow.predictor_reward_points ?? 0,
     isUnionContest: Boolean(pollRow.is_union_contest),
     firstPrizePoints: pollRow.first_prize_points ?? 0,
