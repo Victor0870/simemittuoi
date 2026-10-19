@@ -18,6 +18,8 @@ type Props = {
   employees: WhitelistEmployeeRow[];
   /** Mã NV (viết hoa) → approval_status của tài khoản đã đăng ký. */
   registeredStatus: Record<string, string>;
+  /** false: chỉ xem (ẩn form thêm và nút sửa/ngừng). */
+  canManage?: boolean;
 };
 
 type StatusFilter = "all" | "active" | "inactive" | "unregistered";
@@ -54,7 +56,7 @@ function removeVietnameseTones(str: string): string {
 const inputClass =
   "w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 
-export function AdminEmployeesManager({ employees, registeredStatus }: Props) {
+export function AdminEmployeesManager({ employees, registeredStatus, canManage = true }: Props) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [fullName, setFullName] = useState("");
@@ -340,6 +342,7 @@ export function AdminEmployeesManager({ employees, registeredStatus }: Props) {
         </div>
       </div>
 
+      {canManage ? (
       <form
         className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5"
         onSubmit={handleAdd}
@@ -412,6 +415,7 @@ export function AdminEmployeesManager({ employees, registeredStatus }: Props) {
           </p>
         ) : null}
       </form>
+      ) : null}
 
       {error ? (
         <p className="text-sm text-error" role="alert">
@@ -814,7 +818,9 @@ export function AdminEmployeesManager({ employees, registeredStatus }: Props) {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
-                      {isEditing ? (
+                      {!canManage ? (
+                        <span className="text-xs text-on-surface-variant">Chỉ xem</span>
+                      ) : isEditing ? (
                         <>
                           <button
                             className="rounded-lg bg-tertiary px-3 py-1.5 text-xs font-bold text-on-tertiary disabled:opacity-50"

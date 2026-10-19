@@ -5,6 +5,8 @@ import {
   type WhitelistEmployeeRow,
 } from "@/components/admin/AdminEmployeesManager";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -12,25 +14,16 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminEmployeesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  const access = await getCurrentAccess();
+  if (!access) {
     redirect("/login?next=/admin/employees");
   }
-
-  const { data: me } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("role, approval_status")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (me?.role !== "admin" || me?.approval_status !== "approved") {
+  if (!hasPermission(access, PERMISSIONS.employeesView)) {
     redirect("/");
   }
+  const canManage = hasPermission(access, PERMISSIONS.employeesManage);
 
+  const supabase = await createClient();
   const [{ data: employees, error }, { data: profiles }] = await Promise.all([
     supabase
       .from(CDILV_TABLE.employeeWhitelist)
@@ -54,20 +47,32 @@ export default async function AdminEmployeesPage() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Link
-              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-              href="/admin"
-            >
-              <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
-              <span>Tổng quan Admin</span>
-            </Link>
-            <Link
-              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-primary hover:text-primary"
-              href="/admin/users"
-            >
-              <MaterialIcon className="text-[18px] text-primary" name="manage_accounts" />
-              <span>Duyệt đoàn viên</span>
-            </Link>
+            {access.isAdmin ? (
+              <>
+                <Link
+                  className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+                  href="/admin"
+                >
+                  <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
+                  <span>Tổng quan Admin</span>
+                </Link>
+                <Link
+                  className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-primary hover:text-primary"
+                  href="/admin/users"
+                >
+                  <MaterialIcon className="text-[18px] text-primary" name="manage_accounts" />
+                  <span>Duyệt đoàn viên</span>
+                </Link>
+              </>
+            ) : (
+              <Link
+                className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
+                href="/office"
+              >
+                <MaterialIcon className="text-[18px] text-[#173A67]" name="work" />
+                <span>Khu vực quản lý</span>
+              </Link>
+            )}
             <span className="flex items-center gap-1.5 rounded-xl bg-[#173A67] px-3 py-1.5 text-label-md font-bold text-white shadow-xs">
               <MaterialIcon className="text-[18px]" name="badge" />
               <span>Danh sách nhân viên</span>
@@ -78,6 +83,7 @@ export default async function AdminEmployeesPage() {
           </h1>
           <p className="text-body-md text-[#27496D]">
             Chỉ những mã nhân viên đang hoạt động trong danh sách này mới đăng ký được tài khoản.
+            {canManage ? "" : " Bạn đang ở chế độ chỉ xem."}
           </p>
         </div>
         <Link
@@ -93,6 +99,7 @@ export default async function AdminEmployeesPage() {
       ) : null}
 
       <AdminEmployeesManager
+        canManage={canManage}
         employees={(employees ?? []) as WhitelistEmployeeRow[]}
         registeredStatus={registeredStatus}
       />

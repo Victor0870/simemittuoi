@@ -6,7 +6,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 
 export function TopNavAuth() {
-  const { user, profile, loading, isGuest, isAdmin } = useAuth();
+  const { user, profile, loading, isGuest, isAdmin, hasAnyPermission } = useAuth();
 
   if (loading) {
     return (
@@ -45,6 +45,15 @@ export function TopNavAuth() {
         >
           <MaterialIcon className="text-[15px] text-amber-600" name="shield" />
           <span>Admin</span>
+        </Link>
+      ) : hasAnyPermission ? (
+        <Link
+          className="hidden items-center gap-1 rounded-full border border-[#173A67]/30 bg-[#D9F2EC] px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:bg-[#c6eae1] sm:inline-flex"
+          href="/office"
+          title="Khu vực quản lý"
+        >
+          <MaterialIcon className="text-[15px]" name="work" />
+          <span>Quản lý</span>
         </Link>
       ) : null}
       <NotificationBell />

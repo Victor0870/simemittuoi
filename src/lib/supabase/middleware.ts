@@ -1,9 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
+import { findAdminRoutePermission } from "@/lib/auth/permissions";
 
 function isMemberOnlyPath(pathname: string) {
-  return pathname.startsWith("/admin") || pathname === "/albums" || pathname.startsWith("/albums/");
+  return (
+    pathname.startsWith("/admin") ||
+    pathname === "/office" ||
+    pathname.startsWith("/office/") ||
+    pathname === "/albums" ||
+    pathname.startsWith("/albums/")
+  );
 }
 
 function isAuthExemptPath(pathname: string) {
@@ -107,11 +114,19 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Đã duyệt
+    // Đã duyệt: trang /admin chỉ cho admin, trừ các trang được mở theo quyền
     if (pathname.startsWith("/admin") && role !== "admin") {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = "/";
-      return NextResponse.redirect(redirectUrl);
+      const permission = findAdminRoutePermission(pathname);
+      let allowed = false;
+      if (permission) {
+        const { data } = await supabase.rpc(CDILV_RPC.hasPermission, { p_code: permission });
+        allowed = data === true;
+      }
+      if (!allowed) {
+        const redirectUrl = request.nextUrl.clone();
+        redirectUrl.pathname = "/";
+        return NextResponse.redirect(redirectUrl);
+      }
     }
 
     if (

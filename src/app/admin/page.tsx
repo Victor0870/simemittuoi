@@ -409,6 +409,26 @@ export default async function AdminDashboardPage() {
 
         <div className="space-y-2.5">
           <Link
+            href="/admin/roles"
+            className="flex items-center justify-between rounded-2xl border border-amber-300 bg-amber-50 p-4 transition hover:bg-amber-100/70"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                <MaterialIcon className="text-[20px]" name="admin_panel_settings" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-amber-900">
+                  Phân quyền theo cấp
+                </p>
+                <p className="text-xs text-amber-900/80">
+                  Tạo cấp (Manager, Kế toán, Ủy viên…), chọn quyền từng cấp, gán thành viên
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-amber-800" name="chevron_right" />
+          </Link>
+
+          <Link
             href="/albums"
             className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
           >

@@ -30,6 +30,10 @@ export const CDILV_TABLE = {
   quizSettings: "cdilv_quiz_settings",
   quizSessions: "cdilv_quiz_sessions",
   quizAttempts: "cdilv_quiz_attempts",
+  roles: "cdilv_roles",
+  rolePermissions: "cdilv_role_permissions",
+  userRoles: "cdilv_user_roles",
+  permissionLogs: "cdilv_permission_logs",
 } as const;
 
 export const CDILV_RPC = {
@@ -39,6 +43,8 @@ export const CDILV_RPC = {
   refreshLeaderboardCache: "cdilv_refresh_leaderboard_cache",
   awardAlbumPhotoScore: "cdilv_award_album_photo_score",
   awardAlbumCommentScore: "cdilv_award_album_comment_score",
+  hasPermission: "cdilv_has_permission",
+  myPermissions: "cdilv_my_permissions",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */

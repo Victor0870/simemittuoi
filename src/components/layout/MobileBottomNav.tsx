@@ -13,13 +13,13 @@ type MobileBottomNavProps = {
 
 type NavItem = { href: string; label: string; icon: string };
 
-const SECTION_PREFIXES = ["/admin", "/feedback", "/albums"];
+const SECTION_PREFIXES = ["/admin", "/office", "/feedback", "/albums"];
 
 export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-  const { isAdmin, isApproved } = useAuth();
+  const { isAdmin, isApproved, hasAnyPermission } = useAuth();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -38,7 +38,9 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
   const accountItem: NavItem = isAdmin
     ? { href: "/admin", label: "Tài khoản", icon: "admin_panel_settings" }
     : { href: "/settings", label: "Tài khoản", icon: "person" };
-  const scrollItems: NavItem[] = [...restItems, ...memberItems, accountItem];
+  const officeItems: NavItem[] =
+    hasAnyPermission && !isAdmin ? [{ href: "/office", label: "Quản lý", icon: "work" }] : [];
+  const scrollItems: NavItem[] = [...restItems, ...memberItems, ...officeItems, accountItem];
 
   function isItemActive(href: string) {
     return (

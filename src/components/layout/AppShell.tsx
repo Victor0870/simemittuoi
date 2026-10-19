@@ -29,6 +29,8 @@ function resolveActiveHref(pathname: string): string {
     "/admin/scores",
     "/admin/polls",
     "/admin/quiz",
+    "/admin/roles",
+    "/office",
   ];
 
   const unique = [...new Set(candidates)];
