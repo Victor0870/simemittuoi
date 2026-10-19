@@ -23,10 +23,10 @@ export default async function MyProfilePage() {
   if (!profile) redirect("/");
 
   return (
-    <div className="max-w-3xl space-y-5 pb-10">
+    <div className="max-w-3xl space-y-4 pb-6 sm:space-y-5 sm:pb-10">
       <div>
-        <h1 className="text-headline-md font-extrabold text-[#173A67]">Thông tin cá nhân</h1>
-        <p className="text-sm text-on-surface-variant">
+        <h1 className="text-xl font-extrabold text-[#173A67] sm:text-headline-md">Thông tin cá nhân</h1>
+        <p className="text-xs text-on-surface-variant sm:text-sm">
           Hồ sơ đoàn viên phục vụ giấy tờ hành chính công đoàn. Chỉ bạn và người được phân quyền xem được.
         </p>
         <p className="mt-1 flex items-center gap-1 text-xs font-semibold text-[#1B7F5C]">

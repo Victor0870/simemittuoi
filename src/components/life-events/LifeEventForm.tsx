@@ -17,7 +17,7 @@ import {
 type Props = { category: LifeEventCategory; today: string };
 
 const inputClass =
-  "w-full rounded-xl border border-outline-variant bg-white px-3 py-2.5 text-sm outline-none focus:border-[#173A67]";
+  "w-full min-w-0 rounded-xl border border-outline-variant bg-white px-3 py-2.5 text-base outline-none focus:border-[#173A67] sm:text-sm";
 
 type PendingFile = { key: string; file: File; preview: string | null };
 

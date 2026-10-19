@@ -98,11 +98,11 @@ export function AccountInfo(props: Props) {
   const name = props.fullName || "Đoàn viên";
 
   return (
-    <div className="space-y-5 pb-10">
-      <h1 className="text-headline-md font-extrabold text-[#173A67]">Thông tin tài khoản</h1>
+    <div className="space-y-4 pb-6 sm:space-y-5 sm:pb-10">
+      <h1 className="text-xl font-extrabold text-[#173A67] sm:text-headline-md">Thông tin tài khoản</h1>
 
-      <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 sm:p-6">
-        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:text-left">
+      <section className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-6">
+        <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:gap-4 sm:text-left">
           <label className="group relative h-24 w-24 shrink-0 cursor-pointer" title="Đổi ảnh đại diện">
             <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-4 border-primary-fixed bg-primary-fixed text-3xl font-extrabold text-[#173A67]">
               {avatarUrl ? (
@@ -122,9 +122,9 @@ export function AccountInfo(props: Props) {
               onChange={handleAvatarChange}
             />
           </label>
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <p className="text-xl font-extrabold text-[#173A67]">{name}</p>
-            <p className="text-sm text-on-surface-variant">
+          <div className="w-full min-w-0 flex-1 space-y-1.5">
+            <p className="break-words text-lg font-extrabold text-[#173A67] sm:text-xl">{name}</p>
+            <p className="break-words text-sm text-on-surface-variant">
               {[props.employeeCode ? `Mã NV ${props.employeeCode}` : null, props.department]
                 .filter(Boolean)
                 .join(" · ") || "Chưa có mã nhân viên"}
@@ -142,7 +142,7 @@ export function AccountInfo(props: Props) {
             </div>
           </div>
         </div>
-        <p className="mt-4 text-xs text-on-surface-variant">
+        <p className="mt-3 text-center text-xs text-on-surface-variant sm:mt-4 sm:text-left">
           Bấm vào ảnh để đổi ảnh đại diện (JPG, PNG, WEBP, GIF · tối đa 2MB).{" "}
           {hasAvatarBonus ? "Bạn đã nhận thưởng cập nhật ảnh đại diện." : "Lần đầu cập nhật: +10 điểm."}
         </p>
@@ -155,31 +155,37 @@ export function AccountInfo(props: Props) {
       </section>
 
       {props.isApproved ? (
-        <section className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+        <section className="grid grid-cols-2 gap-3">
+          <Link
+            className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition hover:border-[#173A67] sm:p-4"
+            href="/score-history"
+          >
             <p className="flex items-center gap-1 text-xs font-semibold text-on-surface-variant">
               <MaterialIcon className="text-[16px]" name="stars" />
               Điểm thi đua
             </p>
-            <p className="text-headline-md font-extrabold text-[#173A67]">{props.score.toLocaleString("vi-VN")}</p>
-            <Link className="text-xs font-semibold text-primary hover:underline" href="/score-history">
-              Xem lịch sử điểm →
-            </Link>
-          </div>
-          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
+            <p className="text-2xl font-extrabold text-[#173A67] sm:text-headline-md">
+              {props.score.toLocaleString("vi-VN")}
+            </p>
+            <span className="text-xs font-semibold text-primary">Lịch sử điểm →</span>
+          </Link>
+          <Link
+            className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-3 transition hover:border-[#173A67] sm:p-4"
+            href="/leaderboard"
+          >
             <p className="flex items-center gap-1 text-xs font-semibold text-on-surface-variant">
               <MaterialIcon className="text-[16px]" name="leaderboard" />
               Xếp hạng
             </p>
-            <p className="text-headline-md font-extrabold text-[#173A67]">{props.rank > 0 ? `#${props.rank}` : "—"}</p>
-            <Link className="text-xs font-semibold text-primary hover:underline" href="/leaderboard">
-              Xem bảng xếp hạng →
-            </Link>
-          </div>
+            <p className="text-2xl font-extrabold text-[#173A67] sm:text-headline-md">
+              {props.rank > 0 ? `#${props.rank}` : "—"}
+            </p>
+            <span className="text-xs font-semibold text-primary">Bảng xếp hạng →</span>
+          </Link>
         </section>
       ) : null}
 
-      <p className="text-sm text-on-surface-variant">
+      <p className="text-xs text-on-surface-variant sm:text-sm">
         Thưởng đăng ký tài khoản (+10) được cộng tự động khi bạn đăng ký thành công.
       </p>
     </div>

@@ -53,10 +53,11 @@ const BANK_SUGGESTIONS = [
   "Bac A Bank",
 ];
 
+/** text-base trên điện thoại: iOS tự phóng to trang khi ô nhập có cỡ chữ dưới 16px. */
 const inputClass =
-  "w-full rounded-xl border border-outline-variant bg-surface px-3 py-2 text-sm outline-none focus:border-[#173A67] disabled:bg-surface-container-low disabled:text-on-surface-variant";
+  "w-full min-w-0 rounded-xl border border-outline-variant bg-surface px-3 py-2.5 text-base outline-none focus:border-[#173A67] disabled:bg-surface-container-low disabled:text-on-surface-variant sm:py-2 sm:text-sm";
 const labelClass = "mb-1 block text-label-md font-semibold text-on-surface";
-const sectionClass = "rounded-2xl border border-outline-variant bg-surface-container-lowest p-5";
+const sectionClass = "rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5";
 
 function toDrafts(children: MemberChild[]): ChildDraft[] {
   return children.map((c, i) => ({ ...c, key: c.id ?? `new-${i}` }));
@@ -174,6 +175,7 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
         ? ` ${isSelf ? "Bạn" : "Đoàn viên"} được cộng ${data.awardedPoints} điểm thi đua (${(data.awardedLabels ?? []).join(", ")}).`
         : "";
       setSuccess(base + bonus);
+      window.setTimeout(() => setSuccess(null), 6000);
     } catch {
       setErrors(["Mất kết nối, vui lòng thử lại."]);
     } finally {
@@ -190,8 +192,8 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
     <div className="space-y-5">
       {/* Tổng quan */}
       <div className={sectionClass}>
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-xl font-extrabold text-[#173A67]">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-fixed text-xl font-extrabold text-[#173A67] sm:h-14 sm:w-14">
             {profile.user.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img alt={profile.user.full_name} className="h-full w-full object-cover" src={profile.user.avatar_url} />
@@ -200,8 +202,8 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-lg font-bold text-[#173A67]">{profile.user.full_name}</p>
-            <p className="text-sm text-on-surface-variant">
+            <p className="break-words text-base font-bold text-[#173A67] sm:text-lg">{profile.user.full_name}</p>
+            <p className="break-words text-xs text-on-surface-variant sm:text-sm">
               {[profile.user.employee_code && `Mã NV: ${profile.user.employee_code}`, profile.user.department]
                 .filter(Boolean)
                 .join(" · ") || "—"}
@@ -226,13 +228,27 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
           <p className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-[#173A67]">
             <span className="flex items-center gap-1">
               <MaterialIcon className="text-[16px]" name="military_tech" />
-              Điểm thi đua hoàn thiện hồ sơ: +{PROFILE_POINTS_PER_ITEM} điểm mỗi mục
+              Điểm hoàn thiện hồ sơ: +{PROFILE_POINTS_PER_ITEM} điểm mỗi mục
             </span>
             <span>
               Đã nhận {earnedPoints}/{maxPoints} điểm
             </span>
           </p>
-          <ul className="flex flex-wrap gap-2">
+          <p className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-on-surface-variant sm:hidden">
+            <span className="flex items-center gap-0.5">
+              <MaterialIcon className="text-[13px] text-[#1B7F5C]" name="check_circle" />
+              đã nhận
+            </span>
+            <span className="flex items-center gap-0.5">
+              <MaterialIcon className="text-[13px] text-[#173A67]" name="schedule" />
+              lưu để nhận
+            </span>
+            <span className="flex items-center gap-0.5">
+              <MaterialIcon className="text-[13px] text-amber-700" name="radio_button_unchecked" />
+              chưa khai
+            </span>
+          </p>
+          <ul className="flex flex-wrap gap-1.5 sm:gap-2">
             {completeness.items.map((item) => {
               const awarded = awardedSet.has(item.key);
               const tone = awarded
@@ -244,15 +260,16 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
               return (
                 <li
                   key={item.key}
-                  className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${tone}`}
+                  className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold sm:px-2.5 sm:py-1 sm:text-xs ${tone}`}
                   title={hint}
                 >
                   <MaterialIcon
                     className="text-[14px]"
                     name={awarded ? "check_circle" : item.done ? "schedule" : "radio_button_unchecked"}
                   />
-                  {item.label} · +{PROFILE_POINTS_PER_ITEM}đ
-                  <span className="font-normal opacity-80">({hint})</span>
+                  {item.label}
+                  <span className="hidden sm:inline">· +{PROFILE_POINTS_PER_ITEM}đ</span>
+                  <span className="hidden font-normal opacity-80 sm:inline">({hint})</span>
                 </li>
               );
             })}
@@ -424,10 +441,10 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
                     </button>
                   ) : null}
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_170px_140px]">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_170px_140px] sm:gap-3">
                   <input
                     aria-label="Họ tên con"
-                    className={inputClass}
+                    className={`${inputClass} col-span-2 sm:col-span-1`}
                     disabled={readOnly}
                     maxLength={100}
                     placeholder="Họ và tên"
@@ -581,9 +598,8 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
         </div>
       </section>
 
-      {!readOnly ? (
-        <div className={`${sectionClass} space-y-3`}>
-          {needConsent ? (
+      {!readOnly && needConsent ? (
+        <div className={sectionClass}>
             <label className="flex items-start gap-3 text-sm">
               <input
                 checked={consent}
@@ -597,10 +613,16 @@ export function MemberProfileForm({ initial, targetUserId, readOnly = false }: P
                 được phân quyền mới xem được.
               </span>
             </label>
-          ) : null}
+        </div>
+      ) : null}
 
+      {!readOnly ? (
+        <div className="sticky bottom-[4.5rem] z-20 space-y-2 rounded-2xl border border-outline-variant bg-white/95 p-2.5 shadow-lg backdrop-blur md:static md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none">
           {errors.length > 0 ? (
-            <ul className="space-y-1 rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container" role="alert">
+            <ul
+              className="max-h-36 space-y-1 overflow-y-auto rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container"
+              role="alert"
+            >
               {errors.map((e) => (
                 <li key={e}>• {e}</li>
               ))}
