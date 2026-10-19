@@ -26,6 +26,12 @@ type PhotoViewerModalProps = {
 
 type Notice = { type: "success" | "error"; text: string };
 
+const COMMENT_REACTIONS: { type: ReactionType; emoji: string; label: string; active: string }[] = [
+  { type: "like", emoji: "👍", label: "Thích", active: "border-blue-400 bg-blue-50 text-blue-700" },
+  { type: "heart", emoji: "❤️", label: "Tim", active: "border-rose-400 bg-rose-50 text-rose-700" },
+  { type: "haha", emoji: "😆", label: "Haha", active: "border-amber-400 bg-amber-50 text-amber-700" },
+];
+
 function Avatar({ name, url, size = "h-9 w-9" }: { name: string; url: string | null; size?: string }) {
   return (
     <div
@@ -63,6 +69,7 @@ export function PhotoViewerModal({
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
   const [deletingPhoto, setDeletingPhoto] = useState(false);
   const [reacting, setReacting] = useState(false);
+  const [reactingCommentId, setReactingCommentId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [replyTarget, setReplyTarget] = useState<{ rootId: string; commentId: string; authorName: string } | null>(
     null,
@@ -201,6 +208,45 @@ export function PhotoViewerModal({
     }
   }
 
+  async function handleCommentReact(commentId: string, type: ReactionType) {
+    if (reactingCommentId) return;
+    const target = comments.find((c) => c.id === commentId);
+    if (!target) return;
+    const prev = { reactions: target.reactions, userReaction: target.userReaction };
+
+    const nextReactions = { ...target.reactions };
+    let nextUserReaction: ReactionType | null = type;
+    if (target.userReaction === type) {
+      nextUserReaction = null;
+      nextReactions[type] = Math.max(0, nextReactions[type] - 1);
+    } else {
+      if (target.userReaction) {
+        nextReactions[target.userReaction] = Math.max(0, nextReactions[target.userReaction] - 1);
+      }
+      nextReactions[type] += 1;
+    }
+    const patchComment = (patch: Pick<AlbumPhotoComment, "reactions" | "userReaction">) =>
+      setComments((list) => list.map((c) => (c.id === commentId ? { ...c, ...patch } : c)));
+    patchComment({ reactions: nextReactions, userReaction: nextUserReaction });
+
+    setReactingCommentId(commentId);
+    try {
+      const res = await fetch("/api/albums/photos/comments/reactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentId, reactionType: type }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Không thể gửi cảm xúc.");
+      patchComment({ reactions: data.reactions, userReaction: data.userReaction });
+    } catch (err: any) {
+      patchComment(prev);
+      setNotice({ type: "error", text: err?.message || "Lỗi khi thả cảm xúc." });
+    } finally {
+      setReactingCommentId(null);
+    }
+  }
+
   async function handleSubmitComment(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
@@ -330,14 +376,39 @@ export function PhotoViewerModal({
           {replyToName && <span className="mr-1 font-semibold text-primary">@{replyToName}</span>}
           {c.content}
         </p>
-        <button
-          type="button"
-          onClick={() => startReply(c)}
-          className="mt-1 inline-flex items-center gap-0.5 text-[11px] font-semibold text-on-surface-variant transition hover:text-primary"
-        >
-          <MaterialIcon className="text-[14px]" name="reply" />
-          Trả lời
-        </button>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1">
+          {COMMENT_REACTIONS.map((r) => {
+            const count = c.reactions?.[r.type] ?? 0;
+            const active = c.userReaction === r.type;
+            return (
+              <button
+                key={r.type}
+                type="button"
+                onClick={() => handleCommentReact(c.id, r.type)}
+                disabled={reactingCommentId === c.id}
+                title={r.label}
+                aria-label={r.label}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold transition disabled:opacity-60 ${
+                  active
+                    ? r.active
+                    : "border-dusty-border/70 bg-surface-container-lowest text-on-surface-variant hover:bg-dusty-light"
+                }`}
+              >
+                <span>{r.emoji}</span>
+                {count > 0 && <span>{count}</span>}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => startReply(c)}
+            className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold text-on-surface-variant transition hover:text-primary"
+          >
+            <MaterialIcon className="text-[14px]" name="reply" />
+            Trả lời
+          </button>
+        </div>
       </div>
     );
   }

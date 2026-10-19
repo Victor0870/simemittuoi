@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getAlbumMemberContext } from "@/lib/album-access";
-import { ALBUM_COMMENT_LIMIT, mapPhotoComment } from "@/lib/data/albums";
+import { ALBUM_COMMENT_LIMIT, isReactionType, mapPhotoComment } from "@/lib/data/albums";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 import { sanitizeCompanyNames } from "@/lib/privacy";
@@ -32,6 +32,23 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const comments = (data ?? []).map(mapPhotoComment);
+    if (comments.length > 0) {
+      const { data: reactionRows, error: reactionErr } = await ctx.supabase
+        .from(CDILV_TABLE.albumPhotoCommentReactions)
+        .select("comment_id, user_id, reaction_type")
+        .in(
+          "comment_id",
+          comments.map((c) => c.id),
+        );
+      if (reactionErr) throw reactionErr;
+      const byId = new Map(comments.map((c) => [c.id, c]));
+      for (const r of reactionRows ?? []) {
+        const comment = byId.get(r.comment_id);
+        if (!comment || !isReactionType(r.reaction_type)) continue;
+        comment.reactions[r.reaction_type]++;
+        if (r.user_id === ctx.user.id) comment.userReaction = r.reaction_type;
+      }
+    }
     const myCommentCount = comments.filter((c) => c.userId === ctx.user!.id && !c.parentId).length;
 
     return NextResponse.json({

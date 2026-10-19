@@ -78,6 +78,8 @@ export type AlbumPhotoComment = {
   /** Bình luận gốc (null nếu đây là bình luận gốc). */
   parentId: string | null;
   replyToUserId: string | null;
+  reactions: ReactionCounts;
+  userReaction: ReactionType | null;
 };
 
 type AlbumRow = {
@@ -172,6 +174,8 @@ export function mapPhotoComment(row: {
     timeAgo: formatTimeAgo(row.created_at),
     parentId: row.parent_id ?? null,
     replyToUserId: row.reply_to_user_id ?? null,
+    reactions: emptyReactions(),
+    userReaction: null,
   };
 }
 
