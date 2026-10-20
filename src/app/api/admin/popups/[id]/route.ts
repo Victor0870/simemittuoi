@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { parsePopupInput, popupInputToRow } from "@/lib/popups";
 import { createServiceClient } from "@/lib/supabase/service";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,6 +16,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const raw = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const toggleOnly = raw && Object.keys(raw).length === 1 && typeof raw.isActive === "boolean";
 
+  const db = createServiceClient();
+  const { data: current } = await db.from(CDILV_TABLE.popups).select("image_path").eq("id", id).maybeSingle();
+  if (!current) return NextResponse.json({ error: "Không tìm thấy popup." }, { status: 404 });
+
   let update: Record<string, unknown>;
   if (toggleOnly) {
     update = { is_active: raw.isActive };
@@ -25,14 +29,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     update = popupInputToRow(parsed.value);
   }
 
-  const { data, error } = await createServiceClient()
+  const { error } = await db
     .from(CDILV_TABLE.popups)
     .update({ ...update, updated_by: guard.access.userId, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("id")
-    .maybeSingle();
+    .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!data) return NextResponse.json({ error: "Không tìm thấy popup." }, { status: 404 });
+
+  if (!toggleOnly && current.image_path && current.image_path !== update.image_path) {
+    await db.storage.from(CDILV_STORAGE.popups).remove([current.image_path]);
+  }
   return NextResponse.json({ ok: true });
 }
 
@@ -41,7 +46,16 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   if (guard.response) return guard.response;
 
   const { id } = await params;
-  const { error } = await createServiceClient().from(CDILV_TABLE.popups).delete().eq("id", id);
+  const db = createServiceClient();
+  const { data: removed, error } = await db
+    .from(CDILV_TABLE.popups)
+    .delete()
+    .eq("id", id)
+    .select("image_path")
+    .maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (removed?.image_path) {
+    await db.storage.from(CDILV_STORAGE.popups).remove([removed.image_path]);
+  }
   return NextResponse.json({ ok: true });
 }

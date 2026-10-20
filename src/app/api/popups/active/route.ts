@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { isWithinDailyWindow, toClock, type ActivePopup } from "@/lib/popups";
+import { isWithinDailyWindow, popupImageUrl, toClock, type ActivePopup } from "@/lib/popups";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -17,7 +17,7 @@ export async function GET() {
   const db = createServiceClient();
   let query = db
     .from(CDILV_TABLE.popups)
-    .select("id, title, body, tone, link_url, link_label, frequency, starts_at, daily_start, daily_end")
+    .select("id, title, body, image_path, tone, link_url, link_label, frequency, starts_at, daily_start, daily_end")
     .eq("is_active", true)
     .lte("starts_at", nowIso)
     .or(`ends_at.is.null,ends_at.gt.${nowIso}`)
@@ -54,6 +54,7 @@ export async function GET() {
       id: p.id,
       title: p.title,
       body: p.body,
+      imageUrl: popupImageUrl(p.image_path),
       tone: p.tone,
       linkUrl: p.link_url,
       linkLabel: p.link_label,

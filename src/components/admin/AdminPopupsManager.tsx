@@ -143,10 +143,29 @@ export function AdminPopupsManager({ popups, memberCount }: Props) {
                   ) : null}
                 </div>
 
-                <h3 className="mt-2 break-words text-base font-extrabold text-on-surface">{popup.title}</h3>
-                <p className="mt-1 line-clamp-2 whitespace-pre-line break-words text-sm text-on-surface-variant">
-                  {popup.body}
-                </p>
+                <div className="mt-2 flex gap-3">
+                  {popup.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      alt={popup.title}
+                      className="h-16 w-16 shrink-0 rounded-xl bg-slate-100 object-cover"
+                      src={popup.imageUrl}
+                    />
+                  ) : null}
+                  <div className="min-w-0">
+                    <h3 className="break-words text-base font-extrabold text-on-surface">
+                      {popup.imageUrl ? (
+                        <MaterialIcon className="mr-1 align-[-3px] text-[18px] text-primary" name="image" />
+                      ) : null}
+                      {popup.title}
+                    </h3>
+                    {popup.body ? (
+                      <p className="mt-1 line-clamp-2 whitespace-pre-line break-words text-sm text-on-surface-variant">
+                        {popup.body}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
 
                 <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 text-xs text-on-surface-variant sm:grid-cols-2">
                   <div className="flex gap-1">

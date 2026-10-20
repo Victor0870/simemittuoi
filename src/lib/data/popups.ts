@@ -1,11 +1,12 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
-import { toClock, type AdminPopup, type PopupAudience, type PopupFrequency, type PopupTone } from "@/lib/popups";
+import { popupImageUrl, toClock, type AdminPopup, type PopupAudience, type PopupFrequency, type PopupTone } from "@/lib/popups";
 
 type PopupRow = {
   id: string;
   title: string;
   body: string;
+  image_path: string | null;
   tone: PopupTone;
   link_url: string | null;
   link_label: string | null;
@@ -27,7 +28,7 @@ export async function getAdminPopups(): Promise<AdminPopup[]> {
   const { data, error } = await db
     .from(CDILV_TABLE.popups)
     .select(
-      "id, title, body, tone, link_url, link_label, audience, frequency, starts_at, ends_at, daily_start, daily_end, is_active, created_at, updated_at, creator:created_by(full_name)",
+      "id, title, body, image_path, tone, link_url, link_label, audience, frequency, starts_at, ends_at, daily_start, daily_end, is_active, created_at, updated_at, creator:created_by(full_name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -52,6 +53,8 @@ export async function getAdminPopups(): Promise<AdminPopup[]> {
     id: r.id,
     title: r.title,
     body: r.body,
+    imagePath: r.image_path,
+    imageUrl: popupImageUrl(r.image_path),
     tone: r.tone,
     linkUrl: r.link_url,
     linkLabel: r.link_label,

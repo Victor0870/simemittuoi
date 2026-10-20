@@ -9,6 +9,9 @@ export type PopupFrequency = (typeof POPUP_FREQUENCIES)[number];
 export const POPUP_TITLE_MAX = 120;
 export const POPUP_BODY_MAX = 1000;
 export const POPUP_LINK_LABEL_MAX = 40;
+export const POPUP_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+export const POPUP_IMAGE_BUCKET = "cdilv-popups";
+const IMAGE_PATH_PATTERN = /^popups\/[A-Za-z0-9_.-]+\.(jpg|png|webp|gif)$/;
 
 export type PopupContent = {
   title: string;
@@ -16,7 +19,19 @@ export type PopupContent = {
   tone: PopupTone;
   linkUrl: string | null;
   linkLabel: string | null;
+  /** Popup dạng ảnh: ảnh hiện thay cho tiêu đề, nội dung chữ thành chú thích (không bắt buộc). */
+  imageUrl: string | null;
 };
+
+/** Link công khai của ảnh popup trong Storage. */
+export function popupImageUrl(path: string | null): string | null {
+  if (!path) return null;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${POPUP_IMAGE_BUCKET}/${path}`;
+}
+
+export function isPopupImagePath(path: string): boolean {
+  return IMAGE_PATH_PATTERN.test(path);
+}
 
 /** Popup đang hiện cho người xem (API /api/popups/active). */
 export type ActivePopup = PopupContent & {
@@ -41,6 +56,7 @@ export type AdminPopup = PopupContent & {
   updatedAt: string;
   createdByName: string | null;
   viewerCount: number;
+  imagePath: string | null;
 };
 
 export const POPUP_TONE_META: Record<
@@ -153,7 +169,8 @@ export function formatPopupTime(iso: string): string {
   }).format(new Date(iso));
 }
 
-export type PopupInput = PopupContent & {
+export type PopupInput = Omit<PopupContent, "imageUrl"> & {
+  imagePath: string | null;
   audience: PopupAudience;
   frequency: PopupFrequency;
   startsAt: string;
@@ -178,9 +195,11 @@ export function parsePopupInput(raw: unknown): { error: string } | { value: Popu
   const data = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const title = String(data.title ?? "").trim();
   const body = String(data.body ?? "").trim();
-  if (!title) return { error: "Vui lòng nhập tiêu đề." };
+  const imagePath = String(data.imagePath ?? "").trim() || null;
+  if (imagePath && !isPopupImagePath(imagePath)) return { error: "Ảnh popup không hợp lệ, vui lòng tải lại ảnh." };
+  if (!title) return { error: imagePath ? "Vui lòng đặt tên popup." : "Vui lòng nhập tiêu đề." };
   if (title.length > POPUP_TITLE_MAX) return { error: `Tiêu đề tối đa ${POPUP_TITLE_MAX} ký tự.` };
-  if (!body) return { error: "Vui lòng nhập nội dung." };
+  if (!body && !imagePath) return { error: "Vui lòng nhập nội dung hoặc chọn ảnh." };
   if (body.length > POPUP_BODY_MAX) return { error: `Nội dung tối đa ${POPUP_BODY_MAX} ký tự.` };
 
   const linkUrl = String(data.linkUrl ?? "").trim() || null;
@@ -216,6 +235,7 @@ export function parsePopupInput(raw: unknown): { error: string } | { value: Popu
     value: {
       title,
       body,
+      imagePath,
       tone: pick(data.tone, POPUP_TONES, "info"),
       linkUrl,
       linkLabel: linkUrl ? linkLabel : null,
@@ -234,6 +254,7 @@ export function popupInputToRow(input: PopupInput) {
   return {
     title: input.title,
     body: input.body,
+    image_path: input.imagePath,
     tone: input.tone,
     link_url: input.linkUrl,
     link_label: input.linkLabel,

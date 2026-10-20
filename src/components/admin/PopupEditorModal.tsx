@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PopupCard } from "@/components/popups/PopupCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { resizeImageToBlob } from "@/lib/image-resize";
 import {
   POPUP_AUDIENCE_LABEL,
   POPUP_BODY_MAX,
@@ -58,6 +59,11 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
   const [tone, setTone] = useState<PopupTone>("urgent");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [kind, setKind] = useState<"text" | "image">("text");
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [linkUrl, setLinkUrl] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
   const [audience, setAudience] = useState<PopupAudience>("members");
@@ -76,6 +82,9 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
     setTone(popup?.tone ?? "urgent");
     setTitle(popup?.title ?? "");
     setBody(popup?.body ?? "");
+    setKind(popup?.imagePath ? "image" : "text");
+    setImagePath(popup?.imagePath ?? null);
+    setImageUrl(popup?.imageUrl ?? null);
     setLinkUrl(popup?.linkUrl ?? "");
     setLinkLabel(popup?.linkLabel ?? "");
     setAudience(popup?.audience ?? "members");
@@ -107,9 +116,11 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitting) return;
-    if (!title.trim() || !body.trim()) {
-      setErrorMessage("Vui lòng nhập tiêu đề và nội dung.");
+    if (submitting || uploading) return;
+    if (kind === "image" ? !title.trim() || !imagePath : !title.trim() || !body.trim()) {
+      setErrorMessage(
+        kind === "image" ? "Vui lòng chọn ảnh và đặt tên popup." : "Vui lòng nhập tiêu đề và nội dung.",
+      );
       return;
     }
     const effectiveStart = startsAt || toLocalInput(new Date().toISOString());
@@ -131,6 +142,7 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
         body: JSON.stringify({
           title,
           body,
+          imagePath: kind === "image" ? imagePath : null,
           tone,
           linkUrl,
           linkLabel,
@@ -151,6 +163,34 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
       setErrorMessage(err instanceof Error ? err.message : "Đã xảy ra lỗi khi lưu popup.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleImagePicked(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErrorMessage("Vui lòng chọn file ảnh (JPG, PNG, WEBP, GIF).");
+      return;
+    }
+    setUploading(true);
+    setErrorMessage(null);
+    try {
+      const blob = await resizeImageToBlob(file, 1600, 0.85);
+      const form = new FormData();
+      form.append(
+        "file",
+        blob instanceof File ? blob : new File([blob], "popup.jpg", { type: blob.type || "image/jpeg" }),
+      );
+      const res = await fetch("/api/admin/popups/image", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Không tải được ảnh lên.");
+      setImagePath(data.path);
+      setImageUrl(data.url);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Không tải được ảnh lên.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
 
@@ -311,10 +351,81 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
                 </div>
               </div>
 
+              <div>
+                <p className="mb-1.5 text-xs font-bold text-on-surface sm:text-sm">Kiểu popup</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      { id: "text", icon: "notes", label: "Chữ", hint: "Tiêu đề + nội dung ngắn" },
+                      { id: "image", icon: "image", label: "Ảnh", hint: "Poster / ảnh thông báo" },
+                    ] as const
+                  ).map((k) => (
+                    <button
+                      key={k.id}
+                      className={`${choiceClass(kind === k.id)} flex items-center gap-2.5`}
+                      type="button"
+                      onClick={() => setKind(k.id)}
+                    >
+                      <MaterialIcon
+                        className={`text-[24px] ${kind === k.id ? "text-primary" : "text-on-surface-variant"}`}
+                        name={k.icon}
+                      />
+                      <span>
+                        <span className="block text-sm font-bold text-on-surface">{k.label}</span>
+                        <span className="block text-[11px] text-on-surface-variant">{k.hint}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {kind === "image" ? (
+                <div className="rounded-2xl border-2 border-dashed border-dusty-border p-3">
+                  <input
+                    ref={fileInputRef}
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    type="file"
+                    onChange={(e) => void handleImagePicked(e.target.files?.[0])}
+                  />
+                  {imageUrl ? (
+                    <div className="flex items-center gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img alt="Ảnh popup" className="h-20 w-20 shrink-0 rounded-xl bg-slate-100 object-cover" src={imageUrl} />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <p className="text-xs text-on-surface-variant">Ảnh đã tải lên. Xem cách hiển thị ở khung xem trước.</p>
+                        <button
+                          className="inline-flex items-center gap-1 rounded-lg border border-dusty-border px-3 py-1.5 text-xs font-bold text-primary hover:border-primary disabled:opacity-50"
+                          disabled={uploading}
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <MaterialIcon className="text-[16px]" name="swap_horiz" />
+                          {uploading ? "Đang tải ảnh..." : "Đổi ảnh khác"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className="flex w-full flex-col items-center gap-1 rounded-xl py-5 text-on-surface-variant hover:bg-dusty-light/40 disabled:opacity-60"
+                      disabled={uploading}
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <MaterialIcon className="text-[32px] text-primary" name={uploading ? "hourglass_top" : "add_photo_alternate"} />
+                      <span className="text-sm font-bold text-on-surface">
+                        {uploading ? "Đang tải ảnh lên..." : "Chọn ảnh"}
+                      </span>
+                      <span className="text-[11px]">JPG, PNG, WEBP, GIF · ảnh lớn được tự nén</span>
+                    </button>
+                  )}
+                </div>
+              ) : null}
+
               <label className="block">
                 <span className="mb-1 flex justify-between text-xs font-bold text-on-surface sm:text-sm">
                   <span>
-                    Tiêu đề <span className="text-red-500">*</span>
+                    {kind === "image" ? "Tên popup" : "Tiêu đề"} <span className="text-red-500">*</span>
                   </span>
                   <span className="font-normal text-on-surface-variant">
                     {title.length}/{POPUP_TITLE_MAX}
@@ -323,7 +434,11 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
                 <input
                   className={inputClass}
                   maxLength={POPUP_TITLE_MAX}
-                  placeholder="VD: Thay đổi lịch đón đoàn viên đi tham quan"
+                  placeholder={
+                    kind === "image"
+                      ? "VD: Poster hội thao 2026 (chỉ để quản lý, không hiện trên popup)"
+                      : "VD: Thay đổi lịch đón đoàn viên đi tham quan"
+                  }
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -333,7 +448,13 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
               <label className="block">
                 <span className="mb-1 flex justify-between text-xs font-bold text-on-surface sm:text-sm">
                   <span>
-                    Nội dung <span className="text-red-500">*</span>
+                    {kind === "image" ? (
+                      "Chú thích dưới ảnh (không bắt buộc)"
+                    ) : (
+                      <>
+                        Nội dung <span className="text-red-500">*</span>
+                      </>
+                    )}
                   </span>
                   <span className="font-normal text-on-surface-variant">
                     {body.length}/{POPUP_BODY_MAX}
@@ -342,9 +463,11 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
                 <textarea
                   className={inputClass}
                   maxLength={POPUP_BODY_MAX}
-                  placeholder="Nội dung ngắn gọn, xuống dòng bằng Enter."
-                  required
-                  rows={5}
+                  placeholder={
+                    kind === "image" ? "Để trống nếu ảnh đã đủ thông tin." : "Nội dung ngắn gọn, xuống dòng bằng Enter."
+                  }
+                  required={kind === "text"}
+                  rows={kind === "image" ? 2 : 5}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
                 />
@@ -427,6 +550,7 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
                     tone,
                     linkUrl: linkUrl.trim() || null,
                     linkLabel: linkLabel.trim() || null,
+                    imageUrl: kind === "image" ? imageUrl : null,
                   }}
                 />
               </div>
@@ -444,7 +568,7 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
             </button>
             <button
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:opacity-50"
-              disabled={submitting}
+              disabled={submitting || uploading}
               type="submit"
             >
               <MaterialIcon className="text-[18px]" name={submitting ? "hourglass_top" : "send"} />
