@@ -2,14 +2,20 @@ import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { PollCard } from "@/components/polls/PollCard";
 import { getPolls } from "@/lib/data/polls";
+import { getPollPhase } from "@/lib/polls/phase";
 
 export const revalidate = 30;
 
 export default async function PollsPage() {
   const polls = await getPolls();
 
-  const openPolls = polls.filter((p) => p.status === "open");
-  const closedPolls = polls.filter((p) => p.status === "closed");
+  const now = Date.now();
+  const upcomingPolls = polls.filter((p) => getPollPhase(p, now) === "upcoming");
+  const openPolls = polls.filter((p) => {
+    const phase = getPollPhase(p, now);
+    return phase === "open" || phase === "ended";
+  });
+  const closedPolls = polls.filter((p) => getPollPhase(p, now) === "closed");
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -61,6 +67,25 @@ export default async function PollsPage() {
               </div>
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {openPolls.map((poll) => (
+                  <PollCard key={poll.id} poll={poll} />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {upcomingPolls.length > 0 ? (
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <MaterialIcon className="text-[22px] text-sky-600" name="schedule" />
+                <h2 className="text-title-lg font-bold text-[#173A67]">
+                  Sắp Mở Bình Chọn ({upcomingPolls.length})
+                </h2>
+              </div>
+              <p className="text-xs sm:text-body-sm text-on-surface-variant -mt-2">
+                Xem trước các tác phẩm và bấm thử để làm quen cách bình chọn. Phiếu thử không được ghi nhận.
+              </p>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {upcomingPolls.map((poll) => (
                   <PollCard key={poll.id} poll={poll} />
                 ))}
               </div>

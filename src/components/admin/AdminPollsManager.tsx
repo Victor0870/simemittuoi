@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollSummary } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
+import { POLL_PHASE_META, formatPollTime, getPollPhase } from "@/lib/polls/phase";
 
 type Props = {
   polls: PollSummary[];
@@ -17,6 +18,7 @@ type Props = {
 export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: Props) {
   const router = useRouter();
   const [pollList, setPollList] = useState<PollSummary[]>(polls);
+  const [renderedAt] = useState(() => Date.now());
 
   useEffect(() => {
     setPollList(polls);
@@ -103,6 +105,28 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       router.refresh();
     } catch (err: any) {
       setErrorMessage(err?.message);
+    } finally {
+      setBusyPollId(null);
+    }
+  }
+
+  async function handleOpenNow(pollId: string, title: string) {
+    if (!window.confirm(`Mở bình chọn NGAY cho "${title}"?\n\nTừ lúc này phiếu bình chọn sẽ được ghi nhận thật.`)) return;
+    setBusyPollId(pollId);
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    try {
+      const res = await fetch("/api/polls/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pollId, status: "open" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Thao tác thất bại");
+      setSuccessMessage(data.message || "Đã mở bình chọn!");
+      router.refresh();
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Lỗi khi mở bình chọn.");
     } finally {
       setBusyPollId(null);
     }
@@ -248,6 +272,9 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
                 Bấm <strong>&ldquo;+ Tạo chương trình mới&rdquo;</strong> để tạo cuộc thi vote hoặc câu hỏi trắc nghiệm mới.
               </li>
               <li>
+                Chọn giai đoạn <strong>&ldquo;Sắp mở&rdquo;</strong> trong Cài đặt để mọi người xem trước tác phẩm và <strong>bình chọn thử</strong> (không ghi nhận). Có thể hẹn giờ tự mở và giờ tự dừng nhận phiếu, hoặc bấm <strong>&ldquo;Mở ngay&rdquo;</strong>.
+              </li>
+              <li>
                 Khi chương trình kết thúc, bấm <strong>&ldquo;Đóng & Trao giải&rdquo;</strong>: Hệ thống sẽ tự động tìm người dự đoán đúng nhất và cộng điểm thi đua vào tài khoản của đoàn viên đạt giải!
               </li>
             </ul>
@@ -281,7 +308,8 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
             </thead>
             <tbody>
               {pollList.map((p) => {
-                const isOpen = p.status === "open";
+                const phase = getPollPhase(p, renderedAt);
+                const phaseMeta = POLL_PHASE_META[phase];
                 const isBusy = busyPollId === p.id;
                 const isLoadingEdit = loadingPollId === p.id;
 
@@ -349,15 +377,21 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
                     </td>
                     <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                          isOpen
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-surface-container-high text-on-surface-variant"
-                        }`}
+                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${phaseMeta.chip}`}
                       >
-                        <span className={`h-1.5 w-1.5 rounded-full ${isOpen ? "bg-emerald-600" : "bg-slate-500"}`} />
-                        {isOpen ? "Đang mở" : "Đã kết thúc"}
+                        <MaterialIcon className="text-[13px]" name={phaseMeta.icon} />
+                        {phaseMeta.label}
                       </span>
+                      {phase === "upcoming" && p.opensAt ? (
+                        <div className="mt-1 text-[11px] font-medium text-sky-800 whitespace-nowrap">
+                          Tự mở: {formatPollTime(p.opensAt)}
+                        </div>
+                      ) : null}
+                      {(phase === "upcoming" || phase === "open") && p.votingEndsAt ? (
+                        <div className="mt-0.5 text-[11px] font-medium text-amber-900 whitespace-nowrap">
+                          Dừng nhận phiếu: {formatPollTime(p.votingEndsAt)}
+                        </div>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3.5 text-xs text-on-surface-variant">
                       {new Date(p.createdAt).toLocaleDateString("vi-VN")}
@@ -381,7 +415,16 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
                         Xem trang
                       </Link>
 
-                      {isOpen ? (
+                      {phase === "upcoming" ? (
+                        <button
+                          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer disabled:opacity-50"
+                          disabled={isBusy}
+                          type="button"
+                          onClick={() => handleOpenNow(p.id, p.title)}
+                        >
+                          {isBusy ? "Đang mở..." : "Mở ngay"}
+                        </button>
+                      ) : phase !== "closed" ? (
                         <button
                           className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600 transition shadow-xs cursor-pointer disabled:opacity-50"
                           disabled={isBusy}

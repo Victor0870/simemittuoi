@@ -4,14 +4,17 @@ import { useMemo } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollOption } from "@/lib/data/polls";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { usePollPhase } from "@/components/polls/usePollPhase";
 
 type Props = {
   poll: PollDetail;
+  initialNow: number;
 };
 
-export function PollPodiumResults({ poll }: Props) {
+export function PollPodiumResults({ poll, initialNow }: Props) {
   const { isGuest } = useAuth();
-  const isClosed = poll.status === "closed";
+  const phase = usePollPhase(poll, initialNow);
+  const isClosed = phase === "closed";
 
   // Guest can only see results when poll is closed
   const canSeeResults = isClosed || !isGuest;
@@ -43,6 +46,8 @@ export function PollPodiumResults({ poll }: Props) {
       return a.orderNum - b.orderNum;
     });
   }, [poll.options, poll.hasJudges]);
+
+  if (phase === "upcoming") return null;
 
   if (!canSeeResults) {
     return (

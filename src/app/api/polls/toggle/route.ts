@@ -33,11 +33,26 @@ export async function POST(request: NextRequest) {
 
     const updatePayload: any = {};
     if (status) {
+      if (!["open", "closed", "upcoming"].includes(status)) {
+        return NextResponse.json({ error: "Trạng thái không hợp lệ." }, { status: 400 });
+      }
       updatePayload.status = status;
       if (status === "closed") {
         updatePayload.closed_at = new Date().toISOString();
-      } else if (status === "open") {
+      } else {
         updatePayload.closed_at = null;
+      }
+      if (status === "open") {
+        // Mở ngay: bỏ hẹn giờ mở và bỏ giờ dừng đã qua để nhận phiếu được ngay.
+        updatePayload.opens_at = null;
+        const { data: current } = await publicDb
+          .from(CDILV_TABLE.polls)
+          .select("voting_ends_at")
+          .eq("id", pollId)
+          .maybeSingle();
+        if (current?.voting_ends_at && new Date(current.voting_ends_at).getTime() <= Date.now()) {
+          updatePayload.voting_ends_at = null;
+        }
       }
     }
 
@@ -77,6 +92,10 @@ export async function POST(request: NextRequest) {
       ...updated,
       message: typeof isActive === "boolean"
         ? (updated.is_active ? "Đã kích hoạt chương trình (Active)!" : "Đã chuyển chương trình sang Inactive (Tạm ẩn)!")
+        : status === "upcoming"
+        ? "Đã chuyển sang Sắp mở: mọi người xem trước và bình chọn thử, phiếu chưa được ghi nhận."
+        : status === "open"
+        ? "Đã mở bình chọn: bắt đầu nhận phiếu thật."
         : "Đã cập nhật trạng thái!",
     });
   } catch (err: any) {

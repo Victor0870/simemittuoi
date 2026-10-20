@@ -4,6 +4,7 @@ import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { getPollPhase } from "@/lib/polls/phase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,6 +41,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Không tìm thấy chương trình." },
         { status: 404 },
+      );
+    }
+
+    if (
+      getPollPhase({ status: poll.status, opensAt: poll.opens_at, votingEndsAt: poll.voting_ends_at }) ===
+      "upcoming"
+    ) {
+      return NextResponse.json(
+        { error: "Chương trình đang ở trạng thái Sắp mở (chưa nhận phiếu thật), chưa thể đóng & trao giải." },
+        { status: 400 },
       );
     }
 

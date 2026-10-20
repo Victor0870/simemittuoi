@@ -4,6 +4,17 @@ import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { resizeImageFile } from "@/lib/image-resize";
 import type { JudgeMember, PollDetail, PollOption } from "@/lib/data/polls";
+import type { PollScheduleMode } from "@/lib/polls/phase";
+
+function toLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function fromLocalInput(value: string): string | null {
+  return value ? new Date(value).toISOString() : null;
+}
 
 export type OptionFormState = {
   id?: string;
@@ -83,6 +94,9 @@ export function PollEditorModal({
   const [accessType, setAccessType] = useState<"members_only" | "free">("free");
   const [contentType, setContentType] = useState<"text" | "image">("image");
   const [isActive, setIsActive] = useState(true);
+  const [scheduleMode, setScheduleMode] = useState<PollScheduleMode>("open");
+  const [opensAtLocal, setOpensAtLocal] = useState("");
+  const [votingEndsAtLocal, setVotingEndsAtLocal] = useState("");
   const [maxVotesPerUser, setMaxVotesPerUser] = useState(3);
   const [maxGuestVotes, setMaxGuestVotes] = useState(250);
   const [hasPrediction, setHasPrediction] = useState(true);
@@ -136,6 +150,9 @@ export function PollEditorModal({
       setAccessType(initialPoll.accessType || "free");
       setContentType(initialPoll.contentType || "image");
       setIsActive(initialPoll.isActive !== false);
+      setScheduleMode(initialPoll.status === "upcoming" ? "upcoming" : "open");
+      setOpensAtLocal(toLocalInput(initialPoll.opensAt));
+      setVotingEndsAtLocal(toLocalInput(initialPoll.votingEndsAt));
       setMaxVotesPerUser(initialPoll.maxVotesPerUser || 3);
       setMaxGuestVotes(initialPoll.maxGuestVotes ?? 250);
       setHasPrediction(Boolean(initialPoll.hasPrediction));
@@ -179,6 +196,9 @@ export function PollEditorModal({
       setPollType("vote");
       setAccessType("free");
       setContentType("image");
+      setScheduleMode("open");
+      setOpensAtLocal("");
+      setVotingEndsAtLocal("");
       setMaxVotesPerUser(3);
       setVoterRewardPoints(10);
       setEntryRewardPoints(0);
@@ -353,6 +373,17 @@ export function PollEditorModal({
       return;
     }
 
+    if (
+      scheduleMode === "upcoming" &&
+      opensAtLocal &&
+      votingEndsAtLocal &&
+      new Date(votingEndsAtLocal) <= new Date(opensAtLocal)
+    ) {
+      setError("Giờ dừng nhận phiếu phải sau giờ mở bình chọn.");
+      setActiveTab("general");
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -363,6 +394,9 @@ export function PollEditorModal({
         accessType,
         contentType,
         isActive,
+        scheduleMode,
+        opensAt: scheduleMode === "upcoming" ? fromLocalInput(opensAtLocal) : null,
+        votingEndsAt: fromLocalInput(votingEndsAtLocal),
         maxVotesPerUser,
         maxGuestVotes,
         hasPrediction,
@@ -807,6 +841,95 @@ export function PollEditorModal({
                       <span>Inactive</span>
                     </button>
                   </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border-2 border-sky-300/70 bg-sky-50/60 p-4 sm:p-5 space-y-3">
+                <div>
+                  <h4 className="text-sm font-bold text-[#173A67] flex items-center gap-2">
+                    <MaterialIcon className="text-[18px] text-sky-600" name="schedule" />
+                    <span>Giai đoạn bình chọn</span>
+                  </h4>
+                  {initialPoll?.status === "closed" && mode === "edit" ? (
+                    <p className="text-xs text-amber-800 mt-0.5">
+                      Chương trình đã đóng & trao giải. Giai đoạn bên dưới chỉ áp dụng khi bấm &quot;Mở lại&quot;.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      {
+                        value: "upcoming",
+                        icon: "school",
+                        title: "Sắp mở (bình chọn thử)",
+                        desc: "Mọi người xem trước tác phẩm và bấm thử để làm quen. Phiếu thử không được ghi nhận.",
+                      },
+                      {
+                        value: "open",
+                        icon: "how_to_vote",
+                        title: "Đang mở (nhận phiếu thật)",
+                        desc: "Phiếu bình chọn được ghi nhận và tính kết quả ngay.",
+                      },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.value}
+                      className={`flex items-start gap-2.5 rounded-xl border-2 p-3 text-left transition cursor-pointer ${
+                        scheduleMode === opt.value
+                          ? "border-sky-600 bg-white shadow-xs"
+                          : "border-transparent bg-white/60 hover:border-sky-300"
+                      }`}
+                      type="button"
+                      onClick={() => setScheduleMode(opt.value)}
+                    >
+                      <MaterialIcon
+                        className={`text-[22px] shrink-0 ${scheduleMode === opt.value ? "text-sky-600" : "text-slate-400"}`}
+                        name={scheduleMode === opt.value ? "radio_button_checked" : "radio_button_unchecked"}
+                      />
+                      <span>
+                        <span className="flex items-center gap-1.5 text-sm font-extrabold text-[#173A67]">
+                          <MaterialIcon className="text-[16px]" name={opt.icon} />
+                          {opt.title}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-on-surface-variant">{opt.desc}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {scheduleMode === "upcoming" ? (
+                    <label className="block">
+                      <span className="text-label-xs font-bold text-[#173A67]">Tự mở nhận phiếu lúc</span>
+                      <input
+                        className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-base sm:text-sm text-on-surface focus:border-primary"
+                        type="datetime-local"
+                        value={opensAtLocal}
+                        onChange={(e) => setOpensAtLocal(e.target.value)}
+                      />
+                      <span className="mt-1 block text-[11px] text-on-surface-variant">
+                        {opensAtLocal
+                          ? new Date(opensAtLocal).getTime() <= Date.now()
+                            ? "⚠️ Thời điểm này đã qua: lưu xong chương trình sẽ nhận phiếu thật ngay."
+                            : "Tới giờ hệ thống tự chuyển sang nhận phiếu thật."
+                          : "Để trống nếu muốn tự bấm \"Mở bình chọn ngay\"."}
+                      </span>
+                    </label>
+                  ) : null}
+                  <label className="block">
+                    <span className="text-label-xs font-bold text-[#173A67]">Tự dừng nhận phiếu lúc (không bắt buộc)</span>
+                    <input
+                      className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-base sm:text-sm text-on-surface focus:border-primary"
+                      type="datetime-local"
+                      value={votingEndsAtLocal}
+                      onChange={(e) => setVotingEndsAtLocal(e.target.value)}
+                    />
+                    <span className="mt-1 block text-[11px] text-on-surface-variant">
+                      Hết giờ sẽ ngừng nhận phiếu; trao giải vẫn bấm &quot;Đóng &amp; Trao giải&quot; như cũ.
+                    </span>
+                  </label>
                 </div>
               </div>
 

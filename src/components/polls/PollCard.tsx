@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollSummary } from "@/lib/data/polls";
+import { POLL_PHASE_META, formatPollTime, getPollPhase } from "@/lib/polls/phase";
 
 type Props = {
   poll: PollSummary;
 };
 
 export function PollCard({ poll }: Props) {
-  const isClosed = poll.status === "closed";
-  const isOpen = poll.status === "open";
+  const phase = getPollPhase(poll);
+  const isClosed = phase === "closed";
+  const isOpen = phase === "open";
+  const isUpcoming = phase === "upcoming";
+  const phaseMeta = POLL_PHASE_META[phase];
 
   return (
     <Link
@@ -20,18 +24,14 @@ export function PollCard({ poll }: Props) {
         <div className="mb-2.5 sm:mb-3.5 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] sm:text-label-xs font-bold ${
-                isOpen
-                  ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                  : "bg-surface-container-high text-on-surface-variant"
-              }`}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] sm:text-label-xs font-bold ${phaseMeta.chip}`}
             >
-              <span
-                className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${
-                  isOpen ? "bg-emerald-600 animate-pulse" : "bg-slate-400"
-                }`}
-              />
-              {isOpen ? "Đang mở bình chọn" : "Đã kết thúc"}
+              {isOpen ? (
+                <span className="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-emerald-600 animate-pulse" />
+              ) : (
+                <MaterialIcon className="text-[13px]" name={phaseMeta.icon} />
+              )}
+              {phaseMeta.label}
             </span>
 
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] sm:text-label-xs font-semibold text-primary">
@@ -67,6 +67,16 @@ export function PollCard({ poll }: Props) {
           </p>
         ) : null}
 
+        {isUpcoming ? (
+          <p className="mt-2.5 flex items-start gap-1.5 rounded-xl bg-sky-50 border border-sky-200 px-3 py-2 text-[11px] sm:text-xs font-semibold text-sky-900">
+            <MaterialIcon className="text-[15px] text-sky-600 shrink-0" name="schedule" />
+            <span>
+              {poll.opensAt ? `Mở bình chọn lúc ${formatPollTime(poll.opensAt)}. ` : "Sắp mở bình chọn. "}
+              Có thể vào xem tác phẩm và bình chọn thử trước.
+            </span>
+          </p>
+        ) : null}
+
         {/* Features badges */}
         <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-label-xs text-[#27496D]">
           <span className="flex items-center gap-1">
@@ -91,10 +101,16 @@ export function PollCard({ poll }: Props) {
       {/* Footer CTA */}
       <div className="mt-4 sm:mt-6 flex items-center justify-between border-t border-outline-variant/60 pt-3 sm:pt-4">
         <span className="text-xs sm:text-label-sm font-semibold text-on-surface-variant">
-          {isClosed ? "Xem kết quả chính thức" : "Vào bình chọn ngay"}
+          {isClosed
+            ? "Xem kết quả chính thức"
+            : isUpcoming
+            ? "Xem trước & bình chọn thử"
+            : isOpen
+            ? "Vào bình chọn ngay"
+            : "Chờ ban tổ chức công bố kết quả"}
         </span>
         <span className="flex items-center gap-1 text-xs sm:text-label-md font-bold text-primary transition group-hover:translate-x-1">
-          {isClosed ? "Xem kết quả" : "Bình chọn"}
+          {isClosed ? "Xem kết quả" : isUpcoming ? "Thử ngay" : isOpen ? "Bình chọn" : "Xem"}
           <MaterialIcon name="arrow_forward" />
         </span>
       </div>

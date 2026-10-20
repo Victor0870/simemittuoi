@@ -4,6 +4,7 @@ import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ensureJudgeToken } from "@/lib/polls/judge-access";
+import { parsePollSchedule } from "@/lib/polls/phase";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -67,6 +68,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const schedule = parsePollSchedule(body);
+    if (!schedule.ok) {
+      return NextResponse.json({ error: schedule.error }, { status: 400 });
+    }
+
     // 1. Insert poll
     const { data: poll, error: pollError } = await publicDb
       .from(CDILV_TABLE.polls)
@@ -76,7 +82,9 @@ export async function POST(request: NextRequest) {
         poll_type: pollType,
         access_type: accessType,
         content_type: contentType,
-        status: "open",
+        status: schedule.value?.mode ?? "open",
+        opens_at: schedule.value?.opensAt ?? null,
+        voting_ends_at: schedule.value?.votingEndsAt ?? null,
         is_active: isActive !== false,
         max_votes_per_user: parseInt(String(maxVotesPerUser), 10) || 3,
         max_guest_votes: parseInt(String(maxGuestVotes), 10) || 250,

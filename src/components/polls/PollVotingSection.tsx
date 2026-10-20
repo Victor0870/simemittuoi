@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollOption } from "@/lib/data/polls";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { ImageLightboxModal } from "@/components/polls/ImageLightboxModal";
+import { usePollPhase } from "@/components/polls/usePollPhase";
+import { formatPollTime } from "@/lib/polls/phase";
 
 type Props = {
   poll: PollDetail;
+  initialNow: number;
 };
 
 const MISSING_EMPLOYEE_CODE_MESSAGE =
@@ -26,8 +29,10 @@ function getOrCreateDeviceFingerprint(): string {
   return fp;
 }
 
-export function PollVotingSection({ poll }: Props) {
+export function PollVotingSection({ poll, initialNow }: Props) {
   const router = useRouter();
+  const phase = usePollPhase(poll, initialNow);
+  const isPractice = phase === "upcoming";
   const { user, profile, isGuest } = useAuth();
 
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
@@ -70,13 +75,41 @@ export function PollVotingSection({ poll }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [successIsPractice, setSuccessIsPractice] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const previousPhase = useRef(phase);
+  useEffect(() => {
+    if (previousPhase.current === phase) return;
+    const wasPractice = previousPhase.current === "upcoming";
+    previousPhase.current = phase;
+    setSelectedOptionIds([]);
+    setErrorMessage(null);
+    if (wasPractice && phase === "open") {
+      setSuccessIsPractice(false);
+      setSuccessMessage("Chương trình đã chính thức mở! Từ bây giờ phiếu bình chọn của bạn sẽ được ghi nhận.");
+    } else {
+      setSuccessMessage(null);
+    }
+    router.refresh();
+  }, [phase, router]);
+
+  useEffect(() => {
+    if (!errorMessage || errorMessage === MISSING_EMPLOYEE_CODE_MESSAGE) return;
+    document.getElementById("poll-vote-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [errorMessage]);
+
+  function showResult() {
+    window.setTimeout(() => {
+      document.getElementById("poll-vote-result")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }
 
   // Lightbox zoom image state
   const [zoomedImage, setZoomedImage] = useState<{ url: string; title: string } | null>(null);
 
   const maxVotes = poll.maxVotesPerUser || 3;
-  const isClosed = poll.status === "closed";
+  const isClosed = phase === "closed" || phase === "ended";
   const isInactive = poll.isActive === false;
 
   // Free poll safety limit: max 250 guest votes
@@ -159,6 +192,21 @@ export function PollVotingSection({ poll }: Props) {
       }
     }
 
+    if (isPractice) {
+      setSuccessIsPractice(true);
+      setSuccessMessage(
+        `Bạn đã thao tác đúng! Đây là phiếu THỬ nên không được ghi nhận. ${
+          poll.opensAt
+            ? `Khi chương trình mở lúc ${formatPollTime(poll.opensAt)}, hãy làm lại các bước như vậy để gửi phiếu thật.`
+            : "Khi chương trình mở, hãy làm lại các bước như vậy để gửi phiếu thật."
+        }`,
+      );
+      setSelectedOptionIds([]);
+      setPredictedCount("");
+      showResult();
+      return;
+    }
+
     setSubmitting(true);
     const fingerprint = getOrCreateDeviceFingerprint();
 
@@ -183,7 +231,9 @@ export function PollVotingSection({ poll }: Props) {
         throw new Error(data.error || "Gửi bình chọn thất bại.");
       }
 
+      setSuccessIsPractice(false);
       setSuccessMessage(data.message || "Bình chọn thành công! Cảm ơn bạn.");
+      showResult();
       setSelectedOptionIds([]);
       setPredictedCount("");
       setPredictorName("");
@@ -234,6 +284,8 @@ export function PollVotingSection({ poll }: Props) {
               ? "Chương trình bình chọn đã kết thúc."
               : isBlockedForGuest
               ? "Chương trình hiện mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập."
+              : isPractice
+              ? `Bình chọn thử: chọn tối đa ${maxVotes} tác phẩm để làm quen (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`
               : `Chọn tối đa ${maxVotes} tác phẩm bạn yêu thích nhất (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`}
           </p>
         </div>
@@ -272,12 +324,37 @@ export function PollVotingSection({ poll }: Props) {
         </div>
       ) : null}
 
+      {isPractice && !isInactive ? (
+        <div className="flex items-start gap-3 rounded-2xl border-2 border-dashed border-sky-400 bg-sky-50 p-4 text-sky-950">
+          <MaterialIcon className="text-[26px] text-sky-600 shrink-0" name="school" />
+          <div>
+            <p className="text-sm sm:text-base font-extrabold">Chế độ bình chọn thử</p>
+            <p className="text-xs sm:text-sm leading-relaxed mt-0.5">
+              Chương trình chưa mở nên phiếu gửi lúc này <strong>không được ghi nhận</strong>. Hãy thử chọn tác phẩm và gửi phiếu để quen thao tác
+              {poll.opensAt ? `, khi mở thật lúc ${formatPollTime(poll.opensAt)} bạn sẽ làm nhanh hơn.` : ", khi mở thật bạn sẽ làm nhanh hơn."}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Success banner */}
       {successMessage ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-5 text-emerald-900 shadow-xs">
-          <MaterialIcon className="text-[28px] text-emerald-600 shrink-0" name="check_circle" />
+        <div
+          id="poll-vote-result"
+          className={`flex items-center gap-3 rounded-2xl border p-5 shadow-xs ${
+            successIsPractice
+              ? "border-sky-300 bg-sky-50 text-sky-950"
+              : "border-emerald-300 bg-emerald-50 text-emerald-900"
+          }`}
+        >
+          <MaterialIcon
+            className={`text-[28px] shrink-0 ${successIsPractice ? "text-sky-600" : "text-emerald-600"}`}
+            name={successIsPractice ? "task_alt" : "check_circle"}
+          />
           <div>
-            <p className="text-title-sm font-bold">Thành công!</p>
+            <p className="text-title-sm font-bold">
+              {successIsPractice ? "Bình chọn thử thành công!" : "Thành công!"}
+            </p>
             <p className="text-body-md">{successMessage}</p>
           </div>
         </div>
@@ -285,7 +362,10 @@ export function PollVotingSection({ poll }: Props) {
 
       {/* Error banner */}
       {errorMessage ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-error/40 bg-error-container/40 p-4 text-on-error-container shadow-xs">
+        <div
+          id="poll-vote-error"
+          className="flex items-center gap-3 rounded-2xl border border-error/40 bg-error-container/40 p-4 text-on-error-container shadow-xs"
+        >
           <MaterialIcon className="text-[24px] text-error shrink-0" name="error" />
           <p className="text-body-md font-medium">{errorMessage}</p>
         </div>
@@ -499,6 +579,11 @@ export function PollVotingSection({ poll }: Props) {
           <div className="flex items-center gap-2 text-amber-950">
             <MaterialIcon className="text-[22px] sm:text-[26px] text-amber-600 shrink-0" name="how_to_vote" />
             <h3 className="text-base sm:text-title-lg font-black">Xác Nhận & Gửi Phiếu Bình Chọn</h3>
+            {isPractice ? (
+              <span className="rounded-full bg-sky-600 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wide text-white">
+                Thử
+              </span>
+            ) : null}
           </div>
 
           <p className="text-sm sm:text-body-md text-amber-900">
@@ -638,16 +723,26 @@ export function PollVotingSection({ poll }: Props) {
           {/* Submit Button */}
           <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
             <p className="text-label-sm text-on-surface-variant">
-              Mỗi thiết bị chỉ được gửi 1 lần mỗi 30 phút để chống spam.
+              {isPractice
+                ? "Phiếu thử không được ghi nhận. Khi mở thật, mỗi thiết bị chỉ được gửi 1 lần mỗi 30 phút."
+                : "Mỗi thiết bị chỉ được gửi 1 lần mỗi 30 phút để chống spam."}
             </p>
 
             <button
-              className="flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-title-sm font-extrabold text-white shadow-md hover:bg-dusty-dark transition cursor-pointer disabled:opacity-50"
+              className={`flex items-center gap-2 rounded-xl px-8 py-3.5 text-title-sm font-extrabold text-white shadow-md transition cursor-pointer disabled:opacity-50 ${
+                isPractice ? "bg-sky-600 hover:bg-sky-700" : "bg-primary hover:bg-dusty-dark"
+              }`}
               disabled={submitting || selectedOptionIds.length === 0}
               type="submit"
             >
               <MaterialIcon className="text-[22px]" name="send" />
-              <span>{submitting ? "Đang gửi bình chọn..." : "Gửi phiếu bình chọn"}</span>
+              <span>
+                {submitting
+                  ? "Đang gửi bình chọn..."
+                  : isPractice
+                  ? "Gửi phiếu bình chọn thử"
+                  : "Gửi phiếu bình chọn"}
+              </span>
             </button>
           </div>
         </form>

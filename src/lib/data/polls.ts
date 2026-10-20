@@ -1,5 +1,6 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import type { PollStatus } from "@/lib/polls/phase";
 
 export type JudgeMember = {
   employeeCode: string;
@@ -42,7 +43,9 @@ export type PollSummary = {
   pollType: "quiz" | "vote";
   accessType: "members_only" | "free";
   contentType: "text" | "image";
-  status: "open" | "closed" | "draft";
+  status: PollStatus;
+  opensAt: string | null;
+  votingEndsAt: string | null;
   isActive: boolean;
   maxVotesPerUser: number;
   maxGuestVotes: number;
@@ -94,6 +97,8 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     accessType: row.access_type,
     contentType: row.content_type,
     status: row.status,
+    opensAt: row.opens_at ?? null,
+    votingEndsAt: row.voting_ends_at ?? null,
     isActive: row.is_active !== false,
     maxVotesPerUser: row.max_votes_per_user ?? 3,
     maxGuestVotes: row.max_guest_votes ?? 250,
@@ -299,6 +304,8 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     accessType: pollRow.access_type,
     contentType: pollRow.content_type,
     status: pollRow.status,
+    opensAt: pollRow.opens_at ?? null,
+    votingEndsAt: pollRow.voting_ends_at ?? null,
     isActive: pollRow.is_active !== false,
     maxVotesPerUser: pollRow.max_votes_per_user ?? 3,
     maxGuestVotes: pollRow.max_guest_votes ?? 250,

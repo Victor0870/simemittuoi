@@ -9,6 +9,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { PollDetail } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
 import { PollQrButton } from "@/components/polls/PollQrButton";
+import { usePollPhase } from "@/components/polls/usePollPhase";
 
 type Props = {
   poll: PollDetail;
@@ -22,6 +23,9 @@ export function PollAdminToolbar({ poll }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(poll.isActive);
 
+  const [mountedAt] = useState(() => Date.now());
+  const phase = usePollPhase(poll, mountedAt);
+
   useEffect(() => {
     setIsActive(poll.isActive);
   }, [poll.isActive]);
@@ -30,7 +34,30 @@ export function PollAdminToolbar({ poll }: Props) {
     return null;
   }
 
-  const isOpen = poll.status === "open";
+  async function handleSetStatus(status: "open" | "upcoming") {
+    const question =
+      status === "open"
+        ? `Mở bình chọn NGAY cho "${poll.title}"?\n\nTừ lúc này phiếu bình chọn sẽ được ghi nhận thật.`
+        : `Chuyển "${poll.title}" về trạng thái SẮP MỞ?\n\nMọi người vẫn xem và bình chọn thử được nhưng phiếu không được ghi nhận. Phiếu thật đã gửi trước đó vẫn giữ nguyên.`;
+    if (!window.confirm(question)) return;
+    setIsBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/polls/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pollId: poll.id, status }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Thao tác thất bại");
+      setMessage(data.message || "Đã cập nhật trạng thái!");
+      router.refresh();
+    } catch (err: any) {
+      alert(err?.message || "Lỗi khi đổi trạng thái");
+    } finally {
+      setIsBusy(false);
+    }
+  }
 
   async function handleClosePoll() {
     const confirm = window.confirm(
@@ -179,8 +206,31 @@ export function PollAdminToolbar({ poll }: Props) {
               <span className="hidden md:inline">(Up ảnh, thành viên)</span>
             </button>
 
+            {phase === "upcoming" ? (
+              <button
+                className="flex items-center justify-center gap-1 rounded-xl bg-emerald-500 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-emerald-600 transition cursor-pointer disabled:opacity-50"
+                disabled={isBusy}
+                type="button"
+                onClick={() => handleSetStatus("open")}
+              >
+                <MaterialIcon className="text-[15px] sm:text-[16px]" name="play_circle" />
+                <span>Mở bình chọn ngay</span>
+              </button>
+            ) : phase === "open" ? (
+              <button
+                className="flex items-center justify-center gap-1 rounded-xl bg-sky-500 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-sky-600 transition cursor-pointer disabled:opacity-50"
+                disabled={isBusy}
+                title="Cho mọi người xem trước và bình chọn thử, chưa ghi nhận phiếu"
+                type="button"
+                onClick={() => handleSetStatus("upcoming")}
+              >
+                <MaterialIcon className="text-[15px] sm:text-[16px]" name="schedule" />
+                <span>Chuyển về Sắp mở</span>
+              </button>
+            ) : null}
+
             {/* BUTTON ĐÓNG/MỞ LẠI */}
-            {isOpen ? (
+            {phase === "upcoming" ? null : phase !== "closed" ? (
               <button
                 className="flex items-center justify-center gap-1 rounded-xl bg-rose-500 px-2.5 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold text-white shadow-xs hover:bg-rose-600 transition cursor-pointer disabled:opacity-50"
                 disabled={isBusy}

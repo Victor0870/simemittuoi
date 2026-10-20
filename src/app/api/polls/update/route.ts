@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { parsePollSchedule } from "@/lib/polls/phase";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -110,8 +112,25 @@ export async function POST(request: NextRequest) {
       updateData.is_active = isActive;
     }
 
-    if (status && ["open", "closed", "draft"].includes(status)) {
+    if (status && ["open", "closed", "draft", "upcoming"].includes(status)) {
       updateData.status = status;
+    }
+
+    const schedule = parsePollSchedule(body);
+    if (!schedule.ok) {
+      return NextResponse.json({ error: schedule.error }, { status: 400 });
+    }
+    if (schedule.value) {
+      updateData.opens_at = schedule.value.opensAt;
+      updateData.voting_ends_at = schedule.value.votingEndsAt;
+      const { data: current } = await publicDb
+        .from(CDILV_TABLE.polls)
+        .select("status")
+        .eq("id", pollId)
+        .maybeSingle();
+      if (current && current.status !== "closed" && !updateData.status) {
+        updateData.status = schedule.value.mode;
+      }
     }
 
     const { error: pollUpdateErr } = await publicDb
@@ -187,6 +206,14 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+    }
+
+    try {
+      revalidatePath("/polls");
+      revalidatePath(`/polls/${pollId}`);
+      revalidatePath("/admin/polls");
+    } catch {
+      // ignore
     }
 
     return NextResponse.json({

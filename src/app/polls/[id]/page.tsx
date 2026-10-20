@@ -6,6 +6,9 @@ import { PollPodiumResults } from "@/components/polls/PollPodiumResults";
 import { PollVotingSection } from "@/components/polls/PollVotingSection";
 import { PollAdminToolbar } from "@/components/polls/PollAdminToolbar";
 import { PollQrButton } from "@/components/polls/PollQrButton";
+import { PollPhaseBadge } from "@/components/polls/PollPhaseBadge";
+import { formatPollTime } from "@/lib/polls/phase";
+import { PollScheduleNotice } from "@/components/polls/PollScheduleNotice";
 
 export const revalidate = 15;
 
@@ -19,7 +22,7 @@ export default async function PollDetailPage({ params }: Props) {
 
   if (!poll) notFound();
 
-  const isClosed = poll.status === "closed";
+  const now = Date.now();
 
   return (
     <div className="space-y-8">
@@ -65,20 +68,7 @@ export default async function PollDetailPage({ params }: Props) {
               </span>
             ) : null}
 
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold ${
-                !isClosed
-                  ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                  : "bg-surface-container-high text-on-surface-variant"
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${
-                  !isClosed ? "bg-emerald-600 animate-pulse" : "bg-slate-400"
-                }`}
-              />
-              {!isClosed ? "Đang mở bình chọn" : "Đã kết thúc"}
-            </span>
+            <PollPhaseBadge initialNow={now} poll={poll} />
 
             <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-primary">
               {poll.pollType === "vote" ? "Bình chọn tác phẩm" : "Câu hỏi trắc nghiệm"}
@@ -92,7 +82,9 @@ export default async function PollDetailPage({ params }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <PollQrButton pollId={poll.id} pollTitle={poll.title} />
             <span className="text-xs sm:text-body-sm text-on-surface-variant">
-              Ngày mở: {new Date(poll.createdAt).toLocaleDateString("vi-VN")}
+              {poll.opensAt
+                ? `Mở bình chọn: ${formatPollTime(poll.opensAt)}`
+                : `Ngày mở: ${new Date(poll.createdAt).toLocaleDateString("vi-VN")}`}
             </span>
           </div>
         </div>
@@ -128,17 +120,17 @@ export default async function PollDetailPage({ params }: Props) {
         </div>
       </div>
 
+      <PollScheduleNotice initialNow={now} poll={poll} />
+
       {/* 1. KẾT QUẢ HIỂN THỊ TRÊN ĐẦU (Theo yêu cầu) */}
-      <section className="space-y-3">
-        <PollPodiumResults poll={poll} />
-      </section>
+      <PollPodiumResults initialNow={now} poll={poll} />
 
       {/* 2. KHU VỰC BÌNH CHỌN / BẦU CHỌN TÁC PHẨM */}
       <section
-        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs"
+        className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs scroll-mt-20"
         id="binh-chon"
       >
-        <PollVotingSection poll={poll} />
+        <PollVotingSection initialNow={now} poll={poll} />
       </section>
 
       {/* Bottom navigation */}

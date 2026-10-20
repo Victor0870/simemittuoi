@@ -8,6 +8,7 @@ import {
   judgeCodesFromPoll,
   normalizeEmployeeCode,
 } from "@/lib/polls/judge-access";
+import { formatPollTime, getPollPhase } from "@/lib/polls/phase";
 
 const PUBLIC_JUDGE_BLOCKED =
   "Mã này thuộc Ban giám khảo chưa có tài khoản nên không bình chọn được qua link công khai. Vui lòng dùng link riêng do ban tổ chức gửi. Nếu bạn đã có tài khoản đoàn viên, hãy đăng nhập.";
@@ -73,9 +74,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (poll.status !== "open") {
+    const phase = getPollPhase({
+      status: poll.status,
+      opensAt: poll.opens_at,
+      votingEndsAt: poll.voting_ends_at,
+    });
+    if (phase === "upcoming") {
       return NextResponse.json(
-        { error: "Chương trình bình chọn đã kết thúc hoặc chưa mở." },
+        {
+          error: poll.opens_at
+            ? `Chương trình chưa mở bình chọn. Thời gian mở: ${formatPollTime(poll.opens_at)}.`
+            : "Chương trình chưa mở bình chọn. Vui lòng chờ ban tổ chức mở.",
+        },
+        { status: 400 },
+      );
+    }
+    if (phase !== "open") {
+      return NextResponse.json(
+        { error: "Chương trình bình chọn đã hết thời gian nhận phiếu." },
         { status: 400 },
       );
     }
