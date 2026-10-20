@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function AdminDashboardPage() {
     { count: pendingFeedbackCount },
     { count: activeWhitelistCount },
     { count: quizQuestionsCount },
+    { count: activePopupsCount },
   ] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
@@ -73,6 +75,11 @@ export default async function AdminDashboardPage() {
     supabase
       .from(CDILV_TABLE.quizQuestions)
       .select("id", { count: "exact", head: true }),
+    createServiceClient()
+      .from(CDILV_TABLE.popups)
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`),
   ]);
 
   const initial = (me.full_name || user.email || "A").slice(0, 1).toUpperCase();
@@ -408,6 +415,26 @@ export default async function AdminDashboardPage() {
         </h2>
 
         <div className="space-y-2.5">
+          <Link
+            href="/admin/popups"
+            className="flex items-center justify-between rounded-2xl border border-red-200 bg-red-50/60 p-4 transition hover:bg-red-50"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 text-red-700">
+                <MaterialIcon className="text-[20px]" name="notification_important" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-red-900">
+                  Popup thông báo nhanh
+                </p>
+                <p className="text-xs text-red-900/80">
+                  {activePopupsCount ?? 0} popup đang bật · Đăng tin gấp nội dung ngắn, hẹn giờ hiện và hết hạn
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-red-800" name="chevron_right" />
+          </Link>
+
           <Link
             href="/admin/roles"
             className="flex items-center justify-between rounded-2xl border border-amber-300 bg-amber-50 p-4 transition hover:bg-amber-100/70"

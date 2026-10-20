@@ -18,6 +18,7 @@ export function AdminNavLinks({ activeHref = "/" }: Props) {
   const isPollsActive = activeHref.startsWith("/admin/polls");
   const isEmployeesActive = activeHref.startsWith("/admin/employees");
   const isQuizActive = activeHref.startsWith("/admin/quiz");
+  const isPopupsActive = activeHref.startsWith("/admin/popups");
 
   return (
     <div className="flex items-center gap-2 border-l border-outline-variant/60 pl-3">
@@ -58,6 +59,19 @@ export function AdminNavLinks({ activeHref = "/" }: Props) {
       >
         <MaterialIcon className="text-[18px]" name="quiz" />
         <span>Trắc nghiệm</span>
+      </Link>
+
+      <Link
+        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-label-md font-semibold transition-all ${
+          isPopupsActive
+            ? "bg-primary text-white font-bold shadow-xs"
+            : "text-on-surface-variant hover:bg-surface-container-high"
+        }`}
+        href="/admin/popups"
+        title="Quản trị: Popup thông báo nhanh"
+      >
+        <MaterialIcon className="text-[18px]" name="notification_important" />
+        <span>Popup</span>
       </Link>
 
       <Link

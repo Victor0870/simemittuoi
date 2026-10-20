@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TopNav } from "@/components/layout/TopNav";
+import { AnnouncementPopup } from "@/components/popups/AnnouncementPopup";
 import { QuizEventPopup } from "@/components/quiz/QuizEventPopup";
 import { MOBILE_NAV_ITEMS, NAV_ITEMS } from "@/lib/constants";
 
@@ -32,6 +33,7 @@ function resolveActiveHref(pathname: string): string {
     "/admin/polls",
     "/admin/quiz",
     "/admin/roles",
+    "/admin/popups",
     "/office",
     "/profile",
   ];
@@ -65,6 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Footer />
             <MobileBottomNav activeHref={activeHref} />
             <QuizEventPopup />
+            <AnnouncementPopup />
           </div>
         </div>
       </ApprovalGate>

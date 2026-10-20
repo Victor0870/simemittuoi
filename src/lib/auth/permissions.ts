@@ -30,6 +30,7 @@ export const PERMISSIONS = {
   giftsChildren: "gifts.children",
   lifeEventsView: "life_events.view",
   lifeEventsHandle: "life_events.handle",
+  popupsManage: "popups.manage",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -140,6 +141,19 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Tiếp nhận & ghi chú",
         description: "Bấm “Tiếp nhận” (đoàn viên được báo lại), ghi chú xử lý, bổ sung ảnh giấy tờ.",
         requires: [PERMISSIONS.lifeEventsView],
+      },
+    ],
+  },
+  {
+    key: "popups",
+    name: "Popup thông báo",
+    icon: "notification_important",
+    permissions: [
+      {
+        code: PERMISSIONS.popupsManage,
+        name: "Đăng & quản lý popup",
+        description:
+          "Đăng tin gấp dạng popup nội dung ngắn, hẹn giờ hiện / hết hạn, chọn đối tượng và tần suất hiện, bật / tắt, xem số người đã xem.",
       },
     ],
   },
@@ -285,12 +299,20 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     icon: "how_to_vote",
     permission: PERMISSIONS.pollsManage,
   },
+  {
+    href: "/admin/popups",
+    title: "Popup thông báo",
+    description: "Đăng tin gấp nội dung ngắn hiện dạng popup, hẹn giờ hiện và hết hạn, xem số người đã xem.",
+    icon: "notification_important",
+    permission: PERMISSIONS.popupsManage,
+  },
 ];
 
 /** Các trang trong /admin mở cho người có quyền (trang /admin khác vẫn chỉ dành cho admin). */
 export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCode }[] = [
   { prefix: "/admin/employees", permission: PERMISSIONS.employeesView },
   { prefix: "/admin/polls", permission: PERMISSIONS.pollsManage },
+  { prefix: "/admin/popups", permission: PERMISSIONS.popupsManage },
 ];
 
 export function findAdminRoutePermission(pathname: string): PermissionCode | null {
