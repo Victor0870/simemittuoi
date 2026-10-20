@@ -1,6 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
-import type { AdminPopup, PopupAudience, PopupFrequency, PopupTone } from "@/lib/popups";
+import { toClock, type AdminPopup, type PopupAudience, type PopupFrequency, type PopupTone } from "@/lib/popups";
 
 type PopupRow = {
   id: string;
@@ -13,6 +13,8 @@ type PopupRow = {
   frequency: PopupFrequency;
   starts_at: string;
   ends_at: string | null;
+  daily_start: string | null;
+  daily_end: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -25,7 +27,7 @@ export async function getAdminPopups(): Promise<AdminPopup[]> {
   const { data, error } = await db
     .from(CDILV_TABLE.popups)
     .select(
-      "id, title, body, tone, link_url, link_label, audience, frequency, starts_at, ends_at, is_active, created_at, updated_at, creator:created_by(full_name)",
+      "id, title, body, tone, link_url, link_label, audience, frequency, starts_at, ends_at, daily_start, daily_end, is_active, created_at, updated_at, creator:created_by(full_name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -57,6 +59,8 @@ export async function getAdminPopups(): Promise<AdminPopup[]> {
     frequency: r.frequency,
     startsAt: r.starts_at,
     endsAt: r.ends_at,
+    dailyStart: toClock(r.daily_start),
+    dailyEnd: toClock(r.daily_end),
     isActive: r.is_active,
     createdAt: r.created_at,
     updatedAt: r.updated_at,

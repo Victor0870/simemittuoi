@@ -33,6 +33,9 @@ export type AdminPopup = PopupContent & {
   frequency: PopupFrequency;
   startsAt: string;
   endsAt: string | null;
+  /** Khung giờ mỗi ngày "HH:MM" (giờ VN); null = cả ngày. */
+  dailyStart: string | null;
+  dailyEnd: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -89,23 +92,49 @@ export const POPUP_FREQUENCY_LABEL: Record<PopupFrequency, string> = {
   session: "Mỗi lần mở trang web",
 };
 
-export type PopupStatus = "showing" | "scheduled" | "expired" | "off";
+export type PopupStatus = "showing" | "waiting" | "scheduled" | "expired" | "off";
 
 export const POPUP_STATUS_META: Record<PopupStatus, { label: string; chip: string }> = {
   showing: { label: "Đang hiện", chip: "border-emerald-300 bg-emerald-50 text-emerald-800" },
+  waiting: { label: "Chờ khung giờ", chip: "border-indigo-300 bg-indigo-50 text-indigo-800" },
   scheduled: { label: "Hẹn giờ", chip: "border-sky-300 bg-sky-50 text-sky-800" },
   expired: { label: "Đã hết hạn", chip: "border-slate-300 bg-slate-100 text-slate-600" },
   off: { label: "Đang tắt", chip: "border-slate-300 bg-slate-100 text-slate-600" },
 };
 
+/** Giờ hiện tại theo giờ Việt Nam dạng "HH:MM". */
+export function vnClock(now = Date.now()): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(now));
+}
+
+export function isWithinDailyWindow(
+  popup: { dailyStart: string | null; dailyEnd: string | null },
+  now = Date.now(),
+): boolean {
+  if (!popup.dailyStart || !popup.dailyEnd) return true;
+  const clock = vnClock(now);
+  return clock >= popup.dailyStart && clock < popup.dailyEnd;
+}
+
 export function getPopupStatus(
-  popup: Pick<AdminPopup, "isActive" | "startsAt" | "endsAt">,
+  popup: Pick<AdminPopup, "isActive" | "startsAt" | "endsAt" | "dailyStart" | "dailyEnd">,
   now = Date.now(),
 ): PopupStatus {
   if (!popup.isActive) return "off";
   if (popup.endsAt && new Date(popup.endsAt).getTime() <= now) return "expired";
   if (new Date(popup.startsAt).getTime() > now) return "scheduled";
+  if (!isWithinDailyWindow(popup, now)) return "waiting";
   return "showing";
+}
+
+/** "07:00:00" (Postgres time) → "07:00". */
+export function toClock(value: string | null): string | null {
+  return value ? value.slice(0, 5) : null;
 }
 
 /** Link trong trang ("/posts/...") hoặc http(s) bên ngoài. */
@@ -129,6 +158,8 @@ export type PopupInput = PopupContent & {
   frequency: PopupFrequency;
   startsAt: string;
   endsAt: string | null;
+  dailyStart: string | null;
+  dailyEnd: string | null;
   isActive: boolean;
 };
 
@@ -170,6 +201,17 @@ export function parsePopupInput(raw: unknown): { error: string } | { value: Popu
   if (data.endsAt && !endsAt) return { error: "Thời gian kết thúc không hợp lệ." };
   if (endsAt && endsAt <= startsAt) return { error: "Thời gian kết thúc phải sau thời gian bắt đầu." };
 
+  const clockPattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+  const dailyStart = String(data.dailyStart ?? "").trim() || null;
+  const dailyEnd = String(data.dailyEnd ?? "").trim() || null;
+  if (dailyStart || dailyEnd) {
+    if (!dailyStart || !dailyEnd) return { error: "Khung giờ mỗi ngày cần đủ giờ bắt đầu và giờ kết thúc." };
+    if (!clockPattern.test(dailyStart) || !clockPattern.test(dailyEnd)) {
+      return { error: "Khung giờ mỗi ngày không hợp lệ." };
+    }
+    if (dailyEnd <= dailyStart) return { error: "Giờ kết thúc trong ngày phải sau giờ bắt đầu." };
+  }
+
   return {
     value: {
       title,
@@ -181,6 +223,8 @@ export function parsePopupInput(raw: unknown): { error: string } | { value: Popu
       frequency: pick(data.frequency, POPUP_FREQUENCIES, "once"),
       startsAt,
       endsAt,
+      dailyStart,
+      dailyEnd,
       isActive: data.isActive !== false,
     },
   };
@@ -197,6 +241,8 @@ export function popupInputToRow(input: PopupInput) {
     frequency: input.frequency,
     starts_at: input.startsAt,
     ends_at: input.endsAt,
+    daily_start: input.dailyStart,
+    daily_end: input.dailyEnd,
     is_active: input.isActive,
   };
 }

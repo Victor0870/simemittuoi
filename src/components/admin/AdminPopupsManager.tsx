@@ -21,7 +21,7 @@ type Props = {
   memberCount: number;
 };
 
-const STATUS_ORDER: PopupStatus[] = ["showing", "scheduled", "off", "expired"];
+const STATUS_ORDER: PopupStatus[] = ["showing", "waiting", "scheduled", "off", "expired"];
 
 export function AdminPopupsManager({ popups, memberCount }: Props) {
   const router = useRouter();
@@ -39,7 +39,7 @@ export function AdminPopupsManager({ popups, memberCount }: Props) {
     [popups],
   );
   const counts = useMemo(() => {
-    const c: Record<PopupStatus, number> = { showing: 0, scheduled: 0, expired: 0, off: 0 };
+    const c: Record<PopupStatus, number> = { showing: 0, waiting: 0, scheduled: 0, expired: 0, off: 0 };
     for (const { status } of sorted) c[status] += 1;
     return c;
   }, [sorted]);
@@ -155,6 +155,14 @@ export function AdminPopupsManager({ popups, memberCount }: Props) {
                       {formatPopupTime(popup.startsAt)} → {popup.endsAt ? formatPopupTime(popup.endsAt) : "không tự tắt"}
                     </dd>
                   </div>
+                  {popup.dailyStart && popup.dailyEnd ? (
+                    <div className="flex gap-1">
+                      <dt className="font-semibold">Khung giờ:</dt>
+                      <dd>
+                        {popup.dailyStart}–{popup.dailyEnd} mỗi ngày
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex gap-1">
                     <dt className="font-semibold">Hiện:</dt>
                     <dd>

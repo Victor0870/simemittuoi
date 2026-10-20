@@ -64,6 +64,9 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
   const [frequency, setFrequency] = useState<PopupFrequency>("once");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [useDailyWindow, setUseDailyWindow] = useState(false);
+  const [dailyStart, setDailyStart] = useState("07:00");
+  const [dailyEnd, setDailyEnd] = useState("09:00");
   const [isActive, setIsActive] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -79,6 +82,9 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
     setFrequency(popup?.frequency ?? "once");
     setStartsAt(toLocalInput(popup?.startsAt ?? null));
     setEndsAt(popup ? toLocalInput(popup.endsAt) : addHours("", 72));
+    setUseDailyWindow(Boolean(popup?.dailyStart));
+    setDailyStart(popup?.dailyStart ?? "07:00");
+    setDailyEnd(popup?.dailyEnd ?? "09:00");
     setIsActive(popup?.isActive ?? true);
     setErrorMessage(null);
   }, [isOpen, popup]);
@@ -111,6 +117,10 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
       setErrorMessage("Thời gian kết thúc phải sau thời gian bắt đầu.");
       return;
     }
+    if (useDailyWindow && (!dailyStart || !dailyEnd || dailyEnd <= dailyStart)) {
+      setErrorMessage("Khung giờ mỗi ngày: giờ kết thúc phải sau giờ bắt đầu.");
+      return;
+    }
 
     setSubmitting(true);
     setErrorMessage(null);
@@ -128,6 +138,8 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
           frequency,
           startsAt: fromLocalInput(startsAt),
           endsAt: fromLocalInput(endsAt),
+          dailyStart: useDailyWindow ? dailyStart : null,
+          dailyEnd: useDailyWindow ? dailyEnd : null,
           isActive,
         }),
       });
@@ -202,6 +214,100 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
                       </button>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-2xl border-2 border-primary/20 bg-dusty-light/30 p-4">
+                <div className="flex items-center gap-1.5">
+                  <MaterialIcon className="text-[20px] text-primary" name="schedule" />
+                  <p className="text-sm font-bold text-on-surface">Thời gian xuất hiện</p>
+                </div>
+                <p className="-mt-1 text-[11px] text-on-surface-variant">
+                  Popup tự hiện khi tới giờ bắt đầu và tự tắt khi hết giờ kết thúc — không cần bật / tắt tay.
+                </p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">
+                      Bắt đầu hiện (để trống = ngay khi lưu)
+                    </span>
+                    <input
+                      className={inputClass}
+                      type="datetime-local"
+                      value={startsAt}
+                      onChange={(e) => setStartsAt(e.target.value)}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">
+                      Tự tắt lúc (để trống = không tự tắt)
+                    </span>
+                    <input
+                      className={inputClass}
+                      min={startsAt || undefined}
+                      type="datetime-local"
+                      value={endsAt}
+                      onChange={(e) => setEndsAt(e.target.value)}
+                    />
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] text-on-surface-variant">Hiện trong:</span>
+                  {DURATIONS.map((d) => (
+                    <button
+                      key={d.hours}
+                      className="rounded-full border border-dusty-border bg-white px-2.5 py-1 text-xs font-semibold text-primary hover:border-primary"
+                      type="button"
+                      onClick={() => setEndsAt(addHours(startsAt, d.hours))}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                  <button
+                    className="rounded-full border border-dusty-border bg-white px-2.5 py-1 text-xs font-semibold text-on-surface-variant hover:border-primary"
+                    type="button"
+                    onClick={() => setEndsAt("")}
+                  >
+                    Không tự tắt
+                  </button>
+                </div>
+
+                <div className="border-t border-dusty-border/60 pt-3">
+                  <label className="flex cursor-pointer items-center gap-2.5">
+                    <input
+                      checked={useDailyWindow}
+                      className="h-4 w-4 accent-[#173A67]"
+                      type="checkbox"
+                      onChange={(e) => setUseDailyWindow(e.target.checked)}
+                    />
+                    <span className="text-xs font-bold text-on-surface sm:text-sm">
+                      Chỉ hiện trong khung giờ mỗi ngày
+                    </span>
+                  </label>
+                  {useDailyWindow ? (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <input
+                          aria-label="Giờ bắt đầu mỗi ngày"
+                          className={inputClass}
+                          type="time"
+                          value={dailyStart}
+                          onChange={(e) => setDailyStart(e.target.value)}
+                        />
+                        <span className="text-sm text-on-surface-variant">đến</span>
+                        <input
+                          aria-label="Giờ kết thúc mỗi ngày"
+                          className={inputClass}
+                          type="time"
+                          value={dailyEnd}
+                          onChange={(e) => setDailyEnd(e.target.value)}
+                        />
+                      </div>
+                      <p className="text-[11px] text-on-surface-variant">
+                        Giờ Việt Nam. VD 07:00 đến 09:00: mỗi ngày popup tự hiện lúc 7h và tự ẩn lúc 9h, lặp lại
+                        cho tới ngày tự tắt ở trên. Nên chọn &quot;Mỗi ngày 1 lần&quot; ở mục tần suất.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -292,55 +398,6 @@ export function PopupEditorModal({ isOpen, popup, onClose, onSaved }: Props) {
                       <span className="block text-[11px] text-on-surface-variant">{FREQUENCY_HINT[f]}</span>
                     </button>
                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-2 rounded-2xl border border-dusty-border/80 bg-dusty-light/30 p-4">
-                <p className="text-xs font-bold text-on-surface sm:text-sm">Thời gian xuất hiện</p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">
-                      Bắt đầu (để trống = hiện ngay khi lưu)
-                    </span>
-                    <input
-                      className={inputClass}
-                      type="datetime-local"
-                      value={startsAt}
-                      onChange={(e) => setStartsAt(e.target.value)}
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">
-                      Kết thúc (để trống = không tự tắt)
-                    </span>
-                    <input
-                      className={inputClass}
-                      min={startsAt || undefined}
-                      type="datetime-local"
-                      value={endsAt}
-                      onChange={(e) => setEndsAt(e.target.value)}
-                    />
-                  </label>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] text-on-surface-variant">Hiện trong:</span>
-                  {DURATIONS.map((d) => (
-                    <button
-                      key={d.hours}
-                      className="rounded-full border border-dusty-border bg-white px-2.5 py-1 text-xs font-semibold text-primary hover:border-primary"
-                      type="button"
-                      onClick={() => setEndsAt(addHours(startsAt, d.hours))}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                  <button
-                    className="rounded-full border border-dusty-border bg-white px-2.5 py-1 text-xs font-semibold text-on-surface-variant hover:border-primary"
-                    type="button"
-                    onClick={() => setEndsAt("")}
-                  >
-                    Không tự tắt
-                  </button>
                 </div>
               </div>
 
