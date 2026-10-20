@@ -5,6 +5,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { resizeImageFile } from "@/lib/image-resize";
 import type { JudgeMember, PollDetail, PollOption } from "@/lib/data/polls";
 import type { PollScheduleMode } from "@/lib/polls/phase";
+import { EmployeeSuggestInput, type EmployeeSuggestion } from "@/components/polls/EmployeeSuggestInput";
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
@@ -243,6 +244,25 @@ export function PollEditorModal({
       const next = [...prev];
       next[optIndex].members.push({ fullName: "", employeeCode: "" });
       return next;
+    });
+  }
+
+  function handlePickMember(optIndex: number, memIndex: number, emp: EmployeeSuggestion) {
+    const duplicate = options[optIndex].members.some(
+      (m, i) => i !== memIndex && m.employeeCode.trim().toUpperCase() === emp.employeeCode.toUpperCase(),
+    );
+    if (duplicate) {
+      window.alert(`${emp.fullName} (${emp.employeeCode}) đã có trong tác phẩm này.`);
+      return;
+    }
+    setOptions((prev) => {
+      const nextMembers = prev[optIndex].members.map((m, i) =>
+        i === memIndex ? { fullName: emp.fullName, employeeCode: emp.employeeCode } : m,
+      );
+      if (memIndex === nextMembers.length - 1) {
+        nextMembers.push({ fullName: "", employeeCode: "" });
+      }
+      return prev.map((opt, i) => (i === optIndex ? { ...opt, members: nextMembers } : opt));
     });
   }
 
@@ -711,28 +731,33 @@ export function PollEditorModal({
                         <div className="space-y-2 pt-1">
                           {opt.members.map((mem, memIdx) => (
                             <div key={memIdx} className="flex items-center gap-2">
-                              <input
-                                className="flex-1 rounded-xl border border-outline-variant bg-surface-container-low px-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:border-primary"
-                                placeholder="Họ và tên đoàn viên (VD: Nguyễn Thị Lan)"
-                                type="text"
-                                value={mem.fullName}
-                                onChange={(e) => {
-                                  const next = [...options];
-                                  next[optIdx].members[memIdx].fullName = e.target.value;
-                                  setOptions(next);
-                                }}
-                              />
-                              <input
-                                className="w-36 rounded-xl border border-outline-variant bg-surface-container-low px-3 py-1.5 text-xs text-on-surface placeholder:text-outline focus:border-primary"
-                                placeholder="Mã NV (VD: NV012)"
-                                type="text"
-                                value={mem.employeeCode}
-                                onChange={(e) => {
-                                  const next = [...options];
-                                  next[optIdx].members[memIdx].employeeCode = e.target.value;
-                                  setOptions(next);
-                                }}
-                              />
+                              <div className="flex-1 min-w-0">
+                                <EmployeeSuggestInput
+                                  className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-1.5 text-base sm:text-xs text-on-surface placeholder:text-outline focus:border-primary"
+                                  placeholder="Gõ tên hoặc mã NV để chọn nhanh"
+                                  value={mem.fullName}
+                                  onChange={(text) => {
+                                    const next = [...options];
+                                    next[optIdx].members[memIdx].fullName = text;
+                                    setOptions(next);
+                                  }}
+                                  onPick={(emp) => handlePickMember(optIdx, memIdx, emp)}
+                                />
+                              </div>
+                              <div className="w-28 sm:w-36 shrink-0">
+                                <EmployeeSuggestInput
+                                  align="right"
+                                  className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-1.5 text-base sm:text-xs text-on-surface placeholder:text-outline focus:border-primary"
+                                  placeholder="Mã NV"
+                                  value={mem.employeeCode}
+                                  onChange={(text) => {
+                                    const next = [...options];
+                                    next[optIdx].members[memIdx].employeeCode = text;
+                                    setOptions(next);
+                                  }}
+                                  onPick={(emp) => handlePickMember(optIdx, memIdx, emp)}
+                                />
+                              </div>
                               {opt.members.length > 1 ? (
                                 <button
                                   className="flex h-7 w-7 items-center justify-center rounded-lg text-error hover:bg-error/10 text-xs"
