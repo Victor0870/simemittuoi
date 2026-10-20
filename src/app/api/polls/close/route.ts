@@ -248,6 +248,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Thành viên tác phẩm chỉ lưu mã NV. Mã đã có tài khoản được duyệt thì phải cộng thẳng vào tài khoản:
+    // điểm chờ theo mã chỉ được chuyển sang tài khoản lúc đăng ký, nên người đã có tài khoản sẽ không bao giờ thấy.
+    const { data: allMembers } = await publicDb
+      .from(CDILV_TABLE.pollOptionMembers)
+      .select("employee_code")
+      .in(
+        "option_id",
+        updatedOptions.map((opt) => opt.id),
+      );
+    const memberCodes = [
+      ...new Set(
+        (allMembers ?? [])
+          .map((m) => String(m.employee_code || "").trim().toUpperCase())
+          .filter(Boolean),
+      ),
+    ];
+    const accountByCode = new Map<string, string>();
+    if (memberCodes.length > 0) {
+      const { data: profiles } = await publicDb
+        .from(CDILV_TABLE.profiles)
+        .select("id, employee_code, approval_status")
+        .in("employee_code", memberCodes);
+      for (const p of profiles ?? []) {
+        const code = String(p.employee_code || "").trim().toUpperCase();
+        if (code && p.approval_status === "approved") accountByCode.set(code, p.id);
+      }
+    }
+    const resolveMemberUserId = (m: { user_id?: string | null; employee_code?: string | null }) =>
+      m.user_id || accountByCode.get(String(m.employee_code || "").trim().toUpperCase()) || null;
+
     // 4. If is_union_contest, award points to team members of winning options
     if (poll.is_union_contest) {
       for (const opt of updatedOptions) {
@@ -281,11 +311,12 @@ export async function POST(request: NextRequest) {
           for (const m of members || []) {
             const noteText = `Đạt ${prizeName} - ${opt.title} (${poll.title}) (+${prizePoints}đ)`;
             const awardLabel = `poll_prize_${pollId}_opt_${opt.id}_m_${m.id}`;
+            const memberUserId = resolveMemberUserId(m);
 
-            if (m.user_id) {
+            if (memberUserId) {
               try {
                 await publicDb.from(CDILV_TABLE.scoreEvents).insert({
-                  user_id: m.user_id,
+                  user_id: memberUserId,
                   employee_code: m.employee_code || null,
                   points: prizePoints,
                   note: noteText,
@@ -333,8 +364,9 @@ export async function POST(request: NextRequest) {
         const key = code || (member.user_id ? `user:${member.user_id}` : "");
         if (!key) continue;
         const previous = byKey.get(key);
-        if (!previous || (!previous.user_id && member.user_id)) {
-          byKey.set(key, { ...member, employee_code: code || member.employee_code });
+        const userId = resolveMemberUserId(member);
+        if (!previous || (!previous.user_id && userId)) {
+          byKey.set(key, { ...member, user_id: userId, employee_code: code || member.employee_code });
         }
       }
 
