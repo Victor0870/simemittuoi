@@ -37,8 +37,6 @@ export function PollVotingSection({ poll, initialNow }: Props) {
 
   const [selectedOptionIds, setSelectedOptionIds] = useState<string[]>([]);
   const [predictedCount, setPredictedCount] = useState<string>("");
-  const [predictorName, setPredictorName] = useState<string>("");
-  const [predictorContact, setPredictorContact] = useState<string>("");
   const [employeeCode, setEmployeeCode] = useState<string>("");
   const [judgeToken, setJudgeToken] = useState("");
   const [judgeLinkStatus, setJudgeLinkStatus] = useState<"unknown" | "ok" | "bad">("unknown");
@@ -186,10 +184,6 @@ export function PollVotingSection({ poll, initialNow }: Props) {
         setErrorMessage("Vui lòng nhập số người dự đoán cho tác phẩm đạt giải nhất.");
         return;
       }
-      if (isGuest && (!predictorName.trim() || !predictorContact.trim())) {
-        setErrorMessage("Vui lòng nhập họ tên và thông tin liên hệ để nhận thưởng khi dự đoán đúng.");
-        return;
-      }
     }
 
     if (isPractice) {
@@ -219,8 +213,6 @@ export function PollVotingSection({ poll, initialNow }: Props) {
           optionIds: selectedOptionIds,
           deviceFingerprint: fingerprint,
           predictedCount: poll.hasPrediction ? parseInt(predictedCount, 10) : undefined,
-          predictorName: predictorName.trim(),
-          predictorContact: predictorContact.trim(),
           employeeCode: needsEmployeeCode ? employeeCode.trim() : undefined,
           judgeToken: judgeLinkOk || judgeLinkPending ? judgeToken : undefined,
         }),
@@ -236,8 +228,6 @@ export function PollVotingSection({ poll, initialNow }: Props) {
       showResult();
       setSelectedOptionIds([]);
       setPredictedCount("");
-      setPredictorName("");
-      setPredictorContact("");
       setEmployeeCode("");
       router.refresh();
     } catch (err: any) {
@@ -684,39 +674,9 @@ export function PollVotingSection({ poll, initialNow }: Props) {
                 </div>
               </div>
 
-              {/* Guest identification for contact/prize */}
-              {isGuest ? (
-                <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
-                  <div>
-                    <label className="text-label-sm font-bold text-[#173A67]" htmlFor="pred-name">
-                      Họ và tên của bạn:
-                    </label>
-                    <input
-                      id="pred-name"
-                      className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 text-body-md text-on-surface"
-                      placeholder="Nguyễn Văn A..."
-                      required
-                      type="text"
-                      value={predictorName}
-                      onChange={(e) => setPredictorName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-label-sm font-bold text-[#173A67]" htmlFor="pred-contact">
-                      Số điện thoại hoặc Email:
-                    </label>
-                    <input
-                      id="pred-contact"
-                      className="mt-1 w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 text-body-md text-on-surface"
-                      placeholder="0912... hoặc a@gmail.com"
-                      required
-                      type="text"
-                      value={predictorContact}
-                      onChange={(e) => setPredictorContact(e.target.value)}
-                    />
-                  </div>
-                </div>
-              ) : null}
+              <p className="text-label-xs text-on-surface-variant">
+                Kết quả dự đoán được ghi nhận theo mã nhân viên của bạn, không cần nhập thêm thông tin liên hệ.
+              </p>
             </div>
           ) : null}
 

@@ -47,8 +47,6 @@ export async function POST(request: NextRequest) {
       optionIds,
       deviceFingerprint,
       predictedCount,
-      predictorName,
-      predictorContact,
       employeeCode,
       judgeToken,
     } = body;
@@ -124,15 +122,17 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     let memberEmployeeCode: string | null = null;
+    let memberFullName: string | null = null;
     let isApprovedMember = false;
     if (user) {
       const { data: profile } = await supabase
         .from(CDILV_TABLE.profiles)
-        .select("approval_status, employee_code")
+        .select("approval_status, employee_code, full_name")
         .eq("id", user.id)
         .maybeSingle();
       isApprovedMember = profile?.approval_status === "approved";
       memberEmployeeCode = normalizeEmployeeCode(profile?.employee_code);
+      if (isApprovedMember) memberFullName = profile?.full_name?.trim() || null;
     }
 
     if (poll.access_type === "members_only" && !isApprovedMember && !judgeLinkOk) {
@@ -319,12 +319,27 @@ export async function POST(request: NextRequest) {
     if (poll.has_prediction && predictedCount !== undefined && predictedCount !== null) {
       const predNum = parseInt(String(predictedCount), 10);
       if (!Number.isNaN(predNum)) {
+        // Người dự đoán được nhận diện qua mã nhân viên, không cần tự nhập họ tên / liên hệ.
+        const predictorCode = voterEmployeeCode || (isApprovedMember ? memberEmployeeCode : null);
+        let predictorFullName = isApprovedMember ? memberFullName : null;
+        if (!predictorFullName && predictorCode) {
+          const { data: emp } = await publicDb
+            .from(CDILV_TABLE.employeeWhitelist)
+            .select("full_name")
+            .ilike("employee_code", predictorCode)
+            .limit(1)
+            .maybeSingle();
+          predictorFullName = emp?.full_name?.trim() || null;
+        }
         await publicDb.from(CDILV_TABLE.pollPredictions).insert({
           poll_id: pollId,
           user_id: user?.id || null,
           predicted_count: predNum,
-          full_name: predictorName || null,
-          contact_info: predictorContact || null,
+          full_name:
+            predictorFullName && predictorCode
+              ? `${predictorFullName} (${predictorCode})`
+              : predictorFullName || (predictorCode ? `Mã NV ${predictorCode}` : null),
+          contact_info: predictorCode ? `Mã NV: ${predictorCode}` : null,
           ip_address: clientIp,
           device_fingerprint: fingerprint,
         });
