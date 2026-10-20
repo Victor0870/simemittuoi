@@ -160,7 +160,7 @@ export function LeaderboardPodium({
 
       <div
         className={`relative z-10 mx-auto grid grid-cols-3 items-end ${
-          isHome ? "gap-2 pt-12 sm:gap-4 sm:pt-16" : "max-w-3xl gap-2 md:gap-6"
+          isHome ? "gap-2 pt-12 sm:gap-4 sm:pt-16" : "max-w-3xl gap-2 pt-12 md:gap-6 md:pt-14"
         }`}
       >
         {PLACES.map((cfg) => {
@@ -205,7 +205,7 @@ export function LeaderboardPodium({
                     isFirst ? "group-hover:-translate-y-2" : "group-hover:-translate-y-1"
                   }`}
                 >
-                  {isFirst && isHome ? (
+                  {isFirst ? (
                     <div className="pointer-events-none absolute -top-9 inset-x-0 z-10 flex justify-center sm:-top-10">
                       <MaterialIcon
                         className="animate-bounce text-amber-500 drop-shadow-[0_2px_3px_rgba(180,83,9,0.45)]"
