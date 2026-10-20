@@ -19,24 +19,23 @@ const PRIVATE_JUDGE_ONLY =
 const PRIVATE_JUDGE_HAS_ACCOUNT =
   "Giám khảo đã có tài khoản đoàn viên. Vui lòng đăng nhập rồi bình chọn, không dùng link riêng này.";
 
-async function shiftOptionVoteCount(
+/** Đếm lại từ bảng phiếu thay vì cộng dồn, để nhiều người bầu cùng lúc không làm mất lượt. */
+async function syncOptionVoteCounts(
   publicDb: ReturnType<typeof createServiceClient>,
-  optionId: string,
-  delta: number,
+  optionIds: Iterable<string>,
 ) {
-  if (!delta) return;
-  const { data: opt, error } = await publicDb
-    .from(CDILV_TABLE.pollOptions)
-    .select("vote_count")
-    .eq("id", optionId)
-    .single();
-  if (error) throw error;
-  const next = Math.max(0, (opt?.vote_count || 0) + delta);
-  const { error: updateError } = await publicDb
-    .from(CDILV_TABLE.pollOptions)
-    .update({ vote_count: next })
-    .eq("id", optionId);
-  if (updateError) throw updateError;
+  for (const optionId of new Set(optionIds)) {
+    const { count, error } = await publicDb
+      .from(CDILV_TABLE.pollVotes)
+      .select("id", { count: "exact", head: true })
+      .eq("option_id", optionId);
+    if (error) throw error;
+    const { error: updateError } = await publicDb
+      .from(CDILV_TABLE.pollOptions)
+      .update({ vote_count: count ?? 0 })
+      .eq("id", optionId);
+    if (updateError) throw updateError;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -251,13 +250,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (isReplacement) {
-      const removedByOption = new Map<string, number>();
-      for (const row of priorVotes) {
-        removedByOption.set(row.option_id, (removedByOption.get(row.option_id) ?? 0) + 1);
-      }
-      for (const [optId, count] of removedByOption) {
-        await shiftOptionVoteCount(publicDb, optId, -count);
-      }
       const { error: deleteError } = await publicDb
         .from(CDILV_TABLE.pollVotes)
         .delete()
@@ -300,20 +292,10 @@ export async function POST(request: NextRequest) {
         .eq("id", pollId);
     }
 
-    // Increment vote_count on options
-    for (const optId of optionIds) {
-      const { data: opt } = await publicDb
-        .from(CDILV_TABLE.pollOptions)
-        .select("vote_count")
-        .eq("id", optId)
-        .single();
-
-      const newCount = (opt?.vote_count || 0) + 1;
-      await publicDb
-        .from(CDILV_TABLE.pollOptions)
-        .update({ vote_count: newCount })
-        .eq("id", optId);
-    }
+    await syncOptionVoteCounts(publicDb, [
+      ...priorVotes.map((row) => row.option_id),
+      ...(optionIds as string[]),
+    ]);
 
     // Save prediction if enabled and provided
     if (poll.has_prediction && predictedCount !== undefined && predictedCount !== null) {
@@ -330,6 +312,19 @@ export async function POST(request: NextRequest) {
             .limit(1)
             .maybeSingle();
           predictorFullName = emp?.full_name?.trim() || null;
+        }
+        if (predictorCode) {
+          await publicDb
+            .from(CDILV_TABLE.pollPredictions)
+            .delete()
+            .eq("poll_id", pollId)
+            .eq("contact_info", `Mã NV: ${predictorCode}`);
+        } else if (user) {
+          await publicDb
+            .from(CDILV_TABLE.pollPredictions)
+            .delete()
+            .eq("poll_id", pollId)
+            .eq("user_id", user.id);
         }
         await publicDb.from(CDILV_TABLE.pollPredictions).insert({
           poll_id: pollId,

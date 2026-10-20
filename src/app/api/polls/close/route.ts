@@ -108,6 +108,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const realVotesByOpt = new Map<string, number>();
+    for (const v of votesData ?? []) {
+      realVotesByOpt.set(v.option_id, (realVotesByOpt.get(v.option_id) || 0) + 1);
+    }
+    for (const opt of options) {
+      const real = realVotesByOpt.get(opt.id) || 0;
+      if (opt.vote_count !== real) {
+        opt.vote_count = real;
+        await publicDb.from(CDILV_TABLE.pollOptions).update({ vote_count: real }).eq("id", opt.id);
+      }
+    }
+
     const totalJudgesVoted = judgesVotedSet.size;
     const totalOthersVoted = othersVotedSet.size;
     const judgeWeightPercent = poll.judge_weight_percent ?? 30;
@@ -188,9 +200,16 @@ export async function POST(request: NextRequest) {
         .eq("poll_id", pollId)
         .order("created_at", { ascending: true });
 
-      if (predictions && predictions.length > 0) {
+      // Mỗi người (theo mã NV, hoặc tài khoản) chỉ tính dự đoán gửi sau cùng.
+      const latestByPredictor = new Map<string, NonNullable<typeof predictions>[number]>();
+      for (const p of predictions ?? []) {
+        latestByPredictor.set(p.contact_info || (p.user_id ? `u:${p.user_id}` : `row:${p.id}`), p);
+      }
+      const finalPredictions = [...latestByPredictor.values()];
+
+      if (finalPredictions.length > 0) {
         // Calculate difference and sort by diff asc, then earliest timestamp
-        const sorted = predictions
+        const sorted = finalPredictions
           .map((p) => ({
             ...p,
             diff: Math.abs(p.predicted_count - actualWinningVotes),

@@ -2,9 +2,16 @@ import crypto from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
+const EMPLOYEE_CODE_LENGTH = 4;
+
+/** Mã số ngắn được thêm 0 đằng trước ("139" → "0139") để một người không thể bầu bằng hai cách viết mã. */
 export function normalizeEmployeeCode(raw: unknown): string | null {
   const code = String(raw ?? "").trim().toUpperCase();
-  return code.length > 0 ? code : null;
+  if (!code) return null;
+  if (/^\d+$/.test(code) && code.length < EMPLOYEE_CODE_LENGTH) {
+    return code.padStart(EMPLOYEE_CODE_LENGTH, "0");
+  }
+  return code;
 }
 
 export function judgeCodesFromPoll(poll: {
