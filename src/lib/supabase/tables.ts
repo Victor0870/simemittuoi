@@ -47,6 +47,9 @@ export const CDILV_TABLE = {
   passwordResetRequests: "cdilv_password_reset_requests",
   popups: "cdilv_popups",
   popupViews: "cdilv_popup_views",
+  appSettings: "cdilv_app_settings",
+  visitRequests: "cdilv_visit_requests",
+  visitRequestLogs: "cdilv_visit_request_logs",
 } as const;
 
 export const CDILV_RPC = {
@@ -63,6 +66,8 @@ export const CDILV_RPC = {
   lifeEventLog: "cdilv_life_event_log",
   findUserByEmail: "cdilv_find_user_by_email",
   markPopupSeen: "cdilv_mark_popup_seen",
+  visitRequestTransition: "cdilv_visit_request_transition",
+  visitRequestLog: "cdilv_visit_request_log",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */

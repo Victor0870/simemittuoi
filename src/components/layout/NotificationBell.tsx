@@ -20,6 +20,8 @@ export type NotificationItem = {
     | "photo_reaction"
     | "life_event_new"
     | "life_event_ack"
+    | "visit_new"
+    | "visit_decided"
     | "password_reset_request"
     | "system"
     | string;
@@ -179,6 +181,16 @@ export function NotificationBell() {
       case "life_event_ack":
         return {
           name: "task_alt",
+          bg: "bg-emerald-100 text-emerald-800",
+        };
+      case "visit_new":
+        return {
+          name: "volunteer_activism",
+          bg: "bg-sky-100 text-sky-800",
+        };
+      case "visit_decided":
+        return {
+          name: "fact_check",
           bg: "bg-emerald-100 text-emerald-800",
         };
       case "password_reset_request":

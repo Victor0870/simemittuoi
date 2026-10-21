@@ -10,6 +10,8 @@ import {
   loadLifeEventDetail,
 } from "@/lib/life-events/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { LinkedVisitRequests } from "@/components/visits/LinkedVisitRequests";
+import { loadVisitRequestList, visitAbilities } from "@/lib/visits/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,9 @@ export default async function LifeEventDetailPage({ params, searchParams }: Page
   const isOffice = canViewAllLifeEvents(access);
   const isOwner = detail.member_id === access.userId;
   const visible = isOffice ? detail : { ...detail, logs: detail.logs.filter((l) => l.action !== "note") };
+  const visitCan = visitAbilities(access);
+  const visitList =
+    isOffice && visitCan.view ? await loadVisitRequestList(createServiceClient(), { lifeEventId: detail.id }) : null;
 
   return (
     <div className="max-w-3xl space-y-4 pb-10">
@@ -59,6 +64,13 @@ export default async function LifeEventDetailPage({ params, searchParams }: Page
         isOwner={isOwner}
         userId={access.userId}
       />
+      {visitList ? (
+        <LinkedVisitRequests
+          canCreate={visitCan.create && detail.status !== "withdrawn"}
+          items={visitList}
+          lifeEventId={detail.id}
+        />
+      ) : null}
     </div>
   );
 }

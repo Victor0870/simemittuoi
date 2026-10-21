@@ -32,6 +32,11 @@ export const PERMISSIONS = {
   lifeEventsHandle: "life_events.handle",
   popupsManage: "popups.manage",
   rewardsPayout: "rewards.payout",
+  visitsView: "visits.view",
+  visitsCreate: "visits.create",
+  visitsApprove: "visits.approve",
+  visitsPay: "visits.pay",
+  formsSettings: "forms.settings",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -155,6 +160,49 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Tiếp nhận & ghi chú",
         description: "Bấm “Tiếp nhận” (đoàn viên được báo lại), ghi chú xử lý, bổ sung ảnh giấy tờ.",
         requires: [PERMISSIONS.lifeEventsView],
+      },
+    ],
+  },
+  {
+    key: "visits",
+    name: "Đề nghị thăm hỏi",
+    icon: "volunteer_activism",
+    permissions: [
+      {
+        code: PERMISSIONS.visitsView,
+        name: "Xem & in phiếu",
+        description: "Xem danh sách phiếu đề nghị thăm hỏi, lịch sử xử lý và tải phiếu thăm hỏi (Excel theo mẫu C11-TLĐ).",
+      },
+      {
+        code: PERMISSIONS.visitsCreate,
+        name: "Lập đề nghị",
+        description: "Lập phiếu đề nghị thăm hỏi (từ tin báo hoặc trực tiếp), sửa / hủy phiếu khi chưa duyệt.",
+        requires: [PERMISSIONS.visitsView],
+      },
+      {
+        code: PERMISSIONS.visitsApprove,
+        name: "Duyệt / từ chối",
+        description: "Duyệt hoặc từ chối đề nghị thăm hỏi, nhận thông báo khi có đề nghị mới.",
+        requires: [PERMISSIONS.visitsView],
+      },
+      {
+        code: PERMISSIONS.visitsPay,
+        name: "Xác nhận đã chi",
+        description: "Đánh dấu đề nghị đã duyệt là đã chi tiền (kế toán / thủ quỹ).",
+        requires: [PERMISSIONS.visitsView],
+      },
+    ],
+  },
+  {
+    key: "forms",
+    name: "Biểu mẫu in",
+    icon: "print",
+    permissions: [
+      {
+        code: PERMISSIONS.formsSettings,
+        name: "Cài đặt biểu mẫu & mức chi",
+        description:
+          "Sửa tên đơn vị, họ tên người ký trên phiếu in (Chủ tịch, Kế toán, Người lập) và mức chi thăm hỏi mặc định theo từng loại sự việc.",
       },
     ],
   },
@@ -298,6 +346,20 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Tin vui, tin ốm, khó khăn đoàn viên gửi lên: xem giấy tờ, tiếp nhận, ghi chú.",
     icon: "campaign",
     permission: PERMISSIONS.lifeEventsView,
+  },
+  {
+    href: "/office/visits",
+    title: "Đề nghị thăm hỏi",
+    description: "Lập đề nghị thăm hỏi từ tin báo, duyệt, xác nhận đã chi và in phiếu thăm hỏi theo mẫu C11-TLĐ.",
+    icon: "volunteer_activism",
+    permission: PERMISSIONS.visitsView,
+  },
+  {
+    href: "/office/print-settings",
+    title: "Cài đặt biểu mẫu in",
+    description: "Tên đơn vị, người ký trên phiếu in và mức chi thăm hỏi mặc định.",
+    icon: "print",
+    permission: PERMISSIONS.formsSettings,
   },
   {
     href: "/albums",

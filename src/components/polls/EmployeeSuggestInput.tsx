@@ -16,9 +16,18 @@ type Props = {
   placeholder?: string;
   className?: string;
   align?: "left" | "right";
+  searchUrl?: string;
 };
 
-export function EmployeeSuggestInput({ value, onChange, onPick, placeholder, className, align = "left" }: Props) {
+export function EmployeeSuggestInput({
+  value,
+  onChange,
+  onPick,
+  placeholder,
+  className,
+  align = "left",
+  searchUrl = "/api/polls/employee-search",
+}: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<EmployeeSuggestion[]>([]);
@@ -37,7 +46,7 @@ export function EmployeeSuggestInput({ value, onChange, onPick, placeholder, cla
     setLoading(true);
     const timer = window.setTimeout(async () => {
       try {
-        const res = await fetch(`/api/polls/employee-search?q=${encodeURIComponent(q)}`, {
+        const res = await fetch(`${searchUrl}?q=${encodeURIComponent(q)}`, {
           signal: controller.signal,
         });
         const data = await res.json().catch(() => ({}));
@@ -53,7 +62,7 @@ export function EmployeeSuggestInput({ value, onChange, onPick, placeholder, cla
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [value]);
+  }, [value, searchUrl]);
 
   function pick(emp: EmployeeSuggestion) {
     typedRef.current = false;
