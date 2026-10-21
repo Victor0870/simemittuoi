@@ -3,37 +3,51 @@ import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
-
-export type PollRewardRow = {
-  employeeCode: string;
-  fullName: string;
-  bankAccountNo: string;
-  bankName: string;
-  reward: string;
-};
+import {
+  normalizeRewardMoney,
+  type PollRewardRow,
+  type RewardItem,
+  type RewardKind,
+} from "@/lib/polls/reward-money";
 
 const normalizeCode = (value: unknown) => String(value ?? "").trim().toUpperCase();
 
-function prizeName(rank: number | null, consolationCount: number): string | null {
+function prizeKind(rank: number | null, consolationCount: number): RewardKind | null {
   if (!rank) return null;
-  if (rank === 1) return "Giải Nhất";
-  if (rank === 2) return "Giải Nhì";
-  if (rank === 3) return "Giải Ba";
-  if (rank <= 3 + consolationCount) return "Giải Khuyến khích";
+  if (rank === 1) return "first";
+  if (rank === 2) return "second";
+  if (rank === 3) return "third";
+  if (rank <= 3 + consolationCount) return "consolation";
   return null;
+}
+
+const PRIZE_LABEL: Partial<Record<RewardKind, string>> = {
+  first: "Giải Nhất",
+  second: "Giải Nhì",
+  third: "Giải Ba",
+  consolation: "Giải Khuyến khích",
+};
+
+async function guard() {
+  const { access, response } = await requirePermission(PERMISSIONS.pollsManage);
+  if (response) return { access: null, response };
+  if (!hasPermission(access, PERMISSIONS.membersView)) {
+    return {
+      access: null,
+      response: NextResponse.json(
+        { error: "Cần thêm quyền \"Hồ sơ đoàn viên: Xem hồ sơ\" để xuất số tài khoản ngân hàng." },
+        { status: 403 },
+      ),
+    };
+  }
+  return { access, response: null };
 }
 
 /** Danh sách nhận thưởng (thành viên dự thi + người dự đoán chính xác nhất) kèm STK để làm phiếu chi. */
 export async function GET(request: NextRequest) {
   try {
-    const { access, response } = await requirePermission(PERMISSIONS.pollsManage);
+    const { access, response } = await guard();
     if (response) return response;
-    if (!hasPermission(access, PERMISSIONS.membersView)) {
-      return NextResponse.json(
-        { error: "Cần thêm quyền \"Hồ sơ đoàn viên: Xem hồ sơ\" để xuất số tài khoản ngân hàng." },
-        { status: 403 },
-      );
-    }
 
     const pollId = request.nextUrl.searchParams.get("pollId");
     if (!pollId) {
@@ -43,7 +57,7 @@ export async function GET(request: NextRequest) {
     const db = createServiceClient();
     const { data: poll, error: pollError } = await db
       .from(CDILV_TABLE.polls)
-      .select("id, title, status, consolation_prize_count, winning_predictor_info")
+      .select("id, title, status, consolation_prize_count, winning_predictor_info, reward_money")
       .eq("id", pollId)
       .maybeSingle();
     if (pollError) throw pollError;
@@ -75,22 +89,33 @@ export async function GET(request: NextRequest) {
     const consolationCount = poll.consolation_prize_count ?? 2;
     const optionById = new Map((options ?? []).map((o) => [o.id, o]));
 
-    type Entry = { code: string; name: string; userId: string | null; reward: string; sort: [number, number, number] };
-    const entries: Entry[] = [];
-    const seen = new Set<string>();
+    type Person = { code: string; name: string; userId: string | null; items: RewardItem[]; sort: number };
+    const people = new Map<string, Person>();
+    const personFor = (key: string, init: Omit<Person, "items">) => {
+      const existing = people.get(key);
+      if (existing) {
+        existing.userId ||= init.userId;
+        existing.sort = Math.min(existing.sort, init.sort);
+        return existing;
+      }
+      const created = { ...init, items: [] };
+      people.set(key, created);
+      return created;
+    };
+
     for (const m of members ?? []) {
       const option = optionById.get(m.option_id);
       const code = normalizeCode(m.employee_code);
-      if (!option || !code || seen.has(`${option.id}:${code}`)) continue;
-      seen.add(`${option.id}:${code}`);
-      const prize = prizeName(option.final_rank, consolationCount);
-      entries.push({
+      if (!option || !code) continue;
+      const kind = prizeKind(option.final_rank, consolationCount);
+      const person = personFor(code, {
         code,
         name: m.full_name ?? "",
         userId: m.user_id ?? null,
-        reward: `${prize ?? "Tham gia dự thi"} – ${option.title}`,
-        sort: [0, option.final_rank ?? 999, option.order_num ?? 999],
+        sort: (option.final_rank ?? 999) * 1000 + (option.order_num ?? 999),
       });
+      if (kind) person.items.push({ kind, label: `${PRIZE_LABEL[kind]} – ${option.title}` });
+      person.items.push({ kind: "entry", label: kind ? "Tham gia dự thi" : `Tham gia dự thi – ${option.title}` });
     }
 
     const predictor = poll.winning_predictor_info as {
@@ -98,9 +123,8 @@ export async function GET(request: NextRequest) {
       contactInfo?: string;
       userId?: string | null;
     } | null;
-    let predictorUserId: string | null = null;
     if (predictor) {
-      predictorUserId = predictor.userId ?? null;
+      const predictorUserId = predictor.userId ?? null;
       let code = normalizeCode(predictor.contactInfo?.replace(/^Mã NV:\s*/i, ""));
       if (!code && predictorUserId) {
         const { data: profile } = await db
@@ -110,16 +134,17 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
         code = normalizeCode(profile?.employee_code);
       }
-      entries.push({
+      const person = personFor(code || `u:${predictorUserId ?? "predictor"}`, {
         code,
         name: (predictor.fullName ?? "").replace(/\s*\([^)]*\)\s*$/, ""),
         userId: predictorUserId,
-        reward: "Dự đoán chính xác nhất",
-        sort: [1, 0, 0],
+        sort: 999_999_999,
       });
+      person.items.push({ kind: "predictor", label: "Dự đoán chính xác nhất" });
     }
 
-    const codes = [...new Set(entries.map((e) => e.code).filter(Boolean))];
+    const list = [...people.values()];
+    const codes = [...new Set(list.map((p) => p.code).filter(Boolean))];
     const userIdByCode = new Map<string, string>();
     const nameByCode = new Map<string, string>();
     if (codes.length > 0) {
@@ -138,8 +163,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const resolveUserId = (e: Entry) => e.userId || userIdByCode.get(e.code) || null;
-    const userIds = [...new Set(entries.map(resolveUserId).filter((id): id is string => Boolean(id)))];
+    const resolveUserId = (p: Person) => p.userId || userIdByCode.get(p.code) || null;
+    const userIds = [...new Set(list.map(resolveUserId).filter((id): id is string => Boolean(id)))];
     const bankByUser = new Map<string, { bank_account_no: string | null; bank_name: string | null }>();
     if (userIds.length > 0) {
       const { data: details, error: detailsError } = await db
@@ -150,20 +175,20 @@ export async function GET(request: NextRequest) {
       for (const d of details ?? []) bankByUser.set(d.user_id, d);
     }
 
-    entries.sort((a, b) => a.sort[0] - b.sort[0] || a.sort[1] - b.sort[1] || a.sort[2] - b.sort[2]);
-    const rows: PollRewardRow[] = entries.map((e) => {
-      const bank = bankByUser.get(resolveUserId(e) ?? "");
+    list.sort((a, b) => a.sort - b.sort);
+    const rows: PollRewardRow[] = list.map((p) => {
+      const bank = bankByUser.get(resolveUserId(p) ?? "");
       return {
-        employeeCode: e.code,
-        fullName: nameByCode.get(e.code) || e.name,
+        employeeCode: p.code,
+        fullName: nameByCode.get(p.code) || p.name,
         bankAccountNo: bank?.bank_account_no?.trim() ?? "",
         bankName: bank?.bank_name?.trim() ?? "",
-        reward: e.reward,
+        items: p.items,
       };
     });
 
     const { error: logError } = await db.from(CDILV_TABLE.sensitiveAccessLogs).insert({
-      actor_id: access.userId,
+      actor_id: access!.userId,
       action: "poll_rewards_export",
       target_count: rows.length,
       target_ids: userIds,
@@ -172,10 +197,35 @@ export async function GET(request: NextRequest) {
     });
     if (logError) throw logError;
 
-    return NextResponse.json({ pollTitle: poll.title, rows });
+    return NextResponse.json({ pollTitle: poll.title, money: normalizeRewardMoney(poll.reward_money), rows });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Không xuất được danh sách nhận thưởng.";
     console.error("[api/polls/rewards-export] error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/** Lưu cài đặt tiền thưởng của chương trình. */
+export async function PUT(request: NextRequest) {
+  try {
+    const { response } = await guard();
+    if (response) return response;
+
+    const body = await request.json().catch(() => null);
+    const pollId = body && typeof body.pollId === "string" ? body.pollId : "";
+    if (!pollId) {
+      return NextResponse.json({ error: "Thiếu ID chương trình." }, { status: 400 });
+    }
+    const money = normalizeRewardMoney(body.money);
+    const { error } = await createServiceClient()
+      .from(CDILV_TABLE.polls)
+      .update({ reward_money: money })
+      .eq("id", pollId);
+    if (error) throw error;
+    return NextResponse.json({ success: true, money });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Không lưu được cài đặt tiền thưởng.";
+    console.error("[api/polls/rewards-export] save error:", message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
