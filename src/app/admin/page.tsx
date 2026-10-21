@@ -496,6 +496,26 @@ export default async function AdminDashboardPage() {
           </Link>
 
           <Link
+            href="/office/rewards"
+            className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-light text-primary">
+                <MaterialIcon className="text-[20px]" name="payments" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-on-surface">
+                  Thanh toán thưởng
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  Danh sách nhận thưởng sau bình chọn: số tài khoản, số tiền, in và xuất Excel
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
+          </Link>
+
+          <Link
             href="/office/life-events"
             className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
           >

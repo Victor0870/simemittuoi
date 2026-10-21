@@ -31,6 +31,7 @@ export const PERMISSIONS = {
   lifeEventsView: "life_events.view",
   lifeEventsHandle: "life_events.handle",
   popupsManage: "popups.manage",
+  rewardsPayout: "rewards.payout",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -109,6 +110,19 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Tạo & quản lý bình chọn",
         description:
           "Tạo chương trình bình chọn, sửa lựa chọn và cơ cấu điểm, mở / đóng, kết thúc và tự động trao điểm thưởng.",
+      },
+    ],
+  },
+  {
+    key: "rewards",
+    name: "Thanh toán thưởng",
+    icon: "payments",
+    permissions: [
+      {
+        code: PERMISSIONS.rewardsPayout,
+        name: "Xem, in & xuất danh sách nhận thưởng",
+        description:
+          "Xem danh sách nhận thưởng của các chương trình bình chọn đã kết thúc (mã NV, họ tên, số tài khoản, ngân hàng, số tiền), in và xuất Excel để làm phiếu chi, chuyển khoản.",
       },
     ],
   },
@@ -270,6 +284,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Một nút lọc con đoàn viên dưới 16 tuổi theo mốc ngày, in danh sách ký nhận và xuất Excel.",
     icon: "redeem",
     permission: PERMISSIONS.giftsChildren,
+  },
+  {
+    href: "/office/rewards",
+    title: "Thanh toán thưởng",
+    description: "Danh sách nhận thưởng của chương trình bình chọn đã kết thúc: số tài khoản, số tiền, in và xuất Excel.",
+    icon: "payments",
+    permission: PERMISSIONS.rewardsPayout,
   },
   {
     href: "/office/life-events",
