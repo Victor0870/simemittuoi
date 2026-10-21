@@ -6,6 +6,7 @@ import { resizeImageFile } from "@/lib/image-resize";
 import type { JudgeMember, PollDetail, PollOption } from "@/lib/data/polls";
 import type { PollScheduleMode } from "@/lib/polls/phase";
 import { EmployeeSuggestInput, type EmployeeSuggestion } from "@/components/polls/EmployeeSuggestInput";
+import { EMPTY_REWARD_MONEY, REWARD_KINDS, type RewardMoney } from "@/lib/polls/reward-money";
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
@@ -123,6 +124,7 @@ export function PollEditorModal({
   const [thirdPrizePoints, setThirdPrizePoints] = useState(30);
   const [consolationPrizePoints, setConsolationPrizePoints] = useState(20);
   const [consolationPrizeCount, setConsolationPrizeCount] = useState(2);
+  const [rewardMoney, setRewardMoney] = useState<RewardMoney>(EMPTY_REWARD_MONEY);
 
   // Options State
   const [options, setOptions] = useState<OptionFormState[]>([
@@ -173,6 +175,7 @@ export function PollEditorModal({
       setThirdPrizePoints(initialPoll.thirdPrizePoints ?? 30);
       setConsolationPrizePoints(initialPoll.consolationPrizePoints ?? 20);
       setConsolationPrizeCount(initialPoll.consolationPrizeCount ?? 2);
+      setRewardMoney(initialPoll.rewardMoney ?? EMPTY_REWARD_MONEY);
 
       if (initialPoll.options && initialPoll.options.length > 0) {
         setOptions(
@@ -207,6 +210,7 @@ export function PollEditorModal({
       setHasJudges(false);
       setJudgeWeightPercent(30);
       setJudgeList([]);
+      setRewardMoney(EMPTY_REWARD_MONEY);
       setOptions([
         { title: "Tác phẩm 01", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
         { title: "Tác phẩm 02", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
@@ -433,6 +437,7 @@ export function PollEditorModal({
         thirdPrizePoints,
         consolationPrizePoints,
         consolationPrizeCount,
+        rewardMoney,
         options,
       };
 
@@ -1416,6 +1421,46 @@ export function PollEditorModal({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Reward money for the payout list */}
+              <div className="rounded-2xl border border-emerald-300 bg-emerald-50/60 p-5 space-y-4">
+                <div>
+                  <p className="font-bold text-emerald-900 text-sm">Tiền thưởng (VNĐ / người)</p>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    Dùng để tính cột &ldquo;Tổng tiền&rdquo; khi bấm &ldquo;DS nhận thưởng&rdquo; sau khi kết thúc. Nhập 0 nếu
+                    không thưởng tiền.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {REWARD_KINDS.map(({ kind, label }) => (
+                    <label key={kind} className="rounded-xl bg-white p-3 border border-outline-variant">
+                      <span className="block text-[11px] font-bold text-emerald-900">{label.toUpperCase()}</span>
+                      <span className="mt-1 flex items-center gap-1">
+                        <input
+                          className="w-full text-right text-base font-bold text-emerald-900"
+                          min={0}
+                          step={1000}
+                          type="number"
+                          value={rewardMoney[kind]}
+                          onChange={(e) =>
+                            setRewardMoney((m) => ({ ...m, [kind]: Math.max(0, Number(e.target.value) || 0) }))
+                          }
+                        />
+                        <span className="text-xs text-outline">đ</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-emerald-950 cursor-pointer">
+                  <input
+                    checked={rewardMoney.entryForWinners}
+                    className="h-4 w-4"
+                    type="checkbox"
+                    onChange={(e) => setRewardMoney((m) => ({ ...m, entryForWinners: e.target.checked }))}
+                  />
+                  <span>Thành viên đội đạt giải nhận thêm tiền tham gia dự thi</span>
+                </label>
               </div>
             </div>
           )}

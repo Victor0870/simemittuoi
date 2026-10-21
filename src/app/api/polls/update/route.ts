@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { parsePollSchedule } from "@/lib/polls/phase";
+import { normalizeRewardMoney } from "@/lib/polls/reward-money";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -94,6 +95,10 @@ export async function POST(request: NextRequest) {
       consolation_prize_points: parseInt(String(consolationPrizePoints), 10) || 0,
       consolation_prize_count: parseInt(String(consolationPrizeCount), 10) || 2,
     };
+
+    if (body.rewardMoney !== undefined) {
+      updateData.reward_money = normalizeRewardMoney(body.rewardMoney);
+    }
 
     if (typeof hasJudges === "boolean") {
       updateData.has_judges = hasJudges;
@@ -193,17 +198,25 @@ export async function POST(request: NextRequest) {
         optId = newOpt.id;
       }
 
-      // Re-populate members for this option
-      await publicDb.from(CDILV_TABLE.pollOptionMembers).delete().eq("option_id", optId);
+      const incomingMembers = (Array.isArray(opt.members) ? opt.members : [])
+        .filter((m: any) => m.fullName && m.fullName.trim())
+        .map((m: any) => ({ full_name: m.fullName.trim(), employee_code: m.employeeCode?.trim() || null }));
+      const { data: currentMembers } = await publicDb
+        .from(CDILV_TABLE.pollOptionMembers)
+        .select("full_name, employee_code")
+        .eq("option_id", optId);
+      const memberKey = (m: { full_name: string | null; employee_code: string | null }) =>
+        `${m.full_name ?? ""}|${m.employee_code ?? ""}`;
+      const unchanged =
+        (currentMembers ?? []).length === incomingMembers.length &&
+        (currentMembers ?? []).map(memberKey).sort().join("\n") ===
+          incomingMembers.map(memberKey).sort().join("\n");
 
-      if (Array.isArray(opt.members) && opt.members.length > 0) {
-        for (const m of opt.members) {
-          if (!m.fullName || !m.fullName.trim()) continue;
-          await publicDb.from(CDILV_TABLE.pollOptionMembers).insert({
-            option_id: optId,
-            full_name: m.fullName.trim(),
-            employee_code: m.employeeCode?.trim() || null,
-          });
+      // Giữ nguyên dòng thành viên khi không đổi: id thành viên nằm trong award_label điểm thưởng đã trao.
+      if (!unchanged) {
+        await publicDb.from(CDILV_TABLE.pollOptionMembers).delete().eq("option_id", optId);
+        for (const m of incomingMembers) {
+          await publicDb.from(CDILV_TABLE.pollOptionMembers).insert({ option_id: optId, ...m });
         }
       }
     }

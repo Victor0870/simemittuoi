@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ensureJudgeToken } from "@/lib/polls/judge-access";
 import { parsePollSchedule } from "@/lib/polls/phase";
+import { normalizeRewardMoney } from "@/lib/polls/reward-money";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
         third_prize_points: parseInt(String(thirdPrizePoints), 10) || 0,
         consolation_prize_points: parseInt(String(consolationPrizePoints), 10) || 0,
         consolation_prize_count: parseInt(String(consolationPrizeCount), 10) || 2,
+        reward_money: normalizeRewardMoney(body.rewardMoney),
         has_judges: Boolean(hasJudges),
         judge_weight_percent: Math.min(
           95,

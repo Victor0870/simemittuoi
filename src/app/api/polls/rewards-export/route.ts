@@ -204,28 +204,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-
-/** Lưu cài đặt tiền thưởng của chương trình. */
-export async function PUT(request: NextRequest) {
-  try {
-    const { response } = await guard();
-    if (response) return response;
-
-    const body = await request.json().catch(() => null);
-    const pollId = body && typeof body.pollId === "string" ? body.pollId : "";
-    if (!pollId) {
-      return NextResponse.json({ error: "Thiếu ID chương trình." }, { status: 400 });
-    }
-    const money = normalizeRewardMoney(body.money);
-    const { error } = await createServiceClient()
-      .from(CDILV_TABLE.polls)
-      .update({ reward_money: money })
-      .eq("id", pollId);
-    if (error) throw error;
-    return NextResponse.json({ success: true, money });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Không lưu được cài đặt tiền thưởng.";
-    console.error("[api/polls/rewards-export] save error:", message);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}

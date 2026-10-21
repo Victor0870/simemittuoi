@@ -1,6 +1,7 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import type { PollStatus } from "@/lib/polls/phase";
+import { normalizeRewardMoney, type RewardMoney } from "@/lib/polls/reward-money";
 
 export type JudgeMember = {
   employeeCode: string;
@@ -61,6 +62,7 @@ export type PollSummary = {
   thirdPrizePoints: number;
   consolationPrizePoints: number;
   consolationPrizeCount: number;
+  rewardMoney: RewardMoney;
   hasJudges?: boolean;
   judgeWeightPercent?: number;
   judgeList?: JudgeMember[];
@@ -116,6 +118,7 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     thirdPrizePoints: row.third_prize_points ?? 0,
     consolationPrizePoints: row.consolation_prize_points ?? 0,
     consolationPrizeCount: row.consolation_prize_count ?? 2,
+    rewardMoney: normalizeRewardMoney(row.reward_money),
     hasJudges: Boolean(row.has_judges),
     judgeWeightPercent: row.judge_weight_percent ?? 30,
     judgeList: Array.isArray(row.judge_list)
@@ -323,6 +326,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     thirdPrizePoints: pollRow.third_prize_points ?? 0,
     consolationPrizePoints: pollRow.consolation_prize_points ?? 0,
     consolationPrizeCount: pollRow.consolation_prize_count ?? 2,
+    rewardMoney: normalizeRewardMoney(pollRow.reward_money),
     hasJudges,
     judgeWeightPercent,
     judgeList,
