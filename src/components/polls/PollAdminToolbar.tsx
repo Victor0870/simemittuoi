@@ -9,6 +9,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { PollDetail } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
 import { PollQrButton } from "@/components/polls/PollQrButton";
+import { PollRewardsExportButton } from "@/components/polls/PollRewardsExportButton";
 import { usePollPhase } from "@/components/polls/usePollPhase";
 
 type Props = {
@@ -227,6 +228,10 @@ export function PollAdminToolbar({ poll }: Props) {
                 <MaterialIcon className="text-[15px] sm:text-[16px]" name="schedule" />
                 <span>Chuyển về Sắp mở</span>
               </button>
+            ) : null}
+
+            {phase === "closed" && can(PERMISSIONS.membersView) ? (
+              <PollRewardsExportButton pollId={poll.id} />
             ) : null}
 
             {/* BUTTON ĐÓNG/MỞ LẠI */}
