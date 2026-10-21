@@ -12,6 +12,7 @@ pas data.txt
 pas data
 file danh sách nhân viên.xlsx
 *.xlsx
+!src/lib/print/templates/*.xlsx
 .vercel
 .env*
 tsconfig.tsbuildinfo
