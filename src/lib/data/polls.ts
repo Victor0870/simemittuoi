@@ -1,4 +1,5 @@
 import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import type { PollStatus } from "@/lib/polls/phase";
 import { normalizeRewardMoney, type RewardMoney } from "@/lib/polls/reward-money";
@@ -204,7 +205,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
   const lastVoteAtByOpt = new Map<string, string>();
   const firstVoteAtByOpt = new Map<string, string>();
 
-  const { data: votesData, error: votesError } = await db
+  const { data: votesData, error: votesError } = await createServiceClient()
     .from(CDILV_TABLE.pollVotes)
     .select("option_id, is_judge, employee_code, user_id, submission_id, created_at")
     .eq("poll_id", id);
