@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
-import { periodLabels, type CategoryGroup } from "@/lib/reports/build";
+import { FUND_AMOUNT_KEYS, periodLabels, splitFundTotals, sumFunds, type CategoryGroup } from "@/lib/reports/build";
 import type { ReportBundle } from "@/lib/reports/server";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -61,8 +61,17 @@ export function ReportView({ report }: { report: ReportBundle }) {
   const href = (patch: { year?: number; period?: string }) =>
     `/office/reports?year=${patch.year ?? year}&period=${patch.period ?? g}`;
   const maxBar = Math.max(1, ...f.income.totals, ...f.expense.totals);
-  const fundTotal = (k: "opening" | "income" | "expense" | "transferIn" | "transferOut" | "closing") =>
-    f.funds.reduce((s, r) => s + r[k], 0);
+  const fundTotals = sumFunds(f.funds);
+  const fundSplit = splitFundTotals(f.funds);
+  const fundTotalRows = [
+    ...(fundSplit
+      ? [
+          { label: "Tiền chi được (tiền mặt + tài khoản thanh toán)", values: fundSplit.spendable, strong: false },
+          { label: "Tiền gửi tiết kiệm", values: fundSplit.savings, strong: false },
+        ]
+      : []),
+    { label: "Tổng cộng", values: fundTotals, strong: true },
+  ];
 
   return (
     <div className="space-y-5">
@@ -105,11 +114,19 @@ export function ReportView({ report }: { report: ReportBundle }) {
           { label: `Tổng thu ${year}`, value: f.income.total, tone: "text-emerald-700" },
           { label: `Tổng chi ${year}`, value: f.expense.total, tone: "text-rose-700" },
           { label: "Chênh lệch thu – chi", value: f.income.total - f.expense.total, tone: "text-[#173A67]" },
-          { label: `Số dư các quỹ (${formatDateVi(f.closingDate)})`, value: fundTotal("closing"), tone: "text-[#173A67]" },
+          {
+            label: `Số dư các quỹ (${formatDateVi(f.closingDate)})`,
+            value: fundTotals.closing,
+            tone: "text-[#173A67]",
+            hint: fundSplit
+              ? `Chi được ${formatVnd(fundSplit.spendable.closing)} · Tiết kiệm ${formatVnd(fundSplit.savings.closing)}`
+              : undefined,
+          },
         ].map((s) => (
           <div key={s.label} className="rounded-2xl border border-outline-variant bg-white p-3">
             <p className="text-xs font-semibold text-on-surface-variant">{s.label}</p>
             <p className={`text-lg font-extrabold ${s.tone}`}>{formatVnd(s.value)}</p>
+            {"hint" in s && s.hint ? <p className="text-[11px] text-on-surface-variant">{s.hint}</p> : null}
           </div>
         ))}
       </div>
@@ -202,7 +219,10 @@ export function ReportView({ report }: { report: ReportBundle }) {
             <tbody>
               {f.funds.map((r) => (
                 <tr key={r.id} className={`border-t border-outline-variant ${tdClass}`}>
-                  <td className="font-semibold">{r.name}</td>
+                  <td className="font-semibold">
+                    {r.name}
+                    {r.kind === "savings" ? <span className="ml-1.5 text-[11px] font-normal text-on-surface-variant">(tiết kiệm)</span> : null}
+                  </td>
                   <td className="text-right">{num(r.opening)}</td>
                   <td className="text-right text-emerald-700">{num(r.income)}</td>
                   <td className="text-right text-rose-700">{num(r.expense)}</td>
@@ -213,15 +233,19 @@ export function ReportView({ report }: { report: ReportBundle }) {
               ))}
             </tbody>
             <tfoot>
-              <tr className={`border-t-2 border-[#173A67]/30 font-bold text-[#173A67] ${tdClass}`}>
-                <td>Tổng cộng</td>
-                <td className="text-right">{num(fundTotal("opening"))}</td>
-                <td className="text-right">{num(fundTotal("income"))}</td>
-                <td className="text-right">{num(fundTotal("expense"))}</td>
-                <td className="text-right">{num(fundTotal("transferIn"))}</td>
-                <td className="text-right">{num(fundTotal("transferOut"))}</td>
-                <td className="text-right">{num(fundTotal("closing"))}</td>
-              </tr>
+              {fundTotalRows.map((t) => (
+                <tr
+                  key={t.label}
+                  className={`${t.strong ? "border-t-2 border-[#173A67]/30 font-bold" : "border-t border-outline-variant font-semibold"} text-[#173A67] ${tdClass}`}
+                >
+                  <td>{t.label}</td>
+                  {FUND_AMOUNT_KEYS.map((k) => (
+                    <td key={k} className="text-right">
+                      {num(t.values[k])}
+                    </td>
+                  ))}
+                </tr>
+              ))}
             </tfoot>
           </table>
         </div>

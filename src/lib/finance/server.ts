@@ -5,7 +5,8 @@ import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { loadNames } from "@/lib/visits/server";
 import type { Fund, FundCategory, FundEntry } from "./registry";
 
-const FUND_COLUMNS = "id, kind, name, bank_account_no, bank_name, opening_balance, opening_date, is_active, sort_order";
+const FUND_COLUMNS =
+  "id, kind, name, bank_account_no, bank_name, interest_rate, maturity_date, opening_balance, opening_date, is_active, sort_order";
 const CATEGORY_COLUMNS = "id, kind, code, name, system_key, sort_order, is_active";
 const ENTRY_COLUMNS =
   "id, code, entry_date, kind, fund_id, to_fund_id, category_id, amount, description, counterparty, document_no, payment_request_id, status, void_reason, created_at";
@@ -49,7 +50,11 @@ export async function loadFunds(db: SupabaseClient): Promise<Fund[]> {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw new Error(`Không tải được danh sách quỹ: ${error.message}`);
-  return ((data ?? []) as Fund[]).map((f) => ({ ...f, opening_balance: Number(f.opening_balance) }));
+  return ((data ?? []) as Fund[]).map((f) => ({
+    ...f,
+    opening_balance: Number(f.opening_balance),
+    interest_rate: f.interest_rate === null ? null : Number(f.interest_rate),
+  }));
 }
 
 export async function loadCategories(db: SupabaseClient): Promise<FundCategory[]> {

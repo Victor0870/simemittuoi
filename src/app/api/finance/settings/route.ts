@@ -19,7 +19,7 @@ function bad(message: string, status = 400) {
 
 /**
  * Cài đặt sổ quỹ. Body:
- *  { action: "saveFund", fund: { id?, kind, name, bankAccountNo, bankName, openingBalance, openingDate, isActive, sortOrder } }
+ *  { action: "saveFund", fund: { id?, kind, name, bankAccountNo, bankName, interestRate, maturityDate, openingBalance, openingDate, isActive, sortOrder } }
  *  { action: "saveCategory", category: { id?, kind, code, name, isActive, sortOrder } }
  *  { action: "setLock", lockedThrough: "YYYY-MM-DD" | null }
  */
@@ -34,10 +34,18 @@ export async function POST(request: NextRequest) {
     if (body.action === "saveFund") {
       const raw = (body.fund ?? {}) as Record<string, unknown>;
       const id = typeof raw.id === "string" && UUID_RE.test(raw.id) ? raw.id : null;
-      const kind = raw.kind === "bank" ? "bank" : "cash";
+      const kind = raw.kind === "bank" || raw.kind === "savings" ? raw.kind : "cash";
+      const isBank = kind !== "cash";
       const name = text(raw.name);
       const bankAccountNo = text(raw.bankAccountNo).replace(/\s/g, "") || null;
       const bankName = text(raw.bankName) || null;
+      const rateText = text(raw.interestRate).replace(",", ".");
+      const interestRate = kind === "savings" && rateText ? Math.round(Number(rateText) * 100) / 100 : null;
+      const maturityDate = kind === "savings" ? text(raw.maturityDate) || null : null;
+      if (interestRate !== null && (!Number.isFinite(interestRate) || interestRate < 0 || interestRate > 100)) {
+        return bad("Lãi suất không hợp lệ.");
+      }
+      if (maturityDate !== null && !isValidDate(maturityDate)) return bad("Ngày đáo hạn không hợp lệ.");
       const openingBalance = Math.round(Number(raw.openingBalance ?? 0));
       const openingDate = text(raw.openingDate);
       const sortOrder = Math.round(Number(raw.sortOrder ?? 0)) || 0;
@@ -52,8 +60,10 @@ export async function POST(request: NextRequest) {
 
       const row = {
         name,
-        bank_account_no: kind === "bank" ? bankAccountNo : null,
-        bank_name: kind === "bank" ? bankName : null,
+        bank_account_no: isBank ? bankAccountNo : null,
+        bank_name: isBank ? bankName : null,
+        interest_rate: interestRate,
+        maturity_date: maturityDate,
         opening_balance: openingBalance,
         opening_date: openingDate,
         is_active: raw.isActive !== false,

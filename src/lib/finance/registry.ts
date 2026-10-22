@@ -2,14 +2,38 @@
  * Sổ quỹ công đoàn: kiểu dữ liệu, nhãn, kiểm tra form và tính số dư (dùng ở cả trình duyệt và API).
  */
 
-export type FundKind = "cash" | "bank";
+export type FundKind = "cash" | "bank" | "savings";
 export type EntryKind = "income" | "expense" | "transfer";
 export type CategoryKind = "income" | "expense";
 
 export const FUND_KIND_LABEL: Record<FundKind, string> = {
   cash: "Tiền mặt",
-  bank: "Tiền gửi ngân hàng",
+  bank: "Tài khoản thanh toán",
+  savings: "Tiền gửi tiết kiệm",
 };
+
+export const FUND_KIND_ICON: Record<FundKind, string> = {
+  cash: "payments",
+  bank: "account_balance",
+  savings: "savings",
+};
+
+/** Tiền mặt và tài khoản thanh toán chi được ngay; tiền gửi tiết kiệm phải chuyển quỹ về trước. */
+export function isSpendableFund(fund: Pick<Fund, "kind">): boolean {
+  return fund.kind !== "savings";
+}
+
+/** Dòng phụ mô tả quỹ: số TK / số sổ, ngân hàng, lãi suất, đáo hạn. */
+export function fundSubtitle(fund: Fund, formatDate: (iso: string) => string): string {
+  if (fund.kind === "cash") return FUND_KIND_LABEL.cash;
+  const parts = [
+    fund.bank_account_no && (fund.kind === "savings" ? `Sổ ${fund.bank_account_no}` : `TK ${fund.bank_account_no}`),
+    fund.bank_name,
+    fund.kind === "savings" && fund.interest_rate !== null ? `${fund.interest_rate}%/năm` : null,
+    fund.kind === "savings" && fund.maturity_date ? `đáo hạn ${formatDate(fund.maturity_date)}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : FUND_KIND_LABEL[fund.kind];
+}
 
 export const ENTRY_KIND_LABEL: Record<EntryKind, string> = {
   income: "Phiếu thu",
@@ -40,6 +64,8 @@ export type Fund = {
   name: string;
   bank_account_no: string | null;
   bank_name: string | null;
+  interest_rate: number | null;
+  maturity_date: string | null;
   opening_balance: number;
   opening_date: string;
   is_active: boolean;

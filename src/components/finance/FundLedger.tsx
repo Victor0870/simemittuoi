@@ -5,11 +5,13 @@ import { useMemo, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   ENTRY_KIND_LABEL,
-  FUND_KIND_LABEL,
+  FUND_KIND_ICON,
   compareEntries,
   entryEffect,
   entryTouchesFund,
   fundBalance,
+  fundSubtitle,
+  isSpendableFund,
   type EntryKind,
   type Fund,
   type FundCategory,
@@ -82,6 +84,8 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
     [funds, entries],
   );
   const totalBalance = balances.reduce((sum, b) => sum + b.balance, 0);
+  const savingsBalance = balances.reduce((sum, b) => sum + (isSpendableFund(b.fund) ? 0 : b.balance), 0);
+  const hasSavings = funds.some((f) => !isSpendableFund(f));
 
   const ledger = useMemo(() => {
     const scopeFunds = selectedFund ? [selectedFund] : funds;
@@ -186,14 +190,12 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
             onClick={() => setFundId(fundId === fund.id ? "all" : fund.id)}
           >
             <p className="flex items-center gap-1 text-xs font-bold text-on-surface-variant">
-              <MaterialIcon className="text-[16px]" name={fund.kind === "cash" ? "payments" : "account_balance"} />
+              <MaterialIcon className="text-[16px]" name={FUND_KIND_ICON[fund.kind]} />
               {fund.name}
               {!fund.is_active ? " (ngừng dùng)" : ""}
             </p>
             <p className={`mt-1 text-xl font-extrabold ${balance < 0 ? "text-rose-700" : "text-[#173A67]"}`}>{formatVnd(balance)}</p>
-            <p className="text-[11px] text-on-surface-variant">
-              {fund.kind === "bank" && fund.bank_account_no ? `TK ${fund.bank_account_no}` : FUND_KIND_LABEL[fund.kind]}
-            </p>
+            <p className="text-[11px] text-on-surface-variant">{fundSubtitle(fund, formatDateVi)}</p>
           </button>
         ))}
         <button
@@ -208,7 +210,11 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
             Tổng các quỹ
           </p>
           <p className="mt-1 text-xl font-extrabold text-[#173A67]">{formatVnd(totalBalance)}</p>
-          <p className="text-[11px] text-on-surface-variant">Số dư hiện tại</p>
+          <p className="text-[11px] text-on-surface-variant">
+            {hasSavings
+              ? `Chi được ${formatVnd(totalBalance - savingsBalance)} · Tiết kiệm ${formatVnd(savingsBalance)}`
+              : "Số dư hiện tại"}
+          </p>
         </button>
       </div>
 

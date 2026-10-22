@@ -2,7 +2,7 @@
  * Báo cáo tổng hợp (Bước 9): tính từ dữ liệu sổ quỹ, đề nghị thăm hỏi, đề nghị thanh toán.
  * Chỉ số liệu gộp – không có tên / thông tin cá nhân đoàn viên.
  */
-import { compareEntries, type Fund, type FundCategory, type FundEntry } from "@/lib/finance/registry";
+import { compareEntries, type Fund, type FundCategory, type FundEntry, type FundKind } from "@/lib/finance/registry";
 import { LIFE_EVENT_TYPES } from "@/lib/life-events/registry";
 import { VISIT_STATUS_LABEL, type VisitStatus } from "@/lib/visits/registry";
 
@@ -48,6 +48,7 @@ export type CategoryGroup = {
 export type FundYearRow = {
   id: string;
   name: string;
+  kind: FundKind;
   opening: number;
   income: number;
   expense: number;
@@ -123,6 +124,7 @@ export function buildFinanceReport(
     const row: FundYearRow = {
       id: f.id,
       name: f.name,
+      kind: f.kind,
       opening: f.opening_balance,
       income: 0,
       expense: 0,
@@ -164,6 +166,24 @@ export function buildFinanceReport(
     net: income.totals.map((v, i) => v - expense.totals[i]),
     funds: fundRows,
     closingDate,
+  };
+}
+
+export const FUND_AMOUNT_KEYS = ["opening", "income", "expense", "transferIn", "transferOut", "closing"] as const;
+export type FundTotals = Record<(typeof FUND_AMOUNT_KEYS)[number], number>;
+
+export function sumFunds(rows: FundYearRow[]): FundTotals {
+  const totals = Object.fromEntries(FUND_AMOUNT_KEYS.map((k) => [k, 0])) as FundTotals;
+  for (const r of rows) for (const k of FUND_AMOUNT_KEYS) totals[k] += r[k];
+  return totals;
+}
+
+/** Tách tiền chi được (tiền mặt + tài khoản thanh toán) và tiền gửi tiết kiệm; null nếu không có sổ tiết kiệm. */
+export function splitFundTotals(rows: FundYearRow[]): { spendable: FundTotals; savings: FundTotals } | null {
+  if (!rows.some((r) => r.kind === "savings")) return null;
+  return {
+    spendable: sumFunds(rows.filter((r) => r.kind !== "savings")),
+    savings: sumFunds(rows.filter((r) => r.kind === "savings")),
   };
 }
 

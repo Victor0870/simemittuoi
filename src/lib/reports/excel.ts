@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { formatDateVi } from "@/lib/members/profile-shared";
-import { periodLabels } from "./build";
+import { FUND_AMOUNT_KEYS, periodLabels, splitFundTotals, sumFunds } from "./build";
 import type { ReportBundle } from "./server";
 
 const MONEY = "#,##0;[Red]-#,##0;\"-\"";
@@ -95,22 +95,24 @@ export async function buildReportWorkbook(report: ReportBundle, unionName: strin
   );
 
   // 2. Số dư quỹ
+  const fundTotals = sumFunds(f.funds);
+  const fundSplit = splitFundTotals(f.funds);
   addSheet(
     wb,
     "Số dư quỹ",
     [unionName, `TÌNH HÌNH CÁC QUỸ NĂM ${y}`, `Từ 01/01/${y} đến ${formatDateVi(f.closingDate)} · ${footnote}`],
     ["Quỹ", "Số dư đầu năm", "Thu", "Chi", "Chuyển đến", "Chuyển đi", "Số dư cuối kỳ"],
     [
-      ...f.funds.map((r) => ({ values: [r.name, r.opening, r.income, r.expense, r.transferIn, r.transferOut, r.closing] as Cell[] })),
-      {
-        values: [
-          "TỔNG CỘNG",
-          ...(["opening", "income", "expense", "transferIn", "transferOut", "closing"] as const).map((k) =>
-            f.funds.reduce((s, r) => s + r[k], 0),
-          ),
-        ],
-        style: "total",
-      },
+      ...f.funds.map((r) => ({
+        values: [r.kind === "savings" ? `${r.name} (tiết kiệm)` : r.name, ...FUND_AMOUNT_KEYS.map((k) => r[k])] as Cell[],
+      })),
+      ...(fundSplit
+        ? [
+            { values: ["Tiền chi được (tiền mặt + TK thanh toán)", ...FUND_AMOUNT_KEYS.map((k) => fundSplit.spendable[k])], style: "group" as const },
+            { values: ["Tiền gửi tiết kiệm", ...FUND_AMOUNT_KEYS.map((k) => fundSplit.savings[k])], style: "group" as const },
+          ]
+        : []),
+      { values: ["TỔNG CỘNG", ...FUND_AMOUNT_KEYS.map((k) => fundTotals[k])], style: "total" },
     ],
     [30, 16, 16, 16, 16, 16, 16],
   );

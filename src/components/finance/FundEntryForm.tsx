@@ -6,6 +6,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   ENTRY_KIND_LABEL,
   FINANCE_LIMITS,
+  isSpendableFund,
   parseEntryInput,
   type EntryKind,
   type Fund,
@@ -51,6 +52,8 @@ export function FundEntryForm({ mode, initial, funds, categories, lockedThrough,
   const set = (patch: Partial<EntryFormValues>) => setValues((v) => ({ ...v, ...patch }));
   const amount = Number(values.amount.replace(/\D/g, "")) || 0;
   const usableFunds = funds.filter((f) => f.is_active || f.id === initial.fundId || f.id === initial.toFundId);
+  const sourceFunds = usableFunds.filter((f) => values.kind !== "expense" || isSpendableFund(f) || f.id === initial.fundId);
+  const savingsSource = values.kind === "expense" && funds.some((f) => f.id === values.fundId && !isSpendableFund(f));
   const usableCategories = categories.filter(
     (c) => c.kind === values.kind && (c.is_active || c.id === initial.categoryId),
   );
@@ -101,7 +104,10 @@ export function FundEntryForm({ mode, initial, funds, categories, lockedThrough,
                   : "border border-outline-variant bg-white text-on-surface-variant hover:border-[#173A67]"
               }`}
               type="button"
-              onClick={() => set({ kind: k, categoryId: "" })}
+              onClick={() => {
+                const fund = funds.find((f) => f.id === values.fundId);
+                set({ kind: k, categoryId: "", ...(k === "expense" && fund && !isSpendableFund(fund) ? { fundId: "" } : {}) });
+              }}
             >
               <MaterialIcon className="text-[18px]" name={KIND_ICON[k]} />
               {ENTRY_KIND_LABEL[k]}
@@ -136,12 +142,17 @@ export function FundEntryForm({ mode, initial, funds, categories, lockedThrough,
           <label className={labelClass}>{values.kind === "transfer" ? "Từ quỹ *" : "Quỹ *"}</label>
           <select className={inputClass} value={values.fundId} onChange={(e) => set({ fundId: e.target.value })}>
             <option value="">— Chọn quỹ —</option>
-            {usableFunds.map((f) => (
+            {sourceFunds.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>
             ))}
           </select>
+          {savingsSource ? (
+            <p className="mt-1 text-xs text-rose-700">Không chi trực tiếp từ sổ tiết kiệm – hãy chuyển quỹ về tài khoản thanh toán trước.</p>
+          ) : values.kind === "expense" && funds.some((f) => f.is_active && !isSpendableFund(f)) ? (
+            <p className="mt-1 text-xs text-on-surface-variant">Sổ tiết kiệm không hiện ở đây vì không chi trực tiếp được.</p>
+          ) : null}
         </div>
         {values.kind === "transfer" ? (
           <div>

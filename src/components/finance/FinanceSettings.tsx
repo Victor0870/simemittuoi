@@ -5,8 +5,10 @@ import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   FINANCE_LIMITS,
+  FUND_KIND_ICON,
   FUND_KIND_LABEL,
   endOfPreviousMonth,
+  fundSubtitle,
   type CategoryKind,
   type Fund,
   type FundCategory,
@@ -32,6 +34,8 @@ type FundDraft = {
   name: string;
   bankAccountNo: string;
   bankName: string;
+  interestRate: string;
+  maturityDate: string;
   openingBalance: string;
   openingDate: string;
   isActive: boolean;
@@ -118,10 +122,10 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
             onChange={(e) => setFundDraft({ ...fundDraft, name: e.target.value })}
           />
         </div>
-        {fundDraft.kind === "bank" ? (
+        {fundDraft.kind !== "cash" ? (
           <>
             <div>
-              <label className={labelClass}>Số tài khoản</label>
+              <label className={labelClass}>{fundDraft.kind === "savings" ? "Số sổ / hợp đồng tiền gửi" : "Số tài khoản"}</label>
               <input
                 className={inputClass}
                 maxLength={FINANCE_LIMITS.account}
@@ -136,6 +140,29 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
                 maxLength={FINANCE_LIMITS.name}
                 value={fundDraft.bankName}
                 onChange={(e) => setFundDraft({ ...fundDraft, bankName: e.target.value })}
+              />
+            </div>
+          </>
+        ) : null}
+        {fundDraft.kind === "savings" ? (
+          <>
+            <div>
+              <label className={labelClass}>Lãi suất (%/năm)</label>
+              <input
+                className={inputClass}
+                inputMode="decimal"
+                placeholder="VD: 4,7"
+                value={fundDraft.interestRate}
+                onChange={(e) => setFundDraft({ ...fundDraft, interestRate: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) })}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Ngày đáo hạn</label>
+              <input
+                className={inputClass}
+                type="date"
+                value={fundDraft.maturityDate}
+                onChange={(e) => setFundDraft({ ...fundDraft, maturityDate: e.target.value })}
               />
             </div>
           </>
@@ -285,6 +312,8 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
                 name: "",
                 bankAccountNo: "",
                 bankName: "",
+                interestRate: "",
+                maturityDate: "",
                 openingBalance: "",
                 openingDate: `${today.slice(0, 4)}-01-01`,
                 isActive: true,
@@ -304,11 +333,16 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
                 fundForm
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
-                  <MaterialIcon className="text-[22px] text-[#173A67]" name={f.kind === "cash" ? "payments" : "account_balance"} />
+                  <MaterialIcon className="text-[22px] text-[#173A67]" name={FUND_KIND_ICON[f.kind]} />
                   <div className="min-w-[200px] flex-1">
-                    <p className={`font-bold ${f.is_active ? "" : "text-on-surface-variant line-through"}`}>{f.name}</p>
+                    <p className={`font-bold ${f.is_active ? "" : "text-on-surface-variant line-through"}`}>
+                      {f.name}
+                      <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 text-[11px] font-semibold text-on-surface-variant">
+                        {FUND_KIND_LABEL[f.kind]}
+                      </span>
+                    </p>
                     <p className="text-xs text-on-surface-variant">
-                      {f.kind === "bank" ? [f.bank_account_no && `TK ${f.bank_account_no}`, f.bank_name].filter(Boolean).join(" · ") || "Tiền gửi ngân hàng" : "Tiền mặt"}
+                      {fundSubtitle(f, formatDateVi)}
                       {" · "}Số dư đầu kỳ {formatVnd(f.opening_balance)} tại {formatDateVi(f.opening_date)}
                     </p>
                   </div>
@@ -322,6 +356,8 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
                         name: f.name,
                         bankAccountNo: f.bank_account_no ?? "",
                         bankName: f.bank_name ?? "",
+                        interestRate: f.interest_rate === null ? "" : String(f.interest_rate).replace(".", ","),
+                        maturityDate: f.maturity_date ?? "",
                         openingBalance: f.opening_balance ? String(f.opening_balance) : "",
                         openingDate: f.opening_date,
                         isActive: f.is_active,
@@ -339,7 +375,13 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
         </ul>
         <p className="text-xs text-on-surface-variant">
           Số dư đầu kỳ là số tiền thực có tại ngày bắt đầu theo dõi trên web (theo sổ sách giấy / sao kê ngân hàng). Bút toán chỉ ghi được
-          từ ngày đó trở đi. Đề nghị thanh toán chuyển khoản tự ghi vào quỹ ngân hàng đầu tiên, trả tiền mặt ghi vào quỹ tiền mặt.
+          từ ngày đó trở đi. Đề nghị thanh toán chuyển khoản tự ghi vào tài khoản thanh toán đầu tiên, trả tiền mặt ghi vào quỹ tiền mặt.
+        </p>
+        <p className="text-xs text-on-surface-variant">
+          Tiền gửi tiết kiệm: mỗi sổ tiết kiệm là một quỹ riêng, không chi trực tiếp được. Gửi tiết kiệm / tất toán ghi bằng phiếu{" "}
+          <b>Chuyển quỹ</b> giữa tài khoản thanh toán và sổ tiết kiệm; tiền lãi ghi <b>Phiếu thu</b> danh mục &quot;Lãi tiền gửi ngân hàng&quot; vào quỹ
+          nhận lãi (sổ tiết kiệm nếu lãi nhập gốc, tài khoản thanh toán nếu lãi trả về tài khoản). Sổ đã tất toán thì bỏ chọn &quot;Đang sử
+          dụng&quot;.
         </p>
       </section>
 
