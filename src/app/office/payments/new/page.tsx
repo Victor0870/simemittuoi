@@ -1,0 +1,62 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { PaymentRequestForm, newPaymentItem } from "@/components/payments/PaymentRequestForm";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { loadFormSettings } from "@/lib/forms/settings-server";
+import { todayInVietnam } from "@/lib/life-events/registry";
+import { loadLastReceiver } from "@/lib/payments/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
+
+export const dynamic = "force-dynamic";
+
+export default async function NewPaymentRequestPage() {
+  const access = await getCurrentAccess();
+  if (!access) redirect("/login?next=/office/payments/new");
+  if (!hasPermission(access, PERMISSIONS.paymentsCreate)) redirect("/office/payments");
+
+  const db = createServiceClient();
+  const [settings, last, { data: me }] = await Promise.all([
+    loadFormSettings(db),
+    loadLastReceiver(db, access.userId),
+    db.from(CDILV_TABLE.profiles).select("full_name").eq("id", access.userId).maybeSingle(),
+  ]);
+
+  return (
+    <div className="max-w-3xl space-y-4 pb-10">
+      <Link
+        className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
+        href="/office/payments"
+      >
+        <MaterialIcon className="text-[18px]" name="arrow_back" />
+        Đề nghị thanh toán
+      </Link>
+      <div>
+        <h1 className="text-headline-md font-extrabold text-[#173A67]">Lập giấy đề nghị thanh toán</h1>
+        <p className="text-sm text-on-surface-variant">
+          Sau khi lập, người có quyền duyệt nhận thông báo. Khi xác nhận đã chi, các phiếu thăm hỏi gom trong đề nghị tự chuyển
+          sang “Đã chi”.
+        </p>
+      </div>
+
+      <PaymentRequestForm
+        canGatherVisits={hasPermission(access, PERMISSIONS.visitsView)}
+        initial={{
+          requestDate: todayInVietnam(),
+          title: "",
+          requesterName: settings.preparerName || (me?.full_name as string | undefined) || "",
+          requesterDepartment: last?.requester_department ?? settings.preparerDepartment,
+          paymentMethod: "transfer",
+          receiverName: last?.receiver_name ?? "",
+          receiverAccount: last?.receiver_account ?? "",
+          receiverBank: last?.receiver_bank ?? "",
+          note: "",
+          items: [newPaymentItem()],
+        }}
+        mode="create"
+      />
+    </div>
+  );
+}

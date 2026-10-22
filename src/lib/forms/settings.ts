@@ -12,6 +12,7 @@ export type FormSettings = {
   chairmanName: string;
   accountantName: string;
   preparerName: string;
+  preparerDepartment: string;
   /** Mức chi thăm hỏi mặc định theo loại sự việc (mã trong LIFE_EVENT_TYPES), 0 = chưa đặt. */
   visitAmounts: Record<string, number>;
 };
@@ -22,6 +23,7 @@ export const DEFAULT_FORM_SETTINGS: FormSettings = {
   chairmanName: "",
   accountantName: "",
   preparerName: "",
+  preparerDepartment: "",
   visitAmounts: {},
 };
 
@@ -57,6 +59,7 @@ export function normalizeFormSettings(raw: unknown): FormSettings {
     chairmanName: text(data.chairmanName, ""),
     accountantName: text(data.accountantName, ""),
     preparerName: text(data.preparerName, ""),
+    preparerDepartment: text(data.preparerDepartment, ""),
     visitAmounts,
   };
 }

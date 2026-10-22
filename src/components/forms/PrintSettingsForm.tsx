@@ -16,8 +16,9 @@ const TEXT_FIELDS: { key: keyof Omit<FormSettings, "visitAmounts">; label: strin
   { key: "unionName", label: "Tên đơn vị (dòng đầu phiếu)" },
   { key: "chairmanTitle", label: "Chức danh người duyệt", hint: "Ví dụ: Chủ tịch Công đoàn" },
   { key: "chairmanName", label: "Họ tên Chủ tịch Công đoàn" },
-  { key: "accountantName", label: "Họ tên Kế toán Công đoàn", hint: "Dùng cho Giấy đề nghị thanh toán (bước sau)" },
+  { key: "accountantName", label: "Họ tên Kế toán Công đoàn", hint: "Ký trên Giấy đề nghị thanh toán" },
   { key: "preparerName", label: "Người lập / người thăm hỏi mặc định", hint: "Để trống = lấy tên người lập phiếu" },
+  { key: "preparerDepartment", label: "Bộ phận người lập", hint: "Dòng “Bộ phận / Department” trên Giấy đề nghị thanh toán" },
 ];
 
 export function PrintSettingsForm({ initial }: Props) {

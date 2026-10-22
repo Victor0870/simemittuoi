@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // Mẫu Excel đọc bằng fs khi in phiếu (src/lib/print/xlsx-template.ts)
   outputFileTracingIncludes: {
     "/api/visits/[id]/print": ["./src/lib/print/templates/**/*"],
+    "/api/payments/[id]/print": ["./src/lib/print/templates/**/*"],
   },
   images: {
     remotePatterns: [

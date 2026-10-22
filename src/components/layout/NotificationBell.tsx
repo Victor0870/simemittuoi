@@ -22,6 +22,8 @@ export type NotificationItem = {
     | "life_event_ack"
     | "visit_new"
     | "visit_decided"
+    | "payment_new"
+    | "payment_decided"
     | "password_reset_request"
     | "system"
     | string;
@@ -191,6 +193,16 @@ export function NotificationBell() {
       case "visit_decided":
         return {
           name: "fact_check",
+          bg: "bg-emerald-100 text-emerald-800",
+        };
+      case "payment_new":
+        return {
+          name: "request_quote",
+          bg: "bg-sky-100 text-sky-800",
+        };
+      case "payment_decided":
+        return {
+          name: "price_check",
           bg: "bg-emerald-100 text-emerald-800",
         };
       case "password_reset_request":

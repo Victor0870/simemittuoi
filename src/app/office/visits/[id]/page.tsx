@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { VisitRequestDetailView } from "@/components/visits/VisitRequestDetailView";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadFormSettings } from "@/lib/forms/settings-server";
+import { loadPaymentForVisit } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadVisitRequestDetail, visitAbilities } from "@/lib/visits/server";
 
@@ -23,7 +25,11 @@ export default async function VisitRequestPage({ params, searchParams }: PagePro
   if (!can.view) notFound();
 
   const db = createServiceClient();
-  const [detail, settings] = await Promise.all([loadVisitRequestDetail(db, id), loadFormSettings(db)]);
+  const [detail, settings, payment] = await Promise.all([
+    loadVisitRequestDetail(db, id),
+    loadFormSettings(db),
+    loadPaymentForVisit(db, id),
+  ]);
   if (!detail) notFound();
 
   return (
@@ -52,6 +58,8 @@ export default async function VisitRequestPage({ params, searchParams }: PagePro
         defaultAmounts={settings.visitAmounts}
         detail={detail}
         isCreator={detail.created_by === access.userId}
+        payment={payment}
+        paymentLinkable={hasPermission(access, PERMISSIONS.paymentsView)}
       />
     </div>
   );

@@ -50,6 +50,9 @@ export const CDILV_TABLE = {
   appSettings: "cdilv_app_settings",
   visitRequests: "cdilv_visit_requests",
   visitRequestLogs: "cdilv_visit_request_logs",
+  paymentRequests: "cdilv_payment_requests",
+  paymentRequestItems: "cdilv_payment_request_items",
+  paymentRequestLogs: "cdilv_payment_request_logs",
 } as const;
 
 export const CDILV_RPC = {
@@ -68,6 +71,9 @@ export const CDILV_RPC = {
   markPopupSeen: "cdilv_mark_popup_seen",
   visitRequestTransition: "cdilv_visit_request_transition",
   visitRequestLog: "cdilv_visit_request_log",
+  paymentRequestSave: "cdilv_payment_request_save",
+  paymentRequestTransition: "cdilv_payment_request_transition",
+  paymentRequestLog: "cdilv_payment_request_log",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */

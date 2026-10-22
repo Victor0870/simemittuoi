@@ -12,11 +12,15 @@ export type TemplateDef = {
   file: string;
   /** Vùng thừa trong mẫu cần xóa trắng (gỡ cả ô gộp nằm trong vùng). */
   clear?: string[];
+  /** Bỏ ảnh EMF (ảnh liên kết / “camera” của Excel) – exceljs không cập nhật được nội dung ảnh này. */
+  dropEmfImages?: boolean;
 };
 
 export const PRINT_TEMPLATES = {
   /** Mẫu C11-TLĐ – Phiếu thăm hỏi đoàn viên (khối chữ ký cũ M49:S55 nằm ngoài vùng in). */
   visitSlip: { file: "phieu_tham_hoi.xlsx", clear: ["M49:S55"] },
+  /** Giấy đề nghị thanh toán – khối chữ ký gốc là ảnh liên kết tới K46:Q52, được thay bằng ô thật. */
+  paymentSlip: { file: "de_nghi_thanh_toan.xlsx", clear: ["K46:S55"], dropEmfImages: true },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateId = keyof typeof PRINT_TEMPLATES;
@@ -36,7 +40,7 @@ function decodeRange(range: string) {
   return { top: Math.min(s.row, e.row), bottom: Math.max(s.row, e.row), left: Math.min(s.col, e.col), right: Math.max(s.col, e.col) };
 }
 
-function clearRange(ws: ExcelJS.Worksheet, range: string) {
+export function clearRange(ws: ExcelJS.Worksheet, range: string) {
   const area = decodeRange(range);
   const merges: string[] = (ws.model as { merges?: string[] }).merges ?? [];
   for (const merge of merges) {
@@ -50,8 +54,24 @@ function clearRange(ws: ExcelJS.Worksheet, range: string) {
   }
 }
 
-/** values: { "C5": "Nguyễn Văn A", "C9": 500000, "C12": new Date() } – ghi vào sheet đầu tiên. */
-export async function renderTemplate(id: TemplateId, values: Record<string, ExcelJS.CellValue>): Promise<Buffer> {
+type MediaModel = { extension?: string };
+type WorksheetMedia = { type: string; imageId: string | number };
+
+function dropEmfImages(workbook: ExcelJS.Workbook, ws: ExcelJS.Worksheet) {
+  const media = (workbook as unknown as { model: { media: MediaModel[] } }).model.media;
+  const sheet = ws as unknown as { _media: WorksheetMedia[] };
+  sheet._media = sheet._media.filter((m) => m.type !== "image" || media[Number(m.imageId)]?.extension !== "emf");
+}
+
+/**
+ * values: { "C5": "Nguyễn Văn A", "C9": 500000, "C12": new Date() } – ghi vào sheet đầu tiên.
+ * customize: chỉnh thêm sau khi ghi (viết ô ngoài bảng giá trị, thêm trang tính…).
+ */
+export async function renderTemplate(
+  id: TemplateId,
+  values: Record<string, ExcelJS.CellValue>,
+  customize?: (ws: ExcelJS.Worksheet, workbook: ExcelJS.Workbook) => void,
+): Promise<Buffer> {
   const def: TemplateDef = PRINT_TEMPLATES[id];
   const source = await readFile(path.join(process.cwd(), "src", "lib", "print", "templates", def.file));
   const workbook = new ExcelJS.Workbook();
@@ -59,8 +79,10 @@ export async function renderTemplate(id: TemplateId, values: Record<string, Exce
   const ws = workbook.worksheets[0];
   if (!ws) throw new Error(`Mẫu ${def.file} không có trang tính.`);
 
+  if (def.dropEmfImages) dropEmfImages(workbook, ws);
   for (const range of def.clear ?? []) clearRange(ws, range);
   for (const [address, value] of Object.entries(values)) ws.getCell(address).value = value;
+  customize?.(ws, workbook);
 
   workbook.calcProperties.fullCalcOnLoad = true;
   const out = await workbook.xlsx.writeBuffer();

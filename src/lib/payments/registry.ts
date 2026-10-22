@@ -1,0 +1,171 @@
+/**
+ * Giấy đề nghị thanh toán: nhãn, giới hạn, kiểm tra dữ liệu form (dùng ở cả trình duyệt và API).
+ * Trạng thái dùng chung bộ nhãn / màu với đề nghị thăm hỏi.
+ */
+import { MAX_AMOUNT } from "@/lib/forms/settings";
+import type { VisitStatus } from "@/lib/visits/registry";
+
+export type PaymentStatus = VisitStatus;
+export type PaymentMethod = "transfer" | "cash";
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  transfer: "Chuyển khoản",
+  cash: "Tiền mặt",
+};
+
+export const PAYMENT_LOG_LABEL: Record<string, string> = {
+  created: "Lập đề nghị",
+  edited: "Sửa đề nghị",
+  approved: "Duyệt",
+  rejected: "Từ chối",
+  paid: "Xác nhận đã chi",
+  cancelled: "Hủy đề nghị",
+  printed: "Tải giấy đề nghị",
+};
+
+export const PAYMENT_LIMITS = {
+  title: 200,
+  name: 120,
+  account: 40,
+  content: 300,
+  note: 1000,
+  items: 50,
+  /** Số dòng chi in thẳng trên mẫu; nhiều hơn thì in “theo bảng kê” + trang Bảng kê. */
+  slipRows: 5,
+} as const;
+
+export type PaymentItemInput = {
+  content: string;
+  paidTo: string | null;
+  amount: number;
+  advanced: number;
+  visitRequestId: string | null;
+};
+
+export type PaymentInput = {
+  requestDate: string;
+  title: string;
+  requesterName: string;
+  requesterDepartment: string | null;
+  paymentMethod: PaymentMethod;
+  receiverName: string | null;
+  receiverAccount: string | null;
+  receiverBank: string | null;
+  note: string | null;
+  items: PaymentItemInput[];
+};
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function oneLine(value: unknown): string {
+  return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
+}
+
+function money(value: unknown): number {
+  if (value === "" || value === null || value === undefined) return 0;
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? n : NaN;
+}
+
+export function parsePaymentInput(
+  raw: Record<string, unknown>,
+): { ok: true; value: PaymentInput } | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+
+  const requestDate = oneLine(raw.requestDate);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(requestDate) || Number.isNaN(Date.parse(requestDate))) {
+    errors.push("Ngày đề nghị không hợp lệ.");
+  }
+
+  const title = oneLine(raw.title);
+  if (!title) errors.push("Vui lòng nhập nội dung đề nghị.");
+  if (title.length > PAYMENT_LIMITS.title) errors.push(`Nội dung đề nghị tối đa ${PAYMENT_LIMITS.title} ký tự.`);
+
+  const requesterName = oneLine(raw.requesterName);
+  if (!requesterName) errors.push("Vui lòng nhập người đề nghị.");
+  const requesterDepartment = oneLine(raw.requesterDepartment) || null;
+  if (requesterName.length > PAYMENT_LIMITS.name || (requesterDepartment?.length ?? 0) > PAYMENT_LIMITS.name) {
+    errors.push("Tên / bộ phận người đề nghị quá dài.");
+  }
+
+  const paymentMethod: PaymentMethod = raw.paymentMethod === "cash" ? "cash" : "transfer";
+  const receiverName = oneLine(raw.receiverName) || null;
+  const receiverAccount = oneLine(raw.receiverAccount).replace(/\s/g, "") || null;
+  const receiverBank = oneLine(raw.receiverBank) || null;
+  if ((receiverName?.length ?? 0) > PAYMENT_LIMITS.name || (receiverBank?.length ?? 0) > PAYMENT_LIMITS.name) {
+    errors.push("Tên người nhận / ngân hàng quá dài.");
+  }
+  if ((receiverAccount?.length ?? 0) > PAYMENT_LIMITS.account) errors.push("Số tài khoản quá dài.");
+  if (paymentMethod === "transfer" && (!receiverName || !receiverAccount || !receiverBank)) {
+    errors.push("Chuyển khoản cần đủ chủ tài khoản, số tài khoản và ngân hàng.");
+  }
+
+  const note = typeof raw.note === "string" ? raw.note.trim() || null : null;
+  if (note && note.length > PAYMENT_LIMITS.note) errors.push(`Ghi chú tối đa ${PAYMENT_LIMITS.note} ký tự.`);
+
+  const rawItems = Array.isArray(raw.items) ? raw.items : [];
+  const items: PaymentItemInput[] = [];
+  const seenVisits = new Set<string>();
+  rawItems.forEach((value, index) => {
+    const item = (value ?? {}) as Record<string, unknown>;
+    const line = `Dòng ${index + 1}`;
+    const content = oneLine(item.content);
+    const paidTo = oneLine(item.paidTo) || null;
+    const amount = money(item.amount);
+    const advanced = money(item.advanced);
+    const visitRequestId = typeof item.visitRequestId === "string" && UUID_RE.test(item.visitRequestId) ? item.visitRequestId : null;
+    if (!content) errors.push(`${line}: chưa nhập chi tiết chi phí.`);
+    if (content.length > PAYMENT_LIMITS.content) errors.push(`${line}: chi tiết tối đa ${PAYMENT_LIMITS.content} ký tự.`);
+    if ((paidTo?.length ?? 0) > PAYMENT_LIMITS.name) errors.push(`${line}: tên người nhận quá dài.`);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) errors.push(`${line}: số tiền không hợp lệ.`);
+    if (!Number.isFinite(advanced) || advanced < 0 || advanced > MAX_AMOUNT) errors.push(`${line}: số đã tạm ứng không hợp lệ.`);
+    if (visitRequestId) {
+      if (seenVisits.has(visitRequestId)) errors.push(`${line}: phiếu thăm hỏi bị gom hai lần.`);
+      seenVisits.add(visitRequestId);
+    }
+    items.push({ content, paidTo, amount, advanced, visitRequestId });
+  });
+  if (!items.length) errors.push("Đề nghị phải có ít nhất một dòng chi phí.");
+  if (items.length > PAYMENT_LIMITS.items) errors.push(`Tối đa ${PAYMENT_LIMITS.items} dòng chi phí.`);
+
+  if (errors.length) return { ok: false, errors };
+  return {
+    ok: true,
+    value: {
+      requestDate,
+      title,
+      requesterName,
+      requesterDepartment,
+      paymentMethod,
+      receiverName,
+      receiverAccount,
+      receiverBank,
+      note,
+      items,
+    },
+  };
+}
+
+/** Tham số cho RPC cdilv_payment_request_save. */
+export function paymentRpcPayload(input: PaymentInput) {
+  return {
+    p_header: {
+      request_date: input.requestDate,
+      title: input.title,
+      requester_name: input.requesterName,
+      requester_department: input.requesterDepartment,
+      payment_method: input.paymentMethod,
+      receiver_name: input.receiverName,
+      receiver_account: input.receiverAccount,
+      receiver_bank: input.receiverBank,
+      note: input.note,
+    },
+    p_items: input.items.map((item) => ({
+      content: item.content,
+      paid_to: item.paidTo,
+      amount: item.amount,
+      advanced: item.advanced,
+      visit_request_id: item.visitRequestId,
+    })),
+  };
+}

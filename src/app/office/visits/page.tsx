@@ -36,6 +36,15 @@ export default async function OfficeVisitsPage() {
               Mức chi & người ký
             </Link>
           ) : null}
+          {hasPermission(access, PERMISSIONS.paymentsView) ? (
+            <Link
+              className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]"
+              href="/office/payments"
+            >
+              <MaterialIcon className="text-[18px]" name="request_quote" />
+              Đề nghị thanh toán
+            </Link>
+          ) : null}
           {can.create ? (
             <Link
               className="flex items-center gap-1 rounded-xl bg-[#173A67] px-3 py-1.5 text-sm font-bold text-white hover:bg-[#1E4A7D]"

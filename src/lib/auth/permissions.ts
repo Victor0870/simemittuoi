@@ -37,6 +37,10 @@ export const PERMISSIONS = {
   visitsApprove: "visits.approve",
   visitsPay: "visits.pay",
   formsSettings: "forms.settings",
+  paymentsView: "payments.view",
+  paymentsCreate: "payments.create",
+  paymentsApprove: "payments.approve",
+  paymentsPay: "payments.pay",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -190,6 +194,38 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Xác nhận đã chi",
         description: "Đánh dấu đề nghị đã duyệt là đã chi tiền (kế toán / thủ quỹ).",
         requires: [PERMISSIONS.visitsView],
+      },
+    ],
+  },
+  {
+    key: "payments",
+    name: "Đề nghị thanh toán",
+    icon: "request_quote",
+    permissions: [
+      {
+        code: PERMISSIONS.paymentsView,
+        name: "Xem & in phiếu",
+        description: "Xem các giấy đề nghị thanh toán, lịch sử xử lý và tải Giấy đề nghị thanh toán (Excel theo mẫu).",
+      },
+      {
+        code: PERMISSIONS.paymentsCreate,
+        name: "Lập đề nghị",
+        description:
+          "Lập giấy đề nghị thanh toán (nhập từng dòng chi hoặc gom phiếu thăm hỏi đã duyệt, kèm số tài khoản người nhận), sửa / hủy khi chưa duyệt.",
+        requires: [PERMISSIONS.paymentsView],
+      },
+      {
+        code: PERMISSIONS.paymentsApprove,
+        name: "Duyệt / từ chối",
+        description: "Duyệt hoặc từ chối đề nghị thanh toán, nhận thông báo khi có đề nghị mới.",
+        requires: [PERMISSIONS.paymentsView],
+      },
+      {
+        code: PERMISSIONS.paymentsPay,
+        name: "Xác nhận đã chi",
+        description:
+          "Đánh dấu đề nghị đã duyệt là đã chi tiền; các phiếu thăm hỏi gom trong đề nghị tự chuyển sang “Đã chi”.",
+        requires: [PERMISSIONS.paymentsView],
       },
     ],
   },
@@ -353,6 +389,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Lập đề nghị thăm hỏi từ tin báo, duyệt, xác nhận đã chi và in phiếu thăm hỏi theo mẫu C11-TLĐ.",
     icon: "volunteer_activism",
     permission: PERMISSIONS.visitsView,
+  },
+  {
+    href: "/office/payments",
+    title: "Đề nghị thanh toán",
+    description: "Lập giấy đề nghị thanh toán (gom phiếu thăm hỏi đã duyệt), duyệt, xác nhận đã chi và tải phiếu Excel theo mẫu.",
+    icon: "request_quote",
+    permission: PERMISSIONS.paymentsView,
   },
   {
     href: "/office/print-settings",

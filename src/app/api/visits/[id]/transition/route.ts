@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentAccess } from "@/lib/auth/guard";
+import { loadPaymentForVisit } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC } from "@/lib/supabase/tables";
 import { VISIT_LIMITS } from "@/lib/visits/registry";
@@ -38,6 +39,13 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!allowed) return NextResponse.json({ error: "Bạn chưa được phân quyền thực hiện thao tác này." }, { status: 403 });
     if (body.to === "rejected" && !note) {
       return NextResponse.json({ error: "Vui lòng ghi lý do từ chối." }, { status: 400 });
+    }
+    const payment = await loadPaymentForVisit(db, id);
+    if (payment) {
+      return NextResponse.json(
+        { error: `Phiếu đang nằm trong đề nghị thanh toán ${payment.code} – xử lý ở đề nghị đó (hoặc bỏ phiếu khỏi đề nghị trước).` },
+        { status: 409 },
+      );
     }
 
     const { error } = await db.rpc(CDILV_RPC.visitRequestTransition, {

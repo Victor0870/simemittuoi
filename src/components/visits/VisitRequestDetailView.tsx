@@ -9,7 +9,8 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateTimeVi } from "@/lib/data/albums";
 import { TYPE_BY_CODE } from "@/lib/life-events/registry";
 import { vndInWords } from "@/lib/print/vn-money";
-import { VISIT_LIMITS, VISIT_LOG_LABEL, formatVnd } from "@/lib/visits/registry";
+import type { PaymentStatus } from "@/lib/payments/registry";
+import { VISIT_LIMITS, VISIT_LOG_LABEL, VISIT_STATUS_LABEL, formatVnd } from "@/lib/visits/registry";
 import type { VisitAbilities, VisitRequestDetail } from "@/lib/visits/server";
 
 type Props = {
@@ -17,12 +18,15 @@ type Props = {
   can: VisitAbilities;
   isCreator: boolean;
   defaultAmounts: Record<string, number>;
+  /** Đề nghị thanh toán còn hiệu lực đang chứa phiếu này. */
+  payment?: { id: string; code: string; status: PaymentStatus } | null;
+  paymentLinkable?: boolean;
 };
 
 const textareaClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 
-export function VisitRequestDetailView({ detail, can, isCreator, defaultAmounts }: Props) {
+export function VisitRequestDetailView({ detail, can, isCreator, defaultAmounts, payment, paymentLinkable }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +34,12 @@ export function VisitRequestDetailView({ detail, can, isCreator, defaultAmounts 
   const [editing, setEditing] = useState(false);
 
   const isProposed = detail.status === "proposed";
-  const canDecide = can.approve && isProposed;
-  const canPay = can.pay && detail.status === "approved";
+  const canDecide = can.approve && isProposed && !payment;
+  const canPay = can.pay && detail.status === "approved" && !payment;
   const canCancel =
-    (isProposed || detail.status === "approved") && (can.approve || (can.create && isCreator && isProposed));
+    !payment &&
+    (isProposed || detail.status === "approved") &&
+    (can.approve || (can.create && isCreator && isProposed));
   const canEdit = can.create && isProposed;
   const printable = detail.status !== "rejected" && detail.status !== "cancelled";
 
@@ -156,6 +162,22 @@ export function VisitRequestDetailView({ detail, can, isCreator, defaultAmounts 
               {detail.decider_name ? ` bởi ${detail.decider_name}` : ""} lúc {formatDateTimeVi(detail.decided_at)}
             </p>
             {detail.decision_note ? <p className="mt-1 whitespace-pre-line">{detail.decision_note}</p> : null}
+          </div>
+        ) : null}
+        {payment ? (
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-900">
+            <MaterialIcon className="text-[18px]" name="request_quote" />
+            <span>
+              Đã gom vào đề nghị thanh toán{" "}
+              {paymentLinkable ? (
+                <Link className="font-bold underline" href={`/office/payments/${payment.id}`}>
+                  {payment.code}
+                </Link>
+              ) : (
+                <b>{payment.code}</b>
+              )}{" "}
+              ({VISIT_STATUS_LABEL[payment.status]}) – việc chi tiền xử lý ở đề nghị đó.
+            </span>
           </div>
         ) : null}
         {detail.paid_at ? (
