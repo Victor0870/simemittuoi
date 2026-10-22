@@ -8,6 +8,7 @@ import { MOCK_GOAL } from "@/lib/mock-data";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { stripPostFormatting } from "@/lib/post-format";
 
 const HOME_PUBLIC_CACHE_SECONDS = 30;
 
@@ -257,7 +258,7 @@ export async function getHomePageData(): Promise<HomePageData> {
       tagTone: post.tag_tone === "error" ? "error" : "primary",
       timeAgo: formatTimeAgo(post.published_at),
       title: post.title,
-      excerpt: post.content,
+      excerpt: stripPostFormatting(post.content),
       isImportant: Boolean(post.is_important),
     }));
 

@@ -1,6 +1,7 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { stripPostFormatting } from "@/lib/post-format";
 import { formatScheduleLabel, isScheduledAt } from "@/lib/post-schedule";
 
 export type PostSummary = {
@@ -33,7 +34,7 @@ function formatTimeAgo(isoDate: string): string {
 }
 
 function excerptFrom(content: string, max = 160): string {
-  const plain = content.replace(/\s+/g, " ").trim();
+  const plain = stripPostFormatting(content).replace(/\s+/g, " ").trim();
   if (plain.length <= max) return plain;
   return `${plain.slice(0, max).trim()}…`;
 }

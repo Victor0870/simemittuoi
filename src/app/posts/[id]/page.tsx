@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
+import { PostContent } from "@/components/posts/PostContent";
 import { PostEditButton } from "@/components/posts/PostEditButton";
 import { PostShareButtons } from "@/components/posts/PostShareButtons";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -10,6 +11,7 @@ import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/p
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { BRAND } from "@/lib/brand";
+import { stripPostFormatting } from "@/lib/post-format";
 import { formatScheduleLabel } from "@/lib/post-schedule";
 
 export const revalidate = 60;
@@ -28,7 +30,7 @@ export async function generateMetadata({ params }: PostDetailPageProps): Promise
   }
 
   const title = `${post.title} | ${BRAND.name}`;
-  const description = post.excerpt || post.content.slice(0, 160).trim();
+  const description = post.excerpt || stripPostFormatting(post.content).slice(0, 160).trim();
   const canonicalPath = `/posts/${post.id}`;
   const images = post.imageUrl ? [{ url: post.imageUrl }] : [];
 
@@ -131,9 +133,10 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
         </div>
 
         <div className="px-5 py-6 sm:px-10 sm:py-8 space-y-8">
-          <div className="w-full whitespace-pre-wrap text-body-md sm:text-body-lg leading-relaxed text-on-surface">
-            {post.content}
-          </div>
+          <PostContent
+            className="w-full whitespace-pre-wrap text-body-md sm:text-body-lg leading-relaxed text-on-surface"
+            content={post.content}
+          />
 
           <PostShareButtons
             postId={post.id}

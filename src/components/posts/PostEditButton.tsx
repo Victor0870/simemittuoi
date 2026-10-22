@@ -366,6 +366,9 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                     placeholder="Nhập nội dung bài viết..."
                     className="w-full rounded-xl border border-slate-300 p-3.5 text-base leading-relaxed text-slate-800 font-sans focus:border-[#173A67] focus:outline-hidden focus:ring-2 focus:ring-[#173A67]/20 resize-y sm:text-sm"
                   />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    In đậm: đặt chữ giữa hai cặp dấu sao, ví dụ <code className="rounded bg-slate-100 px-1">**Giai đoạn 1**</code>.
+                  </p>
                 </div>
               </div>
 
