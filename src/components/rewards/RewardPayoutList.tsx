@@ -176,7 +176,6 @@ export function RewardPayoutList({ polls, list }: Props) {
                   <th>Ngân hàng</th>
                   <th>Nội dung thưởng</th>
                   <th className="whitespace-nowrap text-right">Tổng tiền (đ)</th>
-                  <th className="hidden w-24 text-center print:table-cell">Ký nhận</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,7 +200,6 @@ export function RewardPayoutList({ polls, list }: Props) {
                     <td>{r.bankName}</td>
                     <td className="text-on-surface-variant print:text-black">{r.content}</td>
                     <td className="whitespace-nowrap text-right font-semibold">{formatVnd(r.total)}</td>
-                    <td className="hidden print:table-cell" />
                   </tr>
                 ))}
               </tbody>
@@ -212,7 +210,6 @@ export function RewardPayoutList({ polls, list }: Props) {
                       TỔNG CỘNG
                     </td>
                     <td className="whitespace-nowrap text-right text-[#173A67] print:text-black">{formatVnd(total)}</td>
-                    <td className="hidden print:table-cell" />
                   </tr>
                 </tfoot>
               ) : null}
