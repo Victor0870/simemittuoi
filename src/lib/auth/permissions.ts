@@ -44,6 +44,7 @@ export const PERMISSIONS = {
   financeView: "finance.view",
   financeRecord: "finance.record",
   financeManage: "finance.manage",
+  reportsView: "reports.view",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -258,6 +259,19 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     ],
   },
   {
+    key: "reports",
+    name: "Báo cáo",
+    icon: "monitoring",
+    permissions: [
+      {
+        code: PERMISSIONS.reportsView,
+        name: "Xem & xuất báo cáo tổng hợp",
+        description:
+          "Xem báo cáo thu – chi theo danh mục, số dư các quỹ, tổng hợp thăm hỏi và đề nghị thanh toán theo tháng / quý / năm, xuất Excel. Chỉ số liệu gộp, không có thông tin cá nhân đoàn viên.",
+      },
+    ],
+  },
+  {
     key: "forms",
     name: "Biểu mẫu in",
     icon: "print",
@@ -431,6 +445,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Số dư quỹ tiền mặt / ngân hàng, phiếu thu – chi, chuyển quỹ, khóa sổ và xuất sổ quỹ Excel.",
     icon: "account_balance_wallet",
     permission: PERMISSIONS.financeView,
+  },
+  {
+    href: "/office/reports",
+    title: "Báo cáo tổng hợp",
+    description: "Thu – chi theo danh mục, số dư quỹ, thăm hỏi và đề nghị thanh toán theo tháng / quý / năm, xuất Excel.",
+    icon: "monitoring",
+    permission: PERMISSIONS.reportsView,
   },
   {
     href: "/office/print-settings",
