@@ -1,3 +1,5 @@
+import { TRANSFER_TEXT_MAX, fitTransferText, toTransferText } from "@/lib/bank-transfer";
+
 export type RewardKind = "first" | "second" | "third" | "consolation" | "entry" | "predictor";
 
 export type RewardMoney = Record<RewardKind, number> & {
@@ -57,6 +59,36 @@ export function payableItems(items: RewardItem[], money: RewardMoney): RewardIte
 
 export function rowTotal(items: RewardItem[], money: RewardMoney): number {
   return payableItems(items, money).reduce((sum, i) => sum + money[i.kind], 0);
+}
+
+const TRANSFER_KIND_LABEL: Record<RewardKind, string> = {
+  first: "Giai Nhat",
+  second: "Giai Nhi",
+  third: "Giai Ba",
+  consolation: "Giai KK",
+  entry: "Tham gia",
+  predictor: "Du doan dung",
+};
+
+/**
+ * Nội dung chuyển khoản của một người: "CDILV thuong Giai Nhat, Tham gia - <tên chương trình>",
+ * không dấu, tối đa TRANSFER_TEXT_MAX ký tự (tên chương trình bị rút gọn trước).
+ */
+export function rewardTransferText(items: RewardItem[], money: RewardMoney, pollTitle: string): string {
+  const counts = new Map<RewardKind, number>();
+  for (const i of payableItems(items, money)) {
+    if (money[i.kind] > 0) counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
+  }
+  const kinds = REWARD_KINDS.filter(({ kind }) => counts.has(kind))
+    .map(({ kind }) => `${TRANSFER_KIND_LABEL[kind]}${(counts.get(kind) ?? 0) > 1 ? ` x${counts.get(kind)}` : ""}`)
+    .join(", ");
+  const head = `CDILV thuong ${kinds || "giai thuong"}`;
+  const title = toTransferText(pollTitle)
+    .trim()
+    .replace(/^((binh chon|tac pham|bai du thi)\s+)+/i, "");
+  if (!title) return fitTransferText(head);
+  const room = TRANSFER_TEXT_MAX - head.length - 3;
+  return room >= 8 ? `${head} - ${fitTransferText(title, room)}` : fitTransferText(head);
 }
 
 export function formatVnd(value: number): string {

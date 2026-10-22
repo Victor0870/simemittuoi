@@ -2,7 +2,10 @@
  * Giấy đề nghị thanh toán: nhãn, giới hạn, kiểm tra dữ liệu form (dùng ở cả trình duyệt và API).
  * Trạng thái dùng chung bộ nhãn / màu với đề nghị thăm hỏi.
  */
+import { TRANSFER_TEXT_MAX, toTransferText } from "@/lib/bank-transfer";
 import { MAX_AMOUNT } from "@/lib/forms/settings";
+
+export { toTransferText };
 import type { VisitStatus } from "@/lib/visits/registry";
 
 export type PaymentStatus = VisitStatus;
@@ -26,8 +29,8 @@ export const PAYMENT_LOG_LABEL: Record<string, string> = {
 };
 
 export const PAYMENT_LIMITS = {
-  /** Nội dung đề nghị = nội dung chuyển khoản ngân hàng: không dấu, ngắn để không bị ngân hàng cắt. */
-  title: 80,
+  /** Nội dung đề nghị = nội dung chuyển khoản ngân hàng. */
+  title: TRANSFER_TEXT_MAX,
   name: 120,
   account: 40,
   content: 300,
@@ -62,22 +65,6 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 function oneLine(value: unknown): string {
   return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
-}
-
-/**
- * Chữ dùng được trong nội dung chuyển khoản: bỏ dấu tiếng Việt, chỉ giữ chữ, số, khoảng trắng và . , -
- * (ký tự khác thành khoảng trắng). Không cắt khoảng trắng cuối để gõ trực tiếp trên ô nhập được.
- */
-export function toTransferText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/Đ/g, "D")
-    .replace(/[\u2010-\u2015\u2212]/g, "-")
-    .replace(/[^A-Za-z0-9.,\- ]/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/^ /, "");
 }
 
 function money(value: unknown): number {
