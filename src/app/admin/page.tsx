@@ -576,6 +576,26 @@ export default async function AdminDashboardPage() {
           </Link>
 
           <Link
+            href="/office/finance"
+            className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-light text-primary">
+                <MaterialIcon className="text-[20px]" name="account_balance_wallet" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-on-surface">
+                  Sổ quỹ công đoàn
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  Số dư quỹ tiền mặt / ngân hàng, phiếu thu – chi, chuyển quỹ, khóa sổ, xuất Excel
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
+          </Link>
+
+          <Link
             href="/office/print-settings"
             className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
           >

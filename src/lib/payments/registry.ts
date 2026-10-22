@@ -21,6 +21,8 @@ export const PAYMENT_LOG_LABEL: Record<string, string> = {
   paid: "Xác nhận đã chi",
   cancelled: "Hủy đề nghị",
   printed: "Tải giấy đề nghị",
+  fund_posted: "Ghi sổ quỹ",
+  fund_skipped: "Chưa ghi sổ quỹ",
 };
 
 export const PAYMENT_LIMITS = {

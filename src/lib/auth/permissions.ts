@@ -41,6 +41,9 @@ export const PERMISSIONS = {
   paymentsCreate: "payments.create",
   paymentsApprove: "payments.approve",
   paymentsPay: "payments.pay",
+  financeView: "finance.view",
+  financeRecord: "finance.record",
+  financeManage: "finance.manage",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -230,6 +233,31 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     ],
   },
   {
+    key: "finance",
+    name: "Sổ quỹ công đoàn",
+    icon: "account_balance_wallet",
+    permissions: [
+      {
+        code: PERMISSIONS.financeView,
+        name: "Xem sổ quỹ",
+        description: "Xem số dư các quỹ, sổ quỹ thu – chi theo kỳ, chi tiết từng phiếu và xuất Excel.",
+      },
+      {
+        code: PERMISSIONS.financeRecord,
+        name: "Ghi sổ",
+        description:
+          "Lập phiếu thu, phiếu chi, chuyển tiền giữa các quỹ; sửa hoặc hủy (có lý do) bút toán thuộc kỳ chưa khóa sổ.",
+        requires: [PERMISSIONS.financeView],
+      },
+      {
+        code: PERMISSIONS.financeManage,
+        name: "Quản lý quỹ & khóa sổ",
+        description: "Khai báo quỹ, số dư đầu kỳ, danh mục thu – chi và khóa / mở khóa sổ theo kỳ.",
+        requires: [PERMISSIONS.financeView],
+      },
+    ],
+  },
+  {
     key: "forms",
     name: "Biểu mẫu in",
     icon: "print",
@@ -396,6 +424,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Lập giấy đề nghị thanh toán (gom phiếu thăm hỏi đã duyệt), duyệt, xác nhận đã chi và tải phiếu Excel theo mẫu.",
     icon: "request_quote",
     permission: PERMISSIONS.paymentsView,
+  },
+  {
+    href: "/office/finance",
+    title: "Sổ quỹ công đoàn",
+    description: "Số dư quỹ tiền mặt / ngân hàng, phiếu thu – chi, chuyển quỹ, khóa sổ và xuất sổ quỹ Excel.",
+    icon: "account_balance_wallet",
+    permission: PERMISSIONS.financeView,
   },
   {
     href: "/office/print-settings",
