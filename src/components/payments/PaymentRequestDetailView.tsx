@@ -9,7 +9,7 @@ import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateTimeVi } from "@/lib/data/albums";
 import { formatDateVi } from "@/lib/members/profile-shared";
-import { PAYMENT_LIMITS, PAYMENT_LOG_LABEL, PAYMENT_METHOD_LABEL } from "@/lib/payments/registry";
+import { PAYMENT_LIMITS, PAYMENT_LOG_LABEL, PAYMENT_METHOD_LABEL, toTransferText } from "@/lib/payments/registry";
 import type { PaymentAbilities, PaymentRequestDetail } from "@/lib/payments/server";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
@@ -30,6 +30,7 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const isProposed = detail.status === "proposed";
   const canDecide = can.approve && isProposed;
@@ -70,7 +71,7 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
         canGatherVisits={canViewVisits}
         initial={{
           requestDate: detail.request_date,
-          title: detail.title,
+          title: toTransferText(detail.title).trim(),
           requesterName: detail.requester_name,
           requesterDepartment: detail.requester_department ?? "",
           paymentMethod: detail.payment_method,
@@ -106,7 +107,25 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
           </span>
           <span className="ml-auto text-xs font-semibold text-on-surface-variant">{detail.code}</span>
         </div>
-        <h1 className="mt-2 text-headline-sm font-extrabold text-[#173A67]">{detail.title}</h1>
+        <div className="mt-2 flex flex-wrap items-start gap-2">
+          <h1 className="min-w-0 flex-1 text-headline-sm font-extrabold break-words text-[#173A67]">{detail.title}</h1>
+          {detail.payment_method === "transfer" ? (
+            <button
+              className="inline-flex items-center gap-1 rounded-xl border border-outline-variant px-2.5 py-1 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+              title="Sao chép nội dung chuyển khoản"
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(detail.title).then(() => {
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                });
+              }}
+            >
+              <MaterialIcon className="text-[16px]" name={copied ? "check" : "content_copy"} />
+              {copied ? "Đã chép" : "Chép nội dung CK"}
+            </button>
+          ) : null}
+        </div>
 
         <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div>

@@ -113,6 +113,9 @@ export function buildPaymentSlip(req: PaymentRequestRow, items: PaymentItemRow[]
     H24: req.receiver_name ?? "",
     H25: req.receiver_account ?? "",
     H26: req.receiver_bank ?? "",
+    E27: req.payment_method === "transfer" ? "Nội dung CK/ Description" : "Nội dung/ Description",
+    G27: ":",
+    H27: req.title,
   };
 
   const useItemSheet = items.length > PAYMENT_LIMITS.slipRows;
@@ -146,6 +149,15 @@ export function buildPaymentSlip(req: PaymentRequestRow, items: PaymentItemRow[]
       for (const col of ["H", "I"]) ws.getCell(`${col}${row}`).numFmt = MONEY_FORMAT;
     }
     ws.getCell("H25").numFmt = "@";
+    ws.mergeCells("E27:F27");
+    ws.mergeCells("H27:I27");
+    ws.getRow(27).height = 30;
+    const thin = { style: "thin", color: { indexed: 64 } } as Partial<ExcelJS.Border>;
+    ws.getCell("E27").border = { left: thin, bottom: thin };
+    ws.getCell("E27").alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    ws.getCell("G27").alignment = { vertical: "middle" };
+    ws.getCell("H27").alignment = { horizontal: "left", vertical: "middle", wrapText: true };
+    ws.getCell("H27").font = { name: fontName, size: 11, bold: true };
     writeSignatures(ws, [req.requester_name, settings.accountantName, settings.chairmanName], fontName);
     if (useItemSheet) addItemSheet(workbook, req, items, fontName);
   };

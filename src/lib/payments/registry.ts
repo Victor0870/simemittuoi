@@ -26,7 +26,8 @@ export const PAYMENT_LOG_LABEL: Record<string, string> = {
 };
 
 export const PAYMENT_LIMITS = {
-  title: 200,
+  /** Nội dung đề nghị = nội dung chuyển khoản ngân hàng: không dấu, ngắn để không bị ngân hàng cắt. */
+  title: 80,
   name: 120,
   account: 40,
   content: 300,
@@ -63,6 +64,22 @@ function oneLine(value: unknown): string {
   return typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
 }
 
+/**
+ * Chữ dùng được trong nội dung chuyển khoản: bỏ dấu tiếng Việt, chỉ giữ chữ, số, khoảng trắng và . , -
+ * (ký tự khác thành khoảng trắng). Không cắt khoảng trắng cuối để gõ trực tiếp trên ô nhập được.
+ */
+export function toTransferText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .replace(/[\u2010-\u2015\u2212]/g, "-")
+    .replace(/[^A-Za-z0-9.,\- ]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^ /, "");
+}
+
 function money(value: unknown): number {
   if (value === "" || value === null || value === undefined) return 0;
   const n = Math.round(Number(value));
@@ -79,9 +96,9 @@ export function parsePaymentInput(
     errors.push("Ngày đề nghị không hợp lệ.");
   }
 
-  const title = oneLine(raw.title);
-  if (!title) errors.push("Vui lòng nhập nội dung đề nghị.");
-  if (title.length > PAYMENT_LIMITS.title) errors.push(`Nội dung đề nghị tối đa ${PAYMENT_LIMITS.title} ký tự.`);
+  const title = toTransferText(oneLine(raw.title)).trim();
+  if (!/[A-Za-z0-9]/.test(title)) errors.push("Vui lòng nhập nội dung chuyển khoản.");
+  if (title.length > PAYMENT_LIMITS.title) errors.push(`Nội dung chuyển khoản tối đa ${PAYMENT_LIMITS.title} ký tự.`);
 
   const requesterName = oneLine(raw.requesterName);
   if (!requesterName) errors.push("Vui lòng nhập người đề nghị.");

@@ -5,7 +5,13 @@ import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { newPaymentItem, type PaymentFormItem } from "@/lib/payments/form-items";
-import { PAYMENT_LIMITS, PAYMENT_METHOD_LABEL, parsePaymentInput, type PaymentMethod } from "@/lib/payments/registry";
+import {
+  PAYMENT_LIMITS,
+  PAYMENT_METHOD_LABEL,
+  parsePaymentInput,
+  toTransferText,
+  type PaymentMethod,
+} from "@/lib/payments/registry";
 import type { VisitCandidate } from "@/lib/payments/server";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
@@ -36,6 +42,7 @@ const inputClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
 
+const transferTitle = (value: string) => toTransferText(value).slice(0, PAYMENT_LIMITS.title);
 const toNumber = (value: string) => Number(value.replace(/\D/g, "")) || 0;
 const formatInput = (value: string) => (value ? new Intl.NumberFormat("vi-VN").format(toNumber(value)) : "");
 
@@ -104,7 +111,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         }),
       );
       const title =
-        v.title.trim() || (kept.length === 0 ? `Chi thăm hỏi đoàn viên (${added.length} phiếu)` : v.title);
+        v.title.trim() || (kept.length === 0 ? `Chi tham hoi doan vien ${added.length} phieu` : v.title);
       return { ...v, title, items: [...kept, ...added] };
     });
     setCandidates(null);
@@ -156,14 +163,25 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
     <div className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
       <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
         <div>
-          <label className={labelClass}>Nội dung đề nghị *</label>
+          <label className={labelClass}>Nội dung chuyển khoản * (tự bỏ dấu)</label>
           <input
             className={inputClass}
             maxLength={PAYMENT_LIMITS.title}
-            placeholder="Ví dụ: Chi thăm hỏi đoàn viên tháng 10/2026"
+            placeholder="Ví dụ: CDILV chi tham hoi doan vien T10 2026"
             value={values.title}
-            onChange={(e) => set({ title: e.target.value })}
+            onBlur={() => set({ title: transferTitle(values.title).trim() })}
+            onChange={(e) => {
+              const composing = (e.nativeEvent as InputEvent).isComposing;
+              set({ title: composing ? e.target.value : transferTitle(e.target.value) });
+            }}
+            onCompositionEnd={(e) => set({ title: transferTitle(e.currentTarget.value) })}
           />
+          <p className="mt-1 flex justify-between gap-2 text-[11px] text-on-surface-variant">
+            <span>Tiếng Việt không dấu, chỉ chữ, số và . , - để dán vào nội dung chuyển khoản ngân hàng.</span>
+            <span className="whitespace-nowrap">
+              {values.title.trim().length}/{PAYMENT_LIMITS.title}
+            </span>
+          </p>
         </div>
         <div>
           <label className={labelClass}>Ngày đề nghị *</label>
