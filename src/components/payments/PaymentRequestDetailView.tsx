@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PaymentRequestForm, newPaymentItem } from "@/components/payments/PaymentRequestForm";
+import { PaymentRequestForm } from "@/components/payments/PaymentRequestForm";
+import { newPaymentItem } from "@/lib/payments/form-items";
 import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateTimeVi } from "@/lib/data/albums";

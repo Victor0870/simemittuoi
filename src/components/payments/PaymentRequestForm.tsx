@@ -4,20 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
+import { newPaymentItem, type PaymentFormItem } from "@/lib/payments/form-items";
 import { PAYMENT_LIMITS, PAYMENT_METHOD_LABEL, parsePaymentInput, type PaymentMethod } from "@/lib/payments/registry";
 import type { VisitCandidate } from "@/lib/payments/server";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
-
-export type PaymentFormItem = {
-  key: string;
-  content: string;
-  paidTo: string;
-  amount: string;
-  advanced: string;
-  visitRequestId: string | null;
-  visitCode: string | null;
-};
 
 export type PaymentFormValues = {
   requestDate: string;
@@ -44,21 +35,6 @@ type Props = {
 const inputClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
-
-let keySeed = 0;
-export function newPaymentItem(patch: Partial<PaymentFormItem> = {}): PaymentFormItem {
-  keySeed += 1;
-  return {
-    key: `i${Date.now()}-${keySeed}`,
-    content: "",
-    paidTo: "",
-    amount: "",
-    advanced: "",
-    visitRequestId: null,
-    visitCode: null,
-    ...patch,
-  };
-}
 
 const toNumber = (value: string) => Number(value.replace(/\D/g, "")) || 0;
 const formatInput = (value: string) => (value ? new Intl.NumberFormat("vi-VN").format(toNumber(value)) : "");

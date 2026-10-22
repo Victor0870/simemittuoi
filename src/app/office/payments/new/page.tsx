@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PaymentRequestForm, newPaymentItem } from "@/components/payments/PaymentRequestForm";
+import { PaymentRequestForm } from "@/components/payments/PaymentRequestForm";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { todayInVietnam } from "@/lib/life-events/registry";
+import { newPaymentItem } from "@/lib/payments/form-items";
 import { loadLastReceiver } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
