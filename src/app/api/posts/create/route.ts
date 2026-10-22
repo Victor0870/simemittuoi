@@ -4,6 +4,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { formatScheduleLabel, parseScheduledAt } from "@/lib/post-schedule";
 
 const MAX_TITLE = 300;
 const MAX_CONTENT = 50000;
@@ -36,6 +37,15 @@ export async function POST(request: NextRequest) {
     const tag = typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : "Thông báo";
     const isImportant = body.isImportant === true;
 
+    let scheduledAt: string | null = null;
+    if (body.scheduledAt !== undefined && body.scheduledAt !== null) {
+      const parsed = parseScheduledAt(body.scheduledAt);
+      if (!parsed.ok) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
+      }
+      scheduledAt = parsed.iso;
+    }
+
     const { data: post, error } = await createServiceClient()
       .from(CDILV_TABLE.posts)
       .insert({
@@ -46,6 +56,7 @@ export async function POST(request: NextRequest) {
         is_important: isImportant,
         is_active: body.isActive !== false,
         author_id: access.userId,
+        ...(scheduledAt ? { published_at: scheduledAt } : {}),
       })
       .select("id")
       .single();
@@ -54,7 +65,13 @@ export async function POST(request: NextRequest) {
     revalidatePath("/");
     revalidatePath("/posts");
 
-    return NextResponse.json({ success: true, id: post.id, message: "Đã đăng bài viết." });
+    return NextResponse.json({
+      success: true,
+      id: post.id,
+      message: scheduledAt
+        ? `Đã hẹn giờ đăng lúc ${formatScheduleLabel(scheduledAt)}.`
+        : "Đã đăng bài viết.",
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Không thể đăng bài viết.";
     console.error("[api/posts/create] error:", message);

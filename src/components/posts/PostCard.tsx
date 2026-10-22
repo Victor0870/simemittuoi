@@ -31,6 +31,12 @@ export function PostCard({ post }: PostCardProps) {
               Inactive
             </span>
           )}
+          {post.isScheduled && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-label-xs font-bold text-sky-900">
+              <MaterialIcon className="text-[12px]" name="schedule_send" />
+              Hẹn giờ
+            </span>
+          )}
           {post.isImportant && (
             <span className="inline-flex items-center gap-1 rounded-full border border-error/30 bg-error-container/80 px-2 py-0.5 text-label-xs font-bold text-error">
               <MaterialIcon className="text-[12px]" name="priority_high" />

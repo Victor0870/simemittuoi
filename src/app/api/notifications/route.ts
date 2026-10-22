@@ -30,6 +30,12 @@ export async function GET(request: NextRequest) {
 
     const publicDb = createServiceClient();
 
+    // Project không có pg_cron: gửi thông báo cho bài hẹn giờ đã đến giờ ngay khi có người kiểm tra chuông.
+    const { error: publishErr } = await publicDb.rpc("cdilv_publish_due_posts");
+    if (publishErr) {
+      console.error("[api/notifications] publish due posts:", publishErr.message);
+    }
+
     const [notifResult, countResult] = await Promise.all([
       publicDb
         .from(CDILV_TABLE.notifications)

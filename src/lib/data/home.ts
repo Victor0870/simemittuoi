@@ -99,6 +99,7 @@ async function loadHomePublicData(): Promise<HomePublicData> {
       .from(CDILV_TABLE.posts)
       .select("id, title, content, tag, tag_tone, is_important, is_active, published_at")
       .eq("is_active", true)
+      .lte("published_at", new Date().toISOString())
       .order("published_at", { ascending: false })
       .limit(10),
     publicDb

@@ -10,6 +10,7 @@ import { getPostById, getPostCommentsCount, getRelatedPosts } from "@/lib/data/p
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { BRAND } from "@/lib/brand";
+import { formatScheduleLabel } from "@/lib/post-schedule";
 
 export const revalidate = 60;
 
@@ -57,7 +58,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const post = await getPostById(id);
   if (!post) notFound();
 
-  if (!post.isActive) {
+  if (!post.isActive || post.isScheduled) {
     const access = await getCurrentAccess();
     if (!access || !hasPermission(access, PERMISSIONS.postsManage)) notFound();
   }
@@ -116,6 +117,12 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
             <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-950">
               <MaterialIcon className="text-[16px]" name="visibility_off" />
               Đang Inactive — chưa hiện với đoàn viên. Sửa bài rồi bật Active khi muốn đăng.
+            </p>
+          ) : null}
+          {post.isActive && post.isScheduled ? (
+            <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-900">
+              <MaterialIcon className="text-[16px]" name="schedule_send" />
+              Đã hẹn giờ đăng lúc {formatScheduleLabel(post.publishedAt)} — đến giờ bài sẽ tự hiện với đoàn viên.
             </p>
           ) : null}
           <h1 className="text-xl sm:text-headline-lg md:text-headline-xl font-extrabold tracking-tight text-on-surface leading-tight">

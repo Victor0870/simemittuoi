@@ -1,6 +1,7 @@
 import { createPublicClient } from "@/lib/supabase/public";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { formatScheduleLabel, isScheduledAt } from "@/lib/post-schedule";
 
 export type PostSummary = {
   id: string;
@@ -10,6 +11,8 @@ export type PostSummary = {
   tagTone: "primary" | "error";
   isImportant: boolean;
   isActive: boolean;
+  /** published_at ở tương lai: bài hẹn giờ, chưa hiện với đoàn viên. */
+  isScheduled: boolean;
   imageUrl: string | null;
   publishedAt: string;
   timeAgo: string;
@@ -46,6 +49,7 @@ function mapRow(row: {
   image_url: string | null;
   published_at: string;
 }): PostDetail {
+  const isScheduled = isScheduledAt(row.published_at);
   return {
     id: row.id,
     title: row.title,
@@ -55,9 +59,12 @@ function mapRow(row: {
     tagTone: row.tag_tone === "error" ? "error" : "primary",
     isImportant: Boolean(row.is_important),
     isActive: row.is_active !== false,
+    isScheduled,
     imageUrl: row.image_url,
     publishedAt: row.published_at,
-    timeAgo: formatTimeAgo(row.published_at),
+    timeAgo: isScheduled
+      ? `Hẹn đăng ${formatScheduleLabel(row.published_at)}`
+      : formatTimeAgo(row.published_at),
   };
 }
 
@@ -76,7 +83,7 @@ export async function getPosts(
     .limit(limit);
 
   if (!options?.includeInactive) {
-    query = query.eq("is_active", true);
+    query = query.eq("is_active", true).lte("published_at", new Date().toISOString());
   }
 
   const { data, error } = await query;
@@ -114,6 +121,7 @@ export async function getRelatedPosts(
     .from(CDILV_TABLE.posts)
     .select(POST_COLUMNS)
     .eq("is_active", true)
+    .lte("published_at", new Date().toISOString())
     .neq("id", excludeId)
     .order("published_at", { ascending: false })
     .limit(limit);

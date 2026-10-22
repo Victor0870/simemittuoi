@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { isScheduledAt, toDateTimeLocalValue } from "@/lib/post-schedule";
 
 type PostEditButtonProps = {
   /** Không truyền = nút "Đăng bài mới". */
@@ -16,8 +17,16 @@ type PostEditButtonProps = {
     tagTone?: string;
     isImportant?: boolean;
     isActive?: boolean;
+    publishedAt?: string;
   };
 };
+
+function defaultScheduleValue(): string {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return toDateTimeLocalValue(d);
+}
 
 const SUGGESTED_TAGS = [
   "Cuộc thi",
@@ -33,6 +42,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   const { can } = useAuth();
   const router = useRouter();
   const isCreate = !post;
+  const wasScheduled = post?.publishedAt ? isScheduledAt(post.publishedAt) : false;
 
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState(post?.title ?? "");
@@ -40,6 +50,8 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   const [tag, setTag] = useState(post?.tag || "Thông báo");
   const [isImportant, setIsImportant] = useState(Boolean(post?.isImportant));
   const [isActive, setIsActive] = useState(post?.isActive !== false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(wasScheduled);
+  const [scheduleValue, setScheduleValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -60,6 +72,12 @@ export function PostEditButton({ post }: PostEditButtonProps) {
     setTag(post?.tag || "Thông báo");
     setIsImportant(Boolean(post?.isImportant));
     setIsActive(post?.isActive !== false);
+    setScheduleEnabled(wasScheduled);
+    setScheduleValue(
+      wasScheduled && post?.publishedAt
+        ? toDateTimeLocalValue(post.publishedAt)
+        : defaultScheduleValue(),
+    );
     setErrorMsg(null);
     setIsOpen(true);
   }
@@ -78,6 +96,22 @@ export function PostEditButton({ post }: PostEditButtonProps) {
       return;
     }
 
+    let scheduledAt: string | null | undefined;
+    if (scheduleEnabled) {
+      const scheduleDate = new Date(scheduleValue);
+      if (!scheduleValue || Number.isNaN(scheduleDate.getTime())) {
+        setErrorMsg("Vui lòng chọn ngày giờ đăng bài.");
+        return;
+      }
+      if (scheduleDate.getTime() <= Date.now()) {
+        setErrorMsg("Thời điểm hẹn giờ phải ở tương lai.");
+        return;
+      }
+      scheduledAt = scheduleDate.toISOString();
+    } else if (wasScheduled) {
+      scheduledAt = null;
+    }
+
     setSaving(true);
     setErrorMsg(null);
 
@@ -93,6 +127,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
           tagTone: isImportant ? "error" : tag.trim() === "Khẩn cấp" ? "error" : "primary",
           isImportant,
           isActive,
+          scheduledAt,
         }),
       });
 
@@ -243,6 +278,51 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                   </div>
                 </label>
 
+                <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-3">
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={scheduleEnabled}
+                      onChange={(e) => setScheduleEnabled(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600 cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-sky-950">
+                        <MaterialIcon className="text-[16px] text-sky-700" name="schedule_send" />
+                        <span>Hẹn giờ đăng bài</span>
+                      </div>
+                      <p className="text-[11px] text-sky-900/80 leading-normal mt-0.5">
+                        {wasScheduled && !scheduleEnabled
+                          ? "Bỏ hẹn giờ: bài sẽ được đăng ngay khi lưu."
+                          : "Đến giờ đã chọn, bài tự hiện với đoàn viên và gửi thông báo. Trước đó chỉ người quản lý bài viết xem được."}
+                      </p>
+                    </div>
+                  </label>
+                  {scheduleEnabled && (
+                    <div className="mt-2.5 space-y-1.5 pl-7">
+                      <input
+                        type="datetime-local"
+                        required
+                        step={60}
+                        min={toDateTimeLocalValue(new Date())}
+                        value={scheduleValue}
+                        onChange={(e) => setScheduleValue(e.target.value)}
+                        className="w-full rounded-xl border border-sky-300 bg-white p-2 text-base text-slate-800 focus:border-sky-600 focus:outline-hidden focus:ring-2 focus:ring-sky-600/20 sm:w-auto sm:text-sm"
+                      />
+                      {!isCreate && !wasScheduled && (
+                        <p className="text-[11px] text-sky-900/80">
+                          Bài đang hiển thị sẽ tạm ẩn cho đến giờ hẹn.
+                        </p>
+                      )}
+                      {!isActive && (
+                        <p className="text-[11px] font-semibold text-amber-800">
+                          Bài đang Inactive: phải bật Active thì đến giờ bài mới được đăng.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Checkbox: Thông báo quan trọng */}
                 <label className="flex items-start gap-3 p-3 rounded-2xl border border-amber-200 bg-amber-50/70 cursor-pointer hover:bg-amber-100/60 transition select-none">
                   <input
@@ -311,8 +391,13 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                     </>
                   ) : (
                     <>
-                      <MaterialIcon className="text-[16px]" name={isCreate ? "send" : "save"} />
-                      <span>{isCreate ? "Đăng bài" : "Lưu thay đổi"}</span>
+                      <MaterialIcon
+                        className="text-[16px]"
+                        name={!isCreate ? "save" : scheduleEnabled ? "schedule_send" : "send"}
+                      />
+                      <span>
+                        {!isCreate ? "Lưu thay đổi" : scheduleEnabled ? "Hẹn giờ đăng" : "Đăng bài"}
+                      </span>
                     </>
                   )}
                 </button>
