@@ -1,6 +1,6 @@
 import type ExcelJS from "exceljs";
 import type { FormSettings } from "@/lib/forms/settings";
-import { PAYMENT_LIMITS, PAYMENT_METHOD_LABEL } from "./registry";
+import { PAYMENT_LIMITS } from "./registry";
 import type { PaymentItemRow, PaymentRequestRow } from "./server";
 
 /** Ô trên mẫu de_nghi_thanh_toan.xlsx (sheet “Thanh toan Cong Doan”, vùng in A1:I36). */
@@ -21,18 +21,17 @@ function money(value: number): number | null {
   return value > 0 ? value : null;
 }
 
-/** Khối chữ ký A29:I33 thay cho ảnh liên kết của mẫu gốc. */
+/** Khối chữ ký A29:I33 thay cho ảnh liên kết của mẫu gốc (tiêu đề giữ đúng chữ trong vùng O47:Q52 của mẫu). */
 function writeSignatures(ws: ExcelJS.Worksheet, names: [string, string, string], fontName?: string) {
   const blocks: [string, string, string][] = [
-    ["A", "D", "Người lập"],
-    ["E", "G", "Kế toán Công đoàn"],
+    ["A", "D", "Người Lập"],
+    ["E", "G", "Kế toán Công Đoàn"],
     ["H", "I", "Chủ tịch Công đoàn"],
   ];
   const center: Partial<ExcelJS.Alignment> = { horizontal: "center", vertical: "middle", wrapText: true };
   blocks.forEach(([from, to, title], index) => {
     for (const [row, value, font] of [
       [29, title, { bold: true, size: 11 }],
-      [30, "(Ký, ghi rõ họ tên)", { italic: true, size: 9 }],
       [33, names[index] || null, { bold: true, size: 11 }],
     ] as const) {
       ws.mergeCells(`${from}${row}:${to}${row}`);
@@ -108,8 +107,8 @@ export function buildPaymentSlip(req: PaymentRequestRow, items: PaymentItemRow[]
     D4: dateCell(req.request_date),
     D5: req.requester_name,
     D6: req.requester_department ?? settings.preparerDepartment,
-    E21: `${req.payment_method === "cash" ? "☑" : "☐"} ${PAYMENT_METHOD_LABEL.cash} / Cash`,
-    E22: `${req.payment_method === "transfer" ? "☑" : "☐"} ${PAYMENT_METHOD_LABEL.transfer} / Bank`,
+    E21: `${req.payment_method === "cash" ? "☑" : "☐"} Cash`,
+    E22: `${req.payment_method === "transfer" ? "☑" : "☐"} Bank`,
     H24: req.receiver_name ?? "",
     H25: req.receiver_account ?? "",
     H26: req.receiver_bank ?? "",
