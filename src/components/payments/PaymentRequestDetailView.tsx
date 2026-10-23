@@ -7,6 +7,7 @@ import { PaymentRequestForm } from "@/components/payments/PaymentRequestForm";
 import { newPaymentItem } from "@/lib/payments/form-items";
 import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import type { Counterparty } from "@/lib/catalogs/registry";
 import { formatDateTimeVi } from "@/lib/data/albums";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { PAYMENT_LIMITS, PAYMENT_LOG_LABEL, PAYMENT_METHOD_LABEL, toTransferText } from "@/lib/payments/registry";
@@ -19,12 +20,13 @@ type Props = {
   can: PaymentAbilities;
   isCreator: boolean;
   canViewVisits: boolean;
+  counterparties: Counterparty[];
 };
 
 const textareaClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 
-export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits }: Props) {
+export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits, counterparties }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,7 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
           receiverName: detail.receiver_name ?? "",
           receiverAccount: detail.receiver_account ?? "",
           receiverBank: detail.receiver_bank ?? "",
+          counterpartyId: detail.counterparty_id ?? "",
           note: detail.note ?? "",
           items: detail.items.map((i) =>
             newPaymentItem({
@@ -90,6 +93,7 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
             }),
           ),
         }}
+        counterparties={counterparties}
         mode="edit"
         requestId={detail.id}
         onCancel={() => setEditing(false)}
@@ -150,6 +154,13 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
                   {" "}
                   · TK {detail.receiver_account}
                   {detail.receiver_bank ? ` · ${detail.receiver_bank}` : ""}
+                </span>
+              ) : null}
+              {detail.counterparty ? (
+                <span className="mt-0.5 block text-xs font-normal text-on-surface-variant">
+                  Đối tượng {detail.counterparty.code} – {detail.counterparty.name}
+                  {detail.counterparty.tax_code ? ` · MST ${detail.counterparty.tax_code}` : ""}
+                  {detail.counterparty.address ? ` · ${detail.counterparty.address}` : ""}
                 </span>
               ) : null}
             </dd>

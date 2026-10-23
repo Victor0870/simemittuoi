@@ -4,6 +4,7 @@ import { PaymentRequestForm } from "@/components/payments/PaymentRequestForm";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { todayInVietnam } from "@/lib/life-events/registry";
 import { newPaymentItem } from "@/lib/payments/form-items";
@@ -19,11 +20,13 @@ export default async function NewPaymentRequestPage() {
   if (!hasPermission(access, PERMISSIONS.paymentsCreate)) redirect("/office/payments");
 
   const db = createServiceClient();
-  const [settings, last, { data: me }] = await Promise.all([
+  const [settings, last, { data: me }, counterparties] = await Promise.all([
     loadFormSettings(db),
     loadLastReceiver(db, access.userId),
     db.from(CDILV_TABLE.profiles).select("full_name").eq("id", access.userId).maybeSingle(),
+    loadCounterparties(db, { activeOnly: true }),
   ]);
+  const lastParty = counterparties.some((c) => c.id === last?.counterparty_id) ? last?.counterparty_id : null;
 
   return (
     <div className="max-w-3xl space-y-4 pb-10">
@@ -53,9 +56,11 @@ export default async function NewPaymentRequestPage() {
           receiverName: last?.receiver_name ?? "",
           receiverAccount: last?.receiver_account ?? "",
           receiverBank: last?.receiver_bank ?? "",
+          counterpartyId: lastParty ?? "",
           note: "",
           items: [newPaymentItem()],
         }}
+        counterparties={counterparties}
         mode="create"
       />
     </div>

@@ -4,6 +4,7 @@ import { PaymentRequestDetailView } from "@/components/payments/PaymentRequestDe
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { loadPaymentRequestDetail, paymentAbilities } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -26,6 +27,10 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
   const db = createServiceClient();
   const [detail, settings] = await Promise.all([loadPaymentRequestDetail(db, id), loadFormSettings(db)]);
   if (!detail) notFound();
+  const counterparties =
+    can.create && detail.status === "proposed"
+      ? await loadCounterparties(db, { activeOnly: true, includeIds: [detail.counterparty_id] })
+      : [];
 
   const missingSigners = [
     !settings.accountantName ? "Kế toán Công đoàn" : null,
@@ -56,6 +61,7 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
       <PaymentRequestDetailView
         can={can}
         canViewVisits={hasPermission(access, PERMISSIONS.visitsView)}
+        counterparties={counterparties}
         detail={detail}
         isCreator={detail.created_by === access.userId}
       />

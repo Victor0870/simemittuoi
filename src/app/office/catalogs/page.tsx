@@ -1,0 +1,75 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CategoryCatalog } from "@/components/catalogs/CategoryCatalog";
+import { CounterpartyCatalog } from "@/components/catalogs/CounterpartyCatalog";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { loadCounterparties } from "@/lib/catalogs/server";
+import { loadCategories } from "@/lib/finance/server";
+import { createServiceClient } from "@/lib/supabase/service";
+
+export const dynamic = "force-dynamic";
+
+const TABS = [
+  { key: "counterparties", label: "Đối tượng", icon: "apartment" },
+  { key: "income", label: "Danh mục thu", icon: "south_west" },
+  { key: "expense", label: "Danh mục chi", icon: "north_east" },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+type PageProps = { searchParams: Promise<{ tab?: string }> };
+
+export default async function CatalogsPage({ searchParams }: PageProps) {
+  const { tab: rawTab } = await searchParams;
+  const tab: TabKey = TABS.some((t) => t.key === rawTab) ? (rawTab as TabKey) : "counterparties";
+  const access = await getCurrentAccess();
+  if (!access) redirect(`/login?next=/office/catalogs?tab=${tab}`);
+  if (!hasPermission(access, PERMISSIONS.catalogsManage)) redirect("/office");
+
+  const db = createServiceClient();
+  const [categories, counterparties] = await Promise.all([
+    tab === "counterparties" ? Promise.resolve([]) : loadCategories(db),
+    tab === "counterparties" ? loadCounterparties(db) : Promise.resolve([]),
+  ]);
+
+  return (
+    <div className="max-w-4xl space-y-4 pb-10">
+      <Link
+        className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
+        href={access.isAdmin ? "/admin" : "/office"}
+      >
+        <MaterialIcon className="text-[18px]" name="arrow_back" />
+        {access.isAdmin ? "Admin" : "Khu vực quản lý"}
+      </Link>
+      <div>
+        <h1 className="text-headline-md font-extrabold text-[#173A67]">Quản lý danh mục</h1>
+        <p className="text-sm text-on-surface-variant">
+          Danh mục đối tượng (công ty, cá nhân nhận / nộp tiền) và danh mục phân loại thu – chi dùng cho sổ quỹ, đề nghị thanh toán và báo
+          cáo. Không xóa mục đã dùng – chỉ ẩn để giữ đúng chứng từ cũ.
+        </p>
+      </div>
+      <nav className="flex flex-wrap gap-2">
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-sm font-bold ${
+              t.key === tab
+                ? "bg-[#173A67] text-white"
+                : "border border-outline-variant bg-white text-on-surface-variant hover:border-[#173A67]"
+            }`}
+            href={`/office/catalogs?tab=${t.key}`}
+          >
+            <MaterialIcon className="text-[18px]" name={t.icon} />
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+      {tab === "counterparties" ? (
+        <CounterpartyCatalog counterparties={counterparties} />
+      ) : (
+        <CategoryCatalog categories={categories} kind={tab} />
+      )}
+    </div>
+  );
+}

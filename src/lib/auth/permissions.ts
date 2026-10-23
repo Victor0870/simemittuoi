@@ -45,6 +45,7 @@ export const PERMISSIONS = {
   financeRecord: "finance.record",
   financeManage: "finance.manage",
   reportsView: "reports.view",
+  catalogsManage: "catalogs.manage",
 } as const;
 
 export type PermissionCode = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -253,8 +254,21 @@ export const PERMISSION_MODULES: PermissionModule[] = [
       {
         code: PERMISSIONS.financeManage,
         name: "Quản lý quỹ & khóa sổ",
-        description: "Khai báo quỹ, số dư đầu kỳ, danh mục thu – chi và khóa / mở khóa sổ theo kỳ.",
+        description: "Khai báo quỹ, số dư đầu kỳ và khóa / mở khóa sổ theo kỳ.",
         requires: [PERMISSIONS.financeView],
+      },
+    ],
+  },
+  {
+    key: "catalogs",
+    name: "Quản lý danh mục",
+    icon: "category",
+    permissions: [
+      {
+        code: PERMISSIONS.catalogsManage,
+        name: "Thêm & sửa danh mục",
+        description:
+          "Thêm, sửa, ẩn danh mục thu – chi và danh mục đối tượng (công ty, cá nhân: mã số, tên, địa chỉ, MST, số tài khoản, ngân hàng) dùng khi ghi sổ và lập đề nghị thanh toán.",
       },
     ],
   },
@@ -445,6 +459,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     description: "Số dư quỹ tiền mặt / ngân hàng, phiếu thu – chi, chuyển quỹ, khóa sổ và xuất sổ quỹ Excel.",
     icon: "account_balance_wallet",
     permission: PERMISSIONS.financeView,
+  },
+  {
+    href: "/office/catalogs",
+    title: "Quản lý danh mục",
+    description: "Danh mục thu – chi và danh mục đối tượng (công ty, cá nhân: MST, số tài khoản, ngân hàng) dùng cho sổ quỹ và đề nghị thanh toán.",
+    icon: "category",
+    permission: PERMISSIONS.catalogsManage,
   },
   {
     href: "/office/reports",

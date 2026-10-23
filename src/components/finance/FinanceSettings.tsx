@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -9,9 +10,7 @@ import {
   FUND_KIND_LABEL,
   endOfPreviousMonth,
   fundSubtitle,
-  type CategoryKind,
   type Fund,
-  type FundCategory,
   type FundKind,
 } from "@/lib/finance/registry";
 import { formatDateVi } from "@/lib/members/profile-shared";
@@ -19,9 +18,9 @@ import { formatVnd } from "@/lib/visits/registry";
 
 type Props = {
   funds: Fund[];
-  categories: FundCategory[];
   lockedThrough: string | null;
   today: string;
+  canManageCatalogs: boolean;
 };
 
 const inputClass =
@@ -42,21 +41,6 @@ type FundDraft = {
   sortOrder: number;
 };
 
-type CategoryDraft = {
-  id?: string;
-  kind: CategoryKind;
-  code: string;
-  name: string;
-  isActive: boolean;
-  sortOrder: number;
-  systemKey: string | null;
-};
-
-const SYSTEM_HINT: Record<string, string> = {
-  visit: "Tự dùng khi đề nghị thanh toán chỉ gồm phiếu thăm hỏi",
-  payment_default: "Tự dùng cho các đề nghị thanh toán khác (không ẩn được)",
-};
-
 async function post(body: unknown): Promise<string | null> {
   try {
     const res = await fetch("/api/finance/settings", {
@@ -71,10 +55,9 @@ async function post(body: unknown): Promise<string | null> {
   }
 }
 
-export function FinanceSettings({ funds, categories, lockedThrough, today }: Props) {
+export function FinanceSettings({ funds, lockedThrough, today, canManageCatalogs }: Props) {
   const router = useRouter();
   const [fundDraft, setFundDraft] = useState<FundDraft | null>(null);
-  const [categoryDraft, setCategoryDraft] = useState<CategoryDraft | null>(null);
   const [lockDate, setLockDate] = useState(lockedThrough ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,66 +212,6 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
     </div>
   ) : null;
 
-  const categoryForm = categoryDraft ? (
-    <div className="space-y-3 rounded-xl border border-[#173A67]/30 bg-white p-3">
-      <div className="grid gap-3 sm:grid-cols-[110px_1fr_110px]">
-        <div>
-          <label className={labelClass}>Mã (nếu có)</label>
-          <input
-            className={inputClass}
-            maxLength={FINANCE_LIMITS.categoryCode}
-            value={categoryDraft.code}
-            onChange={(e) => setCategoryDraft({ ...categoryDraft, code: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Tên danh mục {categoryDraft.kind === "income" ? "thu" : "chi"} *</label>
-          <input
-            className={inputClass}
-            maxLength={FINANCE_LIMITS.categoryName}
-            value={categoryDraft.name}
-            onChange={(e) => setCategoryDraft({ ...categoryDraft, name: e.target.value })}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Thứ tự</label>
-          <input
-            className={inputClass}
-            type="number"
-            value={categoryDraft.sortOrder}
-            onChange={(e) => setCategoryDraft({ ...categoryDraft, sortOrder: Number(e.target.value) || 0 })}
-          />
-        </div>
-      </div>
-      <label className="flex items-center gap-2 text-sm font-semibold">
-        <input
-          checked={categoryDraft.isActive}
-          disabled={categoryDraft.systemKey === "payment_default"}
-          type="checkbox"
-          onChange={(e) => setCategoryDraft({ ...categoryDraft, isActive: e.target.checked })}
-        />
-        Đang sử dụng (bỏ chọn để ẩn khỏi ô chọn khi ghi sổ; bút toán cũ vẫn giữ danh mục)
-      </label>
-      <div className="flex gap-2">
-        <button
-          className="rounded-xl bg-[#173A67] px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-          disabled={busy}
-          type="button"
-          onClick={() => void run({ action: "saveCategory", category: categoryDraft }, () => setCategoryDraft(null), "Đã lưu danh mục.")}
-        >
-          Lưu danh mục
-        </button>
-        <button
-          className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant"
-          type="button"
-          onClick={() => setCategoryDraft(null)}
-        >
-          Đóng
-        </button>
-      </div>
-    </div>
-  ) : null;
-
   const suggestedLock = endOfPreviousMonth(today);
 
   return (
@@ -385,70 +308,26 @@ export function FinanceSettings({ funds, categories, lockedThrough, today }: Pro
         </p>
       </section>
 
-      {(["income", "expense"] as CategoryKind[]).map((kind) => (
-        <section key={kind} className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-title-md font-bold text-[#173A67]">Danh mục {kind === "income" ? "thu" : "chi"}</h2>
-            <button
-              className="inline-flex items-center gap-1 rounded-xl border border-dashed border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]"
-              type="button"
-              onClick={() =>
-                setCategoryDraft({
-                  kind,
-                  code: "",
-                  name: "",
-                  isActive: true,
-                  sortOrder: (categories.filter((c) => c.kind === kind).at(-1)?.sort_order ?? 0) + 5,
-                  systemKey: null,
-                })
-              }
-            >
-              <MaterialIcon className="text-[18px]" name="add" />
-              Thêm danh mục
-            </button>
-          </div>
-          {categoryDraft && !categoryDraft.id && categoryDraft.kind === kind ? categoryForm : null}
-          <ul className="divide-y divide-outline-variant">
-            {categories
-              .filter((c) => c.kind === kind)
-              .map((c) => (
-                <li key={c.id} className="py-2">
-                  {categoryDraft?.id === c.id ? (
-                    categoryForm
-                  ) : (
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="min-w-[200px] flex-1">
-                        <p className={`text-sm font-semibold ${c.is_active ? "" : "text-on-surface-variant line-through"}`}>
-                          {c.code ? <span className="mr-1 text-on-surface-variant">{c.code}</span> : null}
-                          {c.name}
-                        </p>
-                        {c.system_key ? <p className="text-[11px] text-sky-800">{SYSTEM_HINT[c.system_key]}</p> : null}
-                      </div>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-                        type="button"
-                        onClick={() =>
-                          setCategoryDraft({
-                            id: c.id,
-                            kind: c.kind,
-                            code: c.code ?? "",
-                            name: c.name,
-                            isActive: c.is_active,
-                            sortOrder: c.sort_order,
-                            systemKey: c.system_key,
-                          })
-                        }
-                      >
-                        <MaterialIcon className="text-[16px]" name="edit" />
-                        Sửa
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
+      <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
+        <MaterialIcon className="text-[22px] text-[#173A67]" name="category" />
+        <div className="min-w-[200px] flex-1">
+          <h2 className="text-title-md font-bold text-[#173A67]">Danh mục thu – chi</h2>
+          <p className="text-sm text-on-surface-variant">
+            Danh mục thu – chi và danh mục đối tượng (công ty, cá nhân) nay quản lý chung ở trang Quản lý danh mục.
+          </p>
+        </div>
+        {canManageCatalogs ? (
+          <Link
+            className="inline-flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]"
+            href="/office/catalogs"
+          >
+            Mở Quản lý danh mục
+            <MaterialIcon className="text-[18px]" name="chevron_right" />
+          </Link>
+        ) : (
+          <p className="text-xs text-on-surface-variant">Cần quyền “Thêm & sửa danh mục” để sửa.</p>
+        )}
+      </section>
 
       <section className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
         <h2 className="text-title-md font-bold text-[#173A67]">Khóa sổ</h2>

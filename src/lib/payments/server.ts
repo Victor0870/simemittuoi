@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import type { Counterparty } from "@/lib/catalogs/registry";
+import { loadCounterparty } from "@/lib/catalogs/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { loadNames } from "@/lib/visits/server";
 import type { PaymentMethod, PaymentStatus } from "./registry";
 
 const REQUEST_COLUMNS =
-  "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_name, receiver_account, receiver_bank, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
+  "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_name, receiver_account, receiver_bank, counterparty_id, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
 
 const ITEM_COLUMNS = "id, order_num, content, paid_to, amount, advanced, visit_request_id";
 
@@ -24,6 +26,7 @@ export type PaymentRequestRow = {
   receiver_name: string | null;
   receiver_account: string | null;
   receiver_bank: string | null;
+  counterparty_id: string | null;
   total_amount: number;
   advanced_amount: number;
   note: string | null;
@@ -63,6 +66,7 @@ export type PaymentRequestLog = {
 };
 
 export type PaymentRequestDetail = PaymentRequestRow & {
+  counterparty: Counterparty | null;
   creator_name: string | null;
   decider_name: string | null;
   payer_name: string | null;
@@ -159,13 +163,14 @@ export async function loadPaymentItems(db: SupabaseClient, requestId: string): P
 export async function loadPaymentRequestDetail(db: SupabaseClient, id: string): Promise<PaymentRequestDetail | null> {
   const row = await loadPaymentRequestRow(db, id);
   if (!row) return null;
-  const [items, { data: logs }] = await Promise.all([
+  const [items, { data: logs }, counterparty] = await Promise.all([
     loadPaymentItems(db, id),
     db
       .from(CDILV_TABLE.paymentRequestLogs)
       .select("id, actor_id, action, note, created_at")
       .eq("request_id", id)
       .order("created_at", { ascending: true }),
+    row.counterparty_id ? loadCounterparty(db, row.counterparty_id) : Promise.resolve(null),
   ]);
   const names = await loadNames(db, [
     row.created_by,
@@ -176,6 +181,7 @@ export async function loadPaymentRequestDetail(db: SupabaseClient, id: string): 
   const name = (uid: string | null) => (uid ? (names.get(uid) ?? null) : null);
   return {
     ...row,
+    counterparty,
     creator_name: name(row.created_by),
     decider_name: name(row.decided_by),
     payer_name: name(row.paid_by),
@@ -271,16 +277,18 @@ export async function loadPaymentForVisit(
 export async function loadLastReceiver(
   db: SupabaseClient,
   userId: string,
-): Promise<Pick<PaymentRequestRow, "receiver_name" | "receiver_account" | "receiver_bank" | "requester_department"> | null> {
+): Promise<LastReceiver | null> {
   const { data } = await db
     .from(CDILV_TABLE.paymentRequests)
-    .select("receiver_name, receiver_account, receiver_bank, requester_department")
+    .select("receiver_name, receiver_account, receiver_bank, counterparty_id, requester_department")
     .eq("created_by", userId)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return (data as Pick<
-    PaymentRequestRow,
-    "receiver_name" | "receiver_account" | "receiver_bank" | "requester_department"
-  > | null) ?? null;
+  return (data as LastReceiver | null) ?? null;
 }
+
+type LastReceiver = Pick<
+  PaymentRequestRow,
+  "receiver_name" | "receiver_account" | "receiver_bank" | "counterparty_id" | "requester_department"
+>;

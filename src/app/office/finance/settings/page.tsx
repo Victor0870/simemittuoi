@@ -4,7 +4,7 @@ import { FinanceSettings } from "@/components/finance/FinanceSettings";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
-import { loadCategories, loadFunds, loadLockedThrough } from "@/lib/finance/server";
+import { loadFunds, loadLockedThrough } from "@/lib/finance/server";
 import { todayInVietnam } from "@/lib/life-events/registry";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -16,7 +16,7 @@ export default async function FinanceSettingsPage() {
   if (!hasPermission(access, PERMISSIONS.financeManage)) redirect("/office/finance");
 
   const db = createServiceClient();
-  const [funds, categories, lockedThrough] = await Promise.all([loadFunds(db), loadCategories(db), loadLockedThrough(db)]);
+  const [funds, lockedThrough] = await Promise.all([loadFunds(db), loadLockedThrough(db)]);
 
   return (
     <div className="max-w-3xl space-y-4 pb-10">
@@ -28,13 +28,17 @@ export default async function FinanceSettingsPage() {
         Sổ quỹ
       </Link>
       <div>
-        <h1 className="text-headline-md font-extrabold text-[#173A67]">Quỹ, danh mục & khóa sổ</h1>
+        <h1 className="text-headline-md font-extrabold text-[#173A67]">Quỹ & khóa sổ</h1>
         <p className="text-sm text-on-surface-variant">
-          Khai báo số dư đầu kỳ, thêm tài khoản ngân hàng, sửa danh mục thu – chi theo hướng dẫn tài chính công đoàn và khóa sổ sau khi
-          đối chiếu.
+          Khai báo số dư đầu kỳ, thêm tài khoản ngân hàng / sổ tiết kiệm và khóa sổ sau khi đối chiếu.
         </p>
       </div>
-      <FinanceSettings categories={categories} funds={funds} lockedThrough={lockedThrough} today={todayInVietnam()} />
+      <FinanceSettings
+        canManageCatalogs={hasPermission(access, PERMISSIONS.catalogsManage)}
+        funds={funds}
+        lockedThrough={lockedThrough}
+        today={todayInVietnam()}
+      />
     </div>
   );
 }

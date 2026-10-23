@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { validateCounterpartyLink } from "@/lib/catalogs/server";
 import { parsePaymentInput, paymentRpcPayload } from "@/lib/payments/registry";
 import { validateVisitLinks } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -20,6 +21,8 @@ export async function POST(request: NextRequest) {
     const visitIds = parsed.value.items.map((i) => i.visitRequestId).filter((v): v is string => Boolean(v));
     const linkErrors = await validateVisitLinks(db, visitIds);
     if (linkErrors.length) return NextResponse.json({ error: linkErrors.join(" ") }, { status: 409 });
+    const counterpartyError = await validateCounterpartyLink(db, parsed.value.counterpartyId);
+    if (counterpartyError) return NextResponse.json({ error: counterpartyError }, { status: 409 });
 
     const { data, error } = await db
       .rpc(CDILV_RPC.paymentRequestSave, {

@@ -20,7 +20,6 @@ function bad(message: string, status = 400) {
 /**
  * Cài đặt sổ quỹ. Body:
  *  { action: "saveFund", fund: { id?, kind, name, bankAccountNo, bankName, interestRate, maturityDate, openingBalance, openingDate, isActive, sortOrder } }
- *  { action: "saveCategory", category: { id?, kind, code, name, isActive, sortOrder } }
  *  { action: "setLock", lockedThrough: "YYYY-MM-DD" | null }
  */
 export async function POST(request: NextRequest) {
@@ -77,42 +76,6 @@ export async function POST(request: NextRequest) {
       if (error) {
         if (error.code === "P0001") return bad(error.message, 409);
         throw error;
-      }
-      return NextResponse.json({ success: true });
-    }
-
-    if (body.action === "saveCategory") {
-      const raw = (body.category ?? {}) as Record<string, unknown>;
-      const id = typeof raw.id === "string" && UUID_RE.test(raw.id) ? raw.id : null;
-      const name = text(raw.name);
-      const code = text(raw.code) || null;
-      const sortOrder = Math.round(Number(raw.sortOrder ?? 0)) || 0;
-      const isActive = raw.isActive !== false;
-      if (!name || name.length > FINANCE_LIMITS.categoryName) return bad("Tên danh mục không hợp lệ.");
-      if ((code?.length ?? 0) > FINANCE_LIMITS.categoryCode) return bad("Mã danh mục tối đa 20 ký tự.");
-
-      if (id) {
-        const { data: current } = await db
-          .from(CDILV_TABLE.fundCategories)
-          .select("system_key")
-          .eq("id", id)
-          .maybeSingle();
-        if (!current) return bad("Không tìm thấy danh mục.", 404);
-        if (current.system_key === "payment_default" && !isActive) {
-          return bad("Danh mục này dùng khi tự ghi sổ đề nghị thanh toán nên không ẩn được (có thể đổi tên).");
-        }
-        const { error } = await db
-          .from(CDILV_TABLE.fundCategories)
-          .update({ name, code, sort_order: sortOrder, is_active: isActive, updated_at: now })
-          .eq("id", id);
-        if (error) throw error;
-      } else {
-        const kind = raw.kind === "income" ? "income" : raw.kind === "expense" ? "expense" : null;
-        if (!kind) return bad("Loại danh mục không hợp lệ.");
-        const { error } = await db
-          .from(CDILV_TABLE.fundCategories)
-          .insert({ kind, name, code, sort_order: sortOrder, is_active: isActive });
-        if (error) throw error;
       }
       return NextResponse.json({ success: true });
     }

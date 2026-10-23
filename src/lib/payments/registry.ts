@@ -57,6 +57,8 @@ export type PaymentInput = {
   receiverName: string | null;
   receiverAccount: string | null;
   receiverBank: string | null;
+  /** Đối tượng trong danh mục (nếu chọn) – để lập danh sách chuyển khoản. */
+  counterpartyId: string | null;
   note: string | null;
   items: PaymentItemInput[];
 };
@@ -98,6 +100,8 @@ export function parsePaymentInput(
   const receiverName = oneLine(raw.receiverName) || null;
   const receiverAccount = oneLine(raw.receiverAccount).replace(/\s/g, "") || null;
   const receiverBank = oneLine(raw.receiverBank) || null;
+  const counterpartyId =
+    typeof raw.counterpartyId === "string" && UUID_RE.test(raw.counterpartyId) ? raw.counterpartyId : null;
   if ((receiverName?.length ?? 0) > PAYMENT_LIMITS.name || (receiverBank?.length ?? 0) > PAYMENT_LIMITS.name) {
     errors.push("Tên người nhận / ngân hàng quá dài.");
   }
@@ -146,6 +150,7 @@ export function parsePaymentInput(
       receiverName,
       receiverAccount,
       receiverBank,
+      counterpartyId,
       note,
       items,
     },
@@ -164,6 +169,7 @@ export function paymentRpcPayload(input: PaymentInput) {
       receiver_name: input.receiverName,
       receiver_account: input.receiverAccount,
       receiver_bank: input.receiverBank,
+      counterparty_id: input.counterpartyId,
       note: input.note,
     },
     p_items: input.items.map((item) => ({

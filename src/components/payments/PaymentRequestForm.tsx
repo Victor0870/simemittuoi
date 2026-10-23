@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { counterpartyMatches, type Counterparty } from "@/lib/catalogs/registry";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { newPaymentItem, type PaymentFormItem } from "@/lib/payments/form-items";
 import {
@@ -25,6 +26,7 @@ export type PaymentFormValues = {
   receiverName: string;
   receiverAccount: string;
   receiverBank: string;
+  counterpartyId: string;
   note: string;
   items: PaymentFormItem[];
 };
@@ -35,6 +37,8 @@ type Props = {
   requestId?: string;
   /** Có quyền xem phiếu thăm hỏi → hiện nút gom phiếu đã duyệt. */
   canGatherVisits: boolean;
+  /** Danh mục đối tượng để chọn người nhận (đang dùng + đối tượng đã gắn). */
+  counterparties?: Counterparty[];
   onCancel?: () => void;
 };
 
@@ -51,9 +55,10 @@ function visitLine(v: VisitCandidate): string {
   return `Thăm hỏi ${who} – ${v.reason}`.slice(0, PAYMENT_LIMITS.content);
 }
 
-export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, onCancel }: Props) {
+export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, counterparties, onCancel }: Props) {
   const router = useRouter();
   const [values, setValues] = useState<PaymentFormValues>(initial);
+  const [partySearch, setPartySearch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<VisitCandidate[] | null>(null);
@@ -76,6 +81,22 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
   const total = values.items.reduce((sum, i) => sum + toNumber(i.amount), 0);
   const advanced = values.items.reduce((sum, i) => sum + toNumber(i.advanced), 0);
   const linkedIds = new Set(values.items.map((i) => i.visitRequestId).filter(Boolean));
+  const party = counterparties?.find((c) => c.id === values.counterpartyId) ?? null;
+  const partyOptions = (counterparties ?? []).filter((c) => c.id === values.counterpartyId || counterpartyMatches(c, partySearch));
+
+  function pickCounterparty(id: string) {
+    const c = counterparties?.find((x) => x.id === id);
+    if (!c) {
+      set({ counterpartyId: "" });
+      return;
+    }
+    set({
+      counterpartyId: c.id,
+      receiverName: c.name.slice(0, PAYMENT_LIMITS.name),
+      receiverAccount: c.bank_account_no ?? "",
+      receiverBank: c.bank_name ?? "",
+    });
+  }
 
   async function openCandidates() {
     setLoadingCandidates(true);
@@ -428,6 +449,49 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
             </label>
           ))}
         </div>
+        {counterparties ? (
+          <div className="space-y-1.5 rounded-lg bg-surface-container-low p-2.5">
+            <label className={labelClass}>Chọn đối tượng nhận tiền từ danh mục (tự điền người nhận, số TK, ngân hàng)</label>
+            {counterparties.length ? (
+              <div className="flex flex-wrap gap-2">
+                {counterparties.length > 10 ? (
+                  <input
+                    className={`${inputClass} sm:max-w-[220px]`}
+                    placeholder="Tìm mã, tên, MST..."
+                    value={partySearch}
+                    onChange={(e) => setPartySearch(e.target.value)}
+                  />
+                ) : null}
+                <select
+                  className={`${inputClass} min-w-[220px] flex-1`}
+                  value={values.counterpartyId}
+                  onChange={(e) => pickCounterparty(e.target.value)}
+                >
+                  <option value="">— Không chọn (nhập tay) —</option>
+                  {partyOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} – {c.name}
+                      {c.bank_account_no ? "" : " (chưa có TK)"}
+                      {c.is_active ? "" : " (ngừng dùng)"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <p className="text-xs text-on-surface-variant">
+                Danh mục đối tượng đang trống – thêm công ty / cá nhân tại mục Quản lý danh mục để lần sau chọn nhanh.
+              </p>
+            )}
+            {party ? (
+              <p className="text-xs text-on-surface-variant">
+                {[party.tax_code && `MST ${party.tax_code}`, party.address].filter(Boolean).join(" · ") || "Chưa có MST / địa chỉ"}
+                {values.paymentMethod === "transfer" && !party.bank_account_no ? (
+                  <span className="text-amber-700"> · Đối tượng chưa có số tài khoản, hãy nhập tay hoặc bổ sung trong danh mục.</span>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className={labelClass}>Người nhận / Chủ TK{values.paymentMethod === "transfer" ? " *" : ""}</label>

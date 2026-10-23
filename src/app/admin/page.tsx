@@ -616,6 +616,26 @@ export default async function AdminDashboardPage() {
           </Link>
 
           <Link
+            href="/office/catalogs"
+            className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-light text-primary">
+                <MaterialIcon className="text-[20px]" name="category" />
+              </div>
+              <div>
+                <p className="text-label-md font-bold text-on-surface">
+                  Quản lý danh mục
+                </p>
+                <p className="text-xs text-on-surface-variant">
+                  Danh mục thu – chi, danh mục đối tượng (công ty, cá nhân: MST, số tài khoản, ngân hàng)
+                </p>
+              </div>
+            </div>
+            <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
+          </Link>
+
+          <Link
             href="/office/print-settings"
             className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
           >

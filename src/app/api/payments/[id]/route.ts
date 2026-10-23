@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { loadCounterparty, validateCounterpartyLink } from "@/lib/catalogs/server";
 import { PAYMENT_METHOD_LABEL, parsePaymentInput, paymentRpcPayload } from "@/lib/payments/registry";
 import { loadPaymentItems, loadPaymentRequestRow, validateVisitLinks } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -33,6 +34,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const visitIds = v.items.map((i) => i.visitRequestId).filter((x): x is string => Boolean(x));
     const linkErrors = await validateVisitLinks(db, visitIds, { exceptId: id, keepIds });
     if (linkErrors.length) return NextResponse.json({ error: linkErrors.join(" ") }, { status: 409 });
+    const counterpartyError = await validateCounterpartyLink(db, v.counterpartyId, current.counterparty_id);
+    if (counterpartyError) return NextResponse.json({ error: counterpartyError }, { status: 409 });
 
     const total = v.items.reduce((sum, i) => sum + i.amount, 0);
     const changes: string[] = [];
@@ -46,6 +49,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       v.receiverBank !== current.receiver_bank
     ) {
       changes.push("Thông tin người nhận");
+    }
+    if (v.counterpartyId !== (current.counterparty_id ?? null)) {
+      const linked = v.counterpartyId ? await loadCounterparty(db, v.counterpartyId) : null;
+      changes.push(linked ? `Đối tượng: ${linked.code} – ${linked.name}` : "Bỏ gắn đối tượng");
     }
     if (total !== current.total_amount) changes.push(`Tổng tiền: ${formatVnd(current.total_amount)} → ${formatVnd(total)}`);
     const sameItems =
