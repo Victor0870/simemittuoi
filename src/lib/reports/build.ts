@@ -10,7 +10,14 @@ import {
   type FundEntry,
   type FundKind,
 } from "@/lib/finance/registry";
-import { REPORT_GROUPS } from "@/lib/finance/report-groups";
+import {
+  leafCodes,
+  lineDepth,
+  lineTitle,
+  sideLines,
+  type TemplateLine,
+  type TemplateLineType,
+} from "@/lib/report-templates/registry";
 import { LIFE_EVENT_TYPES } from "@/lib/life-events/registry";
 import { VISIT_STATUS_LABEL, type VisitStatus } from "@/lib/visits/registry";
 
@@ -66,14 +73,14 @@ export type FundYearRow = {
   closing: number;
 };
 
-/** Dòng của bảng tổng hợp theo phân loại báo cáo (REPORT_GROUPS). */
+/** Dòng của bảng tổng hợp theo mẫu báo cáo đang áp dụng. */
 export type SummaryRow = {
   key: string;
-  no: string;
-  label: string;
-  /** 1 = mục con (VD 3.1 DN hỗ trợ), cộng vào dòng nhóm cha. */
-  level: 0 | 1;
-  header: boolean;
+  /** "Đoàn phí công đoàn (22)"; dòng cộng không kèm mã. */
+  title: string;
+  lineType: TemplateLineType | "unclassified";
+  /** Độ sâu trong nhóm (0 = dòng gốc). */
+  level: number;
   values: number[];
   total: number;
   previousYear: number;
@@ -81,32 +88,32 @@ export type SummaryRow = {
 
 export const UNCLASSIFIED_KEY = "_none";
 
-function buildSummary(kind: CategoryKind, group: CategoryGroup, n: number): SummaryRow[] {
-  const defs = REPORT_GROUPS[kind];
-  const blank = (key: string, no: string, label: string, level: 0 | 1, header: boolean): SummaryRow => ({
-    key,
-    no,
-    label,
-    level,
-    header,
-    values: zeros(n),
-    total: 0,
-    previousYear: 0,
-  });
-  const rows = new Map(defs.map((d) => [d.key, blank(d.key, d.no, d.label, d.parent ? 1 : 0, Boolean(d.header))]));
-  const none = blank(UNCLASSIFIED_KEY, "", "Chưa phân loại", 0, false);
-  const add = (target: SummaryRow, r: CategoryRow) => {
+function buildSummary(kind: CategoryKind, group: CategoryGroup, n: number, lines: TemplateLine[]): SummaryRow[] {
+  const side = sideLines(lines, kind);
+  const blank = (): Pick<SummaryRow, "values" | "total" | "previousYear"> => ({ values: zeros(n), total: 0, previousYear: 0 });
+  const items = new Map(side.filter((l) => l.line_type === "item").map((l) => [l.code, blank()]));
+  const none = blank();
+  for (const r of group.rows) {
+    const target = (r.reportGroup && items.get(r.reportGroup)) || none;
     r.values.forEach((v, i) => (target.values[i] += v));
     target.total += r.total;
     target.previousYear += r.previousYear;
-  };
-  for (const r of group.rows) {
-    const def = defs.find((d) => d.key === r.reportGroup && !d.header);
-    add((def && rows.get(def.key)) || none, r);
-    const parent = def?.parent ? rows.get(def.parent) : undefined;
-    if (parent) add(parent, r);
   }
-  return [...rows.values(), ...(none.total || none.previousYear ? [none] : [])];
+  const rows: SummaryRow[] = side.map((line) => {
+    const sum = blank();
+    for (const code of leafCodes(side, kind, line.code)) {
+      const item = items.get(code);
+      if (!item) continue;
+      item.values.forEach((v, i) => (sum.values[i] += v));
+      sum.total += item.total;
+      sum.previousYear += item.previousYear;
+    }
+    return { key: line.code, title: lineTitle(line), lineType: line.line_type, level: lineDepth(side, line), ...sum };
+  });
+  if (none.total || none.previousYear) {
+    rows.push({ key: UNCLASSIFIED_KEY, title: "Chưa phân loại", lineType: "unclassified", level: 0, ...none });
+  }
+  return rows;
 }
 
 export type FinanceReport = {
@@ -172,6 +179,7 @@ export function buildFinanceReport(
   categories: FundCategory[],
   entries: FundEntry[],
   today: string,
+  templateLines: TemplateLine[],
 ): FinanceReport {
   const income = buildGroup("income", year, g, categories, entries);
   const expense = buildGroup("expense", year, g, categories, entries);
@@ -225,8 +233,8 @@ export function buildFinanceReport(
     income,
     expense,
     summary: {
-      income: buildSummary("income", income, periodCount(g)),
-      expense: buildSummary("expense", expense, periodCount(g)),
+      income: buildSummary("income", income, periodCount(g), templateLines),
+      expense: buildSummary("expense", expense, periodCount(g), templateLines),
     },
     net: income.totals.map((v, i) => v - expense.totals[i]),
     funds: fundRows,

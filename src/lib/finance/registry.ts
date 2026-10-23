@@ -78,7 +78,7 @@ export type FundCategory = {
   code: string | null;
   name: string;
   system_key: string | null;
-  /** Mã nhóm trong REPORT_GROUPS (phân loại theo báo cáo tổng hợp). */
+  /** Mã chỉ tiêu (VD 22, 25.01) của mẫu báo cáo đang áp dụng – phân loại theo báo cáo tổng hợp. */
   report_group: string | null;
   sort_order: number;
   is_active: boolean;

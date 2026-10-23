@@ -79,13 +79,15 @@ function SummaryRows({ rows, group, label, tone }: { rows: SummaryRow[]; group: 
       {rows.map((r) => (
         <tr
           key={r.key}
-          className={`border-t border-outline-variant ${tdClass} ${r.header ? "font-semibold" : ""} ${
-            r.key === UNCLASSIFIED_KEY ? "text-amber-800" : ""
-          }`}
+          className={`border-t border-outline-variant ${tdClass} ${r.lineType === "group" ? "font-semibold" : ""} ${
+            r.lineType === "subtotal" ? "bg-[#173A67]/5 font-bold text-[#173A67]" : ""
+          } ${r.key === UNCLASSIFIED_KEY ? "text-amber-800" : ""}`}
         >
-          <td className={`sticky left-0 min-w-[260px] bg-surface-container-lowest ${r.level ? "pl-7" : ""}`}>
-            {r.no ? <span className="mr-1 text-on-surface-variant">{r.no}.</span> : null}
-            {r.level ? <i>{r.label}</i> : r.label}
+          <td
+            className="sticky left-0 min-w-[280px] bg-surface-container-lowest"
+            style={{ paddingLeft: `${0.625 + r.level * 1.25}rem` }}
+          >
+            {r.level ? <i>{r.title}</i> : r.title}
           </td>
           {r.values.map((v, i) => (
             <td key={i} className="text-right whitespace-nowrap">
@@ -206,7 +208,11 @@ export function ReportView({ report }: { report: ReportBundle }) {
 
       <Section
         icon="summarize"
-        note="Cộng số liệu các danh mục theo “Phân loại theo báo cáo tổng hợp” đã chọn trong Quản lý danh mục. Mục 3 phần thu = 3.1 + 3.2."
+        note={
+          report.templateName
+            ? `Theo ${report.templateName}. Cộng số liệu các danh mục theo “Phân loại theo báo cáo tổng hợp” đã chọn trong Quản lý danh mục.`
+            : "Chưa có mẫu báo cáo đang áp dụng – mọi số liệu nằm ở dòng “Chưa phân loại”."
+        }
         title="Tổng hợp thu – chi theo phân loại báo cáo"
       >
         <div className="overflow-x-auto rounded-xl border border-outline-variant">

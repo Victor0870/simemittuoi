@@ -75,13 +75,17 @@ export async function buildReportWorkbook(report: ReportBundle, unionName: strin
 
   // 0. Tổng hợp theo phân loại báo cáo
   const summaryRow = (r: SummaryRow): SheetRow => ({
-    values: [`${r.level ? "    " : ""}${r.no ? `${r.no}. ` : ""}${r.label}`, ...r.values, r.total, r.previousYear],
-    style: r.header ? "total" : undefined,
+    values: [`${"    ".repeat(r.level)}${r.title}`, ...r.values, r.total, r.previousYear],
+    style: r.lineType === "group" || r.lineType === "subtotal" ? "total" : undefined,
   });
   addSheet(
     wb,
     "Tổng hợp theo phân loại",
-    [unionName, `TỔNG HỢP THU – CHI NĂM ${y}`, `Theo phân loại báo cáo tổng hợp, ${periodName} · ${footnote}`],
+    [
+      unionName,
+      `TỔNG HỢP THU – CHI NĂM ${y}`,
+      `${report.templateName ? `Theo ${report.templateName}` : "Theo phân loại báo cáo tổng hợp"}, ${periodName} · ${footnote}`,
+    ],
     ["Chỉ tiêu", ...labels, `Cả năm ${y}`, `Năm ${y - 1}`],
     [
       { values: ["I. THU", ...f.income.totals, f.income.total, f.income.previousYear], style: "group" },

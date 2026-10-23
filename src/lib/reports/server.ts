@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadCategories, loadEntries, loadFunds } from "@/lib/finance/server";
 import { todayInVietnam } from "@/lib/life-events/registry";
+import { loadReportTemplate } from "@/lib/report-templates/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import type { VisitStatus } from "@/lib/visits/registry";
 import {
@@ -24,6 +25,8 @@ export type ReportBundle = {
   visits: VisitReport;
   payments: PaymentReport;
   generatedOn: string;
+  /** "Mẫu S82-TLĐ – phiên bản 1" (mẫu dùng cho bảng tổng hợp), null nếu chưa có mẫu. */
+  templateName: string | null;
 };
 
 export function parseReportParams(params: { year?: string; period?: string }, currentYear: number) {
@@ -36,10 +39,11 @@ export function parseReportParams(params: { year?: string; period?: string }, cu
 
 export async function loadReportBundle(db: SupabaseClient, year: number, granularity: Granularity): Promise<ReportBundle> {
   const today = todayInVietnam();
-  const [funds, categories, entries, visitsRes, paymentsRes] = await Promise.all([
+  const [funds, categories, entries, template, visitsRes, paymentsRes] = await Promise.all([
     loadFunds(db),
     loadCategories(db),
     loadEntries(db),
+    loadReportTemplate(db),
     db.from(CDILV_TABLE.visitRequests).select("event_type, amount, status, created_at").limit(10000),
     db.from(CDILV_TABLE.paymentRequests).select("request_date, status, total_amount").limit(10000),
   ]);
@@ -67,9 +71,10 @@ export async function loadReportBundle(db: SupabaseClient, year: number, granula
       ...visits.map((v) => v.created_date),
       ...payments.map((p) => p.request_date),
     ]),
-    finance: buildFinanceReport(year, granularity, funds, categories, entries, today),
+    finance: buildFinanceReport(year, granularity, funds, categories, entries, today, template?.active?.lines ?? []),
     visits: buildVisitReport(year, granularity, visits),
     payments: buildPaymentReport(year, granularity, payments),
     generatedOn: today,
+    templateName: template?.active ? `${template.active.title} – phiên bản ${template.active.version}` : null,
   };
 }

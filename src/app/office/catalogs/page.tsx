@@ -2,11 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CategoryCatalog } from "@/components/catalogs/CategoryCatalog";
 import { CounterpartyCatalog } from "@/components/catalogs/CounterpartyCatalog";
+import { ReportTemplateManager } from "@/components/catalogs/ReportTemplateManager";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadCategories } from "@/lib/finance/server";
+import { todayInVietnam } from "@/lib/life-events/registry";
+import { loadReportTemplate } from "@/lib/report-templates/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -15,6 +18,7 @@ const TABS = [
   { key: "counterparties", label: "Đối tượng", icon: "apartment" },
   { key: "income", label: "Danh mục thu", icon: "south_west" },
   { key: "expense", label: "Danh mục chi", icon: "north_east" },
+  { key: "templates", label: "Mẫu báo cáo", icon: "description" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -28,10 +32,12 @@ export default async function CatalogsPage({ searchParams }: PageProps) {
   if (!hasPermission(access, PERMISSIONS.catalogsManage)) redirect("/office");
 
   const db = createServiceClient();
-  const [categories, counterparties] = await Promise.all([
+  const [categories, counterparties, template] = await Promise.all([
     tab === "counterparties" ? Promise.resolve([]) : loadCategories(db),
     tab === "counterparties" ? loadCounterparties(db) : Promise.resolve([]),
+    tab === "counterparties" ? Promise.resolve(null) : loadReportTemplate(db),
   ]);
+  const active = template?.active ?? null;
 
   return (
     <div className="max-w-4xl space-y-4 pb-10">
@@ -67,8 +73,15 @@ export default async function CatalogsPage({ searchParams }: PageProps) {
       </nav>
       {tab === "counterparties" ? (
         <CounterpartyCatalog counterparties={counterparties} />
+      ) : tab === "templates" ? (
+        <ReportTemplateManager canEdit={access.isAdmin} categories={categories} template={template} today={todayInVietnam()} />
       ) : (
-        <CategoryCatalog categories={categories} kind={tab} />
+        <CategoryCatalog
+          categories={categories}
+          kind={tab}
+          templateLines={active?.lines ?? []}
+          templateName={active ? `${active.title} – phiên bản ${active.version}` : null}
+        />
       )}
     </div>
   );
