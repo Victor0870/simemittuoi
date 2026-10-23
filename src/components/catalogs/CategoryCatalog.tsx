@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { FINANCE_LIMITS, type CategoryKind, type FundCategory } from "@/lib/finance/registry";
+import { REPORT_GROUPS, REPORT_GROUP_TITLE, reportGroupLabel } from "@/lib/finance/report-groups";
 import { postCatalog } from "./post";
 
 type Props = {
@@ -16,6 +17,7 @@ type CategoryDraft = {
   kind: CategoryKind;
   code: string;
   name: string;
+  reportGroup: string;
   isActive: boolean;
   sortOrder: number;
   systemKey: string | null;
@@ -40,8 +42,19 @@ export function CategoryCatalog({ kind, categories }: Props) {
   const rows = categories.filter((c) => c.kind === kind);
   const label = kind === "income" ? "thu" : "chi";
 
+  const groups = REPORT_GROUPS[kind];
+  const unclassified = rows.filter((c) => c.is_active && !c.report_group).length;
+
   async function save() {
     if (!draft) return;
+    if (!draft.name.trim()) {
+      setError("Vui lòng nhập tên danh mục.");
+      return;
+    }
+    if (!draft.reportGroup) {
+      setError(`Vui lòng chọn ${REPORT_GROUP_TITLE.toLowerCase()}.`);
+      return;
+    }
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -87,6 +100,38 @@ export function CategoryCatalog({ kind, categories }: Props) {
           />
         </div>
       </div>
+      <div>
+        <label className={labelClass}>{REPORT_GROUP_TITLE} *</label>
+        <select
+          className={`${inputClass} ${draft.reportGroup ? "" : "text-on-surface-variant"}`}
+          value={draft.reportGroup}
+          onChange={(e) => setDraft({ ...draft, reportGroup: e.target.value })}
+        >
+          <option value="">— Chọn mục trong báo cáo tổng hợp —</option>
+          {groups
+            .filter((g) => !g.parent)
+            .map((g) =>
+              g.header ? (
+                <optgroup key={g.key} label={`${g.no}. ${g.label}`}>
+                  {groups
+                    .filter((c) => c.parent === g.key)
+                    .map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.no}. {c.label}
+                      </option>
+                    ))}
+                </optgroup>
+              ) : (
+                <option key={g.key} value={g.key}>
+                  {g.no}. {g.label}
+                </option>
+              ),
+            )}
+        </select>
+        <p className="mt-1 text-[11px] text-on-surface-variant">
+          Số liệu của danh mục được cộng vào mục này trong bảng tổng hợp của trang Báo cáo tổng hợp.
+        </p>
+      </div>
       <label className="flex items-center gap-2 text-sm font-semibold">
         <input
           checked={draft.isActive}
@@ -131,6 +176,7 @@ export function CategoryCatalog({ kind, categories }: Props) {
               kind,
               code: "",
               name: "",
+              reportGroup: "",
               isActive: true,
               sortOrder: (rows.at(-1)?.sort_order ?? 0) + 5,
               systemKey: null,
@@ -141,6 +187,12 @@ export function CategoryCatalog({ kind, categories }: Props) {
           Thêm danh mục
         </button>
       </div>
+      {unclassified ? (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Có {unclassified} danh mục đang dùng chưa chọn {REPORT_GROUP_TITLE.toLowerCase()} – số liệu của chúng sẽ nằm ở dòng
+          “Chưa phân loại” trong báo cáo. Bấm “Sửa” để chọn.
+        </div>
+      ) : null}
       {error ? (
         <div className="rounded-xl border border-error/30 bg-error-container/40 px-3 py-2 text-sm text-on-error-container">{error}</div>
       ) : null}
@@ -160,6 +212,11 @@ export function CategoryCatalog({ kind, categories }: Props) {
                     {c.code ? <span className="mr-1 text-on-surface-variant">{c.code}</span> : null}
                     {c.name}
                   </p>
+                  {c.report_group ? (
+                    <p className="text-[11px] text-on-surface-variant">Báo cáo: {reportGroupLabel(c.report_group)}</p>
+                  ) : (
+                    <p className="text-[11px] font-semibold text-amber-700">Chưa chọn {REPORT_GROUP_TITLE.toLowerCase()}</p>
+                  )}
                   {c.system_key ? <p className="text-[11px] text-sky-800">{SYSTEM_HINT[c.system_key]}</p> : null}
                 </div>
                 <button
@@ -171,6 +228,7 @@ export function CategoryCatalog({ kind, categories }: Props) {
                       kind: c.kind,
                       code: c.code ?? "",
                       name: c.name,
+                      reportGroup: c.report_group ?? "",
                       isActive: c.is_active,
                       sortOrder: c.sort_order,
                       systemKey: c.system_key,

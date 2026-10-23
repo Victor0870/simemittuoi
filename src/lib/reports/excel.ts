@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { formatDateVi } from "@/lib/members/profile-shared";
-import { FUND_AMOUNT_KEYS, periodLabels, splitFundTotals, sumFunds } from "./build";
+import { FUND_AMOUNT_KEYS, periodLabels, splitFundTotals, sumFunds, type SummaryRow } from "./build";
 import type { ReportBundle } from "./server";
 
 const MONEY = "#,##0;[Red]-#,##0;\"-\"";
@@ -71,8 +71,32 @@ export async function buildReportWorkbook(report: ReportBundle, unionName: strin
   const periodName = report.granularity === "month" ? "theo tháng" : "theo quý";
   const footnote = `Số liệu lấy ngày ${formatDateVi(report.generatedOn)}`;
 
-  // 1. Thu chi theo danh mục
   const f = report.finance;
+
+  // 0. Tổng hợp theo phân loại báo cáo
+  const summaryRow = (r: SummaryRow): SheetRow => ({
+    values: [`${r.level ? "    " : ""}${r.no ? `${r.no}. ` : ""}${r.label}`, ...r.values, r.total, r.previousYear],
+    style: r.header ? "total" : undefined,
+  });
+  addSheet(
+    wb,
+    "Tổng hợp theo phân loại",
+    [unionName, `TỔNG HỢP THU – CHI NĂM ${y}`, `Theo phân loại báo cáo tổng hợp, ${periodName} · ${footnote}`],
+    ["Chỉ tiêu", ...labels, `Cả năm ${y}`, `Năm ${y - 1}`],
+    [
+      { values: ["I. THU", ...f.income.totals, f.income.total, f.income.previousYear], style: "group" },
+      ...f.summary.income.map(summaryRow),
+      { values: ["II. CHI", ...f.expense.totals, f.expense.total, f.expense.previousYear], style: "group" },
+      ...f.summary.expense.map(summaryRow),
+      {
+        values: ["CHÊNH LỆCH THU – CHI", ...f.net, f.income.total - f.expense.total, f.income.previousYear - f.expense.previousYear],
+        style: "total",
+      },
+    ],
+    [56, ...labels.map(() => (report.granularity === "month" ? 12 : 15)), 16, 16],
+  );
+
+  // 1. Thu chi theo danh mục
   const catRow = (r: { code: string | null; name: string; values: number[]; total: number; previousYear: number }) => ({
     values: [r.code ? `${r.code} – ${r.name}` : r.name, ...r.values, r.total, r.previousYear] as Cell[],
   });

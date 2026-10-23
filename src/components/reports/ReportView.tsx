@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
-import { FUND_AMOUNT_KEYS, periodLabels, splitFundTotals, sumFunds, type CategoryGroup } from "@/lib/reports/build";
+import {
+  FUND_AMOUNT_KEYS,
+  UNCLASSIFIED_KEY,
+  periodLabels,
+  splitFundTotals,
+  sumFunds,
+  type CategoryGroup,
+  type SummaryRow,
+} from "@/lib/reports/build";
 import type { ReportBundle } from "@/lib/reports/server";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -41,6 +49,43 @@ function CategoryRows({ group, label, tone }: { group: CategoryGroup; label: str
           <td className="sticky left-0 min-w-[220px] bg-surface-container-lowest">
             {r.code ? <span className="mr-1 text-on-surface-variant">{r.code}</span> : null}
             {r.name}
+          </td>
+          {r.values.map((v, i) => (
+            <td key={i} className="text-right whitespace-nowrap">
+              {num(v)}
+            </td>
+          ))}
+          <td className="text-right font-semibold whitespace-nowrap">{num(r.total)}</td>
+          <td className="text-right whitespace-nowrap text-on-surface-variant">{num(r.previousYear)}</td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function SummaryRows({ rows, group, label, tone }: { rows: SummaryRow[]; group: CategoryGroup; label: string; tone: string }) {
+  return (
+    <>
+      <tr className={`border-t border-outline-variant bg-surface-container-low font-bold ${tone} ${tdClass}`}>
+        <td className="sticky left-0 bg-surface-container-low">{label}</td>
+        {group.totals.map((v, i) => (
+          <td key={i} className="text-right whitespace-nowrap">
+            {num(v)}
+          </td>
+        ))}
+        <td className="text-right whitespace-nowrap">{num(group.total)}</td>
+        <td className="text-right whitespace-nowrap text-on-surface-variant">{num(group.previousYear)}</td>
+      </tr>
+      {rows.map((r) => (
+        <tr
+          key={r.key}
+          className={`border-t border-outline-variant ${tdClass} ${r.header ? "font-semibold" : ""} ${
+            r.key === UNCLASSIFIED_KEY ? "text-amber-800" : ""
+          }`}
+        >
+          <td className={`sticky left-0 min-w-[260px] bg-surface-container-lowest ${r.level ? "pl-7" : ""}`}>
+            {r.no ? <span className="mr-1 text-on-surface-variant">{r.no}.</span> : null}
+            {r.level ? <i>{r.label}</i> : r.label}
           </td>
           {r.values.map((v, i) => (
             <td key={i} className="text-right whitespace-nowrap">
@@ -156,6 +201,33 @@ export function ReportView({ report }: { report: ReportBundle }) {
             </span>
             <span>Cột phải: chênh lệch thu – chi</span>
           </p>
+        </div>
+      </Section>
+
+      <Section
+        icon="summarize"
+        note="Cộng số liệu các danh mục theo “Phân loại theo báo cáo tổng hợp” đã chọn trong Quản lý danh mục. Mục 3 phần thu = 3.1 + 3.2."
+        title="Tổng hợp thu – chi theo phân loại báo cáo"
+      >
+        <div className="overflow-x-auto rounded-xl border border-outline-variant">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[#D9F2EC] text-[#173A67]">
+              <tr className={thClass}>
+                <th className="sticky left-0 bg-[#D9F2EC]">Chỉ tiêu</th>
+                {labels.map((l) => (
+                  <th key={l} className="text-right">
+                    {l}
+                  </th>
+                ))}
+                <th className="text-right">Cả năm {year}</th>
+                <th className="text-right">Năm {year - 1}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <SummaryRows group={f.income} label="I. THU" rows={f.summary.income} tone="text-emerald-800" />
+              <SummaryRows group={f.expense} label="II. CHI" rows={f.summary.expense} tone="text-rose-800" />
+            </tbody>
+          </table>
         </div>
       </Section>
 

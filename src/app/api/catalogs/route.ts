@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { parseCounterpartyInput } from "@/lib/catalogs/registry";
 import { FINANCE_LIMITS } from "@/lib/finance/registry";
+import { REPORT_GROUP_TITLE, isReportGroup } from "@/lib/finance/report-groups";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -18,7 +19,7 @@ function bad(message: string, status = 400) {
 
 /**
  * Quản lý danh mục. Body:
- *  { action: "saveCategory", category: { id?, kind, code, name, isActive, sortOrder } }
+ *  { action: "saveCategory", category: { id?, kind, code, name, reportGroup, isActive, sortOrder } }
  *  { action: "saveCounterparty", counterparty: { id?, code, kind, name, address, taxCode, bankAccountNo, bankName, isActive } }
  */
 export async function POST(request: NextRequest) {
@@ -38,24 +39,31 @@ export async function POST(request: NextRequest) {
       const isActive = raw.isActive !== false;
       if (!name || name.length > FINANCE_LIMITS.categoryName) return bad("Tên danh mục không hợp lệ.");
       if ((code?.length ?? 0) > FINANCE_LIMITS.categoryCode) return bad("Mã danh mục tối đa 20 ký tự.");
+      const missingGroup = `Vui lòng chọn ${REPORT_GROUP_TITLE.toLowerCase()}.`;
 
       if (id) {
-        const { data: current } = await db.from(CDILV_TABLE.fundCategories).select("system_key").eq("id", id).maybeSingle();
+        const { data: current } = await db
+          .from(CDILV_TABLE.fundCategories)
+          .select("kind, system_key")
+          .eq("id", id)
+          .maybeSingle();
         if (!current) return bad("Không tìm thấy danh mục.", 404);
+        if (!isReportGroup(current.kind, raw.reportGroup)) return bad(missingGroup);
         if (current.system_key === "payment_default" && !isActive) {
           return bad("Danh mục này dùng khi tự ghi sổ đề nghị thanh toán nên không ẩn được (có thể đổi tên).");
         }
         const { error } = await db
           .from(CDILV_TABLE.fundCategories)
-          .update({ name, code, sort_order: sortOrder, is_active: isActive, updated_at: now })
+          .update({ name, code, report_group: raw.reportGroup, sort_order: sortOrder, is_active: isActive, updated_at: now })
           .eq("id", id);
         if (error) throw error;
       } else {
         const kind = raw.kind === "income" ? "income" : raw.kind === "expense" ? "expense" : null;
         if (!kind) return bad("Loại danh mục không hợp lệ.");
+        if (!isReportGroup(kind, raw.reportGroup)) return bad(missingGroup);
         const { error } = await db
           .from(CDILV_TABLE.fundCategories)
-          .insert({ kind, name, code, sort_order: sortOrder, is_active: isActive });
+          .insert({ kind, name, code, report_group: raw.reportGroup, sort_order: sortOrder, is_active: isActive });
         if (error) throw error;
       }
       return NextResponse.json({ success: true });

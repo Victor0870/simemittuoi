@@ -7,7 +7,7 @@ import type { Fund, FundCategory, FundEntry } from "./registry";
 
 const FUND_COLUMNS =
   "id, kind, name, bank_account_no, bank_name, interest_rate, maturity_date, opening_balance, opening_date, is_active, sort_order";
-const CATEGORY_COLUMNS = "id, kind, code, name, system_key, sort_order, is_active";
+const CATEGORY_COLUMNS = "id, kind, code, name, system_key, report_group, sort_order, is_active";
 const ENTRY_COLUMNS =
   "id, code, entry_date, kind, fund_id, to_fund_id, category_id, amount, description, counterparty, document_no, payment_request_id, status, void_reason, created_at";
 

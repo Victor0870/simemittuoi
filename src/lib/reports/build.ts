@@ -2,7 +2,15 @@
  * Báo cáo tổng hợp (Bước 9): tính từ dữ liệu sổ quỹ, đề nghị thăm hỏi, đề nghị thanh toán.
  * Chỉ số liệu gộp – không có tên / thông tin cá nhân đoàn viên.
  */
-import { compareEntries, type Fund, type FundCategory, type FundEntry, type FundKind } from "@/lib/finance/registry";
+import {
+  compareEntries,
+  type CategoryKind,
+  type Fund,
+  type FundCategory,
+  type FundEntry,
+  type FundKind,
+} from "@/lib/finance/registry";
+import { REPORT_GROUPS } from "@/lib/finance/report-groups";
 import { LIFE_EVENT_TYPES } from "@/lib/life-events/registry";
 import { VISIT_STATUS_LABEL, type VisitStatus } from "@/lib/visits/registry";
 
@@ -33,6 +41,7 @@ export type CategoryRow = {
   id: string;
   code: string | null;
   name: string;
+  reportGroup: string | null;
   values: number[];
   total: number;
   previousYear: number;
@@ -57,9 +66,53 @@ export type FundYearRow = {
   closing: number;
 };
 
+/** Dòng của bảng tổng hợp theo phân loại báo cáo (REPORT_GROUPS). */
+export type SummaryRow = {
+  key: string;
+  no: string;
+  label: string;
+  /** 1 = mục con (VD 3.1 DN hỗ trợ), cộng vào dòng nhóm cha. */
+  level: 0 | 1;
+  header: boolean;
+  values: number[];
+  total: number;
+  previousYear: number;
+};
+
+export const UNCLASSIFIED_KEY = "_none";
+
+function buildSummary(kind: CategoryKind, group: CategoryGroup, n: number): SummaryRow[] {
+  const defs = REPORT_GROUPS[kind];
+  const blank = (key: string, no: string, label: string, level: 0 | 1, header: boolean): SummaryRow => ({
+    key,
+    no,
+    label,
+    level,
+    header,
+    values: zeros(n),
+    total: 0,
+    previousYear: 0,
+  });
+  const rows = new Map(defs.map((d) => [d.key, blank(d.key, d.no, d.label, d.parent ? 1 : 0, Boolean(d.header))]));
+  const none = blank(UNCLASSIFIED_KEY, "", "Chưa phân loại", 0, false);
+  const add = (target: SummaryRow, r: CategoryRow) => {
+    r.values.forEach((v, i) => (target.values[i] += v));
+    target.total += r.total;
+    target.previousYear += r.previousYear;
+  };
+  for (const r of group.rows) {
+    const def = defs.find((d) => d.key === r.reportGroup && !d.header);
+    add((def && rows.get(def.key)) || none, r);
+    const parent = def?.parent ? rows.get(def.parent) : undefined;
+    if (parent) add(parent, r);
+  }
+  return [...rows.values(), ...(none.total || none.previousYear ? [none] : [])];
+}
+
 export type FinanceReport = {
   income: CategoryGroup;
   expense: CategoryGroup;
+  summary: { income: SummaryRow[]; expense: SummaryRow[] };
   net: number[];
   funds: FundYearRow[];
   /** Ngày chốt số dư cuối kỳ (hết năm, hoặc hôm nay nếu là năm hiện tại). */
@@ -79,7 +132,15 @@ function buildGroup(
   const map = new Map<string, CategoryRow>();
   for (const c of categories) {
     if (c.kind !== kind) continue;
-    map.set(c.id, { id: c.id, code: c.code, name: c.name, values: zeros(n), total: 0, previousYear: 0 });
+    map.set(c.id, {
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      reportGroup: c.report_group,
+      values: zeros(n),
+      total: 0,
+      previousYear: 0,
+    });
   }
   for (const e of entries) {
     if (e.status !== "posted" || e.kind !== kind || !e.category_id) continue;
@@ -163,6 +224,10 @@ export function buildFinanceReport(
   return {
     income,
     expense,
+    summary: {
+      income: buildSummary("income", income, periodCount(g)),
+      expense: buildSummary("expense", expense, periodCount(g)),
+    },
     net: income.totals.map((v, i) => v - expense.totals[i]),
     funds: fundRows,
     closingDate,
