@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { toAccountHolderName } from "@/lib/bank-transfer";
 import {
   COUNTERPARTY_KIND_LABEL,
   COUNTERPARTY_LIMITS,
@@ -106,7 +107,18 @@ export function CounterpartyCatalog({ counterparties }: Props) {
     setExporting(true);
     try {
       const XLSX = await import("xlsx");
-      const header = ["STT", "Mã số", "Loại", "Tên đối tượng", "Địa chỉ", "Mã số thuế", "Số tài khoản", "Ngân hàng", "Trạng thái"];
+      const header = [
+        "STT",
+        "Mã số",
+        "Loại",
+        "Tên đối tượng",
+        "Địa chỉ",
+        "Mã số thuế",
+        "Tên chủ tài khoản",
+        "Số tài khoản",
+        "Ngân hàng",
+        "Trạng thái",
+      ];
       const data = rows.map((c, i) => [
         i + 1,
         c.code,
@@ -114,13 +126,14 @@ export function CounterpartyCatalog({ counterparties }: Props) {
         c.name,
         c.address ?? "",
         c.tax_code ?? "",
+        c.bank_account_no ? toAccountHolderName(c.name) : "",
         c.bank_account_no ?? "",
         c.bank_name ?? "",
         c.is_active ? "Đang dùng" : "Ngừng dùng",
       ]);
       const sheet = XLSX.utils.aoa_to_sheet([["DANH MỤC ĐỐI TƯỢNG"], [], header, ...data]);
       for (let r = 3; r < 3 + data.length; r++) {
-        for (const c of [5, 6]) {
+        for (const c of [5, 7]) {
           const cell = sheet[XLSX.utils.encode_cell({ r, c })];
           if (cell) {
             cell.t = "s";
@@ -128,7 +141,7 @@ export function CounterpartyCatalog({ counterparties }: Props) {
           }
         }
       }
-      sheet["!cols"] = [6, 10, 16, 40, 44, 16, 20, 28, 12].map((wch) => ({ wch }));
+      sheet["!cols"] = [6, 10, 16, 40, 44, 16, 40, 20, 28, 12].map((wch) => ({ wch }));
       const book = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(book, sheet, "Doi tuong");
       XLSX.writeFile(book, "danh_muc_doi_tuong.xlsx");

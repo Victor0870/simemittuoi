@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { toAccountHolderName } from "@/lib/bank-transfer";
 import { formatVnd, payableItems, rewardTransferText, rowTotal } from "@/lib/polls/reward-money";
 import type { ClosedPollOption, PollRewardList } from "@/lib/polls/rewards-server";
 
@@ -28,6 +29,7 @@ export function RewardPayoutList({ polls, list }: Props) {
       const items = payableItems(r.items, list.money);
       return {
         ...r,
+        holder: toAccountHolderName(r.fullName),
         transfer: rewardTransferText(r.items, list.money, list.pollTitle),
         detail: items.map((i) => `${i.label} (${formatVnd(list.money[i.kind])}đ)`).join("; "),
         total: rowTotal(r.items, list.money),
@@ -47,11 +49,21 @@ export function RewardPayoutList({ polls, list }: Props) {
     setExporting(true);
     try {
       const XLSX = await import("xlsx");
-      const header = ["STT", "Mã nhân viên", "Họ tên", "Số tài khoản", "Ngân hàng", "Nội dung chuyển khoản", "Tổng tiền (VNĐ)"];
+      const header = [
+        "STT",
+        "Mã nhân viên",
+        "Họ tên",
+        "Tên chủ tài khoản",
+        "Số tài khoản",
+        "Ngân hàng",
+        "Nội dung chuyển khoản",
+        "Tổng tiền (VNĐ)",
+      ];
       const data = rows.map((r, idx) => [
         idx + 1,
         r.employeeCode,
         r.fullName,
+        r.holder,
         r.bankAccountNo,
         r.bankName,
         r.transfer,
@@ -64,7 +76,7 @@ export function RewardPayoutList({ polls, list }: Props) {
         [],
         header,
         ...data,
-        ["", "", "TỔNG CỘNG", "", "", "", total],
+        ["", "", "TỔNG CỘNG", "", "", "", "", total],
       ]);
       const firstDataRow = 5;
       const totalCol = header.length - 1;
@@ -73,7 +85,7 @@ export function RewardPayoutList({ polls, list }: Props) {
         if (cell) cell.z = "#,##0";
       }
       sheet["!merges"] = [0, 1, 2].map((r) => ({ s: { r, c: 0 }, e: { r, c: totalCol } }));
-      sheet["!cols"] = [6, 14, 28, 22, 26, 70, 16].map((wch) => ({ wch }));
+      sheet["!cols"] = [6, 14, 28, 28, 22, 26, 70, 16].map((wch) => ({ wch }));
       const book = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(book, sheet, "Nhan thuong");
       XLSX.writeFile(book, `danh_sach_nhan_thuong_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -194,7 +206,10 @@ export function RewardPayoutList({ polls, list }: Props) {
                   >
                     <td className="text-center">{idx + 1}</td>
                     <td className="whitespace-nowrap">{r.employeeCode}</td>
-                    <td className="font-semibold text-[#173A67] print:text-black">{r.fullName}</td>
+                    <td className="font-semibold text-[#173A67] print:text-black">
+                      {r.fullName}
+                      <span className="block text-[11px] font-normal text-on-surface-variant print:hidden">{r.holder}</span>
+                    </td>
                     <td className="whitespace-nowrap">
                       {r.bankAccountNo || <span className="text-amber-700 print:hidden">Chưa khai</span>}
                     </td>

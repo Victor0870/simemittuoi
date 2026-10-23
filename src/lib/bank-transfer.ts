@@ -17,6 +17,11 @@ export function toTransferText(value: string): string {
     .replace(/^ /, "");
 }
 
+/** Tên chủ tài khoản theo kiểu ngân hàng: không dấu, viết hoa (VD "Vũ Thị Mai" → "VU THI MAI"). */
+export function toAccountHolderName(name: string): string {
+  return toTransferText(name).trim().toUpperCase();
+}
+
 /** Cắt nội dung về tối đa `max` ký tự, ưu tiên cắt ở ranh giới từ. */
 export function fitTransferText(value: string, max = TRANSFER_TEXT_MAX): string {
   const text = toTransferText(value).trim();
