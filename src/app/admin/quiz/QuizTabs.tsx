@@ -2,14 +2,27 @@ import Link from "next/link";
 
 export type QuizTabKey = "settings" | "history" | "questions";
 
-export const QUIZ_TABS: { key: QuizTabKey; href: string; label: string }[] = [
-  { key: "settings", href: "/admin/quiz/settings", label: "Cài đặt" },
-  { key: "history", href: "/admin/quiz/history", label: "Lịch sử thi" },
-  { key: "questions", href: "/admin/quiz/questions", label: "Ngân hàng câu hỏi" },
+export const QUIZ_TABS: { key: QuizTabKey; label: string }[] = [
+  { key: "settings", label: "Cài đặt" },
+  { key: "history", label: "Lịch sử thi" },
+  { key: "questions", label: "Ngân hàng câu hỏi" },
 ];
 
+/** Đường dẫn trang quản trị của một chương trình trắc nghiệm (hoặc trang con của nó). */
+export function quizProgramHref(programId: string, section?: QuizTabKey) {
+  return `/admin/quiz/${programId}${section ? `/${section}` : ""}`;
+}
+
 /** Tiêu đề chung của các trang Trắc nghiệm tuần + thanh tab tới 3 trang con. */
-export function QuizTabs({ active, sessionsError }: { active?: QuizTabKey; sessionsError?: string | null }) {
+export function QuizTabs({
+  programId,
+  active,
+  sessionsError,
+}: {
+  programId: string;
+  active?: QuizTabKey;
+  sessionsError?: string | null;
+}) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -39,7 +52,7 @@ export function QuizTabs({ active, sessionsError }: { active?: QuizTabKey; sessi
                   ? "bg-[#4a6b82] text-white shadow-sm"
                   : "bg-[#ecf4ff] text-[#173A67] hover:bg-[#d2dfe9]"
               }`}
-              href={tab.href}
+              href={quizProgramHref(programId, tab.key)}
             >
               {tab.label}
             </Link>

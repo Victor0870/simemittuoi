@@ -129,7 +129,7 @@ export async function DELETE(request: NextRequest) {
     if (attemptId) {
       const { data: attempt, error: fetchErr } = await db
         .from(CDILV_TABLE.quizAttempts)
-        .select("id, session_id, user_id, attempt_no")
+        .select("id, program_id, session_id, user_id, attempt_no")
         .eq("id", attemptId)
         .maybeSingle();
 
@@ -173,7 +173,7 @@ export async function DELETE(request: NextRequest) {
       }
 
       // Cập nhật lại số người tham gia và đúng hết của session
-      const settings = await loadQuizSettings(db);
+      const settings = await loadQuizSettings(db, attempt.program_id);
       const { ranking, participantsCount } = await computeSessionRanking(db, attempt.session_id, settings);
       await db
         .from(CDILV_TABLE.quizSessions)
@@ -196,6 +196,16 @@ export async function DELETE(request: NextRequest) {
     }
 
     if (sessionId && userId) {
+      const { data: session, error: sErr } = await db
+        .from(CDILV_TABLE.quizSessions)
+        .select("program_id")
+        .eq("id", sessionId)
+        .maybeSingle();
+      if (sErr) throw sErr;
+      if (!session) {
+        return NextResponse.json({ error: "Không tìm thấy đợt thi." }, { status: 404 });
+      }
+
       // Tìm các lượt thi của user trong session này để thu hồi điểm
       const { data: userAttempts } = await db
         .from(CDILV_TABLE.quizAttempts)
@@ -221,7 +231,7 @@ export async function DELETE(request: NextRequest) {
         .eq("user_id", userId);
 
       // Cập nhật session stats
-      const settings = await loadQuizSettings(db);
+      const settings = await loadQuizSettings(db, session.program_id);
       const { ranking, participantsCount } = await computeSessionRanking(db, sessionId, settings);
       await db
         .from(CDILV_TABLE.quizSessions)

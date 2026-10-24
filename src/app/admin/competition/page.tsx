@@ -57,8 +57,8 @@ export default async function CompetitionHubPage() {
     },
     {
       href: "/admin/quiz",
-      title: "Trắc nghiệm tuần",
-      description: "Ngân hàng câu hỏi, lịch mở thi, tổng kết cộng điểm và bài viết kết quả.",
+      title: "Trắc nghiệm",
+      description: "Các chương trình thi trắc nghiệm: ngân hàng câu hỏi, lịch mở thi, tổng kết cộng điểm và bài viết kết quả.",
       icon: "quiz",
       tint: "surface",
       allowed: access.isAdmin,

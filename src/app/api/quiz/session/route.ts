@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import { ensureCurrentSession, loadQuizSettings } from "@/lib/quiz";
 import { requireQuizAdmin } from "@/lib/quiz-access";
-import { formatQuizDate, formatQuizTime } from "@/lib/quiz-shared";
+import { formatQuizDate, formatQuizTime, WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -16,9 +16,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const action = body.action;
     const writer = createServiceClient();
-    const settings = await loadQuizSettings(writer);
+    const programId = WEEKLY_QUIZ_PROGRAM_ID;
+    const settings = await loadQuizSettings(writer, programId);
     const now = new Date();
-    const current = await ensureCurrentSession(writer, settings, now);
+    const current = await ensureCurrentSession(writer, programId, settings, now);
 
     if (action === "open") {
       if (current) {
@@ -34,6 +35,7 @@ export async function POST(request: NextRequest) {
       const startsAt = now.toISOString();
       const endsAt = new Date(now.getTime() + minutes * 60_000).toISOString();
       const { error } = await writer.from(CDILV_TABLE.quizSessions).insert({
+        program_id: programId,
         session_key: `manual-${now.getTime()}`,
         title: `Thi trắc nghiệm ${formatQuizDate(startsAt)} (${formatQuizTime(startsAt)})`,
         mode: "manual",

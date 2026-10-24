@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
-import { finalizeQuizSession, loadQuizSettings, QUIZ_SUBMIT_GRACE_MS } from "@/lib/quiz";
+import {
+  finalizeQuizSession,
+  loadQuizSettings,
+  QUIZ_SESSION_COLUMNS,
+  QUIZ_SUBMIT_GRACE_MS,
+} from "@/lib/quiz";
 import { requireQuizAdmin } from "@/lib/quiz-access";
 import { QUIZ_TIMEZONE, type QuizSessionRow } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -20,9 +25,7 @@ export async function POST(request: NextRequest) {
     const writer = createServiceClient();
     const { data: session, error } = await writer
       .from(CDILV_TABLE.quizSessions)
-      .select(
-        "id, session_key, title, mode, starts_at, ends_at, finalized_at, result_post_id, participants_count, winners_count",
-      )
+      .select(QUIZ_SESSION_COLUMNS)
       .eq("id", sessionId)
       .maybeSingle();
     if (error) throw error;
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const settings = await loadQuizSettings(writer);
+    const settings = await loadQuizSettings(writer, session.program_id);
     const lastSubmitAt =
       new Date(session.ends_at).getTime() + settings.time_limit_seconds * 1000 + QUIZ_SUBMIT_GRACE_MS;
     if (lastSubmitAt > Date.now()) {

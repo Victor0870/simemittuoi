@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireQuizAdmin } from "@/lib/quiz-access";
+import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -74,20 +75,23 @@ export async function PATCH(request: NextRequest) {
     const writer = createServiceClient();
     const { error } = await writer
       .from(CDILV_TABLE.quizSettings)
-      .upsert({
-        id: 1,
-        schedule_mode: scheduleMode,
-        schedule_weekday: weekday,
-        start_time: startTime,
-        end_time: endTime,
-        ...numbers,
-        auto_finalize: body.auto_finalize !== false,
-        result_post_title: postTitle || null,
-        result_post_template: postTemplate || null,
-        result_post_publish: body.result_post_publish !== false,
-        updated_by: userId,
-        updated_at: new Date().toISOString(),
-      });
+      .upsert(
+        {
+          program_id: WEEKLY_QUIZ_PROGRAM_ID,
+          schedule_mode: scheduleMode,
+          schedule_weekday: weekday,
+          start_time: startTime,
+          end_time: endTime,
+          ...numbers,
+          auto_finalize: body.auto_finalize !== false,
+          result_post_title: postTitle || null,
+          result_post_template: postTemplate || null,
+          result_post_publish: body.result_post_publish !== false,
+          updated_by: userId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "program_id" },
+      );
     if (error) throw error;
 
     revalidatePath("/admin/quiz");

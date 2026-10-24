@@ -2,7 +2,7 @@ import { QuizLeaderboard } from "@/components/quiz/QuizLeaderboard";
 import { QuizPlayClient } from "@/components/quiz/QuizPlayClient";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { computeSessionRanking, getDisplaySession, getQuizStatus, loadQuizSettings } from "@/lib/quiz";
-import { describePointRules } from "@/lib/quiz-shared";
+import { describePointRules, WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -16,7 +16,8 @@ export default async function QuizPage() {
 
   const db = createServiceClient();
   // Chỉ đọc cấu hình, chạy song song với hồ sơ và getQuizStatus (có ghi phiên thi)
-  const settingsPromise = loadQuizSettings(db);
+  const programId = WEEKLY_QUIZ_PROGRAM_ID;
+  const settingsPromise = loadQuizSettings(db, programId);
   settingsPromise.catch(() => {});
 
   let isApproved = false;
@@ -31,9 +32,9 @@ export default async function QuizPage() {
     isAdmin = me?.role === "admin" && isApproved;
   }
 
-  const status = await getQuizStatus(db, isApproved && userId ? userId : null);
+  const status = await getQuizStatus(db, programId, isApproved && userId ? userId : null);
   const settings = await settingsPromise;
-  const displaySession = await getDisplaySession(db);
+  const displaySession = await getDisplaySession(db, programId);
   const board = displaySession
     ? await computeSessionRanking(db, displaySession.id, settings)
     : null;

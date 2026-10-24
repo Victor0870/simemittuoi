@@ -6,6 +6,7 @@ import {
   selectAllRows,
 } from "@/lib/quiz";
 import { requireQuizMember } from "@/lib/quiz-access";
+import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -34,9 +35,10 @@ export async function POST() {
     if (response) return response;
 
     const db = createServiceClient();
-    const settings = await loadQuizSettings(db);
+    const programId = WEEKLY_QUIZ_PROGRAM_ID;
+    const settings = await loadQuizSettings(db, programId);
     const now = new Date();
-    const session = await ensureCurrentSession(db, settings, now);
+    const session = await ensureCurrentSession(db, programId, settings, now);
     if (!session) {
       return NextResponse.json(
         { error: "Sự kiện thi trắc nghiệm hiện chưa mở." },
@@ -73,7 +75,12 @@ export async function POST() {
 
       const allIds = (
         await selectAllRows<{ id: string }>((from, to) =>
-          db.from(CDILV_TABLE.quizQuestions).select("id").order("id").range(from, to),
+          db
+            .from(CDILV_TABLE.quizQuestions)
+            .select("id")
+            .eq("program_id", programId)
+            .order("id")
+            .range(from, to),
         )
       ).map((q) => q.id);
       const n = settings.questions_per_attempt;
@@ -94,6 +101,7 @@ export async function POST() {
       const { data: qs, error: qErr } = await db
         .from(CDILV_TABLE.quizQuestions)
         .select("id, correct_option")
+        .eq("program_id", programId)
         .in("id", picked);
       if (qErr) throw qErr;
       const correctById = new Map((qs ?? []).map((q) => [q.id, q.correct_option as number]));
@@ -107,6 +115,7 @@ export async function POST() {
       const { data: inserted, error: insErr } = await db
         .from(CDILV_TABLE.quizAttempts)
         .insert({
+          program_id: programId,
           session_id: session.id,
           user_id: userId,
           attempt_no: attempts.length + 1,

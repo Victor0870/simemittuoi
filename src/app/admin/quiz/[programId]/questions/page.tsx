@@ -1,0 +1,19 @@
+import { AdminQuizQuestions } from "@/components/admin/AdminQuizQuestions";
+import { QuizTabs } from "../../QuizTabs";
+import { loadQuizData, requireQuizProgramPage } from "../../loadQuizData";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export default async function AdminQuizQuestionsPage({ params }: { params: Promise<{ programId: string }> }) {
+  const { programId } = await params;
+  const { db, program } = await requireQuizProgramPage(programId, "questions");
+  const { questions, sessionsError } = await loadQuizData(db, program.id);
+
+  return (
+    <div className="space-y-8 pb-10">
+      <QuizTabs active="questions" programId={program.id} sessionsError={sessionsError?.message ?? null} />
+      <AdminQuizQuestions questions={questions} />
+    </div>
+  );
+}

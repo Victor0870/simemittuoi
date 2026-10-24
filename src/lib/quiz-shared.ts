@@ -2,6 +2,17 @@
 
 export const QUIZ_TIMEZONE = "Asia/Ho_Chi_Minh";
 
+/** Chương trình "Trắc nghiệm tuần" (id cố định trong supabase/migration_quiz_programs.sql). */
+export const WEEKLY_QUIZ_PROGRAM_ID = "3f0e9a4c-2b1d-4c7e-8a5f-6d2b1c0e7a01";
+
+export type QuizProgramRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+};
+
 export const WEEKDAY_LABELS = [
   "Chủ nhật",
   "Thứ 2",
@@ -44,6 +55,7 @@ export type QuizQuestionRow = {
 
 export type QuizSessionRow = {
   id: string;
+  program_id: string;
   session_key: string;
   title: string;
   mode: "auto" | "manual";

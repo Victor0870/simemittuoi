@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     const { data: attempt, error } = await db
       .from(CDILV_TABLE.quizAttempts)
       .select(
-        "id, session_id, user_id, attempt_no, correct_options, total_questions, status, started_at, deadline_at",
+        "id, program_id, session_id, user_id, attempt_no, correct_options, total_questions, status, started_at, deadline_at",
       )
       .eq("id", attemptId)
       .maybeSingle();
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     if (updErr) throw updErr;
     if (!updated) return NextResponse.json({ error: "Lượt thi này đã được nộp." }, { status: 400 });
 
-    const settings = await loadQuizSettings(db);
+    const settings = await loadQuizSettings(db, attempt.program_id);
     const attemptPoints = !late ? Number(settings.points_per_attempt ?? 2) : 0;
 
     if (attemptPoints > 0) {

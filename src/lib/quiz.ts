@@ -7,6 +7,7 @@ import {
   formatQuizDate,
   formatQuizDuration,
   pointsForRank,
+  type QuizProgramRow,
   type QuizRankingRow,
   type QuizSessionRow,
   type QuizSettings,
@@ -19,8 +20,31 @@ const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 /** Thời gian cho phép nộp trễ so với hạn (bù độ trễ mạng). */
 export const QUIZ_SUBMIT_GRACE_MS = 15_000;
 
-const SESSION_COLUMNS =
-  "id, session_key, title, mode, starts_at, ends_at, finalized_at, result_post_id, participants_count, winners_count";
+export const QUIZ_SESSION_COLUMNS =
+  "id, program_id, session_key, title, mode, starts_at, ends_at, finalized_at, result_post_id, participants_count, winners_count";
+
+const PROGRAM_COLUMNS = "id, name, description, is_active, created_at";
+
+export async function loadQuizPrograms(db: SupabaseClient): Promise<QuizProgramRow[]> {
+  const { data, error } = await db
+    .from(CDILV_TABLE.quizPrograms)
+    .select(PROGRAM_COLUMNS)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as QuizProgramRow[];
+}
+
+export async function loadQuizProgram(db: SupabaseClient, programId: string): Promise<QuizProgramRow | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(programId)) return null;
+  const { data, error } = await db
+    .from(CDILV_TABLE.quizPrograms)
+    .select(PROGRAM_COLUMNS)
+    .eq("id", programId)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as QuizProgramRow | null) ?? null;
+}
 
 /** Đọc hết các dòng theo trang (PostgREST giới hạn 1000 dòng mỗi lần). */
 export async function selectAllRows<T>(
@@ -37,11 +61,11 @@ export async function selectAllRows<T>(
   }
 }
 
-export async function loadQuizSettings(db: SupabaseClient): Promise<QuizSettings> {
+export async function loadQuizSettings(db: SupabaseClient, programId: string): Promise<QuizSettings> {
   const { data, error } = await db
     .from(CDILV_TABLE.quizSettings)
     .select("*")
-    .eq("id", 1)
+    .eq("program_id", programId)
     .maybeSingle();
   if (error) throw error;
   return { ...DEFAULT_QUIZ_SETTINGS, ...(data ?? {}) } as QuizSettings;
@@ -104,6 +128,7 @@ export function nextAutoStart(settings: QuizSettings, now: Date): Date | null {
 /** Tạo đợt thi tự động (nếu đang trong khung giờ) và trả về đợt thi đang mở. */
 export async function ensureCurrentSession(
   db: SupabaseClient,
+  programId: string,
   settings: QuizSettings,
   now = new Date(),
 ): Promise<QuizSessionRow | null> {
@@ -112,13 +137,14 @@ export async function ensureCurrentSession(
     if (win) {
       const { error } = await db.from(CDILV_TABLE.quizSessions).upsert(
         {
+          program_id: programId,
           session_key: win.key,
           title: win.title,
           mode: "auto",
           starts_at: win.startsAt.toISOString(),
           ends_at: win.endsAt.toISOString(),
         },
-        { onConflict: "session_key", ignoreDuplicates: true },
+        { onConflict: "program_id,session_key", ignoreDuplicates: true },
       );
       if (error) throw error;
     }
@@ -127,7 +153,8 @@ export async function ensureCurrentSession(
   const nowIso = now.toISOString();
   const { data, error } = await db
     .from(CDILV_TABLE.quizSessions)
-    .select(SESSION_COLUMNS)
+    .select(QUIZ_SESSION_COLUMNS)
+    .eq("program_id", programId)
     .lte("starts_at", nowIso)
     .gt("ends_at", nowIso)
     .order("starts_at", { ascending: false })
@@ -347,6 +374,7 @@ export async function finalizeQuizSession(
 /** Tự tổng kết các đợt đã kết thúc (sau khi hết hạn nộp của lượt cuối) nếu bật auto_finalize. */
 export async function finalizeDueSessions(
   db: SupabaseClient,
+  programId: string,
   settings: QuizSettings,
   now = new Date(),
 ) {
@@ -356,7 +384,8 @@ export async function finalizeDueSessions(
   ).toISOString();
   const { data, error } = await db
     .from(CDILV_TABLE.quizSessions)
-    .select(SESSION_COLUMNS)
+    .select(QUIZ_SESSION_COLUMNS)
+    .eq("program_id", programId)
     .is("finalized_at", null)
     .lt("ends_at", cutoff)
     .order("ends_at", { ascending: true })
@@ -372,16 +401,17 @@ export async function finalizeDueSessions(
 
 export async function getQuizStatus(
   db: SupabaseClient,
+  programId: string,
   userId: string | null,
   now = new Date(),
 ): Promise<QuizStatus> {
-  const settings = await loadQuizSettings(db);
+  const settings = await loadQuizSettings(db, programId);
   try {
-    await finalizeDueSessions(db, settings, now);
+    await finalizeDueSessions(db, programId, settings, now);
   } catch (err) {
     console.error("[quiz] auto finalize error:", err);
   }
-  const session = await ensureCurrentSession(db, settings, now);
+  const session = await ensureCurrentSession(db, programId, settings, now);
 
   let attemptsUsed = 0;
   let hasInProgress = false;
@@ -433,10 +463,11 @@ export async function getQuizStatus(
 }
 
 /** Đợt thi để hiển thị bảng xếp hạng: đợt đang mở, nếu không thì đợt gần nhất. */
-export async function getDisplaySession(db: SupabaseClient, now = new Date()) {
+export async function getDisplaySession(db: SupabaseClient, programId: string, now = new Date()) {
   const { data, error } = await db
     .from(CDILV_TABLE.quizSessions)
-    .select(SESSION_COLUMNS)
+    .select(QUIZ_SESSION_COLUMNS)
+    .eq("program_id", programId)
     .lte("starts_at", now.toISOString())
     .order("starts_at", { ascending: false })
     .limit(1)

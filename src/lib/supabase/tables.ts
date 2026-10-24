@@ -28,6 +28,7 @@ export const CDILV_TABLE = {
   albumPhotoReactions: "cdilv_album_photo_reactions",
   albumPhotoComments: "cdilv_album_photo_comments",
   albumPhotoCommentReactions: "cdilv_album_photo_comment_reactions",
+  quizPrograms: "cdilv_quiz_programs",
   quizQuestions: "cdilv_quiz_questions",
   quizSettings: "cdilv_quiz_settings",
   quizSessions: "cdilv_quiz_sessions",

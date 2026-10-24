@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { selectAllRows } from "@/lib/quiz";
 import { requireQuizAdmin } from "@/lib/quiz-access";
+import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -68,12 +69,18 @@ export async function POST(request: NextRequest) {
     }
 
     const writer = createServiceClient();
+    const programId = WEEKLY_QUIZ_PROGRAM_ID;
     const existing = await selectAllRows<{ content: string }>((from, to) =>
-      writer.from(CDILV_TABLE.quizQuestions).select("content").order("id").range(from, to),
+      writer
+        .from(CDILV_TABLE.quizQuestions)
+        .select("content")
+        .eq("program_id", programId)
+        .order("id")
+        .range(from, to),
     );
     const seen = new Set(existing.map((q) => normalizeContent(q.content)));
 
-    const rows: (QuestionValues & { created_by: string })[] = [];
+    const rows: (QuestionValues & { created_by: string; program_id: string })[] = [];
     const invalid: string[] = [];
     let duplicates = 0;
 
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
         return;
       }
       seen.add(key);
-      rows.push({ ...parsed.values, created_by: userId! });
+      rows.push({ ...parsed.values, created_by: userId!, program_id: programId });
     });
 
     if (!isImport) {
