@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollSummary } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
@@ -169,6 +170,189 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
     }
   }
 
+  const columns: DataTableColumn<PollSummary>[] = [
+    {
+      key: "title",
+      header: "Tên chương trình",
+      className: "font-bold text-[#173A67] max-w-sm",
+      render: (p) => (
+        <>
+          <div className="flex items-center gap-2">
+            <Link className="hover:underline line-clamp-2" href={`/polls/${p.id}`}>
+              {p.title}
+            </Link>
+            {!p.isActive ? (
+              <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
+                Ẩn
+              </span>
+            ) : null}
+          </div>
+          {p.hasJudges && (
+            <div className="mt-1 flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-900 border border-amber-300">
+                <MaterialIcon className="text-[12px]" name="gavel" />
+                <span>BGK {p.judgeWeightPercent ?? 30}% ({p.judgeList?.length || 0} GK)</span>
+              </span>
+            </div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "pollType",
+      header: "Hình thức",
+      type: "enum",
+      accessor: (p) => (p.pollType === "vote" ? "Vote tác phẩm" : "Trắc nghiệm"),
+      className: "text-on-surface-variant",
+    },
+    {
+      key: "accessType",
+      header: "Đối tượng",
+      type: "enum",
+      accessor: (p) => (p.accessType === "free" ? "Free (IP check)" : "Đoàn viên"),
+      render: (p) => (
+        <div className="space-y-1">
+          <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
+            {p.accessType === "free" ? "Free (IP check)" : "Đoàn viên"}
+          </span>
+          {p.accessType === "free" ? (
+            <div className="text-[11px] font-medium text-amber-900">
+              🛡️ {p.guestVoteCount}/{p.maxGuestVotes} lượt
+            </div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "isActive",
+      header: "Hiển thị (Active)",
+      type: "enum",
+      accessor: (p) => (p.isActive ? "Active" : "Inactive"),
+      render: (p) => (
+        <button
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition cursor-pointer shadow-2xs border ${
+            p.isActive
+              ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
+              : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+          } disabled:opacity-50`}
+          disabled={busyPollId === p.id}
+          title={
+            p.isActive
+              ? "Đang Active (Hiện). Bấm để chuyển sang Inactive (Tạm ẩn)"
+              : "Đang Inactive (Tạm ẩn). Bấm để chuyển sang Active (Kích hoạt)"
+          }
+          type="button"
+          onClick={() => handleToggleActive(p.id, p.isActive)}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              p.isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
+            }`}
+          />
+          <span>{p.isActive ? "Active" : "Inactive"}</span>
+        </button>
+      ),
+    },
+    {
+      key: "phase",
+      header: "Tiến trình",
+      accessor: (p) => POLL_PHASE_META[getPollPhase(p, renderedAt)].label,
+      render: (p) => {
+        const phase = getPollPhase(p, renderedAt);
+        const phaseMeta = POLL_PHASE_META[phase];
+        return (
+          <>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${phaseMeta.chip}`}
+            >
+              <MaterialIcon className="text-[13px]" name={phaseMeta.icon} />
+              {phaseMeta.label}
+            </span>
+            {phase === "upcoming" && p.opensAt ? (
+              <div className="mt-1 text-[11px] font-medium text-sky-800 whitespace-nowrap">
+                Tự mở: {formatPollTime(p.opensAt)}
+              </div>
+            ) : null}
+            {(phase === "upcoming" || phase === "open") && p.votingEndsAt ? (
+              <div className="mt-0.5 text-[11px] font-medium text-amber-900 whitespace-nowrap">
+                Dừng nhận phiếu: {formatPollTime(p.votingEndsAt)}
+              </div>
+            ) : null}
+          </>
+        );
+      },
+    },
+    {
+      key: "createdAt",
+      header: "Ngày tạo",
+      type: "date",
+      className: "text-xs text-on-surface-variant",
+      render: (p) => new Date(p.createdAt).toLocaleDateString("vi-VN"),
+    },
+    {
+      key: "actions",
+      header: "Thao tác Quản trị",
+      filterable: false,
+      className: "text-right whitespace-nowrap space-x-2",
+      headerClassName: "text-right",
+      render: (p) => {
+        const phase = getPollPhase(p, renderedAt);
+        const isBusy = busyPollId === p.id;
+        const isLoadingEdit = loadingPollId === p.id;
+        return (
+          <>
+            {/* BUTTON CÀI ĐẶT & SỬA */}
+            <button
+              className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1 text-xs font-bold text-white hover:bg-[#27496D] transition shadow-2xs cursor-pointer disabled:opacity-50"
+              disabled={isLoadingEdit}
+              type="button"
+              onClick={() => handleOpenEdit(p.id)}
+            >
+              <MaterialIcon className="text-[14px]" name="settings" />
+              <span>{isLoadingEdit ? "Đang tải..." : "⚙️ Cài đặt / Sửa"}</span>
+            </button>
+
+            <Link
+              className="rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-[#173A67] hover:bg-surface-container-high transition"
+              href={`/polls/${p.id}`}
+            >
+              Xem trang
+            </Link>
+
+            {phase === "upcoming" ? (
+              <button
+                className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer disabled:opacity-50"
+                disabled={isBusy}
+                type="button"
+                onClick={() => handleOpenNow(p.id, p.title)}
+              >
+                {isBusy ? "Đang mở..." : "Mở ngay"}
+              </button>
+            ) : phase !== "closed" ? (
+              <button
+                className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600 transition shadow-xs cursor-pointer disabled:opacity-50"
+                disabled={isBusy}
+                type="button"
+                onClick={() => handleClosePoll(p.id, p.title)}
+              >
+                {isBusy ? "Đang tính..." : "Đóng & Trao giải"}
+              </button>
+            ) : (
+              <button
+                className="rounded-lg border border-primary px-3 py-1 text-xs font-bold text-primary hover:bg-primary/10 transition cursor-pointer disabled:opacity-50"
+                disabled={isBusy}
+                type="button"
+                onClick={() => handleReopenPoll(p.id)}
+              >
+                {isBusy ? "Đang mở..." : "Mở lại"}
+              </button>
+            )}
+          </>
+        );
+      },
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* 1. Header with Admin Tabs */}
@@ -246,163 +430,12 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
           </span>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xs">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-[#D9F2EC] text-[#173A67]">
-              <tr>
-                <th className="px-4 py-3 font-bold">Tên chương trình</th>
-                <th className="px-4 py-3 font-bold">Hình thức</th>
-                <th className="px-4 py-3 font-bold">Đối tượng</th>
-                <th className="px-4 py-3 font-bold">Hiển thị (Active)</th>
-                <th className="px-4 py-3 font-bold">Tiến trình</th>
-                <th className="px-4 py-3 font-bold">Ngày tạo</th>
-                <th className="px-4 py-3 font-bold text-right">Thao tác Quản trị</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pollList.map((p) => {
-                const phase = getPollPhase(p, renderedAt);
-                const phaseMeta = POLL_PHASE_META[phase];
-                const isBusy = busyPollId === p.id;
-                const isLoadingEdit = loadingPollId === p.id;
-
-                return (
-                  <tr key={p.id} className="border-t border-outline-variant hover:bg-surface-container-low/50">
-                    <td className="px-4 py-3.5 font-bold text-[#173A67] max-w-sm">
-                      <div className="flex items-center gap-2">
-                        <Link className="hover:underline line-clamp-2" href={`/polls/${p.id}`}>
-                          {p.title}
-                        </Link>
-                        {!p.isActive ? (
-                          <span className="shrink-0 rounded bg-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-700">
-                            Ẩn
-                          </span>
-                        ) : null}
-                      </div>
-                      {p.hasJudges && (
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-900 border border-amber-300">
-                            <MaterialIcon className="text-[12px]" name="gavel" />
-                            <span>BGK {p.judgeWeightPercent ?? 30}% ({p.judgeList?.length || 0} GK)</span>
-                          </span>
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-on-surface-variant">
-                      {p.pollType === "vote" ? "Vote tác phẩm" : "Trắc nghiệm"}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="space-y-1">
-                        <span className="rounded-md bg-surface-container-high px-2 py-0.5 text-xs font-semibold text-on-surface-variant">
-                          {p.accessType === "free" ? "Free (IP check)" : "Đoàn viên"}
-                        </span>
-                        {p.accessType === "free" ? (
-                          <div className="text-[11px] font-medium text-amber-900">
-                            🛡️ {p.guestVoteCount}/{p.maxGuestVotes} lượt
-                          </div>
-                        ) : null}
-                      </div>
-                    </td>
-                    {/* CỘT KÍCH HOẠT (ACTIVE / INACTIVE) */}
-                    <td className="px-4 py-3.5">
-                      <button
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition cursor-pointer shadow-2xs border ${
-                          p.isActive
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100"
-                            : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
-                        } disabled:opacity-50`}
-                        disabled={isBusy}
-                        title={
-                          p.isActive
-                            ? "Đang Active (Hiện). Bấm để chuyển sang Inactive (Tạm ẩn)"
-                            : "Đang Inactive (Tạm ẩn). Bấm để chuyển sang Active (Kích hoạt)"
-                        }
-                        type="button"
-                        onClick={() => handleToggleActive(p.id, p.isActive)}
-                      >
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            p.isActive ? "bg-emerald-500 animate-pulse" : "bg-slate-400"
-                          }`}
-                        />
-                        <span>{p.isActive ? "Active" : "Inactive"}</span>
-                      </button>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-bold whitespace-nowrap ${phaseMeta.chip}`}
-                      >
-                        <MaterialIcon className="text-[13px]" name={phaseMeta.icon} />
-                        {phaseMeta.label}
-                      </span>
-                      {phase === "upcoming" && p.opensAt ? (
-                        <div className="mt-1 text-[11px] font-medium text-sky-800 whitespace-nowrap">
-                          Tự mở: {formatPollTime(p.opensAt)}
-                        </div>
-                      ) : null}
-                      {(phase === "upcoming" || phase === "open") && p.votingEndsAt ? (
-                        <div className="mt-0.5 text-[11px] font-medium text-amber-900 whitespace-nowrap">
-                          Dừng nhận phiếu: {formatPollTime(p.votingEndsAt)}
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs text-on-surface-variant">
-                      {new Date(p.createdAt).toLocaleDateString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-2">
-                      {/* BUTTON CÀI ĐẶT & SỬA */}
-                      <button
-                        className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1 text-xs font-bold text-white hover:bg-[#27496D] transition shadow-2xs cursor-pointer disabled:opacity-50"
-                        disabled={isLoadingEdit}
-                        type="button"
-                        onClick={() => handleOpenEdit(p.id)}
-                      >
-                        <MaterialIcon className="text-[14px]" name="settings" />
-                        <span>{isLoadingEdit ? "Đang tải..." : "⚙️ Cài đặt / Sửa"}</span>
-                      </button>
-
-                      <Link
-                        className="rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-[#173A67] hover:bg-surface-container-high transition"
-                        href={`/polls/${p.id}`}
-                      >
-                        Xem trang
-                      </Link>
-
-                      {phase === "upcoming" ? (
-                        <button
-                          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer disabled:opacity-50"
-                          disabled={isBusy}
-                          type="button"
-                          onClick={() => handleOpenNow(p.id, p.title)}
-                        >
-                          {isBusy ? "Đang mở..." : "Mở ngay"}
-                        </button>
-                      ) : phase !== "closed" ? (
-                        <button
-                          className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600 transition shadow-xs cursor-pointer disabled:opacity-50"
-                          disabled={isBusy}
-                          type="button"
-                          onClick={() => handleClosePoll(p.id, p.title)}
-                        >
-                          {isBusy ? "Đang tính..." : "Đóng & Trao giải"}
-                        </button>
-                      ) : (
-                        <button
-                          className="rounded-lg border border-primary px-3 py-1 text-xs font-bold text-primary hover:bg-primary/10 transition cursor-pointer disabled:opacity-50"
-                          disabled={isBusy}
-                          type="button"
-                          onClick={() => handleReopenPoll(p.id)}
-                        >
-                          {isBusy ? "Đang mở..." : "Mở lại"}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          emptyText="Chưa có chương trình bình chọn nào."
+          rowKey={(p) => p.id}
+          rows={pollList}
+        />
       </div>
 
       {/* MODAL EDITOR: CÀI ĐẶT SỐ LƯỢNG LỰA CHỌN, UP ẢNH, NHẬP THÀNH VIÊN */}

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   DEFAULT_RESULT_POST_TEMPLATE,
@@ -91,6 +92,146 @@ export function AdminQuizControl({
 
   const notEnoughQuestions = questionsCount < settings.questions_per_attempt;
   const now = new Date(serverNow).getTime();
+
+  const sessionColumns: DataTableColumn<QuizSessionRow>[] = [
+    {
+      key: "title",
+      header: "Đợt thi",
+      className: "font-semibold text-on-surface",
+      render: (s) => (
+        <>
+          {s.title}
+          <span className="ml-1 text-xs font-normal text-on-surface-variant">
+            ({s.mode === "auto" ? "tự động" : "thủ công"})
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "starts_at",
+      header: "Thời gian",
+      type: "date",
+      className: "text-on-surface-variant",
+      render: (s) => (
+        <>
+          {formatQuizDate(s.starts_at)} {formatQuizTime(s.starts_at)}–{formatQuizTime(s.ends_at)}
+        </>
+      ),
+    },
+    {
+      key: "participants",
+      header: "Tham gia / Đúng hết",
+      type: "number",
+      accessor: (s) => (s.finalized_at ? (s.participants_count ?? 0) : null),
+      render: (s) => (s.finalized_at ? `${s.participants_count ?? 0} / ${s.winners_count ?? 0}` : "—"),
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      type: "enum",
+      accessor: (s) =>
+        s.finalized_at ? "Đã tổng kết" : new Date(s.ends_at).getTime() <= now ? "Chờ tổng kết" : "Đang mở",
+      render: (s) => {
+        const ended = new Date(s.ends_at).getTime() <= now;
+        return s.finalized_at ? (
+          <span className="rounded-full bg-[#D9F2EC] px-2 py-0.5 text-xs font-bold text-[#173A67]">
+            Đã tổng kết
+          </span>
+        ) : ended ? (
+          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800">
+            Chờ tổng kết
+          </span>
+        ) : (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
+            Đang mở
+          </span>
+        );
+      },
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      render: (s) => {
+        const ended = new Date(s.ends_at).getTime() <= now;
+        return (
+          <div className="flex flex-wrap items-center gap-2">
+            {s.finalized_at ? (
+              <>
+                {s.result_post_id ? (
+                  <Link
+                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-0.5"
+                    href={`/posts/${s.result_post_id}`}
+                  >
+                    <span>Xem bài kết quả</span>
+                    <MaterialIcon className="text-[14px]" name="open_in_new" />
+                  </Link>
+                ) : null}
+                <button
+                  className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
+                  disabled={busy !== null}
+                  type="button"
+                  title="Hủy kết quả, xóa bài viết và thu hồi toàn bộ điểm đã cộng"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        `HỦY KẾT QUẢ đợt thi "${s.title}"?\n- Hệ thống sẽ thu hồi toàn bộ điểm thưởng đã cộng cho các đoàn viên.\n- Xóa bài viết kết quả.\n- Đưa đợt thi về trạng thái chờ tổng kết.`,
+                      )
+                    ) {
+                      void call(`cancel-${s.id}`, "/api/quiz/session", {
+                        action: "cancel_finalize",
+                        sessionId: s.id,
+                      });
+                    }
+                  }}
+                >
+                  {busy === `cancel-${s.id}` ? "Đang hủy..." : "Hủy kết quả & thu hồi điểm"}
+                </button>
+              </>
+            ) : ended ? (
+              <button
+                className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-amber-600 disabled:opacity-60"
+                disabled={busy !== null}
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Tổng kết "${s.title}": cộng điểm cho người đúng hết và đăng bài kết quả?`,
+                    )
+                  )
+                    void call(`finalize-${s.id}`, "/api/quiz/finalize", { sessionId: s.id });
+                }}
+              >
+                {busy === `finalize-${s.id}` ? "Đang tổng kết..." : "Tổng kết & cộng điểm"}
+              </button>
+            ) : null}
+
+            <button
+              className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/70 px-2 py-1 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
+              disabled={busy !== null}
+              type="button"
+              title="Xóa toàn bộ đợt thi này, các lượt thi và thu hồi điểm (nếu có)"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `XÁC NHẬN XÓA đợt thi "${s.title}"?\nToàn bộ lượt làm bài và điểm đã cộng (nếu có) sẽ bị xóa vĩnh viễn khỏi hệ thống!`,
+                  )
+                ) {
+                  void call(`delete-${s.id}`, "/api/quiz/session", {
+                    action: "delete",
+                    sessionId: s.id,
+                  });
+                }
+              }}
+            >
+              <MaterialIcon className="text-[14px]" name="delete" />
+              <span>{busy === `delete-${s.id}` ? "Đang xóa..." : "Xóa đợt"}</span>
+            </button>
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -190,130 +331,11 @@ export function AdminQuizControl({
         {sessions.length === 0 ? (
           <p className="text-sm text-on-surface-variant">Chưa có đợt thi nào.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs uppercase text-on-surface-variant">
-                <tr>
-                  <th className="py-2 pr-3">Đợt thi</th>
-                  <th className="py-2 pr-3">Thời gian</th>
-                  <th className="py-2 pr-3">Tham gia / Đúng hết</th>
-                  <th className="py-2 pr-3">Trạng thái</th>
-                  <th className="py-2">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map((s) => {
-                  const ended = new Date(s.ends_at).getTime() <= now;
-                  return (
-                    <tr key={s.id} className="border-t border-outline-variant">
-                      <td className="py-2.5 pr-3 font-semibold text-on-surface">
-                        {s.title}
-                        <span className="ml-1 text-xs font-normal text-on-surface-variant">
-                          ({s.mode === "auto" ? "tự động" : "thủ công"})
-                        </span>
-                      </td>
-                      <td className="py-2.5 pr-3 text-on-surface-variant">
-                        {formatQuizDate(s.starts_at)} {formatQuizTime(s.starts_at)}–{formatQuizTime(s.ends_at)}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        {s.finalized_at ? `${s.participants_count ?? 0} / ${s.winners_count ?? 0}` : "—"}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        {s.finalized_at ? (
-                          <span className="rounded-full bg-[#D9F2EC] px-2 py-0.5 text-xs font-bold text-[#173A67]">
-                            Đã tổng kết
-                          </span>
-                        ) : ended ? (
-                          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-800">
-                            Chờ tổng kết
-                          </span>
-                        ) : (
-                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
-                            Đang mở
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {s.finalized_at ? (
-                            <>
-                              {s.result_post_id ? (
-                                <Link
-                                  className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-0.5"
-                                  href={`/posts/${s.result_post_id}`}
-                                >
-                                  <span>Xem bài kết quả</span>
-                                  <MaterialIcon className="text-[14px]" name="open_in_new" />
-                                </Link>
-                              ) : null}
-                              <button
-                                className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:opacity-60"
-                                disabled={busy !== null}
-                                type="button"
-                                title="Hủy kết quả, xóa bài viết và thu hồi toàn bộ điểm đã cộng"
-                                onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `HỦY KẾT QUẢ đợt thi "${s.title}"?\n- Hệ thống sẽ thu hồi toàn bộ điểm thưởng đã cộng cho các đoàn viên.\n- Xóa bài viết kết quả.\n- Đưa đợt thi về trạng thái chờ tổng kết.`,
-                                    )
-                                  ) {
-                                    void call(`cancel-${s.id}`, "/api/quiz/session", {
-                                      action: "cancel_finalize",
-                                      sessionId: s.id,
-                                    });
-                                  }
-                                }}
-                              >
-                                {busy === `cancel-${s.id}` ? "Đang hủy..." : "Hủy kết quả & thu hồi điểm"}
-                              </button>
-                            </>
-                          ) : ended ? (
-                            <button
-                              className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-amber-600 disabled:opacity-60"
-                              disabled={busy !== null}
-                              type="button"
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    `Tổng kết "${s.title}": cộng điểm cho người đúng hết và đăng bài kết quả?`,
-                                  )
-                                )
-                                  void call(`finalize-${s.id}`, "/api/quiz/finalize", { sessionId: s.id });
-                              }}
-                            >
-                              {busy === `finalize-${s.id}` ? "Đang tổng kết..." : "Tổng kết & cộng điểm"}
-                            </button>
-                          ) : null}
-
-                          <button
-                            className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/70 px-2 py-1 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-60"
-                            disabled={busy !== null}
-                            type="button"
-                            title="Xóa toàn bộ đợt thi này, các lượt thi và thu hồi điểm (nếu có)"
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `XÁC NHẬN XÓA đợt thi "${s.title}"?\nToàn bộ lượt làm bài và điểm đã cộng (nếu có) sẽ bị xóa vĩnh viễn khỏi hệ thống!`,
-                                )
-                              ) {
-                                void call(`delete-${s.id}`, "/api/quiz/session", {
-                                  action: "delete",
-                                  sessionId: s.id,
-                                });
-                              }
-                            }}
-                          >
-                            <MaterialIcon className="text-[14px]" name="delete" />
-                            <span>{busy === `delete-${s.id}` ? "Đang xóa..." : "Xóa đợt"}</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={sessionColumns}
+            rowKey={(s) => s.id}
+            rows={sessions}
+          />
         )}
         <p className="mt-3 text-xs text-on-surface-variant">
           {settings.auto_finalize

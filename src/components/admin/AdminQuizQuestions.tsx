@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { QuizQuestionRow } from "@/lib/quiz-shared";
 
@@ -255,6 +256,71 @@ export function AdminQuizQuestions({ questions }: Props) {
     }
   }
 
+  const optionColumn = (n: 1 | 2 | 3 | 4): DataTableColumn<QuizQuestionRow & { stt: number }> => ({
+    key: `option_${n}`,
+    header: `Đáp án ${n}`,
+    render: (row) => (
+      <span className={row.correct_option === n ? "font-bold text-emerald-700" : "text-on-surface-variant"}>
+        {row[`option_${n}`]}
+      </span>
+    ),
+  });
+
+  const columns: DataTableColumn<QuizQuestionRow & { stt: number }>[] = [
+    {
+      key: "stt",
+      header: "STT",
+      type: "number",
+      className: "font-semibold text-[#173A67]",
+    },
+    {
+      key: "content",
+      header: "Nội dung câu hỏi",
+      className: "whitespace-pre-wrap font-medium text-on-surface",
+    },
+    optionColumn(1),
+    optionColumn(2),
+    optionColumn(3),
+    optionColumn(4),
+    {
+      key: "correct_option",
+      header: "Câu trả lời",
+      type: "enum",
+      className: "text-center",
+      headerClassName: "text-center",
+      render: (row) => (
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 font-black text-emerald-800">
+          {row.correct_option}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      render: (row) => (
+        <div className="flex gap-2">
+          <button
+            className="rounded-lg border border-[#173A67] px-3 py-1.5 text-xs font-bold text-[#173A67] disabled:opacity-50"
+            disabled={busyId === row.id}
+            type="button"
+            onClick={() => openEdit(row)}
+          >
+            Sửa
+          </button>
+          <button
+            className="rounded-lg border border-error px-3 py-1.5 text-xs font-bold text-error disabled:opacity-50"
+            disabled={busyId === row.id}
+            type="button"
+            onClick={() => void remove(row)}
+          >
+            Xóa
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -339,79 +405,17 @@ export function AdminQuizQuestions({ questions }: Props) {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-[900px] w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            <tr>
-              <th className="w-12 px-3 py-3">STT</th>
-              <th className="px-3 py-3">Nội dung câu hỏi</th>
-              <th className="px-3 py-3">Đáp án 1</th>
-              <th className="px-3 py-3">Đáp án 2</th>
-              <th className="px-3 py-3">Đáp án 3</th>
-              <th className="px-3 py-3">Đáp án 4</th>
-              <th className="w-24 px-3 py-3 text-center">Câu trả lời</th>
-              <th className="w-32 px-3 py-3">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={8}>
-                  {questions.length === 0
-                    ? "Chưa có câu hỏi nào. Bấm “Thêm câu hỏi” hoặc “Nhập từ Excel”."
-                    : "Không có câu hỏi phù hợp."}
-                </td>
-              </tr>
-            ) : null}
-            {filtered.map((row) => {
-              const options = [row.option_1, row.option_2, row.option_3, row.option_4];
-              return (
-                <tr key={row.id} className="border-t border-outline-variant align-top">
-                  <td className="px-3 py-3 font-semibold text-[#173A67]">{row.stt}</td>
-                  <td className="whitespace-pre-wrap px-3 py-3 font-medium text-on-surface">{row.content}</td>
-                  {options.map((opt, i) => (
-                    <td
-                      key={i}
-                      className={`px-3 py-3 ${
-                        row.correct_option === i + 1
-                          ? "font-bold text-emerald-700"
-                          : "text-on-surface-variant"
-                      }`}
-                    >
-                      {opt}
-                    </td>
-                  ))}
-                  <td className="px-3 py-3 text-center">
-                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 font-black text-emerald-800">
-                      {row.correct_option}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        className="rounded-lg border border-[#173A67] px-3 py-1.5 text-xs font-bold text-[#173A67] disabled:opacity-50"
-                        disabled={busyId === row.id}
-                        type="button"
-                        onClick={() => openEdit(row)}
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        className="rounded-lg border border-error px-3 py-1.5 text-xs font-bold text-error disabled:opacity-50"
-                        disabled={busyId === row.id}
-                        type="button"
-                        onClick={() => void remove(row)}
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        emptyText={
+          questions.length === 0
+            ? "Chưa có câu hỏi nào. Bấm “Thêm câu hỏi” hoặc “Nhập từ Excel”."
+            : "Không có câu hỏi phù hợp."
+        }
+        rowClassName={() => "align-top"}
+        rowKey={(row) => row.id}
+        rows={filtered}
+      />
 
       {editingId ? (
         <div

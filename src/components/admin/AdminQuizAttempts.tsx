@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatQuizDate, formatQuizDateTime, formatQuizDuration, formatQuizTime, type QuizSessionRow } from "@/lib/quiz-shared";
 
@@ -99,6 +100,168 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
 
   const currentSession = sessions.find((s) => s.id === selectedSessionId) ?? sessions[0];
 
+  const isPerfectAttempt = (a: AttemptItem) =>
+    a.correct_count !== null && a.total_questions > 0 && a.correct_count === a.total_questions;
+
+  const columns: DataTableColumn<AttemptItem>[] = [
+    {
+      key: "attempt_no",
+      header: "Lượt",
+      accessor: (a) => `Lượt ${a.attempt_no}`,
+      className: "font-bold text-[#173A67] whitespace-nowrap",
+    },
+    {
+      key: "member",
+      header: "Đoàn viên",
+      accessor: (a) => a.profile.full_name,
+      render: (a) => (
+        <div className="flex items-center gap-2.5">
+          {a.profile.avatar_url ? (
+            <img
+              alt={a.profile.full_name}
+              className="h-8 w-8 rounded-full object-cover shrink-0"
+              src={a.profile.avatar_url}
+            />
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-dusty-light text-xs font-bold text-primary">
+              {a.profile.full_name.slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="truncate font-bold text-on-surface text-sm">
+              {a.profile.full_name}
+            </p>
+            <p className="truncate text-xs text-on-surface-variant">
+              {a.profile.department ?? "—"}{a.profile.employee_code ? ` · MS: ${a.profile.employee_code}` : ""}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "correct_count",
+      header: "Kết quả",
+      type: "number",
+      render: (a) => {
+        const isPerfect = isPerfectAttempt(a);
+        return a.correct_count !== null ? (
+          <span
+            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${
+              isPerfect
+                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                : "bg-surface-container text-on-surface"
+            }`}
+          >
+            <MaterialIcon
+              className={`text-[14px] ${isPerfect ? "text-emerald-600" : ""}`}
+              name={isPerfect ? "check_circle" : "quiz"}
+            />
+            {a.correct_count}/{a.total_questions} câu
+          </span>
+        ) : (
+          <span className="text-xs text-on-surface-variant italic">Đang làm</span>
+        );
+      },
+    },
+    {
+      key: "duration",
+      header: "Thời gian",
+      type: "number",
+      accessor: (a) => (a.duration_ms !== null ? Math.round(a.duration_ms / 1000) : null),
+      className: "font-semibold text-on-surface",
+      render: (a) => (a.duration_ms !== null ? formatQuizDuration(a.duration_ms) : "—"),
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      type: "enum",
+      accessor: (a) => (a.status === "submitted" ? "Đã nộp" : a.status === "in_progress" ? "Đang làm" : "Quá hạn"),
+      render: (a) =>
+        a.status === "submitted" ? (
+          <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">
+            Đã nộp
+          </span>
+        ) : a.status === "in_progress" ? (
+          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700">
+            Đang làm
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
+            Quá hạn
+          </span>
+        ),
+    },
+    {
+      key: "points",
+      header: "Điểm thi đua",
+      type: "number",
+      accessor: (a) =>
+        a.awardedPoints === null && !a.rankingBonus ? null : (a.awardedPoints ?? 0) + (a.rankingBonus ?? 0),
+      render: (a) => (
+        <div className="flex flex-col gap-1 items-start">
+          {a.awardedPoints !== null ? (
+            <span className="inline-flex items-center gap-0.5 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+              <MaterialIcon className="text-[14px] text-amber-600" name="stars" />
+              +{a.awardedPoints}đ (Lượt thi)
+            </span>
+          ) : a.status === "submitted" ? (
+            <span className="text-xs text-on-surface-variant/70">Đã nộp</span>
+          ) : (
+            <span className="text-xs text-on-surface-variant/60">0đ</span>
+          )}
+
+          {a.rankingBonus ? (
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+              <MaterialIcon className="text-[12px] text-emerald-600" name="emoji_events" />
+              +{a.rankingBonus}đ (Top)
+            </span>
+          ) : isPerfectAttempt(a) ? (
+            <span className="text-[11px] text-on-surface-variant italic">Chờ tổng kết Top</span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "started_at",
+      header: "Bắt đầu / Nộp bài",
+      type: "date",
+      className: "text-xs text-on-surface-variant",
+      render: (a) => (
+        <>
+          <div>{formatQuizTime(a.started_at)}</div>
+          {a.submitted_at ? (
+            <div className="text-[11px] text-on-surface-variant/70">
+              Nộp: {formatQuizTime(a.submitted_at)}
+            </div>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (a) => (
+        <button
+          type="button"
+          disabled={busyId === a.id}
+          onClick={() => void handleDeleteAttempt(a)}
+          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+          title="Xóa lượt thi này và thu hồi điểm nếu đã tổng kết"
+        >
+          {busyId === a.id ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-700 border-t-transparent" />
+          ) : (
+            <MaterialIcon className="text-[15px]" name="delete" />
+          )}
+          <span>Xóa lượt</span>
+        </button>
+      ),
+    },
+  ];
+
   return (
     <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -162,144 +325,12 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
             <p className="font-semibold text-on-surface">Chưa có ai tham gia lượt thi nào trong đợt này.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="text-xs uppercase text-on-surface-variant">
-                <tr className="border-b border-outline-variant">
-                  <th className="py-2.5 pr-3">Lượt</th>
-                  <th className="py-2.5 pr-3">Đoàn viên</th>
-                  <th className="py-2.5 pr-3">Kết quả</th>
-                  <th className="py-2.5 pr-3">Thời gian</th>
-                  <th className="py-2.5 pr-3">Trạng thái</th>
-                  <th className="py-2.5 pr-3">Điểm thi đua</th>
-                  <th className="py-2.5 pr-3">Bắt đầu / Nộp bài</th>
-                  <th className="py-2.5 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-outline-variant/70">
-                {attempts.map((a) => {
-                  const isPerfect =
-                    a.correct_count !== null &&
-                    a.total_questions > 0 &&
-                    a.correct_count === a.total_questions;
-                  return (
-                    <tr key={a.id} className="hover:bg-surface-container-low/50 transition">
-                      <td className="py-3 pr-3 font-bold text-[#173A67]">
-                        Lượt {a.attempt_no}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <div className="flex items-center gap-2.5">
-                          {a.profile.avatar_url ? (
-                            <img
-                              alt={a.profile.full_name}
-                              className="h-8 w-8 rounded-full object-cover shrink-0"
-                              src={a.profile.avatar_url}
-                            />
-                          ) : (
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-dusty-light text-xs font-bold text-primary">
-                              {a.profile.full_name.slice(0, 1).toUpperCase()}
-                            </span>
-                          )}
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-on-surface text-sm">
-                              {a.profile.full_name}
-                            </p>
-                            <p className="truncate text-xs text-on-surface-variant">
-                              {a.profile.department ?? "—"}{a.profile.employee_code ? ` · MS: ${a.profile.employee_code}` : ""}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-3">
-                        {a.correct_count !== null ? (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${
-                              isPerfect
-                                ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                                : "bg-surface-container text-on-surface"
-                            }`}
-                          >
-                            <MaterialIcon
-                              className={`text-[14px] ${isPerfect ? "text-emerald-600" : ""}`}
-                              name={isPerfect ? "check_circle" : "quiz"}
-                            />
-                            {a.correct_count}/{a.total_questions} câu
-                          </span>
-                        ) : (
-                          <span className="text-xs text-on-surface-variant italic">Đang làm</span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-3 font-semibold text-on-surface">
-                        {a.duration_ms !== null ? formatQuizDuration(a.duration_ms) : "—"}
-                      </td>
-                      <td className="py-3 pr-3">
-                        {a.status === "submitted" ? (
-                          <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">
-                            Đã nộp
-                          </span>
-                        ) : a.status === "in_progress" ? (
-                          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700">
-                            Đang làm
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-                            Quá hạn
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <div className="flex flex-col gap-1 items-start">
-                          {a.awardedPoints !== null ? (
-                            <span className="inline-flex items-center gap-0.5 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                              <MaterialIcon className="text-[14px] text-amber-600" name="stars" />
-                              +{a.awardedPoints}đ (Lượt thi)
-                            </span>
-                          ) : a.status === "submitted" ? (
-                            <span className="text-xs text-on-surface-variant/70">Đã nộp</span>
-                          ) : (
-                            <span className="text-xs text-on-surface-variant/60">0đ</span>
-                          )}
-
-                          {a.rankingBonus ? (
-                            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                              <MaterialIcon className="text-[12px] text-emerald-600" name="emoji_events" />
-                              +{a.rankingBonus}đ (Top)
-                            </span>
-                          ) : isPerfect ? (
-                            <span className="text-[11px] text-on-surface-variant italic">Chờ tổng kết Top</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="py-3 pr-3 text-xs text-on-surface-variant">
-                        <div>{formatQuizTime(a.started_at)}</div>
-                        {a.submitted_at ? (
-                          <div className="text-[11px] text-on-surface-variant/70">
-                            Nộp: {formatQuizTime(a.submitted_at)}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-3 text-right">
-                        <button
-                          type="button"
-                          disabled={busyId === a.id}
-                          onClick={() => void handleDeleteAttempt(a)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
-                          title="Xóa lượt thi này và thu hồi điểm nếu đã tổng kết"
-                        >
-                          {busyId === a.id ? (
-                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-700 border-t-transparent" />
-                          ) : (
-                            <MaterialIcon className="text-[15px]" name="delete" />
-                          )}
-                          <span>Xóa lượt</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            columns={columns}
+            defaultPageSize={10}
+            rowKey={(a) => a.id}
+            rows={attempts}
+          />
         )}
       </div>
     </section>
