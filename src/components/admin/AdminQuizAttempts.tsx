@@ -146,7 +146,7 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
         const isPerfect = isPerfectAttempt(a);
         return a.correct_count !== null ? (
           <span
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-bold ${
               isPerfect
                 ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
                 : "bg-surface-container text-on-surface"
@@ -200,7 +200,7 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
       render: (a) => (
         <div className="flex flex-col gap-1 items-start">
           {a.awardedPoints !== null ? (
-            <span className="inline-flex items-center gap-0.5 text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+            <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
               <MaterialIcon className="text-[14px] text-amber-600" name="stars" />
               +{a.awardedPoints}đ (Lượt thi)
             </span>
@@ -211,7 +211,7 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
           )}
 
           {a.rankingBonus ? (
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+            <span className="inline-flex items-center gap-0.5 whitespace-nowrap text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
               <MaterialIcon className="text-[12px] text-emerald-600" name="emoji_events" />
               +{a.rankingBonus}đ (Top)
             </span>
@@ -241,43 +241,43 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
       key: "actions",
       header: "Thao tác",
       filterable: false,
-      className: "text-right",
-      headerClassName: "text-right",
+      // Luôn thấy cột thao tác: dính mép phải nếu bảng phải cuộn ngang
+      className:
+        "sticky right-0 z-[1] whitespace-nowrap bg-surface-container-lowest text-right shadow-[inset_1px_0_0_rgb(0_0_0/0.06)]",
+      headerClassName: "sticky right-0 z-20 bg-[#ecf4ff] text-right",
       render: (a) => (
         <button
           type="button"
+          aria-label="Xóa lượt"
           disabled={busyId === a.id}
           onClick={() => void handleDeleteAttempt(a)}
-          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50/60 px-2.5 py-1 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50/60 text-red-700 transition hover:bg-red-100 disabled:opacity-50"
           title="Xóa lượt thi này và thu hồi điểm nếu đã tổng kết"
         >
           {busyId === a.id ? (
             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-red-700 border-t-transparent" />
           ) : (
-            <MaterialIcon className="text-[15px]" name="delete" />
+            <MaterialIcon className="text-[18px]" name="delete" />
           )}
-          <span>Xóa lượt</span>
         </button>
       ),
     },
   ];
 
   return (
-    <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-title-md font-bold text-[#173A67]">
-            <MaterialIcon className="text-[22px]" name="ballot" />
-            Quản lý lượt làm bài của thành viên
-          </h2>
-          <p className="mt-1 text-sm text-on-surface-variant">
-            Xem chi tiết bài nộp, cho phép xóa lượt thi thử nghiệm hoặc hủy kết quả vi phạm (tự động thu hồi điểm nếu có).
-          </p>
-        </div>
+    <section className="flex flex-col gap-2 lg:min-h-0 lg:flex-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
+        <h2
+          className="flex items-center gap-2 text-sm font-bold text-[#173A67]"
+          title="Xem chi tiết bài nộp, cho phép xóa lượt thi thử nghiệm hoặc hủy kết quả vi phạm (tự động thu hồi điểm nếu có)."
+        >
+          <MaterialIcon className="text-[20px]" name="ballot" />
+          Quản lý lượt làm bài của thành viên
+        </h2>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 sm:ml-auto">
           <select
-            className="rounded-xl border border-outline-variant bg-white px-3 py-1.5 text-xs font-semibold text-on-surface outline-none focus:border-[#173A67]"
+            className="min-w-0 rounded-lg border border-outline-variant bg-white px-2.5 py-1 text-xs font-semibold text-on-surface outline-none focus:border-[#173A67]"
             value={selectedSessionId}
             onChange={(e) => setSelectedSessionId(e.target.value)}
           >
@@ -292,7 +292,7 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
             type="button"
             onClick={() => void loadAttempts(selectedSessionId)}
             disabled={loading}
-            className="inline-flex items-center gap-1 rounded-xl border border-outline-variant bg-white px-2.5 py-1.5 text-xs font-bold text-[#173A67] hover:bg-surface-container-low transition disabled:opacity-50"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant bg-white px-2.5 py-1 text-xs font-bold text-[#173A67] hover:bg-surface-container-low transition disabled:opacity-50"
             title="Làm mới danh sách"
           >
             <MaterialIcon className={`text-[16px] ${loading ? "animate-spin" : ""}`} name="refresh" />
@@ -302,37 +302,39 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
       </div>
 
       {error ? (
-        <p className="mt-3 text-sm text-error" role="alert">
+        <p className="shrink-0 text-sm text-error" role="alert">
           {error}
         </p>
       ) : null}
 
       {success ? (
-        <p className="mt-3 rounded-xl bg-[#D9F2EC] px-4 py-2 text-sm font-semibold text-[#173A67]">
+        <p className="shrink-0 rounded-xl bg-[#D9F2EC] px-3 py-1.5 text-sm font-semibold text-[#173A67]">
           {success}
         </p>
       ) : null}
 
-      <div className="mt-4">
-        {loading ? (
-          <div className="flex items-center justify-center py-8 text-on-surface-variant">
-            <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="ml-2 text-sm font-semibold">Đang tải danh sách lượt thi...</span>
-          </div>
-        ) : attempts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-8 text-center text-sm text-on-surface-variant">
-            <MaterialIcon className="mx-auto mb-1 text-[28px] text-on-surface-variant/40" name="inbox" />
-            <p className="font-semibold text-on-surface">Chưa có ai tham gia lượt thi nào trong đợt này.</p>
-          </div>
-        ) : (
+      {loading ? (
+        <div className="flex shrink-0 items-center justify-center rounded-xl border border-outline-variant bg-surface-container-lowest py-8 text-on-surface-variant">
+          <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <span className="ml-2 text-sm font-semibold">Đang tải danh sách lượt thi...</span>
+        </div>
+      ) : attempts.length === 0 ? (
+        <div className="shrink-0 rounded-xl border border-dashed border-outline-variant bg-surface-container-low px-4 py-8 text-center text-sm text-on-surface-variant">
+          <MaterialIcon className="mx-auto mb-1 text-[28px] text-on-surface-variant/40" name="inbox" />
+          <p className="font-semibold text-on-surface">Chưa có ai tham gia lượt thi nào trong đợt này.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col lg:min-h-0 lg:flex-1">
           <DataTable
             columns={columns}
             defaultPageSize={10}
+            density="compact"
+            fill
             rowKey={(a) => a.id}
             rows={attempts}
           />
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

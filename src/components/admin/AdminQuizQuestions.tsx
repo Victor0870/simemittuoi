@@ -301,9 +301,9 @@ export function AdminQuizQuestions({ programId, questions }: Props) {
       header: "Thao tác",
       filterable: false,
       render: (row) => (
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
-            className="rounded-lg border border-[#173A67] px-3 py-1.5 text-xs font-bold text-[#173A67] disabled:opacity-50"
+            className="rounded-lg border border-[#173A67] px-2.5 py-1 text-xs font-bold text-[#173A67] disabled:opacity-50"
             disabled={busyId === row.id}
             type="button"
             onClick={() => openEdit(row)}
@@ -311,7 +311,7 @@ export function AdminQuizQuestions({ programId, questions }: Props) {
             Sửa
           </button>
           <button
-            className="rounded-lg border border-error px-3 py-1.5 text-xs font-bold text-error disabled:opacity-50"
+            className="rounded-lg border border-error px-2.5 py-1 text-xs font-bold text-error disabled:opacity-50"
             disabled={busyId === row.id}
             type="button"
             onClick={() => void remove(row)}
@@ -324,40 +324,46 @@ export function AdminQuizQuestions({ programId, questions }: Props) {
   ];
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-title-md font-bold text-[#173A67]">
-          <MaterialIcon className="text-[22px]" name="library_books" />
+    <section className="flex flex-col gap-2 lg:min-h-0 lg:flex-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-[#173A67]">
+          <MaterialIcon className="text-[20px]" name="library_books" />
           Ngân hàng câu hỏi
-          <span className="rounded-full bg-dusty-light px-2.5 py-0.5 text-xs font-bold text-primary">
+          <span className="rounded-full bg-dusty-light px-2 py-0.5 text-xs font-bold text-primary">
             {questions.length} câu
           </span>
         </h2>
-        <div className="flex flex-wrap gap-2">
+        <input
+          className="w-full rounded-lg border border-outline-variant bg-surface px-2.5 py-1 text-xs outline-none focus:border-[#173A67] sm:w-64"
+          placeholder="Tìm trong câu hỏi, đáp án..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-1.5 sm:ml-auto">
           <button
-            className="inline-flex items-center gap-1.5 rounded-xl bg-tertiary px-4 py-2 text-sm font-bold text-on-tertiary disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-lg bg-tertiary px-3 py-1 text-xs font-bold text-on-tertiary disabled:opacity-60"
             disabled={busy}
             type="button"
             onClick={openNew}
           >
-            <MaterialIcon className="text-[18px]" name="add" />
+            <MaterialIcon className="text-[16px]" name="add" />
             Thêm câu hỏi
           </button>
           <button
-            className="inline-flex items-center gap-1.5 rounded-xl border-2 border-[#173A67] px-4 py-2 text-sm font-bold text-[#173A67] disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-lg border border-[#173A67] px-3 py-1 text-xs font-bold text-[#173A67] disabled:opacity-60"
             disabled={busy}
             type="button"
             onClick={() => fileRef.current?.click()}
           >
-            <MaterialIcon className="text-[18px]" name="upload_file" />
+            <MaterialIcon className="text-[16px]" name="upload_file" />
             Nhập từ Excel
           </button>
           <button
-            className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant px-3 py-2 text-sm font-semibold text-on-surface-variant"
+            className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-on-surface-variant"
             type="button"
             onClick={() => void downloadTemplate()}
           >
-            <MaterialIcon className="text-[18px]" name="download" />
+            <MaterialIcon className="text-[16px]" name="download" />
             File mẫu
           </button>
           <input
@@ -373,22 +379,22 @@ export function AdminQuizQuestions({ programId, questions }: Props) {
         </div>
       </div>
 
-      <p className="text-xs text-on-surface-variant">
+      <p className="shrink-0 text-[11px] leading-snug text-on-surface-variant">
         Format Excel: <strong>STT | Nội dung câu hỏi | Đáp án 1 | Đáp án 2 | Đáp án 3 | Đáp án 4 | Câu trả lời</strong>{" "}
         (câu trả lời là số 1–4 ứng với đáp án đúng). Nhập từ Excel sẽ cộng thêm vào ngân hàng, câu trùng nội
         dung được bỏ qua.
       </p>
 
       {error ? (
-        <p className="text-sm text-error" role="alert">
+        <p className="shrink-0 text-sm text-error" role="alert">
           {error}
         </p>
       ) : null}
       {success ? (
-        <p className="rounded-xl bg-[#D9F2EC] px-4 py-2 text-sm text-[#173A67]">{success}</p>
+        <p className="shrink-0 rounded-xl bg-[#D9F2EC] px-3 py-1.5 text-sm text-[#173A67]">{success}</p>
       ) : null}
       {importErrors.length > 0 ? (
-        <details className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
+        <details className="shrink-0 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm text-amber-900">
           <summary className="cursor-pointer font-semibold">
             {importErrors.length} dòng bị bỏ qua khi nhập
           </summary>
@@ -400,24 +406,21 @@ export function AdminQuizQuestions({ programId, questions }: Props) {
         </details>
       ) : null}
 
-      <input
-        className={`${inputClass} max-w-sm`}
-        placeholder="Tìm trong câu hỏi, đáp án..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-
-      <DataTable
-        columns={columns}
-        emptyText={
-          questions.length === 0
-            ? "Chưa có câu hỏi nào. Bấm “Thêm câu hỏi” hoặc “Nhập từ Excel”."
-            : "Không có câu hỏi phù hợp."
-        }
-        rowClassName={() => "align-top"}
-        rowKey={(row) => row.id}
-        rows={filtered}
-      />
+      <div className="flex flex-col lg:min-h-0 lg:flex-1">
+        <DataTable
+          columns={columns}
+          density="compact"
+          emptyText={
+            questions.length === 0
+              ? "Chưa có câu hỏi nào. Bấm “Thêm câu hỏi” hoặc “Nhập từ Excel”."
+              : "Không có câu hỏi phù hợp."
+          }
+          fill
+          rowClassName={() => "align-top"}
+          rowKey={(row) => row.id}
+          rows={filtered}
+        />
+      </div>
 
       {editingId ? (
         <div

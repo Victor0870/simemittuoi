@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { AdminBreadcrumbTrail } from "@/components/admin/AdminBreadcrumbTrail";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { QuizProgramRow } from "@/lib/quiz-shared";
 
 export type QuizTabKey = "settings" | "history" | "questions";
 
-export const QUIZ_TABS: { key: QuizTabKey; label: string }[] = [
-  { key: "settings", label: "Cài đặt" },
-  { key: "history", label: "Lịch sử thi" },
-  { key: "questions", label: "Ngân hàng câu hỏi" },
+export const QUIZ_TABS: { key: QuizTabKey; label: string; icon: string }[] = [
+  { key: "settings", label: "Cài đặt", icon: "tune" },
+  { key: "history", label: "Lịch sử thi", icon: "history" },
+  { key: "questions", label: "Ngân hàng câu hỏi", icon: "library_books" },
 ];
+
+/** Bố cục gọn của 3 trang con: từ lg trở lên vừa một màn hình (trừ thanh tiêu đề 64px + lề main 2×28px). */
+export const QUIZ_COMPACT_PAGE = "flex flex-col gap-3 lg:h-[calc(100dvh-120px)] lg:min-h-0 lg:overflow-hidden";
 
 /** Đường dẫn trang quản trị của một chương trình trắc nghiệm (hoặc trang con của nó). */
 export function quizProgramHref(programId: string, section?: QuizTabKey) {
@@ -30,53 +34,52 @@ export function QuizTabs({
   if (activeTab) trail.push({ label: activeTab.label, href: quizProgramHref(program.id, activeTab.key) });
 
   return (
-    <div className="space-y-4">
+    <>
       <AdminBreadcrumbTrail items={trail} />
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-headline-md font-bold text-[#173A67]">{program.name}</h1>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                program.is_active ? "bg-emerald-100 text-emerald-800" : "bg-surface-container text-on-surface-variant"
-              }`}
-            >
-              {program.is_active ? "Active" : "Inactive"}
-            </span>
-          </div>
-          <p className="text-body-md text-[#27496D]">
-            Quản lý ngân hàng câu hỏi, lịch mở thi, tổng kết cộng điểm và bài viết kết quả.
-          </p>
-        </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+        <h1
+          className="text-lg font-extrabold text-[#173A67]"
+          title="Quản lý ngân hàng câu hỏi, lịch mở thi, tổng kết cộng điểm và bài viết kết quả."
+        >
+          {program.name}
+        </h1>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+            program.is_active ? "bg-emerald-100 text-emerald-800" : "bg-surface-container text-on-surface-variant"
+          }`}
+        >
+          {program.is_active ? "Active" : "Inactive"}
+        </span>
+        <nav aria-label="Các trang của chương trình trắc nghiệm" className="flex flex-wrap items-center gap-1.5">
+          {QUIZ_TABS.map((tab) => {
+            const isActive = tab.key === active;
+            return (
+              <Link
+                key={tab.key}
+                aria-current={isActive ? "page" : undefined}
+                className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-semibold transition ${
+                  isActive
+                    ? "border-[#4a6b82] bg-[#4a6b82] text-white"
+                    : "border-[#d2dfe9] bg-white text-[#4a6b82] hover:bg-[#ecf4ff] hover:text-[#173A67]"
+                }`}
+                href={quizProgramHref(program.id, tab.key)}
+              >
+                <MaterialIcon className="text-[14px]" name={tab.icon} />
+                <span>{tab.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
         <Link
-          className="rounded-xl border-2 border-[#173A67] px-4 py-2 font-bold text-[#173A67] transition hover:bg-[#173A67] hover:text-white"
+          className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#173A67] px-2 py-0.5 text-xs font-bold text-[#173A67] transition hover:bg-[#173A67] hover:text-white"
           href={`/quiz/${program.id}`}
         >
-          Xem trang thi →
+          Xem trang thi
+          <MaterialIcon className="text-[14px]" name="open_in_new" />
         </Link>
       </div>
 
-      <nav aria-label="Các trang của chương trình trắc nghiệm" className="flex flex-wrap gap-2">
-        {QUIZ_TABS.map((tab) => {
-          const isActive = tab.key === active;
-          return (
-            <Link
-              key={tab.key}
-              aria-current={isActive ? "page" : undefined}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                isActive
-                  ? "bg-[#4a6b82] text-white shadow-sm"
-                  : "bg-[#ecf4ff] text-[#173A67] hover:bg-[#d2dfe9]"
-              }`}
-              href={quizProgramHref(program.id, tab.key)}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {sessionsError ? <p className="text-sm text-error">{sessionsError}</p> : null}
-    </div>
+      {sessionsError ? <p className="shrink-0 text-sm text-error">{sessionsError}</p> : null}
+    </>
   );
 }

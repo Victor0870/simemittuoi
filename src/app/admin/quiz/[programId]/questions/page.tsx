@@ -1,5 +1,5 @@
 import { AdminQuizQuestions } from "@/components/admin/AdminQuizQuestions";
-import { QuizTabs } from "../../QuizTabs";
+import { QUIZ_COMPACT_PAGE, QuizTabs } from "../../QuizTabs";
 import { loadQuizData, requireQuizProgramPage } from "../../loadQuizData";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export default async function AdminQuizQuestionsPage({ params }: { params: Promi
   const { questions, sessionsError } = await loadQuizData(db, program);
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className={QUIZ_COMPACT_PAGE}>
       <QuizTabs active="questions" program={program} sessionsError={sessionsError?.message ?? null} />
       <AdminQuizQuestions programId={program.id} questions={questions} />
     </div>

@@ -1,7 +1,7 @@
 import { AdminQuizControl } from "@/components/admin/AdminQuizControl";
 import { nextAutoStart } from "@/lib/quiz";
 import type { QuizSessionRow } from "@/lib/quiz-shared";
-import { QuizTabs } from "../../QuizTabs";
+import { QUIZ_COMPACT_PAGE, QuizTabs } from "../../QuizTabs";
 import { loadQuizData, requireQuizProgramPage } from "../../loadQuizData";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,8 @@ export default async function AdminQuizSettingsPage({ params }: { params: Promis
   const { now, settings, currentSession, questions, sessions, sessionsError } = await loadQuizData(db, program);
 
   return (
-    <div className="space-y-8 pb-10">
+    // Mở form cài đặt (details) thì bỏ khóa chiều cao để trang cuộn bình thường
+    <div className={`${QUIZ_COMPACT_PAGE} lg:has-[details[open]]:h-auto lg:has-[details[open]]:overflow-visible`}>
       <QuizTabs active="settings" program={program} sessionsError={sessionsError?.message ?? null} />
 
       <AdminQuizControl

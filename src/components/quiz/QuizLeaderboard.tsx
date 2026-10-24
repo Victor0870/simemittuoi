@@ -17,6 +17,8 @@ type Props = {
   currentUserId?: string | null;
   isAdmin?: boolean;
   sessionId?: string;
+  /** Trang quản trị: tiêu đề một dòng, bảng xếp hạng dạng lưới thẻ nhỏ, chiều cao giới hạn. */
+  compact?: boolean;
 };
 
 const MEDAL_CLASS = [
@@ -36,6 +38,7 @@ export function QuizLeaderboard({
   currentUserId,
   isAdmin,
   sessionId,
+  compact = false,
 }: Props) {
   const router = useRouter();
   const [busyUser, setBusyUser] = useState<string | null>(null);
@@ -63,15 +66,35 @@ export function QuizLeaderboard({
       setBusyUser(null);
     }
   }
+  const resultLink = resultPostId ? (
+    <Link
+      className={`inline-flex items-center gap-1 font-bold text-primary hover:underline ${compact ? "text-xs" : "mt-4 text-sm"}`}
+      href={`/posts/${resultPostId}`}
+    >
+      Xem bài viết kết quả
+      <MaterialIcon className={compact ? "text-[16px]" : "text-[18px]"} name="arrow_forward" />
+    </Link>
+  ) : null;
+
   return (
     <section
-      className="rounded-2xl border border-dusty-border/80 bg-white p-4 shadow-xs sm:p-6"
+      className={
+        compact
+          ? "shrink-0 rounded-xl border border-dusty-border/80 bg-white p-3 shadow-xs"
+          : "rounded-2xl border border-dusty-border/80 bg-white p-4 shadow-xs sm:p-6"
+      }
       id="quiz-leaderboard"
     >
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-title-md font-bold text-[#173A67]">
-            <MaterialIcon className="text-[22px] text-amber-500" name="emoji_events" />
+      <div
+        className={
+          compact
+            ? "mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1"
+            : "mb-4 flex flex-wrap items-start justify-between gap-3"
+        }
+      >
+        <div className={compact ? "flex min-w-0 flex-wrap items-baseline gap-x-2" : undefined}>
+          <h2 className={`flex items-center gap-2 font-bold text-[#173A67] ${compact ? "text-sm" : "text-title-md"}`}>
+            <MaterialIcon className={`${compact ? "text-[20px]" : "text-[22px]"} text-amber-500`} name="emoji_events" />
             Bảng xếp hạng
           </h2>
           <p className="text-xs text-on-surface-variant">
@@ -79,26 +102,76 @@ export function QuizLeaderboard({
             xếp hạng
           </p>
         </div>
-        {isOpen ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            Đang diễn ra
-          </span>
-        ) : finalized ? (
-          <span className="rounded-full bg-[#D9F2EC] px-2.5 py-0.5 text-xs font-bold text-[#173A67]">
-            Đã tổng kết & cộng điểm
-          </span>
-        ) : (
-          <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
-            Chờ tổng kết
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {compact ? resultLink : null}
+          {isOpen ? (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+              Đang diễn ra
+            </span>
+          ) : finalized ? (
+            <span className="rounded-full bg-[#D9F2EC] px-2.5 py-0.5 text-xs font-bold text-[#173A67]">
+              Đã tổng kết & cộng điểm
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+              Chờ tổng kết
+            </span>
+          )}
+        </div>
       </div>
 
       {ranking.length === 0 ? (
-        <p className="rounded-xl bg-surface-container-low px-4 py-6 text-center text-sm text-on-surface-variant">
+        <p
+          className={`bg-surface-container-low text-center text-on-surface-variant ${
+            compact ? "rounded-lg px-3 py-2 text-xs" : "rounded-xl px-4 py-6 text-sm"
+          }`}
+        >
           Chưa có ai trả lời đúng cả {totalQuestions} câu.
         </p>
+      ) : compact ? (
+        <ol className="grid gap-1.5 sm:grid-cols-2 lg:max-h-[100px] lg:grid-cols-3 lg:overflow-y-auto xl:grid-cols-4">
+          {ranking.map((r) => (
+            <li
+              key={r.user_id}
+              className="flex min-w-0 items-center gap-2 rounded-lg border border-dusty-border/60 px-2 py-1.5"
+              title={`${r.full_name} · ${r.department ?? "—"} · bắt đầu ${formatQuizTime(r.started_at)}`}
+            >
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black ${
+                  MEDAL_CLASS[r.rank - 1] ?? "bg-surface-container text-[#173A67]"
+                }`}
+              >
+                {r.rank}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-on-surface">{r.full_name}</p>
+                <p className="truncate text-[11px] text-on-surface-variant">
+                  <span className="font-semibold text-[#173A67]">{formatQuizDuration(r.duration_ms)}</span>
+                  {" · "}
+                  <span className="font-semibold text-amber-700">
+                    +{r.points}đ{finalized ? "" : " (dự kiến)"}
+                  </span>
+                </p>
+              </div>
+              {isAdmin && sessionId ? (
+                <button
+                  type="button"
+                  disabled={busyUser === r.user_id}
+                  onClick={() => void handleDeleteUserResult(r.user_id, r.full_name)}
+                  title={`Xóa kết quả thi của ${r.full_name}`}
+                  className="shrink-0 rounded-lg p-1 text-on-surface-variant/40 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                >
+                  {busyUser === r.user_id ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                  ) : (
+                    <MaterialIcon className="text-[16px]" name="delete_forever" />
+                  )}
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ol>
       ) : (
         <ol className="divide-y divide-dusty-border/60">
           {ranking.map((r) => {
@@ -164,15 +237,7 @@ export function QuizLeaderboard({
         </ol>
       )}
 
-      {resultPostId ? (
-        <Link
-          className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-primary hover:underline"
-          href={`/posts/${resultPostId}`}
-        >
-          Xem bài viết kết quả
-          <MaterialIcon className="text-[18px]" name="arrow_forward" />
-        </Link>
-      ) : null}
+      {compact ? null : resultLink}
     </section>
   );
 }

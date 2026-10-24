@@ -235,66 +235,114 @@ export function AdminQuizControl({
     },
   ];
 
+  const scheduleText =
+    settings.schedule_mode === "auto"
+      ? `Tự động mở ${WEEKDAY_LABELS[settings.schedule_weekday]} hàng tuần, ${settings.start_time}–${settings.end_time} (giờ Việt Nam).`
+      : "Chế độ thủ công: Admin bấm bật / tắt mỗi đợt thi.";
+  const finalizeNote = settings.auto_finalize
+    ? "Đang bật tự động tổng kết: sau khi đợt thi kết thúc (và hết giờ của lượt cuối), hệ thống tự cộng điểm và đăng bài kết quả khi có người truy cập website."
+    : "Tự động tổng kết đang tắt: bấm “Tổng kết & cộng điểm” sau khi đợt thi kết thúc.";
+  const kpis = [
+    {
+      label: "Lịch thi",
+      value: settings.schedule_mode === "auto" ? WEEKDAY_LABELS[settings.schedule_weekday] : "Thủ công",
+      hint:
+        settings.schedule_mode === "auto"
+          ? `${settings.start_time}–${settings.end_time} hàng tuần`
+          : "Admin bật / tắt mỗi đợt",
+      icon: "calendar_month",
+      box: "border-outline-variant bg-surface-container-lowest",
+      iconBox: "bg-primary/10 text-primary",
+      text: "text-[#173A67]",
+      title: scheduleText,
+    },
+    {
+      label: "Ngân hàng câu hỏi",
+      value: `${questionsCount} câu`,
+      hint: `Mỗi lượt ${settings.questions_per_attempt} câu`,
+      icon: "library_books",
+      box: notEnoughQuestions ? "border-amber-300 bg-amber-50/60" : "border-outline-variant bg-surface-container-lowest",
+      iconBox: "bg-amber-500/10 text-amber-700",
+      text: notEnoughQuestions ? "text-amber-900" : "text-[#173A67]",
+      title: `${questionsCount} câu trong ngân hàng, mỗi lượt ${settings.questions_per_attempt} câu`,
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="flex items-center gap-2 text-title-md font-bold text-[#173A67]">
-              <MaterialIcon className="text-[22px]" name="event" />
-              Điều khiển sự kiện
-            </h2>
-            <p className="mt-1 text-sm text-on-surface-variant">
-              {settings.schedule_mode === "auto"
-                ? `Tự động mở ${WEEKDAY_LABELS[settings.schedule_weekday]} hàng tuần, ${settings.start_time}–${settings.end_time} (giờ Việt Nam).`
-                : "Chế độ thủ công: Admin bấm bật / tắt mỗi đợt thi."}
-            </p>
-            {!currentSession && nextStartAt ? (
-              <p className="text-sm text-on-surface-variant">
-                Lần mở tự động tiếp theo: <strong>{formatQuizDateTime(nextStartAt)}</strong>
+    <>
+      <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((k) => (
+          <div
+            key={k.label}
+            className={`flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5 shadow-xs ${k.box}`}
+            title={k.title}
+          >
+            <div className={`shrink-0 rounded-lg p-1.5 ${k.iconBox}`}>
+              <MaterialIcon className="text-[20px]" name={k.icon} />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-on-surface-variant">{k.label}</p>
+              <p className="flex min-w-0 items-baseline gap-1.5">
+                <span className={`shrink-0 text-lg font-black leading-tight ${k.text}`}>{k.value}</span>
+                <span className="truncate text-xs text-on-surface-variant">{k.hint}</span>
               </p>
-            ) : null}
+            </div>
           </div>
-          {currentSession ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-              Đang mở đến {formatQuizTime(currentSession.ends_at)}
-            </span>
-          ) : (
-            <span className="rounded-full bg-surface-container-high px-3 py-1 text-sm font-bold text-on-surface-variant">
-              Đang tắt
-            </span>
-          )}
-        </div>
+        ))}
 
-        {notEnoughQuestions ? (
-          <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-900">
-            Ngân hàng mới có {questionsCount} câu, cần ít nhất {settings.questions_per_attempt} câu để người chơi
-            làm bài.
-          </p>
-        ) : null}
-
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          {currentSession ? (
-            <button
-              className="rounded-xl border-2 border-error px-5 py-2 font-bold text-error disabled:opacity-60"
-              disabled={busy !== null}
-              type="button"
-              onClick={() => {
-                if (window.confirm("Tắt đợt thi ngay bây giờ? Người đang làm dở vẫn được nộp trong thời gian của lượt."))
-                  void call("close", "/api/quiz/session", { action: "close", programId });
-              }}
-            >
-              {busy === "close" ? "Đang tắt..." : "Tắt thi ngay"}
-            </button>
-          ) : (
-            <>
-              <div>
-                <label className="mb-1 block text-label-md" htmlFor="quizDuration">
-                  Mở trong (phút)
+        <div
+          className={`flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5 shadow-xs sm:col-span-2 ${
+            currentSession ? "border-emerald-300 bg-emerald-50/60" : "border-[#d2dfe9] bg-white"
+          }`}
+        >
+          <div
+            className={`shrink-0 rounded-lg p-1.5 ${
+              currentSession ? "bg-emerald-500/10 text-emerald-700" : "bg-tertiary-container text-on-tertiary-container"
+            }`}
+          >
+            <MaterialIcon className="text-[20px]" name="event" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="flex min-w-0 items-center gap-2 text-xs">
+              <span className="shrink-0 font-semibold text-on-surface-variant">Điều khiển sự kiện</span>
+              {currentSession ? (
+                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 font-bold text-emerald-800">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Đang mở đến {formatQuizTime(currentSession.ends_at)}
+                </span>
+              ) : (
+                <span className="shrink-0 rounded-full bg-surface-container-high px-2 py-0.5 font-bold text-on-surface-variant">
+                  Đang tắt
+                </span>
+              )}
+              {!currentSession && nextStartAt ? (
+                <span
+                  className="truncate text-on-surface-variant"
+                  title={`Lần mở tự động tiếp theo: ${formatQuizDateTime(nextStartAt)}`}
+                >
+                  Mở tự động: <strong>{formatQuizDateTime(nextStartAt)}</strong>
+                </span>
+              ) : null}
+            </p>
+            {currentSession ? (
+              <button
+                className="mt-0.5 rounded-lg border-2 border-error px-3 py-0.5 text-xs font-bold text-error disabled:opacity-60"
+                disabled={busy !== null}
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Tắt đợt thi ngay bây giờ? Người đang làm dở vẫn được nộp trong thời gian của lượt."))
+                    void call("close", "/api/quiz/session", { action: "close", programId });
+                }}
+              >
+                {busy === "close" ? "Đang tắt..." : "Tắt thi ngay"}
+              </button>
+            ) : (
+              <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
+                <label className="text-on-surface-variant" htmlFor="quizDuration">
+                  Mở trong
                 </label>
                 <input
-                  className={`${inputClass} w-28`}
+                  className="w-16 rounded-lg border border-outline-variant bg-surface px-2 py-0.5 text-xs outline-none focus:border-[#173A67]"
                   id="quizDuration"
                   max={360}
                   min={5}
@@ -302,60 +350,74 @@ export function AdminQuizControl({
                   value={duration}
                   onChange={(e) => setDuration(Number(e.target.value))}
                 />
+                <span className="text-on-surface-variant">phút</span>
+                <button
+                  className="rounded-lg bg-tertiary px-3 py-0.5 font-bold text-on-tertiary disabled:opacity-60"
+                  disabled={busy !== null}
+                  type="button"
+                  onClick={() =>
+                    void call("open", "/api/quiz/session", { action: "open", durationMinutes: duration, programId })
+                  }
+                >
+                  {busy === "open" ? "Đang bật..." : "Bật thi ngay"}
+                </button>
               </div>
-              <button
-                className="rounded-xl bg-tertiary px-5 py-2 font-bold text-on-tertiary disabled:opacity-60"
-                disabled={busy !== null}
-                type="button"
-                onClick={() =>
-                  void call("open", "/api/quiz/session", { action: "open", durationMinutes: duration, programId })
-                }
-              >
-                {busy === "open" ? "Đang bật..." : "Bật thi ngay"}
-              </button>
-            </>
-          )}
+            )}
+          </div>
         </div>
-      </section>
+      </div>
+
+      {notEnoughQuestions ? (
+        <p className="flex shrink-0 items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">
+          <MaterialIcon className="text-[16px] text-amber-700" name="warning" />
+          Ngân hàng mới có {questionsCount} câu, cần ít nhất {settings.questions_per_attempt} câu để người chơi
+          làm bài.
+        </p>
+      ) : null}
 
       {error ? (
-        <p className="text-sm text-error" role="alert">
+        <p className="shrink-0 text-sm text-error" role="alert">
           {error}
         </p>
       ) : null}
       {success ? (
-        <p className="rounded-xl bg-[#D9F2EC] px-4 py-2 text-sm text-[#173A67]">{success}</p>
+        <p className="shrink-0 rounded-xl bg-[#D9F2EC] px-3 py-1.5 text-sm text-[#173A67]">{success}</p>
       ) : null}
 
-      <section className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
-        <h2 className="mb-3 flex items-center gap-2 text-title-md font-bold text-[#173A67]">
-          <MaterialIcon className="text-[22px]" name="history" />
+      <section className="flex flex-col gap-2 lg:min-h-0 lg:flex-1">
+        <h2 className="flex shrink-0 items-center gap-2 text-sm font-bold text-[#173A67]">
+          <MaterialIcon className="text-[20px]" name="history" />
           Các đợt thi gần đây
         </h2>
         {sessions.length === 0 ? (
-          <p className="text-sm text-on-surface-variant">Chưa có đợt thi nào.</p>
+          <>
+            <p className="rounded-xl border border-[#d2dfe9] bg-white px-3 py-2 text-sm text-on-surface-variant">
+              Chưa có đợt thi nào.
+            </p>
+            <p className="text-xs text-on-surface-variant">{finalizeNote}</p>
+          </>
         ) : (
-          <DataTable
-            columns={sessionColumns}
-            rowKey={(s) => s.id}
-            rows={sessions}
-          />
+          <div className="flex flex-col lg:min-h-[200px] lg:flex-1">
+            <DataTable
+              columns={sessionColumns}
+              density="compact"
+              fill
+              footerNote={finalizeNote}
+              rowKey={(s) => s.id}
+              rows={sessions}
+            />
+          </div>
         )}
-        <p className="mt-3 text-xs text-on-surface-variant">
-          {settings.auto_finalize
-            ? "Đang bật tự động tổng kết: sau khi đợt thi kết thúc (và hết giờ của lượt cuối), hệ thống tự cộng điểm và đăng bài kết quả khi có người truy cập website."
-            : "Tự động tổng kết đang tắt: bấm “Tổng kết & cộng điểm” sau khi đợt thi kết thúc."}
-        </p>
       </section>
 
-      <details className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5">
-        <summary className="flex cursor-pointer items-center gap-2 text-title-md font-bold text-[#173A67]">
-          <MaterialIcon className="text-[22px]" name="settings" />
+      <details className="shrink-0 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-2">
+        <summary className="flex cursor-pointer items-center gap-2 text-sm font-bold text-[#173A67]">
+          <MaterialIcon className="text-[20px]" name="settings" />
           Cài đặt lịch thi, điểm thưởng & bài viết kết quả
         </summary>
 
         <form
-          className="mt-4 space-y-5"
+          className="mt-3 space-y-4"
           onSubmit={(e) => {
             e.preventDefault();
             void call("settings", "/api/quiz/settings", { ...form, programId });
@@ -518,6 +580,6 @@ export function AdminQuizControl({
           </button>
         </form>
       </details>
-    </div>
+    </>
   );
 }
