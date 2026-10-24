@@ -1,19 +1,15 @@
 import Link from "next/link";
 import { BackToHubBar } from "@/components/admin/BackToHubBar";
-import { PostCard } from "@/components/posts/PostCard";
 import { PostEditButton } from "@/components/posts/PostEditButton";
+import { PostsListClient } from "@/components/posts/PostsListClient";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { getPosts } from "@/lib/data/posts";
 
+// Bản cache chung chỉ gồm bài đang hiển thị; nút đăng bài và bài Inactive chỉ hiện với người có quyền (phía trình duyệt).
 export const revalidate = 60;
 
 export default async function PostsPage() {
-  const access = await getCurrentAccess();
-  const canManage = access ? hasPermission(access, PERMISSIONS.postsManage) : false;
-
-  const posts = await getPosts(50, { includeInactive: canManage });
+  const posts = await getPosts(50);
 
   return (
     <div className="space-y-8">
@@ -40,21 +36,11 @@ export default async function PostsPage() {
             <MaterialIcon className="text-[16px]" name="arrow_back" />
             Về trang chủ
           </Link>
-          {canManage ? <PostEditButton /> : null}
+          <PostEditButton />
         </div>
       </header>
 
-      {posts.length === 0 ? (
-        <p className="rounded-2xl border border-dusty-border bg-white px-4 py-12 text-center text-sm text-on-surface-variant">
-          Chưa có bài viết nào. Vui lòng quay lại sau.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 gap-gutter md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
-          ))}
-        </div>
-      )}
+      <PostsListClient initialPosts={posts} />
     </div>
   );
 }

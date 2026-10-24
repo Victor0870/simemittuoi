@@ -22,17 +22,23 @@ export type DashboardUser = {
   newActivitiesCount: number;
 };
 
+/** Dữ liệu chung của trang chủ, giống nhau với mọi người xem (được cache ISR). */
 export type HomePageData = {
-  user: DashboardUser;
   announcements: Announcement[];
   newsPosts: Announcement[];
   activities: Activity[];
   leaderboard: LeaderboardEntry[];
   goal: typeof MOCK_GOAL;
   dataSource: "supabase" | "empty" | "error";
+  errorMessage?: string;
+};
+
+/** Phần riêng của từng người xem trang chủ, tải qua /api/home/session. */
+export type HomeSessionInfo = {
   /** true = chưa đăng nhập (khách) */
   isGuest: boolean;
-  errorMessage?: string;
+  user: DashboardUser;
+  registeredActivityIds: string[];
 };
 
 function formatTimeAgo(isoDate: string): string {
@@ -53,7 +59,7 @@ function formatDate(date: string | null): string {
   return parsed.toLocaleDateString("vi-VN");
 }
 
-function emptyUser(isGuest: boolean): DashboardUser {
+export function emptyUser(isGuest: boolean): DashboardUser {
   return {
     name: isGuest ? "Khách" : "Đoàn viên",
     score: 0,
@@ -194,21 +200,35 @@ async function getHomePublicData(): Promise<HomePublicData> {
   };
 }
 
-async function getSessionInfo(
-  publicDb: ReturnType<typeof createPublicClient>,
-  activityCount: number,
-): Promise<{ authUserId: string | null; isGuest: boolean; user: DashboardUser }> {
+/**
+ * Thông tin riêng của người đang xem trang chủ (tên, điểm, hạng, hoạt động đã đăng ký).
+ * Chỉ gọi từ route động (đọc cookie), không bao giờ cache chung giữa các người dùng.
+ */
+export async function getHomeSessionInfo(activityIds: string[]): Promise<HomeSessionInfo> {
+  const guest: HomeSessionInfo = {
+    isGuest: true,
+    user: emptyUser(true),
+    registeredActivityIds: [],
+  };
   try {
     const [supabase, authUserId] = await Promise.all([createClient(), getSessionUserId()]);
-    if (!authUserId) {
-      return { authUserId: null, isGuest: true, user: emptyUser(true) };
-    }
+    if (!authUserId) return guest;
 
-    const { data: profile } = await supabase
-      .from(CDILV_TABLE.profiles)
-      .select("full_name, employee_code, total_score, rank")
-      .eq("id", authUserId)
-      .maybeSingle();
+    const publicDb = createPublicClient();
+    const [{ data: profile }, registrationsResult] = await Promise.all([
+      supabase
+        .from(CDILV_TABLE.profiles)
+        .select("full_name, employee_code, total_score, rank")
+        .eq("id", authUserId)
+        .maybeSingle(),
+      activityIds.length
+        ? publicDb
+            .from(CDILV_TABLE.activityRegistrations)
+            .select("activity_id")
+            .eq("user_id", authUserId)
+            .in("activity_id", activityIds)
+        : Promise.resolve({ data: [] as Array<{ activity_id: string }> }),
+    ]);
 
     let score = profile?.total_score ?? 0;
     let rank = profile?.rank ? Number(profile.rank) : 0;
@@ -237,18 +257,18 @@ async function getSessionInfo(
     }
 
     return {
-      authUserId,
       isGuest: false,
       user: {
         name: profile?.full_name ?? "Đoàn viên",
         score,
         rank,
-        newActivitiesCount: activityCount,
+        newActivitiesCount: activityIds.length,
       },
+      registeredActivityIds: (registrationsResult.data ?? []).map((r) => r.activity_id),
     };
   } catch (authErr) {
     console.warn("[home] auth session skipped:", authErr);
-    return { authUserId: null, isGuest: true, user: emptyUser(true) };
+    return guest;
   }
 }
 
@@ -262,18 +282,14 @@ export async function getHomePageData(): Promise<HomePageData> {
     }
 
     const activityIds = activities.map((item) => item.id);
-    const [registrationsResult, session] = await Promise.all([
-      activityIds.length
-        ? publicDb
-            .from(CDILV_TABLE.activityRegistrations)
-            .select("activity_id, user_id")
-            .in("activity_id", activityIds)
-        : Promise.resolve({ data: [] as Array<{ activity_id: string; user_id: string }> }),
-      getSessionInfo(publicDb, activities.length),
-    ]);
+    const registrationsResult = activityIds.length
+      ? await publicDb
+          .from(CDILV_TABLE.activityRegistrations)
+          .select("activity_id")
+          .in("activity_id", activityIds)
+      : { data: [] as Array<{ activity_id: string }> };
 
     const allRegistrations = registrationsResult.data ?? [];
-    const { authUserId, isGuest, user } = session;
 
     const allMappedPosts: Announcement[] = posts.map((post) => ({
       id: post.id,
@@ -307,9 +323,6 @@ export async function getHomePageData(): Promise<HomePageData> {
 
     const activityItems: Activity[] = activities.map((item) => {
       const actRegs = allRegistrations.filter((r) => r.activity_id === item.id);
-      const isUserRegistered = authUserId
-        ? actRegs.some((r) => r.user_id === authUserId)
-        : false;
 
       return {
         id: item.id,
@@ -324,7 +337,7 @@ export async function getHomePageData(): Promise<HomePageData> {
         extraParticipants: 0,
         isRegistrationOpen: item.is_registration_open !== false,
         participantCount: actRegs.length,
-        isRegistered: isUserRegistered,
+        isRegistered: false,
       };
     });
 
@@ -334,28 +347,24 @@ export async function getHomePageData(): Promise<HomePageData> {
       leaderboard.length > 0;
 
     return {
-      user,
       announcements,
       newsPosts,
       activities: activityItems.slice(0, 4),
       leaderboard,
       goal: MOCK_GOAL,
       dataSource: hasContent ? "supabase" : errors.length ? "error" : "empty",
-      isGuest,
       errorMessage: errors.length ? errors.join(" | ") : undefined,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[home] fatal:", message);
     return {
-      user: emptyUser(true),
       announcements: [],
       newsPosts: [],
       activities: [],
       leaderboard: [],
       goal: MOCK_GOAL,
       dataSource: "error",
-      isGuest: true,
       errorMessage: message,
     };
   }

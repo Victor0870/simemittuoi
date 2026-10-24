@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -97,7 +98,7 @@ export async function getPosts(
   return (data ?? []).map(mapRow);
 }
 
-export async function getPostById(id: string): Promise<PostDetail | null> {
+export const getPostById = cache(async (id: string): Promise<PostDetail | null> => {
   const db = createServiceClient();
   const { data, error } = await db
     .from(CDILV_TABLE.posts)
@@ -111,7 +112,7 @@ export async function getPostById(id: string): Promise<PostDetail | null> {
   }
   if (!data) return null;
   return mapRow(data);
-}
+});
 
 export async function getRelatedPosts(
   excludeId: string,

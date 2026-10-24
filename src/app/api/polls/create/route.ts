@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
@@ -148,6 +149,14 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+    }
+
+    try {
+      revalidatePath("/polls");
+      revalidatePath("/admin/polls");
+      revalidatePath("/");
+    } catch {
+      /* noop */
     }
 
     return NextResponse.json({

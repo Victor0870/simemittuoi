@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,9 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   const { isGuest, isAdmin } = useAuth();
 
   const [isRegistered, setIsRegistered] = useState(activity.isRegistered ?? false);
+  useEffect(() => {
+    setIsRegistered(activity.isRegistered ?? false);
+  }, [activity.isRegistered]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(
     activity.isRegistrationOpen !== false,
   );

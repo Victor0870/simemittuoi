@@ -5,9 +5,11 @@ import type { DashboardUser } from "@/lib/data/home";
 type HeroWelcomeProps = {
   user: DashboardUser;
   isGuest?: boolean;
+  /** Đang tải thông tin riêng của người xem: hiện khung chờ thay cho lời chào. */
+  loading?: boolean;
 };
 
-export function HeroWelcome({ user, isGuest = false }: HeroWelcomeProps) {
+export function HeroWelcome({ user, isGuest = false, loading = false }: HeroWelcomeProps) {
   return (
     <section className="relative overflow-hidden rounded-2xl border border-dusty-border/80 bg-gradient-to-r from-dusty-light/90 via-surface-muted to-white p-4 sm:p-8 shadow-xs">
       <div className="pointer-events-none absolute -top-12 -right-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
@@ -15,7 +17,13 @@ export function HeroWelcome({ user, isGuest = false }: HeroWelcomeProps) {
 
       <div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:gap-6 lg:flex-row lg:items-center">
         <div className="max-w-2xl space-y-2 sm:space-y-3">
-          {isGuest ? (
+          {loading ? (
+            <div aria-busy="true" className="space-y-3">
+              <div className="h-8 w-64 max-w-full animate-pulse rounded-lg bg-dusty-border/60" />
+              <div className="h-4 w-96 max-w-full animate-pulse rounded bg-dusty-border/40" />
+              <div className="h-4 w-72 max-w-full animate-pulse rounded bg-dusty-border/40" />
+            </div>
+          ) : isGuest ? (
             <>
               <h1 className="text-title-lg sm:text-headline-lg font-extrabold tracking-tight text-on-surface">
                 Xin chào{" "}
@@ -52,7 +60,9 @@ export function HeroWelcome({ user, isGuest = false }: HeroWelcomeProps) {
         </div>
 
         <div className="flex w-full flex-wrap items-center gap-2.5 sm:gap-3 sm:w-auto">
-          {isGuest ? (
+          {loading ? (
+            <div className="h-11 w-full animate-pulse rounded-xl bg-dusty-border/40 sm:w-72" />
+          ) : isGuest ? (
             <>
               <Link
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-label-lg font-bold text-white shadow-xs transition-all hover:bg-dusty-dark active:scale-95 sm:flex-none"

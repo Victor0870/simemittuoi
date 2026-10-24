@@ -7,8 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
-export type LeaderboardPageData = {
-  entries: LeaderboardEntry[];
+export type MyLeaderboardPosition = {
   isGuest: boolean;
   currentUserId: string | null;
   currentEmployeeCode: string | null;
@@ -90,11 +89,22 @@ async function getLeaderboardRows(limit: number): Promise<LeaderboardRow[]> {
   }
 }
 
-export async function getLeaderboardPageData(
-  limit = 45,
-): Promise<LeaderboardPageData> {
-  const empty: LeaderboardPageData = {
-    entries: [],
+/** Bảng xếp hạng chung, giống nhau với mọi người xem (trang /leaderboard được cache ISR). */
+export async function getLeaderboardEntries(limit = 45): Promise<LeaderboardEntry[]> {
+  try {
+    return mapRows(await getLeaderboardRows(limit));
+  } catch (err) {
+    console.error("[leaderboard] fatal:", err);
+    return [];
+  }
+}
+
+/**
+ * Hạng / điểm của người đang đăng nhập. Đọc cookie nên chỉ gọi từ route động
+ * (/api/leaderboard/me), không bao giờ cache chung giữa các người dùng.
+ */
+export async function getMyLeaderboardPosition(): Promise<MyLeaderboardPosition> {
+  const result: MyLeaderboardPosition = {
     isGuest: true,
     currentUserId: null,
     currentEmployeeCode: null,
@@ -104,73 +114,48 @@ export async function getLeaderboardPageData(
 
   try {
     const publicDb = createPublicClient();
+    const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
+    result.isGuest = !userId;
 
-    let isGuest = true;
-    let currentUserId: string | null = null;
-    let currentEmployeeCode: string | null = null;
-    let currentRank = 0;
-    let currentScore = 0;
+    if (userId) {
+      result.currentUserId = userId;
+      const { data: profile } = await supabase
+        .from(CDILV_TABLE.profiles)
+        .select("employee_code, total_score, rank")
+        .eq("id", userId)
+        .maybeSingle();
 
-    // Bảng xếp hạng chung và thông tin của người đang đăng nhập không phụ thuộc nhau: tải song song
-    const loadMine = async () => {
-      try {
-        const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
-        isGuest = !userId;
+      result.currentEmployeeCode = profile?.employee_code ?? null;
 
-        if (userId) {
-          currentUserId = userId;
-          const { data: profile } = await supabase
-            .from(CDILV_TABLE.profiles)
-            .select("employee_code, total_score, rank")
-            .eq("id", userId)
+      if (profile?.rank && (profile.total_score ?? 0) > 0) {
+        result.currentRank = Number(profile.rank);
+        result.currentScore = profile.total_score ?? 0;
+      } else {
+        const { data: byId } = await publicDb
+          .from(CDILV_TABLE.leaderboard)
+          .select("total_score, rank, id, employee_code")
+          .eq("id", userId)
+          .maybeSingle();
+
+        let mine = byId;
+        if (!mine && result.currentEmployeeCode) {
+          const { data: byCode } = await publicDb
+            .from(CDILV_TABLE.leaderboard)
+            .select("total_score, rank, id, employee_code")
+            .eq("employee_code", result.currentEmployeeCode)
             .maybeSingle();
-
-          currentEmployeeCode = profile?.employee_code ?? null;
-
-          if (profile?.rank && (profile.total_score ?? 0) > 0) {
-            currentRank = Number(profile.rank);
-            currentScore = profile.total_score ?? 0;
-          } else {
-            const { data: byId } = await publicDb
-              .from(CDILV_TABLE.leaderboard)
-              .select("total_score, rank, id, employee_code")
-              .eq("id", userId)
-              .maybeSingle();
-
-            let mine = byId;
-            if (!mine && currentEmployeeCode) {
-              const { data: byCode } = await publicDb
-                .from(CDILV_TABLE.leaderboard)
-                .select("total_score, rank, id, employee_code")
-                .eq("employee_code", currentEmployeeCode)
-                .maybeSingle();
-              mine = byCode;
-            }
-
-            if (mine) {
-              currentRank = Number(mine.rank);
-              currentScore = mine.total_score;
-            }
-          }
+          mine = byCode;
         }
-      } catch (authErr) {
-        console.warn("[leaderboard] auth skipped:", authErr);
+
+        if (mine) {
+          result.currentRank = Number(mine.rank);
+          result.currentScore = mine.total_score;
+        }
       }
-    };
-
-    const [rows] = await Promise.all([getLeaderboardRows(limit), loadMine()]);
-    const entries = mapRows(rows);
-
-    return {
-      entries,
-      isGuest,
-      currentUserId,
-      currentEmployeeCode,
-      currentRank,
-      currentScore,
-    };
-  } catch (err) {
-    console.error("[leaderboard] fatal:", err);
-    return empty;
+    }
+  } catch (authErr) {
+    console.warn("[leaderboard] auth skipped:", authErr);
   }
+
+  return result;
 }

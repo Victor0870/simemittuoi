@@ -12,6 +12,11 @@ import { PollScheduleNotice } from "@/components/polls/PollScheduleNotice";
 
 export const revalidate = 15;
 
+// Không dựng sẵn lúc build; mỗi poll được render lần đầu khi có người mở rồi cache chung (ISR).
+export async function generateStaticParams() {
+  return [];
+}
+
 type Props = {
   params: Promise<{ id: string }>;
 };
