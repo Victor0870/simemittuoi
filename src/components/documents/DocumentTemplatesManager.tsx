@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { DocumentSettingsModal } from "@/components/documents/DocumentSettingsModal";
 import { DocumentTemplateEditor, type TemplateDraft } from "@/components/documents/DocumentTemplateEditor";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { DEFAULT_DOCUMENT_ORG_SETTINGS, type DocumentOrgSettings } from "@/lib/documents/settings";
 import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABEL,
   STANDARD_TEMPLATE_FIELDS,
+  parseStructuredDocument,
   type DocumentTemplate,
   type DocumentType,
 } from "@/lib/documents/templates";
@@ -22,13 +25,21 @@ function normalize(text: string): string {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 }
 
-/** Thư viện mẫu văn bản: lọc theo loại / trạng thái, tìm theo tên, thêm – sửa – ngừng dùng. */
-export function DocumentTemplatesManager({ templates }: { templates: DocumentTemplate[] }) {
+/** Thư viện mẫu văn bản: lọc theo loại / trạng thái, tìm theo tên, thêm – sửa – ngừng dùng, cài đặt thông tin cố định đơn vị. */
+export function DocumentTemplatesManager({
+  templates,
+  initialSettings = DEFAULT_DOCUMENT_ORG_SETTINGS,
+}: {
+  templates: DocumentTemplate[];
+  initialSettings?: DocumentOrgSettings;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<DocumentType | "">("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [draft, setDraft] = useState<TemplateDraft | null>(null);
+  const [orgSettings, setOrgSettings] = useState<DocumentOrgSettings>(initialSettings);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +116,7 @@ export function DocumentTemplatesManager({ templates }: { templates: DocumentTem
           {t.name}
         </button>
       ),
-      className: "min-w-[220px]",
+      className: "min-w-[240px]",
     },
     {
       key: "docType",
@@ -114,8 +125,26 @@ export function DocumentTemplatesManager({ templates }: { templates: DocumentTem
       className: "whitespace-nowrap",
     },
     {
+      key: "structure",
+      header: "Cấu trúc (Căn cứ / Điều)",
+      filterable: false,
+      accessor: (t) => {
+        const s = parseStructuredDocument(t.body, t.docType);
+        return `${s.bases.length} căn cứ • ${s.articles.length} điều`;
+      },
+      render: (t) => {
+        const s = parseStructuredDocument(t.body, t.docType);
+        return (
+          <span className="whitespace-nowrap text-xs text-on-surface-variant">
+            <strong>{s.bases.length}</strong> căn cứ • <strong>{s.articles.length}</strong> điều
+          </span>
+        );
+      },
+      className: "whitespace-nowrap",
+    },
+    {
       key: "fields",
-      header: "Số trường",
+      header: "Ô nhập",
       type: "number",
       accessor: (t) => t.fields.length,
       className: "whitespace-nowrap text-right tabular-nums",
@@ -154,7 +183,7 @@ export function DocumentTemplatesManager({ templates }: { templates: DocumentTem
           <button
             aria-label={`Sửa mẫu ${t.name}`}
             className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-            title="Sửa mẫu"
+            title="Sửa mẫu (Căn cứ, Các Điều, Ô nhập)"
             type="button"
             onClick={() => openEdit(t)}
           >
@@ -188,13 +217,50 @@ export function DocumentTemplatesManager({ templates }: { templates: DocumentTem
         <span className="text-xs text-on-surface-variant">
           <strong className="text-[#173A67]">{activeCount}</strong> đang dùng / {templates.length} mẫu
         </span>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#173A67] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#ecf4ff]"
+            type="button"
+            onClick={() => {
+              setError(null);
+              setMessage(null);
+              setShowSettingsModal(true);
+            }}
+          >
+            <MaterialIcon className="text-[17px]" name="settings" />
+            Cài đặt thông tin cố định (Đơn vị)
+          </button>
+          <button
+            className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
+            type="button"
+            onClick={openNew}
+          >
+            <MaterialIcon className="text-[18px]" name="add" />
+            Thêm mẫu
+          </button>
+        </div>
+      </div>
+
+      {/* Thanh tóm tắt Cài đặt đơn vị cố định */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[#d2dfe9] bg-[#f5f9ff] px-3 py-1.5 text-xs text-on-surface-variant">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span>
+            Đơn vị: <strong className="text-[#173A67]">{orgSettings.unionHeaderName}</strong>
+          </span>
+          <span>
+            Cấp trên: <strong>{orgSettings.parentUnionName}</strong>
+          </span>
+          <span>
+            Địa danh: <strong>{orgSettings.defaultLocation}</strong> • Đuôi số QĐ:{" "}
+            <strong className="font-mono">{orgSettings.decisionCodeSuffix}</strong>
+          </span>
+        </div>
         <button
-          className="ml-auto inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
+          className="text-xs font-bold text-[#173A67] hover:underline"
           type="button"
-          onClick={openNew}
+          onClick={() => setShowSettingsModal(true)}
         >
-          <MaterialIcon className="text-[18px]" name="add" />
-          Thêm mẫu
+          Thay đổi cài đặt đơn vị →
         </button>
       </div>
 
@@ -277,10 +343,25 @@ export function DocumentTemplatesManager({ templates }: { templates: DocumentTem
       {draft ? (
         <DocumentTemplateEditor
           initial={draft}
+          orgSettings={orgSettings}
           onClose={() => setDraft(null)}
+          onOpenSettings={() => setShowSettingsModal(true)}
           onSaved={(saved, created) => {
             setDraft(null);
             setMessage(created ? `Đã tạo mẫu “${saved.name}”.` : `Đã lưu mẫu “${saved.name}”.`);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {showSettingsModal ? (
+        <DocumentSettingsModal
+          initial={orgSettings}
+          onClose={() => setShowSettingsModal(false)}
+          onSaved={(nextSettings) => {
+            setOrgSettings(nextSettings);
+            setShowSettingsModal(false);
+            setMessage("Đã lưu cài đặt thông tin cố định của đơn vị.");
             router.refresh();
           }}
         />

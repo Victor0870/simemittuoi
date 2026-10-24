@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { DocumentTemplatesManager } from "@/components/documents/DocumentTemplatesManager";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { loadDocumentOrgSettings } from "@/lib/documents/settings-server";
 import { loadDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -13,6 +14,10 @@ export default async function DocumentTemplatesPage() {
   if (!access) redirect("/login?next=/admin/documents/templates");
   if (!hasPermission(access, PERMISSIONS.postsManage)) redirect("/");
 
-  const templates = await loadDocumentTemplates(createServiceClient());
-  return <DocumentTemplatesManager templates={templates} />;
+  const db = createServiceClient();
+  const [templates, initialSettings] = await Promise.all([
+    loadDocumentTemplates(db),
+    loadDocumentOrgSettings(db),
+  ]);
+  return <DocumentTemplatesManager initialSettings={initialSettings} templates={templates} />;
 }
