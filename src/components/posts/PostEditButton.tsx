@@ -5,15 +5,8 @@ import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PERMISSIONS } from "@/lib/auth/permissions";
-import { resizeImageToBlob } from "@/lib/image-resize";
-import {
-  POST_IMAGE_ACCEPT,
-  POST_IMAGE_ERRORS,
-  POST_IMAGE_MAX_BYTES,
-  POST_IMAGE_MAX_WIDTH,
-  POST_IMAGE_TYPES,
-  postInlineImageMarkup,
-} from "@/lib/post-images";
+import { uploadPostImage } from "@/lib/post-image-upload";
+import { POST_IMAGE_ACCEPT, postInlineImageMarkup } from "@/lib/post-images";
 import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 import { isScheduledAt, toDateTimeLocalValue } from "@/lib/post-schedule";
 
@@ -37,23 +30,6 @@ type PostEditButtonProps = {
   /** Nút sửa dạng icon gọn (dùng trong bảng quản trị). */
   compact?: boolean;
 };
-
-/** Nén (cạnh dài tối đa 1600px, GIF giữ nguyên) rồi tải ảnh bài viết lên Storage qua API. */
-async function uploadPostImage(file: File): Promise<string> {
-  if (!POST_IMAGE_TYPES[file.type]) throw new Error(POST_IMAGE_ERRORS.badType);
-  const blob = await resizeImageToBlob(file, POST_IMAGE_MAX_WIDTH, 0.85).catch(() => file);
-  if (blob.size > POST_IMAGE_MAX_BYTES) throw new Error(POST_IMAGE_ERRORS.tooLarge);
-
-  const form = new FormData();
-  form.append(
-    "file",
-    blob instanceof File ? blob : new File([blob], "post.jpg", { type: blob.type || "image/jpeg" }),
-  );
-  const res = await fetch("/api/posts/images", { method: "POST", body: form });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || typeof data.url !== "string") throw new Error(data.error || "Không tải được ảnh lên.");
-  return data.url;
-}
 
 function defaultScheduleValue(): string {
   const d = new Date();

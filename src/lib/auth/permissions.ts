@@ -490,6 +490,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.reportsView,
   },
   {
+    href: "/admin/finance/regulations",
+    title: "Quy chế chi tiêu",
+    description: "Soạn và cập nhật Quy chế chi tiêu theo Chương / Điều cho đoàn viên đọc và in.",
+    icon: "gavel",
+    permission: PERMISSIONS.financeManage,
+  },
+  {
     href: "/office/print-settings",
     title: "Cài đặt biểu mẫu in",
     description: "Tên đơn vị, người ký trên phiếu in và mức chi thăm hỏi mặc định.",
@@ -532,6 +539,7 @@ export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCo
   { prefix: "/admin/polls", permission: PERMISSIONS.pollsManage },
   { prefix: "/admin/popups", permission: PERMISSIONS.popupsManage },
   { prefix: "/admin/content/guides", permission: PERMISSIONS.postsManage },
+  { prefix: "/admin/finance/regulations", permission: PERMISSIONS.financeManage },
 ];
 
 export function findAdminRoutePermission(pathname: string): PermissionCode | null {

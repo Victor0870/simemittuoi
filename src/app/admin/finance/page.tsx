@@ -67,6 +67,14 @@ export default async function FinanceHubPage() {
       tint: "amber",
       allowed: hasPermission(access, PERMISSIONS.catalogsManage),
     },
+    {
+      href: "/admin/finance/regulations",
+      title: "Quy chế chi tiêu",
+      description: "Soạn và cập nhật Quy chế chi tiêu theo Chương / Điều; đoàn viên đọc và in tại trang Quy chế chi tiêu.",
+      icon: "gavel",
+      tint: "surface",
+      allowed: hasPermission(access, PERMISSIONS.financeManage),
+    },
   ];
 
   return (

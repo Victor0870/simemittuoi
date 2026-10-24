@@ -21,6 +21,7 @@ function resolveActiveHref(pathname: string): string {
     "/polls",
     "/albums",
     "/quiz",
+    "/quy-che-chi-tieu",
     "/settings",
     "/score-history",
     "/campaigns",
