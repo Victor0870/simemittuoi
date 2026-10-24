@@ -1,8 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
-import { findAdminRoutePermission } from "@/lib/auth/permissions";
+import {
+  findAdminRoutePermission,
+  hasPermission,
+  parseAccess,
+  type PermissionCode,
+} from "@/lib/auth/permissions";
 import { CHANGE_PASSWORD_PATH, mustChangePassword } from "@/lib/auth/password";
+import { FORWARDED_ACCESS_HEADER, signForwardedAccess } from "@/lib/auth/forwarded-access";
+
+type SupabaseMiddlewareClient = ReturnType<typeof createServerClient>;
 
 function isMemberOnlyPath(pathname: string) {
   return (
@@ -26,10 +34,102 @@ function isAuthExemptPath(pathname: string) {
   );
 }
 
+type GateInfo = {
+  status: string;
+  isAdminRole: boolean;
+  /** Quyền mở trang /admin tương ứng (chỉ có ý nghĩa khi đã duyệt và không phải admin). */
+  adminPermissionAllowed: boolean;
+  /** Kết quả thô của cdilv_my_permissions để chuyển xuống trang (null nếu không lấy được). */
+  rawAccess: unknown;
+};
+
+/**
+ * Trạng thái duyệt / vai trò / quyền trang admin của người đang đăng nhập.
+ * Thường chỉ 1 lần gọi (cdilv_my_permissions — cùng RPC mà getCurrentAccess dùng ở trang);
+ * chỉ người chưa được duyệt mới cần đọc thêm approval_status để phân biệt "bị từ chối".
+ */
+async function loadGateInfo(
+  supabase: SupabaseMiddlewareClient,
+  userId: string,
+  adminPermission: PermissionCode | null,
+  needsRejectedFlag: boolean,
+): Promise<GateInfo> {
+  const { data: rawAccess, error } = await supabase.rpc(CDILV_RPC.myPermissions);
+
+  if (!error) {
+    const access = parseAccess(rawAccess);
+    if (access.isApproved) {
+      return {
+        status: "approved",
+        isAdminRole: access.isAdmin,
+        adminPermissionAllowed: adminPermission ? hasPermission(access, adminPermission) : false,
+        rawAccess,
+      };
+    }
+
+    // Chưa duyệt đang ở login/register/pending: không chuyển hướng nên không cần biết có bị từ chối không
+    if (!needsRejectedFlag) {
+      return { status: "pending", isAdminRole: false, adminPermissionAllowed: false, rawAccess: null };
+    }
+
+    const { data: profile } = await supabase
+      .from(CDILV_TABLE.profiles)
+      .select("approval_status")
+      .eq("id", userId)
+      .maybeSingle();
+    return {
+      status: profile?.approval_status ?? "pending",
+      isAdminRole: false,
+      adminPermissionAllowed: false,
+      rawAccess: null,
+    };
+  }
+
+  // RPC lỗi: kiểm tra như cũ bằng hồ sơ + cdilv_has_permission
+  const [{ data: profile }, permissionResult] = await Promise.all([
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("role, approval_status")
+      .eq("id", userId)
+      .maybeSingle(),
+    adminPermission ? supabase.rpc(CDILV_RPC.hasPermission, { p_code: adminPermission }) : null,
+  ]);
+  return {
+    status: profile?.approval_status ?? "pending",
+    isAdminRole: (profile?.role ?? "user") === "admin",
+    adminPermissionAllowed: permissionResult?.data === true,
+    rawAccess: null,
+  };
+}
+
+/** Giữ cookie phiên vừa làm mới, thêm header quyền đã ký cho trang phía sau. */
+async function withForwardedAccess(
+  request: NextRequest,
+  response: NextResponse,
+  userId: string,
+  rawAccess: unknown,
+): Promise<NextResponse> {
+  const signed = await signForwardedAccess(userId, rawAccess);
+  if (!signed) return response;
+
+  const headers = new Headers(request.headers);
+  headers.set(FORWARDED_ACCESS_HEADER, signed);
+  const forwarded = NextResponse.next({ request: { headers } });
+  response.cookies.getAll().forEach((cookie) => forwarded.cookies.set(cookie));
+  return forwarded;
+}
+
 export async function updateSession(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const { pathname } = request.nextUrl;
+
+  // Header quyền nội bộ chỉ do middleware tạo; bỏ bản trình duyệt tự gửi (dù đã có chữ ký HMAC)
+  try {
+    request.headers.delete(FORWARDED_ACCESS_HEADER);
+  } catch {
+    /* headers không cho sửa: chữ ký HMAC vẫn chặn giả mạo */
+  }
 
   if (!url || !anonKey) {
     return NextResponse.next({ request });
@@ -96,7 +196,7 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Tối ưu 2: Chỉ truy vấn database profiles khi cần kiểm tra quyền Admin hoặc trang đặc biệt
+    // Tối ưu 2: Chỉ truy vấn quyền khi cần kiểm tra trang được bảo vệ hoặc trang đặc biệt
     const requiresProfileCheck =
       isMemberOnlyPath(pathname) ||
       pathname === "/pending" ||
@@ -107,19 +207,14 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    // Trang /admin mở theo quyền: kiểm tra quyền song song với hồ sơ, kết quả chỉ dùng khi đã duyệt và không phải admin
     const adminPermission = pathname.startsWith("/admin") ? findAdminRoutePermission(pathname) : null;
-    const [{ data: profile }, permissionResult] = await Promise.all([
-      supabase
-        .from(CDILV_TABLE.profiles)
-        .select("role, approval_status")
-        .eq("id", userId)
-        .maybeSingle(),
-      adminPermission ? supabase.rpc(CDILV_RPC.hasPermission, { p_code: adminPermission }) : null,
-    ]);
-
-    const status = profile?.approval_status ?? "pending";
-    const role = profile?.role ?? "user";
+    const gate = await loadGateInfo(
+      supabase,
+      userId,
+      adminPermission,
+      !isAuthExemptPath(pathname),
+    );
+    const status = gate.status;
 
     // Chưa duyệt / bị từ chối: chỉ được ở login/register/pending/auth
     if (status !== "approved") {
@@ -136,9 +231,8 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Đã duyệt: trang /admin chỉ cho admin, trừ các trang được mở theo quyền
-    if (pathname.startsWith("/admin") && role !== "admin") {
-      const allowed = permissionResult?.data === true;
-      if (!allowed) {
+    if (pathname.startsWith("/admin") && !gate.isAdminRole) {
+      if (!gate.adminPermissionAllowed) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/";
         return NextResponse.redirect(redirectUrl);
@@ -155,6 +249,9 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
+    if (gate.rawAccess !== null) {
+      return await withForwardedAccess(request, supabaseResponse, userId, gate.rawAccess);
+    }
     return supabaseResponse;
   } catch (e) {
     console.error("[middleware] updateSession error:", e);
