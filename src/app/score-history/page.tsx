@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { getSessionUserId } from "@/lib/auth/session";
 import { readableAwardLabel } from "@/lib/score-labels";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -8,12 +9,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function ScoreHistoryPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
 
-  if (!user) {
+  if (!userId) {
     return (
       <div className="mx-auto max-w-xl text-center py-12 space-y-4">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
@@ -34,19 +32,20 @@ export default async function ScoreHistoryPage() {
     );
   }
 
-  // 1. Profile
-  const { data: profile } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("id, full_name, employee_code, department, total_score, rank, avatar_url")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  // 2. Score Events
-  const { data: events } = await supabase
-    .from(CDILV_TABLE.scoreEvents)
-    .select("id, points, note, award_label, created_at, activity_id")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: profile }, { data: events }] = await Promise.all([
+    // 1. Profile
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("id, full_name, employee_code, department, total_score, rank, avatar_url")
+      .eq("id", userId)
+      .maybeSingle(),
+    // 2. Score Events
+    supabase
+      .from(CDILV_TABLE.scoreEvents)
+      .select("id, points, note, award_label, created_at, activity_id")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+  ]);
 
   const scoreEvents = events ?? [];
 

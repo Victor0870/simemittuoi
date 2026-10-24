@@ -107,11 +107,16 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    const { data: profile } = await supabase
-      .from(CDILV_TABLE.profiles)
-      .select("role, approval_status")
-      .eq("id", userId)
-      .maybeSingle();
+    // Trang /admin mở theo quyền: kiểm tra quyền song song với hồ sơ, kết quả chỉ dùng khi đã duyệt và không phải admin
+    const adminPermission = pathname.startsWith("/admin") ? findAdminRoutePermission(pathname) : null;
+    const [{ data: profile }, permissionResult] = await Promise.all([
+      supabase
+        .from(CDILV_TABLE.profiles)
+        .select("role, approval_status")
+        .eq("id", userId)
+        .maybeSingle(),
+      adminPermission ? supabase.rpc(CDILV_RPC.hasPermission, { p_code: adminPermission }) : null,
+    ]);
 
     const status = profile?.approval_status ?? "pending";
     const role = profile?.role ?? "user";
@@ -132,12 +137,7 @@ export async function updateSession(request: NextRequest) {
 
     // Đã duyệt: trang /admin chỉ cho admin, trừ các trang được mở theo quyền
     if (pathname.startsWith("/admin") && role !== "admin") {
-      const permission = findAdminRoutePermission(pathname);
-      let allowed = false;
-      if (permission) {
-        const { data } = await supabase.rpc(CDILV_RPC.hasPermission, { p_code: permission });
-        allowed = data === true;
-      }
+      const allowed = permissionResult?.data === true;
       if (!allowed) {
         const redirectUrl = request.nextUrl.clone();
         redirectUrl.pathname = "/";

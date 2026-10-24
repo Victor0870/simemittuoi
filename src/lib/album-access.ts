@@ -36,11 +36,17 @@ export async function getAlbumMemberContext(): Promise<AlbumMemberContext> {
     };
   }
 
-  const { data: me, error } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("role, full_name, approval_status")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Quyền albums.manage chỉ được dùng khi đã duyệt và không phải admin; truy vấn song song với hồ sơ (chỉ đọc)
+  const [{ data: me, error }, { data: allowed, error: permError }] = await Promise.all([
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("role, full_name, approval_status")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase.rpc(CDILV_RPC.hasPermission, {
+      p_code: PERMISSIONS.albumsManage,
+    }),
+  ]);
 
   if (error) throw error;
 
@@ -48,9 +54,6 @@ export async function getAlbumMemberContext(): Promise<AlbumMemberContext> {
   const isAdmin = isApproved && me?.role === "admin";
   let canManage = isAdmin;
   if (isApproved && !isAdmin) {
-    const { data: allowed, error: permError } = await supabase.rpc(CDILV_RPC.hasPermission, {
-      p_code: PERMISSIONS.albumsManage,
-    });
     if (permError) console.error("[album-access] has_permission:", permError.message);
     canManage = allowed === true;
   }

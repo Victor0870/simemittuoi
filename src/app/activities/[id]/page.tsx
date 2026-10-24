@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { createClient } from "@/lib/supabase/server";
+import { getSessionUserId } from "@/lib/auth/session";
 import { getActivityById } from "@/lib/data/activities";
 import { ActivityDetailActionButtons } from "@/components/activities/ActivityDetailActionButtons";
 
@@ -17,11 +17,7 @@ export default async function ActivityDetailPage({ params }: Props) {
 
   let currentUserId: string | undefined;
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    currentUserId = user?.id;
+    currentUserId = (await getSessionUserId()) ?? undefined;
   } catch {
     // ignore
   }

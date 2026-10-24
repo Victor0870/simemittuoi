@@ -19,13 +19,14 @@ export default async function AdminPollsPage() {
   }
 
   const supabase = await createClient();
-  const { data: me } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("full_name")
-    .eq("id", access.userId)
-    .maybeSingle();
-
-  const polls = await getPolls(true);
+  const [{ data: me }, polls] = await Promise.all([
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("full_name")
+      .eq("id", access.userId)
+      .maybeSingle(),
+    getPolls(true),
+  ]);
 
   return (
     <AdminPollsManager

@@ -5,6 +5,7 @@ import type {
 } from "@/lib/mock-data";
 import { unstable_cache } from "next/cache";
 import { MOCK_GOAL } from "@/lib/mock-data";
+import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -174,17 +175,15 @@ async function getSessionInfo(
   activityCount: number,
 ): Promise<{ authUserId: string | null; isGuest: boolean; user: DashboardUser }> {
   try {
-    const supabase = await createClient();
-    const authResult = await supabase.auth.getUser();
-    const authUser = authResult.data.user;
-    if (!authUser) {
+    const [supabase, authUserId] = await Promise.all([createClient(), getSessionUserId()]);
+    if (!authUserId) {
       return { authUserId: null, isGuest: true, user: emptyUser(true) };
     }
 
     const { data: profile } = await supabase
       .from(CDILV_TABLE.profiles)
       .select("full_name, employee_code, total_score, rank")
-      .eq("id", authUser.id)
+      .eq("id", authUserId)
       .maybeSingle();
 
     let score = profile?.total_score ?? 0;
@@ -194,7 +193,7 @@ async function getSessionInfo(
       const { data: byId } = await publicDb
         .from(CDILV_TABLE.leaderboard)
         .select("total_score, rank")
-        .eq("id", authUser.id)
+        .eq("id", authUserId)
         .maybeSingle();
 
       let myRank = byId;
@@ -214,7 +213,7 @@ async function getSessionInfo(
     }
 
     return {
-      authUserId: authUser.id,
+      authUserId,
       isGuest: false,
       user: {
         name: profile?.full_name ?? "Đoàn viên",

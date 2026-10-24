@@ -7,34 +7,36 @@ import {
   selectAllRows,
 } from "@/lib/quiz";
 import type { QuizQuestionRow } from "@/lib/quiz-shared";
+import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 /** Kiểm tra quyền admin và tải dữ liệu chung cho các trang Trắc nghiệm tuần; `nextPath` là trang quay lại sau đăng nhập. */
 export async function loadQuizData(nextPath: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login?next=" + nextPath);
   }
+
+  const db = createServiceClient();
+  // Chỉ đọc cấu hình (không ghi) song song với kiểm tra quyền; lỗi (nếu có) được ném ra sau khi kiểm tra quyền như trước
+  const settingsPromise = loadQuizSettings(db);
+  settingsPromise.catch(() => {});
 
   const { data: me } = await supabase
     .from(CDILV_TABLE.profiles)
     .select("role, approval_status")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle();
 
   if (me?.role !== "admin" || me?.approval_status !== "approved") {
     redirect("/");
   }
 
-  const db = createServiceClient();
   const now = new Date();
-  const settings = await loadQuizSettings(db);
+  const settings = await settingsPromise;
   try {
     await finalizeDueSessions(db, settings, now);
   } catch (err) {

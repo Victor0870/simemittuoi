@@ -6,6 +6,7 @@ import {
   type OverviewTask,
 } from "@/components/admin/AdminOverview";
 import { getCurrentAccess } from "@/lib/auth/guard";
+import { getSessionUserId } from "@/lib/auth/session";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { fundBalance } from "@/lib/finance/registry";
 import { financeAbilities, loadEntries, loadFunds } from "@/lib/finance/server";
@@ -21,38 +22,14 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login?next=/admin");
   }
 
-  const { data: me } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("id, role, approval_status, full_name, employee_code, department, avatar_url")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (me?.role !== "admin" || me?.approval_status !== "approved") {
-    redirect("/");
-  }
-
-  // Fetch quick metrics for admin dashboard
-  const [
-    { count: pendingUsersCount },
-    { count: totalUsersCount },
-    { count: totalPollsCount },
-    { count: activePollsCount },
-    { count: totalActivitiesCount },
-    { count: openActivitiesCount },
-    { count: pendingFeedbackCount },
-    { count: activeWhitelistCount },
-    { count: quizQuestionsCount },
-    { count: activePopupsCount },
-  ] = await Promise.all([
+  // Hồ sơ, số liệu nhanh và quyền chạy song song; chỉ dùng số liệu sau khi đã kiểm tra quyền admin
+  const metricsPromise = Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
       .select("id", { count: "exact", head: true })
@@ -93,7 +70,33 @@ export default async function AdminDashboardPage() {
       .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`),
   ]);
 
-  const access = await getCurrentAccess();
+  const [{ data: me }, metrics, access] = await Promise.all([
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("id, role, approval_status, full_name, employee_code, department, avatar_url")
+      .eq("id", userId)
+      .maybeSingle(),
+    metricsPromise,
+    getCurrentAccess(),
+  ]);
+
+  if (me?.role !== "admin" || me?.approval_status !== "approved") {
+    redirect("/");
+  }
+
+  const [
+    { count: pendingUsersCount },
+    { count: totalUsersCount },
+    { count: totalPollsCount },
+    { count: activePollsCount },
+    { count: totalActivitiesCount },
+    { count: openActivitiesCount },
+    { count: pendingFeedbackCount },
+    { count: activeWhitelistCount },
+    { count: quizQuestionsCount },
+    { count: activePopupsCount },
+  ] = metrics;
+
   const db = createServiceClient();
   const canFinance = access ? hasPermission(access, PERMISSIONS.financeView) : false;
   const canPayments = access ? paymentAbilities(access).view : false;

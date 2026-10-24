@@ -5,6 +5,7 @@ import type {
   AdminScoreEventItem,
   AdminWhitelistItem,
 } from "@/components/admin/AdminScoresManager";
+import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -30,70 +31,76 @@ export type LoadScoresOptions = {
 
 /** Kiểm tra quyền admin và tải dữ liệu chung cho 3 trang điểm thi đua; `nextPath` là trang quay lại sau đăng nhập. */
 export async function loadScoresData(nextPath: string, options?: LoadScoresOptions): Promise<AdminScoresData> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
 
-  if (!user) {
+  if (!userId) {
     redirect(`/login?next=${nextPath}`);
   }
 
-  const { data: me } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("id, full_name, role, approval_status")
-    .eq("id", user.id)
-    .maybeSingle();
+  // 3. Load recent score events
+  const historyFrom = options?.historyFrom;
+  const loadEvents = async (): Promise<ScoreEventRow[] | null> => {
+    if (historyFrom) {
+      const fromIso = historyFrom === "all" ? null : new Date(`${historyFrom}T00:00:00+07:00`).toISOString();
+      const rows: ScoreEventRow[] = [];
+      for (let from = 0; from < HISTORY_MAX_ROWS; from += HISTORY_PAGE_SIZE) {
+        let query = supabase
+          .from(CDILV_TABLE.scoreEvents)
+          .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code");
+        if (fromIso) query = query.gte("created_at", fromIso);
+        const { data: page } = await query
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, Math.min(from + HISTORY_PAGE_SIZE, HISTORY_MAX_ROWS) - 1);
+        rows.push(...((page ?? []) as ScoreEventRow[]));
+        if (!page || page.length < HISTORY_PAGE_SIZE) break;
+      }
+      return rows;
+    }
+    const { data } = await supabase
+      .from(CDILV_TABLE.scoreEvents)
+      .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    return data;
+  };
+
+  // Hồ sơ admin và 4 nguồn dữ liệu (đều qua phiên người dùng) chạy song song; chỉ trả về sau khi kiểm tra quyền
+  const [
+    { data: me },
+    // 1. Load all approved profiles
+    { data: profilesData },
+    // 2. Load activities
+    { data: activitiesData },
+    eventsData,
+    // 4. Load employee whitelist (for matching employees without accounts yet)
+    { data: whitelistData },
+  ] = await Promise.all([
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("id, full_name, role, approval_status")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("id, full_name, employee_code, department, avatar_url, total_score, rank, approval_status")
+      .eq("approval_status", "approved")
+      .order("total_score", { ascending: false }),
+    supabase
+      .from(CDILV_TABLE.activities)
+      .select("id, title, points, event_date")
+      .order("event_date", { ascending: false }),
+    loadEvents(),
+    supabase
+      .from(CDILV_TABLE.employeeWhitelist)
+      .select("employee_code, full_name, department")
+      .eq("is_active", true)
+      .order("employee_code", { ascending: true }),
+  ]);
 
   if (me?.role !== "admin" || me?.approval_status !== "approved") {
     redirect("/");
   }
-
-  // 1. Load all approved profiles
-  const { data: profilesData } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("id, full_name, employee_code, department, avatar_url, total_score, rank, approval_status")
-    .eq("approval_status", "approved")
-    .order("total_score", { ascending: false });
-
-  // 2. Load activities
-  const { data: activitiesData } = await supabase
-    .from(CDILV_TABLE.activities)
-    .select("id, title, points, event_date")
-    .order("event_date", { ascending: false });
-
-  // 3. Load recent score events
-  const historyFrom = options?.historyFrom;
-  let eventsData: ScoreEventRow[] | null;
-  if (historyFrom) {
-    const fromIso = historyFrom === "all" ? null : new Date(`${historyFrom}T00:00:00+07:00`).toISOString();
-    eventsData = [];
-    for (let from = 0; from < HISTORY_MAX_ROWS; from += HISTORY_PAGE_SIZE) {
-      let query = supabase
-        .from(CDILV_TABLE.scoreEvents)
-        .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code");
-      if (fromIso) query = query.gte("created_at", fromIso);
-      const { data: page } = await query
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, Math.min(from + HISTORY_PAGE_SIZE, HISTORY_MAX_ROWS) - 1);
-      eventsData.push(...((page ?? []) as ScoreEventRow[]));
-      if (!page || page.length < HISTORY_PAGE_SIZE) break;
-    }
-  } else {
-    ({ data: eventsData } = await supabase
-      .from(CDILV_TABLE.scoreEvents)
-      .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code")
-      .order("created_at", { ascending: false })
-      .limit(50));
-  }
-
-  // 4. Load employee whitelist (for matching employees without accounts yet)
-  const { data: whitelistData } = await supabase
-    .from(CDILV_TABLE.employeeWhitelist)
-    .select("employee_code, full_name, department")
-    .eq("is_active", true)
-    .order("employee_code", { ascending: true });
 
   const profiles: AdminProfileItem[] = (profilesData ?? []).map((p) => ({
     id: p.id,

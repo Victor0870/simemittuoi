@@ -7,36 +7,35 @@ import {
   AdminPasswordResetRequests,
   type PasswordResetRequestItem,
 } from "@/components/admin/AdminPasswordResetRequests";
+import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export default async function AdminUsersPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
 
-  if (!user) {
+  if (!userId) {
     redirect("/login?next=/admin/users");
   }
 
-  const { data: me } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select("role, approval_status")
-    .eq("id", user.id)
-    .maybeSingle();
+  const [{ data: me }, { data: users, error }] = await Promise.all([
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select("role, approval_status")
+      .eq("id", userId)
+      .maybeSingle(),
+    supabase
+      .from(CDILV_TABLE.profiles)
+      .select(
+        "id, full_name, employee_code, department, role, approval_status, created_at",
+      )
+      .order("created_at", { ascending: false }),
+  ]);
 
   if (me?.role !== "admin" || me?.approval_status !== "approved") {
     redirect("/");
   }
-
-  const { data: users, error } = await supabase
-    .from(CDILV_TABLE.profiles)
-    .select(
-      "id, full_name, employee_code, department, role, approval_status, created_at",
-    )
-    .order("created_at", { ascending: false });
 
   const { data: resetRows } = await createServiceClient()
     .from(CDILV_TABLE.passwordResetRequests)

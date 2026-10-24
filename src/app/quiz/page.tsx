@@ -3,6 +3,7 @@ import { QuizPlayClient } from "@/components/quiz/QuizPlayClient";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { computeSessionRanking, getDisplaySession, getQuizStatus, loadQuizSettings } from "@/lib/quiz";
 import { describePointRules } from "@/lib/quiz-shared";
+import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -11,26 +12,27 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function QuizPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
+
+  const db = createServiceClient();
+  // Chỉ đọc cấu hình, chạy song song với hồ sơ và getQuizStatus (có ghi phiên thi)
+  const settingsPromise = loadQuizSettings(db);
+  settingsPromise.catch(() => {});
 
   let isApproved = false;
   let isAdmin = false;
-  if (user) {
+  if (userId) {
     const { data: me } = await supabase
       .from(CDILV_TABLE.profiles)
       .select("approval_status, role")
-      .eq("id", user.id)
+      .eq("id", userId)
       .maybeSingle();
     isApproved = me?.approval_status === "approved";
     isAdmin = me?.role === "admin" && isApproved;
   }
 
-  const db = createServiceClient();
-  const status = await getQuizStatus(db, isApproved && user ? user.id : null);
-  const settings = await loadQuizSettings(db);
+  const status = await getQuizStatus(db, isApproved && userId ? userId : null);
+  const settings = await settingsPromise;
   const displaySession = await getDisplaySession(db);
   const board = displaySession
     ? await computeSessionRanking(db, displaySession.id, settings)
@@ -55,14 +57,14 @@ export default async function QuizPage() {
       <QuizPlayClient
         initialStatus={status}
         isApproved={isApproved}
-        isLoggedIn={Boolean(user)}
+        isLoggedIn={Boolean(userId)}
         pointRules={describePointRules(settings)}
         isAdmin={isAdmin}
       />
 
       {displaySession && board ? (
         <QuizLeaderboard
-          currentUserId={user?.id ?? null}
+          currentUserId={userId}
           finalized={Boolean(displaySession.finalized_at)}
           isOpen={status.session?.id === displaySession.id}
           participantsCount={board.participantsCount}
