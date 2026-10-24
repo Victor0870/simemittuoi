@@ -44,7 +44,7 @@
 | Bài viết / Hướng dẫn sử dụng | BÀN GIAO CHO AGY | khung xong; AGY có thể viết thêm bài hướng dẫn |
 | Hoạt động công đoàn (hẹn giờ) | BÀN GIAO CHO AGY | khung xong (6014a49) |
 | Tài chính công đoàn | CHƯA BẮT ĐẦU | Cursor sẽ dựng khung trước |
-| Tài chính: Quy chế chi tiêu | BÀN GIAO CHO AGY | khung xong, AGY điền nội dung |
+| Tài chính: Quy chế chi tiêu | BÀN GIAO CHO AGY | khung xong, AGY điền nội dung; chỉ admin xem (/admin/finance/regulations, bc57233) |
 | Mẫu văn bản (.docx) | CHƯA BẮT ĐẦU | Cursor sẽ dựng khung trước |
 | Văn bản: Mẫu văn bản | BÀN GIAO CHO AGY | khung xong (237e1da); AGY điền nội dung mẫu tại /admin/documents/templates (bảng cdilv_document_templates) |
 
@@ -57,3 +57,5 @@
 2026-10-24 18:55 (UTC+7) | XONG | Tài chính: Quy chế chi tiêu | khung quản trị /admin/finance/regulations + trang đoàn viên /quy-che-chi-tieu; nội dung lưu ở cdilv_app_settings, key spending_regulation | c9ca6bc | migration_spending_regulation.sql (đã chạy)
 2026-10-24 19:40 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | dựng hub Văn bản công đoàn + trang Mẫu văn bản | | migration_document_templates.sql (bảng mẫu văn bản + 4 mẫu trống)
 2026-10-24 19:48 (UTC+7) | XONG | Văn bản: Mẫu văn bản | hub /admin/documents + trang /admin/documents/templates (quyền posts.manage) | 237e1da | migration_document_templates.sql (đã chạy)
+2026-10-24 19:52 (UTC+7) | BẮT ĐẦU | Tài chính: Quy chế chi tiêu | ẩn trang đoàn viên (chỉ admin / finance.manage xem tại /admin/finance/regulations) | | không
+2026-10-24 19:56 (UTC+7) | XONG | Tài chính: Quy chế chi tiêu | ẩn trang đoàn viên: /quy-che-chi-tieu trả 404, bỏ khỏi menu; chỉ admin / finance.manage xem; nội dung giữ nguyên | bc57233 | không

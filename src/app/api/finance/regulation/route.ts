@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { SPENDING_REGULATION_LIMITS } from "@/lib/finance/regulation";
@@ -33,7 +32,6 @@ export async function PUT(request: NextRequest) {
     }
 
     const saved = await saveSpendingRegulation(createServiceClient(), body, guard.access.userId);
-    revalidatePath("/quy-che-chi-tieu");
     return NextResponse.json({ success: true, ...saved });
   } catch (err: unknown) {
     console.error("[api/finance/regulation] error:", err);

@@ -21,8 +21,7 @@ function isMemberOnlyPath(pathname: string) {
     pathname === "/life-events" ||
     pathname.startsWith("/life-events/") ||
     pathname === "/albums" ||
-    pathname.startsWith("/albums/") ||
-    pathname === "/quy-che-chi-tieu"
+    pathname.startsWith("/albums/")
   );
 }
 

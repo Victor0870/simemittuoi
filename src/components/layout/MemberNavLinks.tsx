@@ -27,16 +27,8 @@ export function MemberNavLinks({ activeHref = "/" }: Props) {
                 : "rounded px-2 py-1 text-on-surface-variant hover:bg-surface-container-high"
             }`}
             href={item.href}
-            title={item.shortLabel !== item.label ? item.label : undefined}
           >
-            {item.shortLabel !== item.label ? (
-              <>
-                <span className="lg:hidden">{item.shortLabel}</span>
-                <span className="hidden lg:inline">{item.label}</span>
-              </>
-            ) : (
-              item.label
-            )}
+            {item.label}
           </Link>
         );
       })}

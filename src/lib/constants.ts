@@ -18,7 +18,6 @@ export const NAV_ITEMS = [
 export const MEMBER_NAV_ITEMS = [
   { href: "/albums", label: "Album ảnh", shortLabel: "Album", icon: "photo_library" },
   { href: "/quiz", label: "Trắc nghiệm", shortLabel: "Trắc nghiệm", icon: "quiz" },
-  { href: "/quy-che-chi-tieu", label: "Quy chế chi tiêu", shortLabel: "Quy chế", icon: "gavel" },
 ] as const;
 
 export const MOBILE_NAV_ITEMS = [

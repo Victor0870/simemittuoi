@@ -492,7 +492,7 @@ export const OFFICE_TOOLS: OfficeTool[] = [
   {
     href: "/admin/finance/regulations",
     title: "Quy chế chi tiêu",
-    description: "Soạn và cập nhật Quy chế chi tiêu theo Chương / Điều cho đoàn viên đọc và in.",
+    description: "Soạn và cập nhật Quy chế chi tiêu theo Chương / Điều (chỉ quản trị và người có quyền quản lý quỹ xem).",
     icon: "gavel",
     permission: PERMISSIONS.financeManage,
   },

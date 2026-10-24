@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { RegulationContent } from "@/components/finance/RegulationContent";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -45,7 +44,7 @@ function formatSavedAt(iso: string | null) {
   return iso ? new Date(iso).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) : null;
 }
 
-/** Soạn Quy chế chi tiêu: thông tin chung + nội dung theo Chương / Điều, xem trước giống trang đoàn viên. */
+/** Soạn Quy chế chi tiêu: thông tin chung + nội dung theo Chương / Điều, xem trước nội dung. */
 export function SpendingRegulationEditor({ initial, updatedAt }: Props) {
   const [title, setTitle] = useState(initial.title);
   const [regulationNo, setRegulationNo] = useState(initial.regulationNo);
@@ -215,14 +214,6 @@ export function SpendingRegulationEditor({ initial, updatedAt }: Props) {
           <span className="text-xs text-on-surface-variant">Lưu lần cuối: {formatSavedAt(savedAt)}</span>
         ) : null}
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Link
-            className="inline-flex items-center gap-1 rounded-lg border border-[#173A67] px-2 py-1 text-xs font-bold text-[#173A67] transition hover:bg-[#173A67] hover:text-white"
-            href="/quy-che-chi-tieu"
-            target="_blank"
-          >
-            Xem trang đoàn viên
-            <MaterialIcon className="text-[14px]" name="open_in_new" />
-          </Link>
           <button
             className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-4 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-[#1E4A7D] disabled:opacity-50"
             disabled={saving || uploading}
