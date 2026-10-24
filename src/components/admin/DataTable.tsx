@@ -38,6 +38,12 @@ type DataTableProps<T> = {
   defaultPageSize?: DataTablePageSize;
   maxHeightClass?: string;
   footerNote?: ReactNode;
+  /** Dòng <tr> luôn ở đầu tbody mọi trang, không bị lọc / sắp xếp / phân trang. */
+  pinnedRows?: ReactNode;
+  /** Dòng <tr> trong tfoot (tổng cộng...). */
+  footerRows?: ReactNode;
+  /** Ghi chú hiện khi đang sắp xếp theo một cột. */
+  sortHint?: ReactNode;
 };
 
 type Cell = { label: string; norm: string; num: number | null; day: string | null; sortValue: number | string | null };
@@ -146,6 +152,9 @@ export function DataTable<T>({
   defaultPageSize = 20,
   maxHeightClass = "max-h-[calc(100vh-320px)] min-h-[240px]",
   footerNote,
+  pinnedRows,
+  footerRows,
+  sortHint,
 }: DataTableProps<T>) {
   const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({});
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(null);
@@ -229,6 +238,23 @@ export function DataTable<T>({
 
   return (
     <div className="space-y-3">
+      {sort && sortHint ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant print:hidden">
+          <MaterialIcon className="text-[#4a6b82]" name="info" size={16} />
+          <span>{sortHint}</span>
+          <button
+            className="font-semibold text-[#4a6b82] hover:text-[#173A67] hover:underline"
+            type="button"
+            onClick={() => {
+              setSort(null);
+              setPage(1);
+            }}
+          >
+            Bỏ sắp xếp
+          </button>
+        </div>
+      ) : null}
+
       {isFiltered ? (
         <div className="flex flex-wrap items-center gap-2 text-xs print:hidden">
           {activeFilters.map(({ column, filter }) => (
@@ -301,6 +327,7 @@ export function DataTable<T>({
               </tr>
             </thead>
             <tbody>
+              {pinnedRows}
               {pageRows.length === 0 ? (
                 <tr>
                   <td className="px-4 py-10 text-center text-on-surface-variant" colSpan={columns.length}>
@@ -325,6 +352,7 @@ export function DataTable<T>({
                 ))
               )}
             </tbody>
+            {footerRows ? <tfoot>{footerRows}</tfoot> : null}
           </table>
         </div>
 

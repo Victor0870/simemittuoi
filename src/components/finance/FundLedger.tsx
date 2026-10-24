@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   ENTRY_KIND_LABEL,
@@ -130,6 +131,71 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
     }
     return categoryById.get(e.category_id ?? "")?.name ?? "";
   }
+
+  const columns: DataTableColumn<Row>[] = [
+    {
+      key: "entry_date",
+      header: "Ngày",
+      type: "date",
+      accessor: (r) => r.entry.entry_date,
+      className: "whitespace-nowrap",
+      render: (r) => formatDateVi(r.entry.entry_date),
+    },
+    {
+      key: "code",
+      header: "Số phiếu",
+      accessor: (r) => r.entry.code,
+      className: "whitespace-nowrap",
+      render: ({ entry: e }) => (
+        <>
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/finance/${e.id}`}>
+            {e.code}
+          </Link>
+          {e.status === "void" ? <span className="ml-1 text-[11px] font-bold text-rose-700 no-underline">Đã hủy</span> : null}
+        </>
+      ),
+    },
+    {
+      key: "description",
+      header: "Diễn giải",
+      accessor: (r) => r.entry.description,
+      className: "max-w-[420px]",
+      render: ({ entry: e }) => (
+        <>
+          <p className="line-clamp-2">{e.description}</p>
+          <p className="text-[11px] text-on-surface-variant">
+            {[describe(e), e.counterparty, e.document_no ? `CT: ${e.document_no}` : null].filter(Boolean).join(" · ")}
+          </p>
+        </>
+      ),
+    },
+    {
+      key: "income",
+      header: "Thu",
+      type: "number",
+      accessor: (r) => r.income || null,
+      className: "text-right font-semibold whitespace-nowrap text-emerald-700",
+      headerClassName: "text-right",
+      render: (r) => (r.income ? formatVnd(r.income) : ""),
+    },
+    {
+      key: "expense",
+      header: "Chi",
+      type: "number",
+      accessor: (r) => r.expense || null,
+      className: "text-right font-semibold whitespace-nowrap text-rose-700",
+      headerClassName: "text-right",
+      render: (r) => (r.expense ? formatVnd(r.expense) : ""),
+    },
+    {
+      key: "balance",
+      header: "Tồn",
+      filterable: false,
+      className: "text-right whitespace-nowrap",
+      headerClassName: "text-right",
+      render: (r) => (r.balance === null ? "" : formatVnd(r.balance)),
+    },
+  ];
 
   async function exportExcel() {
     setExporting(true);
@@ -332,66 +398,28 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            <tr className="[&>th]:px-3 [&>th]:py-2.5 [&>th]:font-bold [&>th]:whitespace-nowrap">
-              <th>Ngày</th>
-              <th>Số phiếu</th>
-              <th>Diễn giải</th>
-              <th className="text-right">Thu</th>
-              <th className="text-right">Chi</th>
-              <th className="text-right">Tồn</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-t border-outline-variant bg-surface-container-low/50 font-semibold [&>td]:px-3 [&>td]:py-2">
-              <td colSpan={5}>Số dư đầu kỳ ({formatDateVi(from)})</td>
-              <td className="text-right whitespace-nowrap">{formatVnd(ledger.opening)}</td>
-            </tr>
-            {ledger.rows.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={6}>
-                  Không có phát sinh trong kỳ.
-                </td>
-              </tr>
-            ) : null}
-            {ledger.rows.map(({ entry: e, income, expense, balance }) => (
-              <tr
-                key={e.id}
-                className={`border-t border-outline-variant hover:bg-surface-container-low/60 [&>td]:px-3 [&>td]:py-2 ${
-                  e.status === "void" ? "text-on-surface-variant line-through" : ""
-                }`}
-              >
-                <td className="whitespace-nowrap">{formatDateVi(e.entry_date)}</td>
-                <td className="whitespace-nowrap">
-                  <Link className="font-bold text-[#173A67] hover:underline" href={`/office/finance/${e.id}`}>
-                    {e.code}
-                  </Link>
-                  {e.status === "void" ? <span className="ml-1 text-[11px] font-bold text-rose-700 no-underline">Đã hủy</span> : null}
-                </td>
-                <td className="max-w-[420px]">
-                  <p className="line-clamp-2">{e.description}</p>
-                  <p className="text-[11px] text-on-surface-variant">
-                    {[describe(e), e.counterparty, e.document_no ? `CT: ${e.document_no}` : null].filter(Boolean).join(" · ")}
-                  </p>
-                </td>
-                <td className="text-right font-semibold whitespace-nowrap text-emerald-700">{income ? formatVnd(income) : ""}</td>
-                <td className="text-right font-semibold whitespace-nowrap text-rose-700">{expense ? formatVnd(expense) : ""}</td>
-                <td className="text-right whitespace-nowrap">{balance === null ? "" : formatVnd(balance)}</td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-[#173A67]/20 font-bold text-[#173A67] [&>td]:px-3 [&>td]:py-2.5">
-              <td colSpan={3}>Cộng phát sinh{filtered ? " (cả kỳ, không theo bộ lọc)" : ""}</td>
-              <td className="text-right whitespace-nowrap">{formatVnd(ledger.income)}</td>
-              <td className="text-right whitespace-nowrap">{formatVnd(ledger.expense)}</td>
-              <td className="text-right whitespace-nowrap">{formatVnd(ledger.closing)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        emptyText="Không có phát sinh trong kỳ."
+        footerRows={
+          <tr className="border-t-2 border-[#173A67]/20 font-bold text-[#173A67] [&>td]:px-4 [&>td]:py-3">
+            <td colSpan={3}>Cộng phát sinh{filtered ? " (cả kỳ, không theo bộ lọc)" : ""}</td>
+            <td className="text-right whitespace-nowrap">{formatVnd(ledger.income)}</td>
+            <td className="text-right whitespace-nowrap">{formatVnd(ledger.expense)}</td>
+            <td className="text-right whitespace-nowrap">{formatVnd(ledger.closing)}</td>
+          </tr>
+        }
+        pinnedRows={
+          <tr className="border-t border-outline-variant bg-surface-container-low/50 font-semibold [&>td]:px-4 [&>td]:py-3">
+            <td colSpan={5}>Số dư đầu kỳ ({formatDateVi(from)})</td>
+            <td className="text-right whitespace-nowrap">{formatVnd(ledger.opening)}</td>
+          </tr>
+        }
+        rowClassName={(r) => (r.entry.status === "void" ? "text-on-surface-variant line-through" : "")}
+        rowKey={(r) => r.entry.id}
+        rows={ledger.rows}
+        sortHint="Số tồn tính theo thứ tự ngày"
+      />
     </div>
   );
 }
