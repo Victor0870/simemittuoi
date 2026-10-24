@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { PostContent } from "@/components/posts/PostContent";
+import { PostCoverImage } from "@/components/posts/PostCoverImage";
 import { PostEditButton } from "@/components/posts/PostEditButton";
 import { PostShareButtons } from "@/components/posts/PostShareButtons";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -35,6 +36,12 @@ export function PostDetailView({ post, related, commentCount }: PostDetailViewPr
       </nav>
 
       <article className="overflow-hidden rounded-2xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm">
+        <PostCoverImage
+          priority
+          alt={post.title}
+          className="block aspect-[16/9] max-h-[460px] w-full bg-slate-100 object-cover"
+          src={post.imageUrl}
+        />
         <div className="border-b border-dusty-border/70 bg-gradient-to-r from-dusty-light/80 via-white to-white px-5 py-6 sm:px-10 sm:py-8">
           <div className="mb-3 sm:mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">

@@ -1,10 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PERMISSIONS } from "@/lib/auth/permissions";
+import { resizeImageToBlob } from "@/lib/image-resize";
+import {
+  POST_IMAGE_ACCEPT,
+  POST_IMAGE_ERRORS,
+  POST_IMAGE_MAX_BYTES,
+  POST_IMAGE_MAX_WIDTH,
+  POST_IMAGE_TYPES,
+  postInlineImageMarkup,
+} from "@/lib/post-images";
 import { isScheduledAt, toDateTimeLocalValue } from "@/lib/post-schedule";
 
 type PostEditButtonProps = {
@@ -18,8 +27,26 @@ type PostEditButtonProps = {
     isImportant?: boolean;
     isActive?: boolean;
     publishedAt?: string;
+    imageUrl?: string | null;
   };
 };
+
+/** Nén (cạnh dài tối đa 1600px, GIF giữ nguyên) rồi tải ảnh bài viết lên Storage qua API. */
+async function uploadPostImage(file: File): Promise<string> {
+  if (!POST_IMAGE_TYPES[file.type]) throw new Error(POST_IMAGE_ERRORS.badType);
+  const blob = await resizeImageToBlob(file, POST_IMAGE_MAX_WIDTH, 0.85).catch(() => file);
+  if (blob.size > POST_IMAGE_MAX_BYTES) throw new Error(POST_IMAGE_ERRORS.tooLarge);
+
+  const form = new FormData();
+  form.append(
+    "file",
+    blob instanceof File ? blob : new File([blob], "post.jpg", { type: blob.type || "image/jpeg" }),
+  );
+  const res = await fetch("/api/posts/images", { method: "POST", body: form });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || typeof data.url !== "string") throw new Error(data.error || "Không tải được ảnh lên.");
+  return data.url;
+}
 
 function defaultScheduleValue(): string {
   const d = new Date();
@@ -54,6 +81,16 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   const [scheduleValue, setScheduleValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(post?.imageUrl ?? null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [inlineUploading, setInlineUploading] = useState(false);
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+  const selectionRef = useRef<{ start: number; end: number } | null>(null);
+  const uploading = coverUploading || inlineUploading;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -79,12 +116,69 @@ export function PostEditButton({ post }: PostEditButtonProps) {
         : defaultScheduleValue(),
     );
     setErrorMsg(null);
+    setCoverUrl(post?.imageUrl ?? null);
+    setCoverError(null);
+    setInlineError(null);
     setIsOpen(true);
+  }
+
+  async function handleCoverPicked(file: File | undefined) {
+    if (!file) return;
+    setCoverUploading(true);
+    setCoverError(null);
+    try {
+      setCoverUrl(await uploadPostImage(file));
+    } catch (err) {
+      setCoverError(err instanceof Error ? err.message : "Không tải được ảnh lên.");
+    } finally {
+      setCoverUploading(false);
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  }
+
+  function handleInlineClick() {
+    const textarea = contentRef.current;
+    selectionRef.current = textarea
+      ? { start: textarea.selectionStart, end: textarea.selectionEnd }
+      : null;
+    inlineInputRef.current?.click();
+  }
+
+  async function handleInlinePicked(file: File | undefined) {
+    if (!file) return;
+    setInlineUploading(true);
+    setInlineError(null);
+    try {
+      const url = await uploadPostImage(file);
+      const markup = postInlineImageMarkup(url);
+      const sel = selectionRef.current;
+      let cursor = 0;
+      setContent((prev) => {
+        const start = Math.min(sel?.start ?? prev.length, prev.length);
+        const end = Math.min(Math.max(sel?.end ?? prev.length, start), prev.length);
+        const before = prev.slice(0, start);
+        const after = prev.slice(end);
+        const insert = `${before && !before.endsWith("\n") ? "\n" : ""}${markup}${after.startsWith("\n") ? "" : "\n"}`;
+        cursor = before.length + insert.length;
+        return before + insert + after;
+      });
+      requestAnimationFrame(() => {
+        const textarea = contentRef.current;
+        if (!textarea) return;
+        textarea.focus();
+        textarea.setSelectionRange(cursor, cursor);
+      });
+    } catch (err) {
+      setInlineError(err instanceof Error ? err.message : "Không tải được ảnh lên.");
+    } finally {
+      setInlineUploading(false);
+      if (inlineInputRef.current) inlineInputRef.current.value = "";
+    }
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (saving) return;
+    if (saving || uploading) return;
 
     if (!title.trim()) {
       setErrorMsg("Vui lòng nhập tiêu đề bài viết.");
@@ -128,6 +222,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
           isImportant,
           isActive,
           scheduledAt,
+          imageUrl: isCreate || coverUrl !== (post?.imageUrl ?? null) ? coverUrl : undefined,
         }),
       });
 
@@ -228,6 +323,75 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                     placeholder="Nhập tiêu đề bài viết..."
                     className="w-full rounded-xl border border-slate-300 p-2.5 text-base font-semibold text-slate-800 focus:border-[#173A67] focus:outline-hidden focus:ring-2 focus:ring-[#173A67]/20 sm:text-sm"
                   />
+                </div>
+
+                {/* Ảnh đại diện */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Ảnh đại diện <span className="font-normal text-slate-400">(không bắt buộc)</span>
+                  </label>
+                  <input
+                    ref={coverInputRef}
+                    accept={POST_IMAGE_ACCEPT}
+                    className="hidden"
+                    type="file"
+                    onChange={(e) => void handleCoverPicked(e.target.files?.[0])}
+                  />
+                  {coverUrl ? (
+                    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        alt="Ảnh đại diện bài viết"
+                        className="aspect-[16/9] w-full shrink-0 rounded-xl border border-slate-200 bg-white object-cover sm:w-48"
+                        src={coverUrl}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={coverUploading}
+                          onClick={() => coverInputRef.current?.click()}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] hover:border-[#173A67] disabled:opacity-50 cursor-pointer"
+                        >
+                          <MaterialIcon
+                            className={`text-[16px] ${coverUploading ? "animate-spin" : ""}`}
+                            name={coverUploading ? "progress_activity" : "swap_horiz"}
+                          />
+                          {coverUploading ? "Đang tải ảnh..." : "Đổi ảnh khác"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={coverUploading}
+                          onClick={() => {
+                            setCoverUrl(null);
+                            setCoverError(null);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50 cursor-pointer"
+                        >
+                          <MaterialIcon className="text-[16px]" name="delete" />
+                          Xóa ảnh
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={coverUploading}
+                      onClick={() => coverInputRef.current?.click()}
+                      className="flex w-full flex-col items-center gap-1 rounded-2xl border-2 border-dashed border-slate-300 py-5 text-slate-500 transition hover:border-[#173A67]/50 hover:bg-slate-50 disabled:opacity-60 cursor-pointer"
+                    >
+                      <MaterialIcon
+                        className={`text-[30px] text-[#173A67] ${coverUploading ? "animate-spin" : ""}`}
+                        name={coverUploading ? "progress_activity" : "add_photo_alternate"}
+                      />
+                      <span className="text-sm font-bold text-slate-700">
+                        {coverUploading ? "Đang tải ảnh..." : "Chọn ảnh đại diện"}
+                      </span>
+                      <span className="text-[11px]">JPG, PNG, WEBP, GIF · tối đa 5MB · ảnh lớn được tự nén</span>
+                    </button>
+                  )}
+                  {coverError && (
+                    <p className="mt-1.5 text-[11px] font-semibold text-red-700">{coverError}</p>
+                  )}
                 </div>
 
                 {/* 2. Thẻ / Phân loại */}
@@ -354,11 +518,38 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                     <label className="text-xs font-bold text-slate-700">
                       Nội dung bài viết <span className="text-red-500">*</span>
                     </label>
-                    <span className="text-[11px] text-slate-400">
-                      {content.length} ký tự
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-slate-400">
+                        {content.length} ký tự
+                      </span>
+                      <input
+                        ref={inlineInputRef}
+                        accept={POST_IMAGE_ACCEPT}
+                        className="hidden"
+                        type="file"
+                        onChange={(e) => void handleInlinePicked(e.target.files?.[0])}
+                      />
+                      <button
+                        type="button"
+                        disabled={inlineUploading}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={handleInlineClick}
+                        title="Tải ảnh lên và chèn vào vị trí con trỏ trong nội dung"
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-bold text-[#173A67] hover:border-[#173A67] disabled:opacity-60 cursor-pointer"
+                      >
+                        <MaterialIcon
+                          className={`text-[15px] ${inlineUploading ? "animate-spin" : ""}`}
+                          name={inlineUploading ? "progress_activity" : "image"}
+                        />
+                        {inlineUploading ? "Đang tải ảnh..." : "Chèn ảnh"}
+                      </button>
+                    </div>
                   </div>
+                  {inlineError && (
+                    <p className="mb-1.5 text-[11px] font-semibold text-red-700">{inlineError}</p>
+                  )}
                   <textarea
+                    ref={contentRef}
                     required
                     rows={12}
                     value={content}
@@ -368,6 +559,10 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                   />
                   <p className="mt-1 text-[11px] text-slate-500">
                     In đậm: đặt chữ giữa hai cặp dấu sao, ví dụ <code className="rounded bg-slate-100 px-1">**Giai đoạn 1**</code>.
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    Chèn ảnh: đặt con trỏ ở chỗ muốn chèn rồi bấm <strong>Chèn ảnh</strong>; ảnh hiện thành dòng{" "}
+                    <code className="rounded bg-slate-100 px-1">![Ảnh](đường dẫn)</code>. Có thể sửa chữ mô tả trong ngoặc vuông, không sửa đường dẫn.
                   </p>
                 </div>
               </div>
@@ -384,7 +579,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || !title.trim() || !content.trim()}
+                  disabled={saving || uploading || !title.trim() || !content.trim()}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-5 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#1E4A7D] active:scale-95 disabled:opacity-50 transition cursor-pointer"
                 >
                   {saving ? (

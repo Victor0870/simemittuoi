@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { isScheduledAt, parseScheduledAt } from "@/lib/post-schedule";
+import { isAllowedPostImageUrl } from "@/lib/post-images";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, tag, tagTone, isImportant, isActive, scheduledAt } = body;
+    const { id, title, content, tag, tagTone, isImportant, isActive, scheduledAt, imageUrl } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -76,6 +77,16 @@ export async function POST(request: NextRequest) {
 
     if (isActive !== undefined) {
       updatePayload.is_active = Boolean(isActive);
+    }
+
+    // imageUrl: undefined = giữ nguyên ảnh đại diện; null/"" = xóa ảnh; chuỗi = ảnh mới (chỉ Storage CDILV).
+    if (imageUrl === null || imageUrl === "") {
+      updatePayload.image_url = null;
+    } else if (imageUrl !== undefined) {
+      if (!isAllowedPostImageUrl(imageUrl)) {
+        return NextResponse.json({ error: "Ảnh đại diện không hợp lệ." }, { status: 400 });
+      }
+      updatePayload.image_url = imageUrl;
     }
 
     // scheduledAt: chuỗi ISO = hẹn giờ mới; null = bỏ hẹn giờ, đăng ngay nếu bài đang chờ giờ.

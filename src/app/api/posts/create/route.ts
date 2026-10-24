@@ -5,6 +5,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { formatScheduleLabel, parseScheduledAt } from "@/lib/post-schedule";
+import { isAllowedPostImageUrl } from "@/lib/post-images";
 
 const MAX_TITLE = 300;
 const MAX_CONTENT = 50000;
@@ -37,6 +38,14 @@ export async function POST(request: NextRequest) {
     const tag = typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : "Thông báo";
     const isImportant = body.isImportant === true;
 
+    let imageUrl: string | null = null;
+    if (body.imageUrl !== undefined && body.imageUrl !== null && body.imageUrl !== "") {
+      if (!isAllowedPostImageUrl(body.imageUrl)) {
+        return NextResponse.json({ error: "Ảnh đại diện không hợp lệ." }, { status: 400 });
+      }
+      imageUrl = body.imageUrl;
+    }
+
     let scheduledAt: string | null = null;
     if (body.scheduledAt !== undefined && body.scheduledAt !== null) {
       const parsed = parseScheduledAt(body.scheduledAt);
@@ -55,6 +64,7 @@ export async function POST(request: NextRequest) {
         tag_tone: body.tagTone === "error" ? "error" : "primary",
         is_important: isImportant,
         is_active: body.isActive !== false,
+        image_url: imageUrl,
         author_id: access.userId,
         ...(scheduledAt ? { published_at: scheduledAt } : {}),
       })
