@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useRef, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { readableAwardLabel } from "@/lib/score-labels";
 
@@ -266,6 +267,195 @@ export function AdminScoresManager({
   const totalPointsAwarded = useMemo(() => {
     return profiles.reduce((sum, p) => sum + (p.total_score || 0), 0);
   }, [profiles]);
+
+  const historyColumns: DataTableColumn<AdminScoreEventItem>[] = [
+    {
+      key: "created_at",
+      header: "Thời gian",
+      type: "date",
+      accessor: (evt) => evt.created_at,
+      className: "text-on-surface-variant whitespace-nowrap text-xs",
+      render: (evt) =>
+        new Date(evt.created_at).toLocaleString("vi-VN", {
+          dateStyle: "short",
+          timeStyle: "short",
+        }),
+    },
+    {
+      key: "recipient",
+      header: "Đoàn viên",
+      accessor: (evt) => profileMap.get(evt.user_id)?.full_name ?? evt.employee_code ?? null,
+      className: "font-semibold text-[#173A67]",
+      render: (evt) => {
+        const recipient = profileMap.get(evt.user_id);
+        return recipient ? recipient.full_name : evt.employee_code ?? "—";
+      },
+    },
+    {
+      key: "employee_code",
+      header: "Mã NV",
+      accessor: (evt) => profileMap.get(evt.user_id)?.employee_code ?? evt.employee_code ?? null,
+      className: "text-on-surface-variant",
+      render: (evt) => profileMap.get(evt.user_id)?.employee_code ?? evt.employee_code ?? "—",
+    },
+    {
+      key: "points",
+      header: "Điểm",
+      type: "number",
+      accessor: (evt) => evt.points,
+      className: "whitespace-nowrap",
+      render: (evt) => {
+        const isPositive = evt.points >= 0;
+        return (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black ${
+              isPositive
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-error/15 text-error"
+            }`}
+          >
+            {isPositive ? `+${evt.points}` : evt.points} đ
+          </span>
+        );
+      },
+    },
+    {
+      key: "note",
+      header: "Lý do / Hoạt động",
+      accessor: (evt) => evt.note ?? (evt.activity_id ? activityMap.get(evt.activity_id)?.title : null) ?? null,
+      className: "max-w-xs text-on-surface",
+      render: (evt) => {
+        const act = evt.activity_id ? activityMap.get(evt.activity_id) : null;
+        return (
+          <>
+            <p className="line-clamp-2">{evt.note ?? act?.title ?? "—"}</p>
+            {readableAwardLabel(evt.award_label) ? (
+              <span className="text-[11px] text-on-surface-variant/70 italic">
+                [{readableAwardLabel(evt.award_label)}]
+              </span>
+            ) : null}
+          </>
+        );
+      },
+    },
+    {
+      key: "created_by",
+      header: "Người cộng",
+      type: "enum",
+      accessor: (evt) => {
+        const creator = evt.created_by ? profileMap.get(evt.created_by) : null;
+        return creator ? creator.full_name : "Hệ thống";
+      },
+      className: "text-xs text-on-surface-variant whitespace-nowrap",
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      className: "text-right whitespace-nowrap",
+      headerClassName: "text-right",
+      render: (evt) => {
+        const recipient = profileMap.get(evt.user_id);
+        return (
+          <button
+            className="rounded-lg px-2.5 py-1 text-xs font-semibold text-error hover:bg-error/10 transition disabled:opacity-50"
+            disabled={deletingId === evt.id}
+            title="Thu hồi lượt cộng điểm này"
+            type="button"
+            onClick={() =>
+              handleDeleteEvent(
+                evt.id,
+                recipient?.full_name ?? evt.employee_code ?? "đoàn viên",
+                evt.points,
+              )
+            }
+          >
+            {deletingId === evt.id ? "Đang xóa..." : "Thu hồi"}
+          </button>
+        );
+      },
+    },
+  ];
+
+  const rosterColumns: DataTableColumn<AdminProfileItem>[] = [
+    {
+      key: "rank",
+      header: "Hạng",
+      type: "number",
+      accessor: (p) => p.rank,
+      className: "font-black text-[#173A67]",
+      render: (p) =>
+        p.rank ? (
+          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+            p.rank === 1
+              ? "bg-amber-400 text-amber-950"
+              : p.rank === 2
+              ? "bg-slate-300 text-slate-800"
+              : p.rank === 3
+              ? "bg-amber-700/30 text-amber-900"
+              : "text-on-surface-variant"
+          }`}>
+            {p.rank}
+          </span>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      key: "employee_code",
+      header: "Mã NV",
+      className: "font-semibold text-[#173A67]",
+      render: (p) => p.employee_code ?? "—",
+    },
+    {
+      key: "full_name",
+      header: "Họ và tên",
+      render: (p) => (
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+            {p.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt="" className="h-full w-full rounded-full object-cover" src={p.avatar_url} />
+            ) : (
+              p.full_name.slice(0, 1)
+            )}
+          </div>
+          <span className="font-bold text-[#173A67]">{p.full_name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "department",
+      header: "Bộ phận",
+      type: "enum",
+      className: "text-on-surface-variant",
+      render: (p) => p.department ?? "—",
+    },
+    {
+      key: "total_score",
+      header: "Tổng điểm",
+      type: "number",
+      className: "font-black text-amber-800 text-base",
+      render: (p) => `${p.total_score} đ`,
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (p) => (
+        <button
+          className="inline-flex items-center gap-1 rounded-xl bg-amber-500/15 border border-amber-400 px-3 py-1 text-xs font-bold text-amber-900 hover:bg-amber-500 hover:text-white transition shadow-2xs"
+          type="button"
+          onClick={() => handleSelectFromTable(p)}
+        >
+          <MaterialIcon className="text-[14px]" name="add" />
+          <span>Cộng điểm</span>
+        </button>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -647,97 +837,15 @@ export function AdminScoresManager({
             <MaterialIcon className="text-[24px] text-[#173A67]" name="history" />
             <h2 className="text-title-lg font-bold text-[#173A67]">Lịch sử cộng điểm gần đây</h2>
           </div>
-          <span className="text-label-sm text-on-surface-variant">
-            Hiển thị tối đa 50 lượt cộng gần nhất
-          </span>
         </div>
 
-        {recentEvents.length === 0 ? (
-          <p className="rounded-2xl border border-outline-variant bg-white p-6 text-center text-sm text-on-surface-variant">
-            Chưa có lượt cộng điểm nào trong hệ thống.
-          </p>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xs">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-[#D9F2EC] text-[#173A67]">
-                <tr>
-                  <th className="px-4 py-3 font-bold">Thời gian</th>
-                  <th className="px-4 py-3 font-bold">Đoàn viên</th>
-                  <th className="px-4 py-3 font-bold">Mã NV</th>
-                  <th className="px-4 py-3 font-bold">Điểm</th>
-                  <th className="px-4 py-3 font-bold">Lý do / Hoạt động</th>
-                  <th className="px-4 py-3 font-bold">Người cộng</th>
-                  <th className="px-4 py-3 font-bold text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentEvents.map((evt) => {
-                  const recipient = profileMap.get(evt.user_id);
-                  const creator = evt.created_by ? profileMap.get(evt.created_by) : null;
-                  const act = evt.activity_id ? activityMap.get(evt.activity_id) : null;
-                  const isPositive = evt.points >= 0;
-                  const timeFormatted = new Date(evt.created_at).toLocaleString("vi-VN", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  });
-
-                  return (
-                    <tr key={evt.id} className="border-t border-outline-variant hover:bg-surface-container-low/50">
-                      <td className="px-4 py-3 text-on-surface-variant whitespace-nowrap text-xs">
-                        {timeFormatted}
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-[#173A67]">
-                        {recipient ? recipient.full_name : evt.employee_code ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-on-surface-variant">
-                        {recipient?.employee_code ?? evt.employee_code ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black ${
-                            isPositive
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-error/15 text-error"
-                          }`}
-                        >
-                          {isPositive ? `+${evt.points}` : evt.points} đ
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 max-w-xs text-on-surface">
-                        <p className="line-clamp-2">{evt.note ?? act?.title ?? "—"}</p>
-                        {readableAwardLabel(evt.award_label) ? (
-                          <span className="text-[11px] text-on-surface-variant/70 italic">
-                            [{readableAwardLabel(evt.award_label)}]
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-on-surface-variant whitespace-nowrap">
-                        {creator ? creator.full_name : "Hệ thống"}
-                      </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button
-                          className="rounded-lg px-2.5 py-1 text-xs font-semibold text-error hover:bg-error/10 transition disabled:opacity-50"
-                          disabled={deletingId === evt.id}
-                          title="Thu hồi lượt cộng điểm này"
-                          type="button"
-                          onClick={() =>
-                            handleDeleteEvent(
-                              evt.id,
-                              recipient?.full_name ?? evt.employee_code ?? "đoàn viên",
-                              evt.points,
-                            )
-                          }
-                        >
-                          {deletingId === evt.id ? "Đang xóa..." : "Thu hồi"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <DataTable
+          columns={historyColumns}
+          emptyText="Chưa có lượt cộng điểm nào trong hệ thống."
+          footerNote="Đang hiển thị 50 lượt cộng điểm gần nhất"
+          rowKey={(evt) => evt.id}
+          rows={recentEvents}
+        />
       </div>
 
       {/* 5. Member Roster Table with Quick Award Action */}
@@ -774,83 +882,12 @@ export function AdminScoresManager({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xs">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-[#D9F2EC] text-[#173A67]">
-              <tr>
-                <th className="px-4 py-3 font-bold">Hạng</th>
-                <th className="px-4 py-3 font-bold">Mã NV</th>
-                <th className="px-4 py-3 font-bold">Họ và tên</th>
-                <th className="px-4 py-3 font-bold">Bộ phận</th>
-                <th className="px-4 py-3 font-bold">Tổng điểm</th>
-                <th className="px-4 py-3 font-bold text-right">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProfiles.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={6}>
-                    Không tìm thấy đoàn viên nào phù hợp.
-                  </td>
-                </tr>
-              ) : (
-                filteredProfiles.map((p) => (
-                  <tr key={p.id} className="border-t border-outline-variant hover:bg-surface-container-low/50">
-                    <td className="px-4 py-3 font-black text-[#173A67]">
-                      {p.rank ? (
-                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                          p.rank === 1
-                            ? "bg-amber-400 text-amber-950"
-                            : p.rank === 2
-                            ? "bg-slate-300 text-slate-800"
-                            : p.rank === 3
-                            ? "bg-amber-700/30 text-amber-900"
-                            : "text-on-surface-variant"
-                        }`}>
-                          {p.rank}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-semibold text-[#173A67]">
-                      {p.employee_code ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                          {p.avatar_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img alt="" className="h-full w-full rounded-full object-cover" src={p.avatar_url} />
-                          ) : (
-                            p.full_name.slice(0, 1)
-                          )}
-                        </div>
-                        <span className="font-bold text-[#173A67]">{p.full_name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-on-surface-variant">
-                      {p.department ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 font-black text-amber-800 text-base">
-                      {p.total_score} đ
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        className="inline-flex items-center gap-1 rounded-xl bg-amber-500/15 border border-amber-400 px-3 py-1 text-xs font-bold text-amber-900 hover:bg-amber-500 hover:text-white transition shadow-2xs"
-                        type="button"
-                        onClick={() => handleSelectFromTable(p)}
-                      >
-                        <MaterialIcon className="text-[14px]" name="add" />
-                        <span>Cộng điểm</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={rosterColumns}
+          emptyText="Không tìm thấy đoàn viên nào phù hợp."
+          rowKey={(p) => p.id}
+          rows={filteredProfiles}
+        />
       </div>
     </div>
   );
