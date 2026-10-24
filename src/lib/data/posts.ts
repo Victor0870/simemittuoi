@@ -77,6 +77,14 @@ export async function getPosts(
   limit = 50,
   options?: { includeInactive?: boolean; tag?: string },
 ): Promise<PostSummary[]> {
+  return getPostDetails(limit, options);
+}
+
+/** Như getPosts nhưng giữ kiểu có nội dung bài (dùng cho trang quản trị cần mở trình soạn bài). */
+export async function getPostDetails(
+  limit = 50,
+  options?: { includeInactive?: boolean; tag?: string },
+): Promise<PostDetail[]> {
   const db = options?.includeInactive ? createServiceClient() : createPublicClient();
   let query = db
     .from(CDILV_TABLE.posts)

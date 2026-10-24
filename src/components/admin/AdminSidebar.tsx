@@ -102,6 +102,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     },
   ],
   content: [
+    { href: "/admin/content/guides", label: "Hướng dẫn sử dụng" },
     { href: "/admin/activities", label: "Hoạt động & phong trào" },
     { href: "/admin/popups", label: "Popup thông báo" },
   ],

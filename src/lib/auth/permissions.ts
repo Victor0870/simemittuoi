@@ -531,6 +531,7 @@ export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCo
   { prefix: "/admin/employees", permission: PERMISSIONS.employeesView },
   { prefix: "/admin/polls", permission: PERMISSIONS.pollsManage },
   { prefix: "/admin/popups", permission: PERMISSIONS.popupsManage },
+  { prefix: "/admin/content/guides", permission: PERMISSIONS.postsManage },
 ];
 
 export function findAdminRoutePermission(pathname: string): PermissionCode | null {

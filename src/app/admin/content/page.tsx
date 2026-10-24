@@ -20,6 +20,14 @@ export default async function ContentHubPage() {
       allowed: hasPermission(access, PERMISSIONS.postsManage),
     },
     {
+      href: "/admin/content/guides",
+      title: "Hướng dẫn sử dụng",
+      description: "Thêm, sửa, ẩn / hiện bài hướng dẫn sử dụng website; xem trước cả bài Inactive.",
+      icon: "menu_book",
+      tint: "surface",
+      allowed: hasPermission(access, PERMISSIONS.postsManage),
+    },
+    {
       href: "/admin/activities",
       title: "Hoạt động & phong trào",
       description: "Tạo hoạt động, phát động phong trào, mở / dừng nhận đăng ký và theo dõi danh sách tham gia.",

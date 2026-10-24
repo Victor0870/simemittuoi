@@ -32,6 +32,10 @@ type PostEditButtonProps = {
   };
   /** Tag mặc định khi đăng bài mới (vd. đăng từ trang /huong-dan). */
   defaultTag?: string;
+  /** Nhãn nút đăng bài mới (mặc định "Đăng bài mới"). */
+  createLabel?: string;
+  /** Nút sửa dạng icon gọn (dùng trong bảng quản trị). */
+  compact?: boolean;
 };
 
 /** Nén (cạnh dài tối đa 1600px, GIF giữ nguyên) rồi tải ảnh bài viết lên Storage qua API. */
@@ -69,7 +73,12 @@ const SUGGESTED_TAGS = [
   GUIDE_POST_CATEGORY.tag,
 ];
 
-export function PostEditButton({ post, defaultTag }: PostEditButtonProps) {
+export function PostEditButton({
+  post,
+  defaultTag,
+  createLabel = "Đăng bài mới",
+  compact = false,
+}: PostEditButtonProps) {
   const { can } = useAuth();
   const router = useRouter();
   const isCreate = !post;
@@ -260,7 +269,17 @@ export function PostEditButton({ post, defaultTag }: PostEditButtonProps) {
           className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-[#1E4A7D] active:scale-95 cursor-pointer sm:text-label-md"
         >
           <MaterialIcon className="text-[18px]" name="post_add" />
-          <span>Đăng bài mới</span>
+          <span>{createLabel}</span>
+        </button>
+      ) : compact ? (
+        <button
+          onClick={handleOpen}
+          type="button"
+          aria-label="Sửa bài viết"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#173A67] text-white shadow-2xs transition hover:bg-[#27496D] cursor-pointer"
+          title="Sửa bài viết"
+        >
+          <MaterialIcon className="text-[18px]" name="edit" />
         </button>
       ) : (
         <button
