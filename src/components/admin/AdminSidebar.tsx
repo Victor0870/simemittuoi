@@ -72,12 +72,69 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
+export type AdminChildPage = { href: string; label: string };
+
+/** Trang con của từng hub (nhãn trùng với ô trên trang hub), dùng cho breadcrumb 3 cấp. */
+export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
+  members: [
+    { href: "/admin/users", label: "Duyệt thành viên" },
+    { href: "/office/members", label: "Hồ sơ đoàn viên" },
+    { href: "/admin/employees", label: "DS nhân viên được đăng ký" },
+  ],
+  competition: [
+    { href: "/admin/scores", label: "Cộng điểm thi đua" },
+    { href: "/admin/polls", label: "Bình chọn" },
+    { href: "/admin/quiz", label: "Trắc nghiệm tuần" },
+  ],
+  content: [
+    { href: "/admin/activities", label: "Hoạt động & phong trào" },
+    { href: "/admin/popups", label: "Popup thông báo" },
+  ],
+  administration: [
+    { href: "/office/life-events", label: "Hộp tin báo" },
+    { href: "/office/visits", label: "Đề nghị thăm hỏi" },
+    { href: "/office/payments", label: "Đề nghị thanh toán" },
+    { href: "/office/rewards", label: "Thanh toán thưởng" },
+    { href: "/office/gifts/children", label: "Quà thiếu nhi" },
+    { href: "/office/print-settings", label: "Cài đặt biểu mẫu in" },
+  ],
+  finance: [
+    { href: "/office/finance", label: "Sổ quỹ" },
+    { href: "/office/reports", label: "Báo cáo tổng hợp" },
+    { href: "/office/catalogs", label: "Danh mục thu chi" },
+  ],
+  system: [{ href: "/admin/roles", label: "Phân quyền theo cấp" }],
+};
+
+function matchesPath(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 export function findAdminNavGroup(pathname: string): AdminNavGroup | null {
   return (
     ADMIN_NAV_GROUPS.find(
-      (g) => g.exact?.includes(pathname) || g.prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`)),
+      (g) =>
+        g.exact?.includes(pathname) ||
+        g.prefixes.some((p) => matchesPath(pathname, p)) ||
+        (ADMIN_CHILD_PAGES[g.key] ?? []).some((c) => matchesPath(pathname, c.href)),
     ) ?? null
   );
+}
+
+/** Nhóm, trang con (nếu có) và cờ "đang ở chính trang hub" cho breadcrumb. */
+export function resolveAdminLocation(pathname: string): {
+  group: AdminNavGroup | null;
+  page: AdminChildPage | null;
+  isHub: boolean;
+} {
+  const group = findAdminNavGroup(pathname);
+  if (!group) return { group: null, page: null, isHub: false };
+  const page =
+    (ADMIN_CHILD_PAGES[group.key] ?? [])
+      .filter((c) => matchesPath(pathname, c.href))
+      .sort((a, b) => b.href.length - a.href.length)[0] ?? null;
+  const isHub = group.key === "overview" || pathname === group.href;
+  return { group, page, isHub };
 }
 
 const itemClass = "flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold transition";

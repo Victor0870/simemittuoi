@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AdminSidebar, findAdminNavGroup } from "@/components/admin/AdminSidebar";
+import { AdminSidebar, resolveAdminLocation } from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -11,8 +11,9 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 /** Khung chung cho /admin/* và /office/*: sidebar cố định (drawer trên mobile), thanh tiêu đề, vùng nội dung. */
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/admin";
-  const group = findAdminNavGroup(pathname);
+  const { group, page, isHub } = resolveAdminLocation(pathname);
   const { user, profile, isAdmin } = useAuth();
+  const hubHref = group && isAdmin ? group.href : "/office";
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const initial = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
@@ -64,12 +65,42 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             >
               <MaterialIcon className="text-[24px]" name="menu" />
             </button>
+            {group && page ? (
+              <Link
+                aria-label={`Quay lại ${group.label}`}
+                className="shrink-0 rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] md:hidden"
+                href={hubHref}
+              >
+                <MaterialIcon className="text-[20px]" name="arrow_back" />
+              </Link>
+            ) : null}
             <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-sm">
-              <Link className="text-on-surface-variant hover:text-[#173A67]" href={isAdmin ? "/admin" : "/office"}>
+              <Link className="shrink-0 text-on-surface-variant hover:text-[#173A67]" href={isAdmin ? "/admin" : "/office"}>
                 Quản trị
               </Link>
-              <span className="text-outline">/</span>
-              <span className="truncate font-bold text-[#173A67]">{group?.label ?? "Tổng quan"}</span>
+              <span className="shrink-0 text-outline">/</span>
+              {!group || isHub ? (
+                <span aria-current="page" className="min-w-0 truncate font-bold text-[#173A67]">
+                  {group?.label ?? "Tổng quan"}
+                </span>
+              ) : (
+                <>
+                  <Link
+                    className={`min-w-0 truncate text-on-surface-variant hover:text-[#173A67] ${page ? "max-w-[9rem] sm:max-w-[14rem] md:max-w-none" : ""}`}
+                    href={hubHref}
+                  >
+                    {group.label}
+                  </Link>
+                  {page ? (
+                    <>
+                      <span className="shrink-0 text-outline">/</span>
+                      <span aria-current="page" className="min-w-0 truncate font-bold text-[#173A67]">
+                        {page.label}
+                      </span>
+                    </>
+                  ) : null}
+                </>
+              )}
             </nav>
           </div>
           <div className="flex shrink-0 items-center gap-3">
