@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { AdminSidebar, findAdminNavGroup } from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
@@ -14,10 +14,25 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const group = findAdminNavGroup(pathname);
   const { user, profile, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const initial = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
 
+  const closeDrawer = useCallback((restoreFocus = false) => {
+    setOpen(false);
+    if (restoreFocus) menuButtonRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeDrawer(true);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open, closeDrawer]);
+
   return (
-    <div className="min-h-screen bg-surface-bg">
+    <div className="min-h-screen bg-surface-bg" data-admin-shell="">
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:block print:hidden">
         <AdminSidebar />
       </aside>
@@ -28,10 +43,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             aria-label="Đóng menu"
             className="absolute inset-0 bg-black/40"
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => closeDrawer(true)}
           />
           <div className="relative h-full max-w-[85vw] overflow-hidden shadow-xl">
-            <AdminSidebar onNavigate={() => setOpen(false)} />
+            <AdminSidebar onNavigate={() => closeDrawer()} />
           </div>
         </div>
       ) : null}
@@ -40,6 +55,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-dusty-border bg-white px-4 md:px-7 print:hidden">
           <div className="flex min-w-0 items-center gap-2">
             <button
+              ref={menuButtonRef}
+              aria-expanded={open}
               aria-label="Mở menu quản trị"
               className="rounded-lg p-1.5 text-on-surface-variant hover:bg-surface-container-high md:hidden"
               type="button"
@@ -73,7 +90,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-container-max flex-1 p-6 md:p-7 print:max-w-none print:p-0">{children}</main>
+        <main className="mx-auto w-full min-w-0 max-w-container-max flex-1 p-6 md:p-7 print:max-w-none print:p-0">{children}</main>
       </div>
     </div>
   );

@@ -109,6 +109,16 @@
   body {
     @apply bg-surface text-on-surface font-sans antialiased;
   }
+
+  /* Khung quản trị: giữ chỗ thanh cuộn để trang dài / ngắn thẳng hàng nhau (header, nội dung). */
+  html:has([data-admin-shell]) {
+    scrollbar-gutter: stable;
+  }
+
+  /* Ô chọn có tên mục dài không được đẩy trang tràn ngang trên mobile. */
+  [data-admin-shell] main select {
+    max-width: 100%;
+  }
 }
 
 @layer utilities {
