@@ -518,6 +518,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.postsManage,
   },
   {
+    href: "/admin/documents/templates",
+    title: "Mẫu văn bản",
+    description: "Thư viện mẫu Quyết định, Quy định, Biên bản làm việc, Biên bản cuộc họp với các chỗ trống cần điền.",
+    icon: "description",
+    permission: PERMISSIONS.postsManage,
+  },
+  {
     href: "/admin/polls",
     title: "Quản lý bình chọn",
     description: "Tạo, sửa, mở / đóng chương trình bình chọn và tổng kết trao điểm.",
@@ -540,6 +547,7 @@ export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCo
   { prefix: "/admin/popups", permission: PERMISSIONS.popupsManage },
   { prefix: "/admin/content/guides", permission: PERMISSIONS.postsManage },
   { prefix: "/admin/finance/regulations", permission: PERMISSIONS.financeManage },
+  { prefix: "/admin/documents", permission: PERMISSIONS.postsManage },
 ];
 
 export function findAdminRoutePermission(pathname: string): PermissionCode | null {

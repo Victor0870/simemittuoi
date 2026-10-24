@@ -64,6 +64,13 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     prefixes: ["/admin/finance", "/office/finance", "/office/reports", "/office/catalogs"],
   },
   {
+    key: "documents",
+    label: "Văn bản công đoàn",
+    icon: "description",
+    href: "/admin/documents",
+    prefixes: ["/admin/documents"],
+  },
+  {
     key: "system",
     label: "Hệ thống",
     icon: "settings",
@@ -112,6 +119,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/office/catalogs", label: "Danh mục thu chi" },
     { href: "/admin/finance/regulations", label: "Quy chế chi tiêu" },
   ],
+  documents: [{ href: "/admin/documents/templates", label: "Mẫu văn bản" }],
   system: [{ href: "/admin/roles", label: "Phân quyền theo cấp" }],
 };
 

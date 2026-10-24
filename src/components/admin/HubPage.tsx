@@ -13,6 +13,8 @@ export type HubTile = {
   icon: string;
   tint?: HubTint;
   badge?: string | null;
+  /** Chức năng chưa mở: hiện ô mờ, không bấm được. */
+  disabled?: boolean;
 };
 
 const TINT_CLASS: Record<HubTint, string> = {
@@ -24,28 +26,43 @@ const TINT_CLASS: Record<HubTint, string> = {
 export function HubTileGrid({ tiles, hubKey }: { tiles: HubTile[]; hubKey?: HubKey }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {tiles.map((t) => (
-        <Link
-          key={t.href + t.title}
-          className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
-          href={withHubFrom(t.href, hubKey)}
-        >
-          <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${TINT_CLASS[t.tint ?? "dusty"]}`}>
-            <MaterialIcon className="text-[24px]" name={t.icon} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-bold text-on-surface transition-colors group-hover:text-primary">{t.title}</p>
-              {t.badge ? (
-                <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-light px-2 py-0.5 text-[11px] font-bold text-amber-800">
-                  {t.badge}
-                </span>
-              ) : null}
+      {tiles.map((t) => {
+        const body = (
+          <>
+            <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${TINT_CLASS[t.tint ?? "dusty"]}`}>
+              <MaterialIcon className="text-[24px]" name={t.icon} />
             </div>
-            <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{t.description}</p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-bold text-on-surface transition-colors group-hover:text-primary">{t.title}</p>
+                {t.badge ? (
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-light px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                    {t.badge}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{t.description}</p>
+            </div>
+          </>
+        );
+        return t.disabled ? (
+          <div
+            key={t.href + t.title}
+            aria-disabled="true"
+            className="flex cursor-not-allowed items-start gap-3.5 rounded-2xl border border-dashed border-border-subtle bg-white/60 p-5 opacity-60"
+          >
+            {body}
           </div>
-        </Link>
-      ))}
+        ) : (
+          <Link
+            key={t.href + t.title}
+            className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
+            href={withHubFrom(t.href, hubKey)}
+          >
+            {body}
+          </Link>
+        );
+      })}
     </div>
   );
 }

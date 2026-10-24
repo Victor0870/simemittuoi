@@ -62,6 +62,7 @@ export const CDILV_TABLE = {
   fundEntries: "cdilv_fund_entries",
   fundEntryLogs: "cdilv_fund_entry_logs",
   counterparties: "cdilv_counterparties",
+  documentTemplates: "cdilv_document_templates",
 } as const;
 
 export const CDILV_RPC = {
