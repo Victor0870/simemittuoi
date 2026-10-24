@@ -174,11 +174,11 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
     {
       key: "title",
       header: "Tên chương trình",
-      className: "font-bold text-[#173A67] max-w-sm",
+      className: "min-w-[11rem] max-w-[18rem] font-bold text-[#173A67]",
       render: (p) => (
         <>
-          <div className="flex items-center gap-2">
-            <Link className="hover:underline line-clamp-2" href={`/polls/${p.id}`}>
+          <div className="flex items-start gap-2">
+            <Link className="line-clamp-2 break-words hover:underline" href={`/polls/${p.id}`} title={p.title}>
               {p.title}
             </Link>
             {!p.isActive ? (
@@ -225,7 +225,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
     },
     {
       key: "isActive",
-      header: "Hiển thị (Active)",
+      header: "Hiển thị",
       type: "enum",
       accessor: (p) => (p.isActive ? "Active" : "Inactive"),
       render: (p) => (
@@ -269,13 +269,13 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
               {phaseMeta.label}
             </span>
             {phase === "upcoming" && p.opensAt ? (
-              <div className="mt-1 text-[11px] font-medium text-sky-800 whitespace-nowrap">
-                Tự mở: {formatPollTime(p.opensAt)}
+              <div className="mt-1 text-[11px] font-medium leading-tight text-sky-800">
+                Tự mở: <span className="whitespace-nowrap">{formatPollTime(p.opensAt)}</span>
               </div>
             ) : null}
             {(phase === "upcoming" || phase === "open") && p.votingEndsAt ? (
-              <div className="mt-0.5 text-[11px] font-medium text-amber-900 whitespace-nowrap">
-                Dừng nhận phiếu: {formatPollTime(p.votingEndsAt)}
+              <div className="mt-0.5 text-[11px] font-medium leading-tight text-amber-900">
+                Dừng nhận phiếu: <span className="whitespace-nowrap">{formatPollTime(p.votingEndsAt)}</span>
               </div>
             ) : null}
           </>
@@ -286,68 +286,83 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       key: "createdAt",
       header: "Ngày tạo",
       type: "date",
-      className: "text-xs text-on-surface-variant",
+      className: "whitespace-nowrap text-xs text-on-surface-variant",
       render: (p) => new Date(p.createdAt).toLocaleDateString("vi-VN"),
     },
     {
       key: "actions",
-      header: "Thao tác Quản trị",
+      header: "Thao tác",
       filterable: false,
-      className: "text-right whitespace-nowrap space-x-2",
-      headerClassName: "text-right",
+      // Luôn thấy cột thao tác: dính mép phải nếu bảng phải cuộn ngang (màn hẹp)
+      className:
+        "sticky right-0 z-[1] whitespace-nowrap bg-surface-container-lowest text-right shadow-[inset_1px_0_0_rgb(0_0_0/0.06)]",
+      headerClassName: "sticky right-0 z-20 bg-[#ecf4ff] text-right",
       render: (p) => {
         const phase = getPollPhase(p, renderedAt);
         const isBusy = busyPollId === p.id;
         const isLoadingEdit = loadingPollId === p.id;
+        const iconButton =
+          "inline-flex h-8 w-8 items-center justify-center rounded-lg transition shadow-2xs cursor-pointer disabled:cursor-wait disabled:opacity-50";
+        const busyIcon = <MaterialIcon className="animate-spin text-[18px]" name="progress_activity" />;
+        const editLabel = isLoadingEdit ? "Đang tải..." : "Cài đặt / Sửa";
         return (
-          <>
+          <div className="inline-flex items-center justify-end gap-1">
             {/* BUTTON CÀI ĐẶT & SỬA */}
             <button
-              className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1 text-xs font-bold text-white hover:bg-[#27496D] transition shadow-2xs cursor-pointer disabled:opacity-50"
+              aria-label={editLabel}
+              className={`${iconButton} bg-[#173A67] text-white hover:bg-[#27496D]`}
               disabled={isLoadingEdit}
+              title={editLabel}
               type="button"
               onClick={() => handleOpenEdit(p.id)}
             >
-              <MaterialIcon className="text-[14px]" name="settings" />
-              <span>{isLoadingEdit ? "Đang tải..." : "⚙️ Cài đặt / Sửa"}</span>
+              {isLoadingEdit ? busyIcon : <MaterialIcon className="text-[18px]" name="settings" />}
             </button>
 
             <Link
-              className="rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-[#173A67] hover:bg-surface-container-high transition"
+              aria-label="Xem trang"
+              className={`${iconButton} border border-outline-variant bg-white text-[#173A67] hover:bg-surface-container-high`}
               href={`/polls/${p.id}`}
+              title="Xem trang"
             >
-              Xem trang
+              <MaterialIcon className="text-[18px]" name="open_in_new" />
             </Link>
 
             {phase === "upcoming" ? (
               <button
-                className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white hover:bg-emerald-700 transition shadow-xs cursor-pointer disabled:opacity-50"
+                aria-label={isBusy ? "Đang mở..." : "Mở ngay"}
+                className={`${iconButton} bg-emerald-600 text-white hover:bg-emerald-700`}
                 disabled={isBusy}
+                title={isBusy ? "Đang mở..." : "Mở ngay"}
                 type="button"
                 onClick={() => handleOpenNow(p.id, p.title)}
               >
-                {isBusy ? "Đang mở..." : "Mở ngay"}
+                {isBusy ? busyIcon : <MaterialIcon className="text-[18px]" name="play_arrow" />}
               </button>
             ) : phase !== "closed" ? (
               <button
-                className="rounded-lg bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600 transition shadow-xs cursor-pointer disabled:opacity-50"
+                aria-label={isBusy ? "Đang tính..." : "Đóng & Trao giải"}
+                className={`${iconButton} bg-amber-500 text-white hover:bg-amber-600`}
                 disabled={isBusy}
+                title={isBusy ? "Đang tính..." : "Đóng & Trao giải"}
                 type="button"
                 onClick={() => handleClosePoll(p.id, p.title)}
               >
-                {isBusy ? "Đang tính..." : "Đóng & Trao giải"}
+                {isBusy ? busyIcon : <MaterialIcon className="text-[18px]" name="emoji_events" />}
               </button>
             ) : (
               <button
-                className="rounded-lg border border-primary px-3 py-1 text-xs font-bold text-primary hover:bg-primary/10 transition cursor-pointer disabled:opacity-50"
+                aria-label={isBusy ? "Đang mở..." : "Mở lại"}
+                className={`${iconButton} border border-primary bg-white text-primary hover:bg-primary/10`}
                 disabled={isBusy}
+                title={isBusy ? "Đang mở..." : "Mở lại"}
                 type="button"
                 onClick={() => handleReopenPoll(p.id)}
               >
-                {isBusy ? "Đang mở..." : "Mở lại"}
+                {isBusy ? busyIcon : <MaterialIcon className="text-[18px]" name="replay" />}
               </button>
             )}
-          </>
+          </div>
         );
       },
     },
@@ -403,16 +418,16 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
             <p className="font-bold text-base">Hướng dẫn quản lý & cài đặt bình chọn:</p>
             <ul className="list-disc pl-5 space-y-0.5 text-xs text-[#27496D]">
               <li>
-                Bấm <strong>&ldquo;⚙️ Cài đặt / Sửa&rdquo;</strong> ở mỗi chương trình để: Thêm/bớt tác phẩm, up ảnh chụp máy ảnh (hệ thống tự động nén tối ưu), nhập danh sách đoàn viên cho từng nhóm.
+                Bấm nút <strong>⚙️ (Cài đặt / Sửa)</strong> ở cột Thao tác của mỗi chương trình để: Thêm/bớt tác phẩm, up ảnh chụp máy ảnh (hệ thống tự động nén tối ưu), nhập danh sách đoàn viên cho từng nhóm.
               </li>
               <li>
                 Bấm <strong>&ldquo;+ Tạo chương trình mới&rdquo;</strong> để tạo cuộc thi vote hoặc câu hỏi trắc nghiệm mới.
               </li>
               <li>
-                Chọn giai đoạn <strong>&ldquo;Sắp mở&rdquo;</strong> trong Cài đặt để mọi người xem trước tác phẩm và <strong>bình chọn thử</strong> (không ghi nhận). Có thể hẹn giờ tự mở và giờ tự dừng nhận phiếu, hoặc bấm <strong>&ldquo;Mở ngay&rdquo;</strong>.
+                Chọn giai đoạn <strong>&ldquo;Sắp mở&rdquo;</strong> trong Cài đặt để mọi người xem trước tác phẩm và <strong>bình chọn thử</strong> (không ghi nhận). Có thể hẹn giờ tự mở và giờ tự dừng nhận phiếu, hoặc bấm nút <strong>▶ (Mở ngay)</strong>.
               </li>
               <li>
-                Khi chương trình kết thúc, bấm <strong>&ldquo;Đóng & Trao giải&rdquo;</strong>: Hệ thống sẽ tự động tìm người dự đoán đúng nhất và cộng điểm thi đua vào tài khoản của đoàn viên đạt giải!
+                Khi chương trình kết thúc, bấm nút <strong>🏆 (Đóng & Trao giải)</strong>: Hệ thống sẽ tự động tìm người dự đoán đúng nhất và cộng điểm thi đua vào tài khoản của đoàn viên đạt giải!
               </li>
             </ul>
           </div>
@@ -420,7 +435,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       </div>
 
       {/* 2. BẢNG DANH SÁCH CÁC CHƯƠNG TRÌNH */}
-      <div className="space-y-4">
+      <div className="space-y-4 pb-6">
         <div className="flex items-center justify-between">
           <h2 className="text-title-lg font-bold text-[#173A67]">
             Các Chương Trình Bình Chọn ({pollList.length})
@@ -432,7 +447,9 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
 
         <DataTable
           columns={columns}
+          density="compact"
           emptyText="Chưa có chương trình bình chọn nào."
+          maxHeightClass="max-h-[calc(100dvh-240px)] min-h-[240px]"
           rowKey={(p) => p.id}
           rows={pollList}
         />

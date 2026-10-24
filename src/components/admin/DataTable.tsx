@@ -49,6 +49,8 @@ type DataTableProps<T> = {
    * chỉ thân bảng cuộn, thanh phân trang luôn ở đáy. Dưới lg vẫn dùng maxHeightClass.
    */
   fill?: boolean;
+  /** compact: đệm ô nhỏ hơn cho bảng nhiều cột (mặc định normal, giữ nguyên như cũ). */
+  density?: "normal" | "compact";
 };
 
 type Cell = { label: string; norm: string; num: number | null; day: string | null; sortValue: number | string | null };
@@ -161,7 +163,9 @@ export function DataTable<T>({
   footerRows,
   sortHint,
   fill = false,
+  density = "normal",
 }: DataTableProps<T>) {
+  const cellPadding = density === "compact" ? "px-2.5 py-2" : "px-4 py-3";
   const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({});
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(null);
   const [pageSize, setPageSize] = useState<DataTablePageSize>(defaultPageSize);
@@ -314,7 +318,7 @@ export function DataTable<T>({
                     <th
                       key={column.key}
                       aria-sort={sortDir === "asc" ? "ascending" : sortDir === "desc" ? "descending" : undefined}
-                      className={`whitespace-nowrap px-4 py-3 font-bold shadow-[inset_0_-1px_0_rgb(0_0_0/0.08)] ${column.headerClassName ?? ""}`}
+                      className={`whitespace-nowrap ${cellPadding} font-bold shadow-[inset_0_-1px_0_rgb(0_0_0/0.08)] ${column.headerClassName ?? ""}`}
                       scope="col"
                     >
                       <span className="inline-flex items-center gap-1 align-middle">
@@ -355,7 +359,7 @@ export function DataTable<T>({
                     className={`border-t border-outline-variant hover:bg-surface-container-low/50 ${rowClassName?.(row) ?? ""}`}
                   >
                     {columns.map((column) => (
-                      <td key={column.key} className={`px-4 py-3 ${column.className ?? ""}`}>
+                      <td key={column.key} className={`${cellPadding} ${column.className ?? ""}`}>
                         {column.render ? column.render(row) : (() => {
                           const value = rawValue(column, row);
                           return value instanceof Date ? value.toLocaleString("vi-VN") : value ?? "—";
