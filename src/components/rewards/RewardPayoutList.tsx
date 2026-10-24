@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { toAccountHolderName } from "@/lib/bank-transfer";
 import { formatVnd, payableItems, rewardTransferText, rowTotal } from "@/lib/polls/reward-money";
@@ -39,6 +40,64 @@ export function RewardPayoutList({ polls, list }: Props) {
   const total = rows.reduce((sum, r) => sum + r.total, 0);
   const missingBank = rows.filter((r) => !r.bankAccountNo).length;
   const noMoney = list !== null && total === 0;
+
+  const numbered = useMemo(() => rows.map((r, idx) => ({ ...r, stt: idx + 1 })), [rows]);
+
+  const columns: DataTableColumn<(typeof numbered)[number]>[] = [
+    {
+      key: "stt",
+      header: "STT",
+      type: "number",
+      className: "text-center",
+      headerClassName: "text-center",
+    },
+    {
+      key: "employeeCode",
+      header: "Mã NV",
+      className: "whitespace-nowrap",
+    },
+    {
+      key: "fullName",
+      header: "Họ tên",
+      className: "font-semibold text-[#173A67]",
+      render: (r) => (
+        <>
+          {r.fullName}
+          <span className="block text-[11px] font-normal text-on-surface-variant">{r.holder}</span>
+        </>
+      ),
+    },
+    {
+      key: "bankAccountNo",
+      header: "Số tài khoản",
+      className: "whitespace-nowrap",
+      render: (r) => r.bankAccountNo || <span className="text-amber-700">Chưa khai</span>,
+    },
+    {
+      key: "bankName",
+      header: "Ngân hàng",
+      type: "enum",
+      render: (r) => r.bankName,
+    },
+    {
+      key: "transfer",
+      header: "Nội dung chuyển khoản",
+      render: (r) => (
+        <>
+          {r.transfer}
+          <span className="block text-[11px] text-on-surface-variant">{r.detail}</span>
+        </>
+      ),
+    },
+    {
+      key: "total",
+      header: "Tổng tiền (đ)",
+      type: "number",
+      className: "whitespace-nowrap text-right font-semibold",
+      headerClassName: "text-right",
+      render: (r) => formatVnd(r.total),
+    },
+  ];
 
   function selectPoll(id: string) {
     startTransition(() => router.push(`${pathname}?poll=${encodeURIComponent(id)}`));
@@ -178,62 +237,66 @@ export function RewardPayoutList({ polls, list }: Props) {
             <p className="text-[12px] italic">{list.pollTitle}</p>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest print:overflow-visible print:rounded-none print:border-0 print:bg-white">
-            <table className="min-w-full text-left text-sm print:text-[11px] print:text-black">
-              <thead className="bg-[#D9F2EC] text-[#173A67] print:bg-white print:text-black">
-                <tr className="[&>th]:px-3 [&>th]:py-2.5 [&>th]:font-bold print:[&>th]:border print:[&>th]:border-black print:[&>th]:px-1.5 print:[&>th]:py-1">
-                  <th className="text-center">STT</th>
-                  <th className="whitespace-nowrap">Mã NV</th>
-                  <th>Họ tên</th>
-                  <th className="whitespace-nowrap">Số tài khoản</th>
-                  <th>Ngân hàng</th>
-                  <th>Nội dung chuyển khoản</th>
-                  <th className="whitespace-nowrap text-right">Tổng tiền (đ)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={7}>
-                      Chương trình này không có người nhận thưởng.
-                    </td>
-                  </tr>
-                ) : null}
-                {rows.map((r, idx) => (
-                  <tr
-                    key={`${r.employeeCode}-${idx}`}
-                    className="border-t border-outline-variant break-inside-avoid [&>td]:px-3 [&>td]:py-2 print:[&>td]:border print:[&>td]:border-black print:[&>td]:px-1.5 print:[&>td]:py-1"
-                  >
-                    <td className="text-center">{idx + 1}</td>
-                    <td className="whitespace-nowrap">{r.employeeCode}</td>
-                    <td className="font-semibold text-[#173A67] print:text-black">
-                      {r.fullName}
-                      <span className="block text-[11px] font-normal text-on-surface-variant print:hidden">{r.holder}</span>
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {r.bankAccountNo || <span className="text-amber-700 print:hidden">Chưa khai</span>}
-                    </td>
-                    <td>{r.bankName}</td>
-                    <td className="print:text-black">
-                      {r.transfer}
-                      <span className="block text-[11px] text-on-surface-variant print:hidden">{r.detail}</span>
-                    </td>
-                    <td className="whitespace-nowrap text-right font-semibold">{formatVnd(r.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              {rows.length > 0 ? (
-                <tfoot>
-                  <tr className="border-t-2 border-outline-variant font-bold [&>td]:px-3 [&>td]:py-2.5 print:[&>td]:border print:[&>td]:border-black print:[&>td]:px-1.5 print:[&>td]:py-1">
-                    <td colSpan={6} className="text-right">
-                      TỔNG CỘNG
-                    </td>
-                    <td className="whitespace-nowrap text-right text-[#173A67] print:text-black">{formatVnd(total)}</td>
-                  </tr>
-                </tfoot>
-              ) : null}
-            </table>
+          <div className="print:hidden">
+            <DataTable
+              columns={columns}
+              emptyText="Chương trình này không có người nhận thưởng."
+              footerNote={
+                rows.length > 0 ? (
+                  <span className="not-italic font-bold text-[#173A67]">TỔNG CỘNG: {formatVnd(total)}đ</span>
+                ) : null
+              }
+              rowKey={(r) => `${r.employeeCode}-${r.stt}`}
+              rows={numbered}
+            />
           </div>
+
+          <table className="hidden w-full text-left text-black print:table print:text-[11px]">
+            <thead>
+              <tr className="[&>th]:border [&>th]:border-black [&>th]:px-1.5 [&>th]:py-1 [&>th]:font-bold">
+                <th className="text-center">STT</th>
+                <th className="whitespace-nowrap">Mã NV</th>
+                <th>Họ tên</th>
+                <th className="whitespace-nowrap">Số tài khoản</th>
+                <th>Ngân hàng</th>
+                <th>Nội dung chuyển khoản</th>
+                <th className="whitespace-nowrap text-right">Tổng tiền (đ)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td className="border border-black px-1.5 py-1 text-center" colSpan={7}>
+                    Chương trình này không có người nhận thưởng.
+                  </td>
+                </tr>
+              ) : null}
+              {rows.map((r, idx) => (
+                <tr
+                  key={`${r.employeeCode}-${idx}`}
+                  className="break-inside-avoid [&>td]:border [&>td]:border-black [&>td]:px-1.5 [&>td]:py-1"
+                >
+                  <td className="text-center">{idx + 1}</td>
+                  <td className="whitespace-nowrap">{r.employeeCode}</td>
+                  <td className="font-semibold">{r.fullName}</td>
+                  <td className="whitespace-nowrap">{r.bankAccountNo}</td>
+                  <td>{r.bankName}</td>
+                  <td>{r.transfer}</td>
+                  <td className="whitespace-nowrap text-right font-semibold">{formatVnd(r.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+            {rows.length > 0 ? (
+              <tfoot>
+                <tr className="font-bold [&>td]:border [&>td]:border-black [&>td]:px-1.5 [&>td]:py-1">
+                  <td colSpan={6} className="text-right">
+                    TỔNG CỘNG
+                  </td>
+                  <td className="whitespace-nowrap text-right">{formatVnd(total)}</td>
+                </tr>
+              </tfoot>
+            ) : null}
+          </table>
 
           <div className="hidden text-[12px] text-black print:mt-3 print:block">
             <p>

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateTimeVi } from "@/lib/data/albums";
-import { formatVnd, type VisitStatus } from "@/lib/visits/registry";
+import { VISIT_STATUS_LABEL, formatVnd, type VisitStatus } from "@/lib/visits/registry";
 import type { VisitRequestListItem } from "@/lib/visits/server";
 
 type Props = { items: VisitRequestListItem[] };
@@ -66,6 +67,67 @@ export function VisitRequestList({ items }: Props) {
 
   const total = filtered.reduce((sum, i) => sum + i.amount, 0);
 
+  const columns: DataTableColumn<VisitRequestListItem>[] = [
+    {
+      key: "code",
+      header: "Số phiếu",
+      className: "whitespace-nowrap",
+      render: (i) => (
+        <>
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/visits/${i.id}`}>
+            {i.code}
+          </Link>
+          <p className="text-[11px] text-on-surface-variant">{formatDateTimeVi(i.created_at)}</p>
+        </>
+      ),
+    },
+    {
+      key: "member_name",
+      header: "Đoàn viên",
+      render: (i) => (
+        <>
+          <p className="font-semibold">{i.member_name}</p>
+          <p className="text-[11px] text-on-surface-variant">
+            {[i.member_employee_code, i.member_department].filter(Boolean).join(" · ")}
+          </p>
+        </>
+      ),
+    },
+    {
+      key: "reason",
+      header: "Lý do",
+      className: "max-w-[320px]",
+      render: (i) => (
+        <>
+          <p className="line-clamp-2">{i.reason}</p>
+          {i.life_event_code ? <p className="text-[11px] text-on-surface-variant">Từ tin báo {i.life_event_code}</p> : null}
+        </>
+      ),
+    },
+    {
+      key: "amount",
+      header: "Số tiền",
+      type: "number",
+      className: "text-right font-bold whitespace-nowrap",
+      headerClassName: "text-right",
+      render: (i) => formatVnd(i.amount),
+    },
+    {
+      key: "creator_name",
+      header: "Người lập",
+      type: "enum",
+      className: "whitespace-nowrap",
+      render: (i) => i.creator_name ?? "—",
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      type: "enum",
+      accessor: (i) => VISIT_STATUS_LABEL[i.status],
+      render: (i) => <VisitStatusBadge status={i.status} />,
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -114,68 +176,20 @@ export function VisitRequestList({ items }: Props) {
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            <tr className="[&>th]:px-3 [&>th]:py-2.5 [&>th]:font-bold [&>th]:whitespace-nowrap">
-              <th>Số phiếu</th>
-              <th>Đoàn viên</th>
-              <th>Lý do</th>
-              <th className="text-right">Số tiền</th>
-              <th>Người lập</th>
-              <th>Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={6}>
-                  {tab === "proposed" ? "Không có đề nghị nào đang chờ duyệt." : "Không có phiếu phù hợp."}
-                </td>
-              </tr>
-            ) : null}
-            {filtered.map((i) => (
-              <tr
-                key={i.id}
-                className={`border-t border-outline-variant hover:bg-surface-container-low/60 [&>td]:px-3 [&>td]:py-2.5 ${
-                  i.status === "proposed" ? "bg-amber-50/40" : ""
-                }`}
-              >
-                <td className="whitespace-nowrap">
-                  <Link className="font-bold text-[#173A67] hover:underline" href={`/office/visits/${i.id}`}>
-                    {i.code}
-                  </Link>
-                  <p className="text-[11px] text-on-surface-variant">{formatDateTimeVi(i.created_at)}</p>
-                </td>
-                <td>
-                  <p className="font-semibold">{i.member_name}</p>
-                  <p className="text-[11px] text-on-surface-variant">
-                    {[i.member_employee_code, i.member_department].filter(Boolean).join(" · ")}
-                  </p>
-                </td>
-                <td className="max-w-[320px]">
-                  <p className="line-clamp-2">{i.reason}</p>
-                  {i.life_event_code ? <p className="text-[11px] text-on-surface-variant">Từ tin báo {i.life_event_code}</p> : null}
-                </td>
-                <td className="text-right font-bold whitespace-nowrap">{formatVnd(i.amount)}</td>
-                <td className="whitespace-nowrap">{i.creator_name ?? "—"}</td>
-                <td>
-                  <VisitStatusBadge status={i.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {filtered.length > 0 ? (
-            <tfoot>
-              <tr className="border-t-2 border-[#173A67]/20 font-bold text-[#173A67] [&>td]:px-3 [&>td]:py-2.5">
-                <td colSpan={3}>Tổng cộng ({filtered.length} phiếu)</td>
-                <td className="text-right whitespace-nowrap">{formatVnd(total)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          ) : null}
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        emptyText={tab === "proposed" ? "Không có đề nghị nào đang chờ duyệt." : "Không có phiếu phù hợp."}
+        footerNote={
+          filtered.length > 0 ? (
+            <span className="not-italic font-bold text-[#173A67]">
+              Tổng cộng ({filtered.length} phiếu): {formatVnd(total)}
+            </span>
+          ) : null
+        }
+        rowClassName={(i) => (i.status === "proposed" ? "bg-amber-50/40" : "")}
+        rowKey={(i) => i.id}
+        rows={filtered}
+      />
     </div>
   );
 }

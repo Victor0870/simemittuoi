@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { PAYMENT_METHOD_LABEL, type PaymentStatus } from "@/lib/payments/registry";
 import type { PaymentRequestListItem } from "@/lib/payments/server";
-import { formatVnd } from "@/lib/visits/registry";
+import { VISIT_STATUS_LABEL, formatVnd } from "@/lib/visits/registry";
 
 type Props = { items: PaymentRequestListItem[] };
 
@@ -64,6 +65,67 @@ export function PaymentRequestList({ items }: Props) {
 
   const total = filtered.reduce((sum, i) => sum + i.total_amount, 0);
 
+  const columns: DataTableColumn<PaymentRequestListItem>[] = [
+    {
+      key: "code",
+      header: "Số đề nghị",
+      className: "whitespace-nowrap",
+      render: (i) => (
+        <>
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/payments/${i.id}`}>
+            {i.code}
+          </Link>
+          <p className="text-[11px] text-on-surface-variant">{formatDateVi(i.request_date)}</p>
+        </>
+      ),
+    },
+    {
+      key: "title",
+      header: "Nội dung",
+      className: "max-w-[320px]",
+      render: (i) => (
+        <>
+          <p className="line-clamp-2 font-semibold">{i.title}</p>
+          <p className="text-[11px] text-on-surface-variant">
+            {i.item_count} dòng · {i.requester_name}
+          </p>
+        </>
+      ),
+    },
+    {
+      key: "receiver_name",
+      header: "Người nhận",
+      render: (i) => (
+        <>
+          <p>{i.receiver_name ?? "—"}</p>
+          <p className="text-[11px] text-on-surface-variant">{PAYMENT_METHOD_LABEL[i.payment_method]}</p>
+        </>
+      ),
+    },
+    {
+      key: "total_amount",
+      header: "Số tiền",
+      type: "number",
+      className: "text-right font-bold whitespace-nowrap",
+      headerClassName: "text-right",
+      render: (i) => formatVnd(i.total_amount),
+    },
+    {
+      key: "creator_name",
+      header: "Người lập",
+      type: "enum",
+      className: "whitespace-nowrap",
+      render: (i) => i.creator_name ?? "—",
+    },
+    {
+      key: "status",
+      header: "Trạng thái",
+      type: "enum",
+      accessor: (i) => VISIT_STATUS_LABEL[i.status],
+      render: (i) => <VisitStatusBadge status={i.status} />,
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
@@ -112,68 +174,20 @@ export function PaymentRequestList({ items }: Props) {
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            <tr className="[&>th]:px-3 [&>th]:py-2.5 [&>th]:font-bold [&>th]:whitespace-nowrap">
-              <th>Số đề nghị</th>
-              <th>Nội dung</th>
-              <th>Người nhận</th>
-              <th className="text-right">Số tiền</th>
-              <th>Người lập</th>
-              <th>Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={6}>
-                  {tab === "proposed" ? "Không có đề nghị nào đang chờ duyệt." : "Không có đề nghị phù hợp."}
-                </td>
-              </tr>
-            ) : null}
-            {filtered.map((i) => (
-              <tr
-                key={i.id}
-                className={`border-t border-outline-variant hover:bg-surface-container-low/60 [&>td]:px-3 [&>td]:py-2.5 ${
-                  i.status === "proposed" ? "bg-amber-50/40" : ""
-                }`}
-              >
-                <td className="whitespace-nowrap">
-                  <Link className="font-bold text-[#173A67] hover:underline" href={`/office/payments/${i.id}`}>
-                    {i.code}
-                  </Link>
-                  <p className="text-[11px] text-on-surface-variant">{formatDateVi(i.request_date)}</p>
-                </td>
-                <td className="max-w-[320px]">
-                  <p className="line-clamp-2 font-semibold">{i.title}</p>
-                  <p className="text-[11px] text-on-surface-variant">
-                    {i.item_count} dòng · {i.requester_name}
-                  </p>
-                </td>
-                <td>
-                  <p>{i.receiver_name ?? "—"}</p>
-                  <p className="text-[11px] text-on-surface-variant">{PAYMENT_METHOD_LABEL[i.payment_method]}</p>
-                </td>
-                <td className="text-right font-bold whitespace-nowrap">{formatVnd(i.total_amount)}</td>
-                <td className="whitespace-nowrap">{i.creator_name ?? "—"}</td>
-                <td>
-                  <VisitStatusBadge status={i.status} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          {filtered.length > 0 ? (
-            <tfoot>
-              <tr className="border-t-2 border-[#173A67]/20 font-bold text-[#173A67] [&>td]:px-3 [&>td]:py-2.5">
-                <td colSpan={3}>Tổng cộng ({filtered.length} đề nghị)</td>
-                <td className="text-right whitespace-nowrap">{formatVnd(total)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          ) : null}
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        emptyText={tab === "proposed" ? "Không có đề nghị nào đang chờ duyệt." : "Không có đề nghị phù hợp."}
+        footerNote={
+          filtered.length > 0 ? (
+            <span className="not-italic font-bold text-[#173A67]">
+              Tổng cộng ({filtered.length} đề nghị): {formatVnd(total)}
+            </span>
+          ) : null
+        }
+        rowClassName={(i) => (i.status === "proposed" ? "bg-amber-50/40" : "")}
+        rowKey={(i) => i.id}
+        rows={filtered}
+      />
     </div>
   );
 }

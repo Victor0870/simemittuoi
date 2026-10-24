@@ -230,7 +230,7 @@ export function DataTable<T>({
   return (
     <div className="space-y-3">
       {isFiltered ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 text-xs print:hidden">
           {activeFilters.map(({ column, filter }) => (
             <span
               key={column.key}
@@ -263,7 +263,7 @@ export function DataTable<T>({
       ) : null}
 
       <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xs">
-        <div className={`overflow-auto ${maxHeightClass}`}>
+        <div className={`overflow-auto ${maxHeightClass} print:max-h-none print:overflow-visible`}>
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#ecf4ff] text-[#173A67]">
               <tr>
@@ -328,7 +328,7 @@ export function DataTable<T>({
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-outline-variant bg-white px-4 py-2.5 text-xs text-on-surface-variant">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-outline-variant bg-white px-4 py-2.5 text-xs text-on-surface-variant print:hidden">
           <span>
             Hiển thị {from}–{to} / {isFiltered ? `${total} (lọc từ ${rows.length})` : `tổng ${total}`}
           </span>

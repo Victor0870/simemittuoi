@@ -207,7 +207,7 @@ export function ColumnFilter({ label, type, filter, sortDir, getOptions, onApply
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Lọc cột ${label}`}
-        className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition ${
+        className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition print:hidden ${
           active || open
             ? "bg-[#4a6b82]/15 text-[#4a6b82]"
             : "text-[#173A67]/45 hover:bg-white/70 hover:text-[#4a6b82]"

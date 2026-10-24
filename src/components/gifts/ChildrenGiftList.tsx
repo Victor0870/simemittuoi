@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState, useTransition } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   GIFT_MAX_AGE_LIMIT,
@@ -96,6 +97,88 @@ export function ChildrenGiftList({ items, refDate, maxAge }: Props) {
       byAge: [...byAge.entries()].sort((a, b) => a[0] - b[0]),
     };
   }, [filtered]);
+
+  const numbered = useMemo(() => filtered.map((item, idx) => ({ ...item, stt: idx + 1 })), [filtered]);
+
+  const columns: DataTableColumn<GiftChildItem & { stt: number }>[] = [
+    {
+      key: "stt",
+      header: "STT",
+      type: "number",
+      className: "text-center",
+      headerClassName: "text-center",
+    },
+    {
+      key: "fullName",
+      header: "Họ tên cháu",
+      className: "font-semibold text-[#173A67]",
+      render: (item) => (
+        <>
+          {item.fullName}
+          {item.merged ? (
+            <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900">
+              {item.parents.length > 1 ? "Bố & mẹ cùng khai" : "Khai trùng"}
+            </span>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      key: "dateOfBirth",
+      header: "Ngày sinh",
+      type: "date",
+      className: "whitespace-nowrap",
+      render: (item) => formatIsoDateVi(item.dateOfBirth),
+    },
+    {
+      key: "ageAtRef",
+      header: "Tuổi",
+      type: "number",
+      className: "text-center",
+      headerClassName: "text-center",
+    },
+    {
+      key: "gender",
+      header: "Giới tính",
+      type: "enum",
+      accessor: (item) => (item.gender ? GENDER_LABEL[item.gender] : null),
+      render: (item) => (item.gender ? GENDER_LABEL[item.gender] : "—"),
+    },
+    {
+      key: "parents",
+      header: "Bố/mẹ (đoàn viên)",
+      accessor: (item) => item.parents.map((p) => p.fullName).join(" / "),
+      render: (item) =>
+        item.parents.map((p) => (
+          <div key={p.memberId}>{p.fullName}</div>
+        )),
+    },
+    {
+      key: "employeeCode",
+      header: "Mã NV",
+      className: "whitespace-nowrap",
+      accessor: (item) => item.parents.map((p) => p.employeeCode ?? "").filter(Boolean).join(" / ") || null,
+      render: (item) =>
+        item.parents.map((p) => (
+          <div key={p.memberId}>{p.employeeCode ?? "—"}</div>
+        )),
+    },
+    {
+      key: "department",
+      header: "Bộ phận",
+      type: "enum",
+      className: "text-on-surface-variant",
+      accessor: (item) => departmentsOf(item).join(" / "),
+    },
+    {
+      key: "sign",
+      header: "Ký nhận",
+      filterable: false,
+      className: "hidden print:table-cell",
+      headerClassName: "hidden w-28 text-center print:table-cell",
+      render: () => null,
+    },
+  ];
 
   const mergedInList = items.filter((i) => i.merged).length;
   const dirty = dateInput !== refDate || ageInput !== String(maxAge);
@@ -305,67 +388,70 @@ export function ChildrenGiftList({ items, refDate, maxAge }: Props) {
         <p className="text-[12px] italic">{subtitle}</p>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest print:overflow-visible print:rounded-none print:border-0 print:bg-white">
-        <table className="min-w-full text-left text-sm print:text-[11px] print:text-black">
-          <thead className="bg-[#D9F2EC] text-[#173A67] print:bg-white print:text-black">
-            <tr className="[&>th]:px-3 [&>th]:py-2.5 [&>th]:font-bold print:[&>th]:border print:[&>th]:border-black print:[&>th]:px-1.5 print:[&>th]:py-1">
-              <th className="text-center">STT</th>
-              <th>Họ tên cháu</th>
-              <th className="whitespace-nowrap">Ngày sinh</th>
-              <th className="text-center">Tuổi</th>
-              <th className="whitespace-nowrap">Giới tính</th>
-              <th>Bố/mẹ (đoàn viên)</th>
-              <th className="whitespace-nowrap">Mã NV</th>
-              <th>Bộ phận</th>
-              <th className="hidden w-28 text-center print:table-cell">Ký nhận</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={9}>
-                  {items.length === 0
-                    ? `Không có cháu nào dưới ${maxAge} tuổi tại ngày ${formatIsoDateVi(refDate)}.`
-                    : "Không có cháu phù hợp bộ lọc."}
-                </td>
-              </tr>
-            ) : null}
-            {filtered.map((item, idx) => (
-              <tr
-                key={item.key}
-                className={`border-t border-outline-variant break-inside-avoid [&>td]:px-3 [&>td]:py-2 print:[&>td]:border print:[&>td]:border-black print:[&>td]:px-1.5 print:[&>td]:py-1 ${
-                  item.merged ? "bg-amber-50/60 print:bg-white" : ""
-                }`}
-              >
-                <td className="text-center">{idx + 1}</td>
-                <td className="font-semibold text-[#173A67] print:text-black">
-                  {item.fullName}
-                  {item.merged ? (
-                    <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-900 print:hidden">
-                      {item.parents.length > 1 ? "Bố & mẹ cùng khai" : "Khai trùng"}
-                    </span>
-                  ) : null}
-                </td>
-                <td className="whitespace-nowrap">{formatIsoDateVi(item.dateOfBirth)}</td>
-                <td className="text-center">{item.ageAtRef}</td>
-                <td>{item.gender ? GENDER_LABEL[item.gender] : "—"}</td>
-                <td>
-                  {item.parents.map((p) => (
-                    <div key={p.memberId}>{p.fullName}</div>
-                  ))}
-                </td>
-                <td className="whitespace-nowrap">
-                  {item.parents.map((p) => (
-                    <div key={p.memberId}>{p.employeeCode ?? "—"}</div>
-                  ))}
-                </td>
-                <td className="text-on-surface-variant print:text-black">{departmentsOf(item).join(" / ")}</td>
-                <td className="hidden print:table-cell" />
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="print:hidden">
+        <DataTable
+          columns={columns}
+          emptyText={
+            items.length === 0
+              ? `Không có cháu nào dưới ${maxAge} tuổi tại ngày ${formatIsoDateVi(refDate)}.`
+              : "Không có cháu phù hợp bộ lọc."
+          }
+          rowClassName={(item) => (item.merged ? "bg-amber-50/60" : "")}
+          rowKey={(item) => item.key}
+          rows={numbered}
+        />
       </div>
+
+      <table className="hidden w-full text-left text-black print:table print:text-[11px]">
+        <thead>
+          <tr className="[&>th]:border [&>th]:border-black [&>th]:px-1.5 [&>th]:py-1 [&>th]:font-bold">
+            <th className="text-center">STT</th>
+            <th>Họ tên cháu</th>
+            <th className="whitespace-nowrap">Ngày sinh</th>
+            <th className="text-center">Tuổi</th>
+            <th className="whitespace-nowrap">Giới tính</th>
+            <th>Bố/mẹ (đoàn viên)</th>
+            <th className="whitespace-nowrap">Mã NV</th>
+            <th>Bộ phận</th>
+            <th className="w-28 text-center">Ký nhận</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.length === 0 ? (
+            <tr>
+              <td className="border border-black px-1.5 py-1 text-center" colSpan={9}>
+                {items.length === 0
+                  ? `Không có cháu nào dưới ${maxAge} tuổi tại ngày ${formatIsoDateVi(refDate)}.`
+                  : "Không có cháu phù hợp bộ lọc."}
+              </td>
+            </tr>
+          ) : null}
+          {filtered.map((item, idx) => (
+            <tr
+              key={item.key}
+              className="break-inside-avoid [&>td]:border [&>td]:border-black [&>td]:px-1.5 [&>td]:py-1"
+            >
+              <td className="text-center">{idx + 1}</td>
+              <td className="font-semibold">{item.fullName}</td>
+              <td className="whitespace-nowrap">{formatIsoDateVi(item.dateOfBirth)}</td>
+              <td className="text-center">{item.ageAtRef}</td>
+              <td>{item.gender ? GENDER_LABEL[item.gender] : "—"}</td>
+              <td>
+                {item.parents.map((p) => (
+                  <div key={p.memberId}>{p.fullName}</div>
+                ))}
+              </td>
+              <td className="whitespace-nowrap">
+                {item.parents.map((p) => (
+                  <div key={p.memberId}>{p.employeeCode ?? "—"}</div>
+                ))}
+              </td>
+              <td>{departmentsOf(item).join(" / ")}</td>
+              <td />
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <div className="hidden text-[12px] text-black print:mt-3 print:block">
         <p>
