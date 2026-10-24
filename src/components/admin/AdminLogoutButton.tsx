@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 
-export function AdminLogoutButton() {
+export function AdminLogoutButton({ variant = "card" }: { variant?: "card" | "sidebar" }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +25,20 @@ export function AdminLogoutButton() {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  if (variant === "sidebar") {
+    return (
+      <button
+        onClick={() => void handleLogout()}
+        disabled={loading}
+        type="button"
+        className="flex w-full items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold text-on-surface-variant transition hover:bg-surface-container-high disabled:opacity-50"
+      >
+        <MaterialIcon className="text-[20px]" name="logout" />
+        <span>{loading ? "Đang đăng xuất..." : "Đăng xuất"}</span>
+      </button>
+    );
   }
 
   return (

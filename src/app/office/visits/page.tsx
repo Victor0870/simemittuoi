@@ -54,13 +54,6 @@ export default async function OfficeVisitsPage() {
               Lập đề nghị
             </Link>
           ) : null}
-          <Link
-            className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]"
-            href={access.isAdmin ? "/admin" : "/office"}
-          >
-            <MaterialIcon className="text-[18px]" name="arrow_back" />
-            {access.isAdmin ? "Trang Admin" : "Khu vực quản lý"}
-          </Link>
         </div>
       </div>
       <VisitRequestList items={items} />

@@ -49,6 +49,10 @@ function resolveActiveHref(pathname: string): string {
   return prefix ?? pathname;
 }
 
+function isAdminAreaPath(pathname: string): boolean {
+  return ["/admin", "/office"].some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/";
   const activeHref = resolveActiveHref(pathname);
@@ -56,6 +60,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <ApprovalGate>
+        {isAdminAreaPath(pathname) ? (
+          <div className="min-h-screen bg-surface-bg text-on-surface print:min-h-0 print:bg-white">
+            {children}
+            <div className="print:hidden">
+              <QuizEventPopup />
+              <AnnouncementPopup />
+            </div>
+          </div>
+        ) : (
         <div className="flex min-h-screen flex-col bg-surface-bg text-on-surface print:min-h-0 print:bg-white">
           <div className="print:hidden">
             <TopNav activeHref={activeHref} />
@@ -70,6 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <AnnouncementPopup />
           </div>
         </div>
+        )}
       </ApprovalGate>
     </AuthProvider>
   );

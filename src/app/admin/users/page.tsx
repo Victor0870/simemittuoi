@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   AdminUsersTable,
@@ -8,7 +7,6 @@ import {
   AdminPasswordResetRequests,
   type PasswordResetRequestItem,
 } from "@/components/admin/AdminPasswordResetRequests";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -73,51 +71,11 @@ export default async function AdminUsersPage() {
     <>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="mb-3 flex items-center gap-2">
-            <Link
-              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-              href="/admin"
-            >
-              <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
-              <span>Tổng quan Admin</span>
-            </Link>
-            <Link
-              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-amber-400 hover:text-amber-800"
-              href="/admin/scores"
-            >
-              <MaterialIcon className="text-[18px] text-amber-600" name="military_tech" />
-              <span>Quản lý & Cộng điểm</span>
-            </Link>
-            <Link
-              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-primary hover:text-primary"
-              href="/admin/polls"
-            >
-              <MaterialIcon className="text-[18px] text-primary" name="how_to_vote" />
-              <span>Quản lý Bình chọn</span>
-            </Link>
-            <span className="flex items-center gap-1.5 rounded-xl bg-[#173A67] px-3 py-1.5 text-label-md font-bold text-white shadow-xs">
-              <MaterialIcon className="text-[18px]" name="manage_accounts" />
-              <span>Duyệt đoàn viên</span>
-            </span>
-            <Link
-              className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-              href="/admin/employees"
-            >
-              <MaterialIcon className="text-[18px] text-[#173A67]" name="badge" />
-              <span>Danh sách nhân viên</span>
-            </Link>
-          </div>
           <h1 className="text-headline-md font-bold text-[#173A67]">Quản lý & Duyệt đoàn viên</h1>
           <p className="text-body-md text-[#27496D]">
             Duyệt hoặc từ chối tài khoản đăng ký theo mã nhân viên.
           </p>
         </div>
-        <Link
-          className="rounded-xl border-2 border-[#173A67] px-4 py-2 font-bold text-[#173A67] transition hover:bg-[#173A67] hover:text-white"
-          href="/"
-        >
-          ← Về trang chủ
-        </Link>
       </div>
 
       {error ? (

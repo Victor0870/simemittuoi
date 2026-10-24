@@ -66,10 +66,6 @@ export default async function OfficeFinancePage() {
               Quỹ, danh mục & khóa sổ
             </Link>
           ) : null}
-          <Link className={buttonClass} href={access.isAdmin ? "/admin" : "/office"}>
-            <MaterialIcon className="text-[18px]" name="arrow_back" />
-            {access.isAdmin ? "Trang Admin" : "Khu vực quản lý"}
-          </Link>
         </div>
       </div>
       {funds.length === 0 ? (

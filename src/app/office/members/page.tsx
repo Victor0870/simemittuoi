@@ -1,7 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { OfficeMembersTable } from "@/components/members/OfficeMembersTable";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadMemberProfileSummaries } from "@/lib/members/profile-server";
@@ -26,13 +24,6 @@ export default async function OfficeMembersPage() {
             Tình trạng khai báo hồ sơ của đoàn viên đã được duyệt. Bấm vào tên để xem chi tiết.
           </p>
         </div>
-        <Link
-          className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]"
-          href={access.isAdmin ? "/admin" : "/office"}
-        >
-          <MaterialIcon className="text-[18px]" name="arrow_back" />
-          {access.isAdmin ? "Trang Admin" : "Khu vực quản lý"}
-        </Link>
       </div>
       <OfficeMembersTable rows={rows} />
     </div>

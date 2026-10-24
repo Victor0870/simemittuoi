@@ -41,13 +41,6 @@ export default async function CatalogsPage({ searchParams }: PageProps) {
 
   return (
     <div className="max-w-4xl space-y-4 pb-10">
-      <Link
-        className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
-        href={access.isAdmin ? "/admin" : "/office"}
-      >
-        <MaterialIcon className="text-[18px]" name="arrow_back" />
-        {access.isAdmin ? "Admin" : "Khu vực quản lý"}
-      </Link>
       <div>
         <h1 className="text-headline-md font-extrabold text-[#173A67]">Quản lý danh mục</h1>
         <p className="text-sm text-on-surface-variant">

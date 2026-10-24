@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -127,13 +126,6 @@ export default async function AdminDashboardPage() {
             >
               <MaterialIcon className="text-[16px]" name="manage_accounts" />
               <span>Hồ sơ cá nhân</span>
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 p-2 text-white transition hover:bg-white/20"
-              title="Về trang chủ"
-            >
-              <MaterialIcon className="text-[20px]" name="home" />
             </Link>
           </div>
         </div>
@@ -715,27 +707,6 @@ export default async function AdminDashboardPage() {
             <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
           </Link>
 
-          <Link
-            href="/"
-            className="flex items-center justify-between rounded-2xl border border-dusty-border/80 bg-white p-4 transition hover:bg-dusty-light/40"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-dusty-light text-primary">
-                <MaterialIcon className="text-[20px]" name="home" />
-              </div>
-              <div>
-                <p className="text-label-md font-bold text-on-surface">
-                  Về Trang chủ CDILV
-                </p>
-                <p className="text-xs text-on-surface-variant">
-                  Xem tin tức, bảng xếp hạng và các bài viết mới
-                </p>
-              </div>
-            </div>
-            <MaterialIcon className="text-[18px] text-on-surface-variant" name="chevron_right" />
-          </Link>
-
-          <AdminLogoutButton />
         </div>
       </section>
     </div>

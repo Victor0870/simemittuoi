@@ -174,47 +174,6 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       {/* 1. Header with Admin Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-6">
         <div>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {isAdmin ? (
-              <>
-                <Link
-                  className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-                  href="/admin"
-                >
-                  <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
-                  <span>Tổng quan Admin</span>
-                </Link>
-                <Link
-                  className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-                  href="/admin/scores"
-                >
-                  <MaterialIcon className="text-[18px] text-amber-600" name="military_tech" />
-                  <span>Quản lý & Cộng điểm</span>
-                </Link>
-              </>
-            ) : (
-              <Link
-                className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-                href="/office"
-              >
-                <MaterialIcon className="text-[18px] text-[#173A67]" name="work" />
-                <span>Khu vực quản lý</span>
-              </Link>
-            )}
-            <span className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-label-md font-bold text-white shadow-xs">
-              <MaterialIcon className="text-[18px]" name="how_to_vote" />
-              <span>Quản lý Bình chọn</span>
-            </span>
-            {isAdmin ? (
-              <Link
-                className="flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-                href="/admin/users"
-              >
-                <MaterialIcon className="text-[18px]" name="manage_accounts" />
-                <span>Duyệt đoàn viên</span>
-              </Link>
-            ) : null}
-          </div>
           <h1 className="text-headline-md font-extrabold text-[#173A67]">
             Quản Lý Chương Trình Bình Chọn
           </h1>
@@ -232,12 +191,6 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
             <MaterialIcon name="add_circle" />
             <span>+ Tạo chương trình mới</span>
           </button>
-          <Link
-            className="rounded-xl border-2 border-[#173A67] px-4 py-2 font-bold text-[#173A67] hover:bg-[#173A67] hover:text-white transition"
-            href="/"
-          >
-            ← Về trang chủ
-          </Link>
         </div>
       </div>
 

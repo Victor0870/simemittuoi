@@ -4,7 +4,6 @@ import { AdminQuizControl } from "@/components/admin/AdminQuizControl";
 import { AdminQuizAttempts } from "@/components/admin/AdminQuizAttempts";
 import { AdminQuizQuestions } from "@/components/admin/AdminQuizQuestions";
 import { QuizLeaderboard } from "@/components/quiz/QuizLeaderboard";
-import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   computeSessionRanking,
   ensureCurrentSession,
@@ -76,13 +75,6 @@ export default async function AdminQuizPage() {
     <div className="space-y-8 pb-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <Link
-            className="mb-3 inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-label-md font-semibold text-on-surface-variant transition hover:border-[#173A67] hover:text-[#173A67]"
-            href="/admin"
-          >
-            <MaterialIcon className="text-[18px] text-[#173A67]" name="dashboard" />
-            <span>Tổng quan Admin</span>
-          </Link>
           <h1 className="text-headline-md font-bold text-[#173A67]">Thi trắc nghiệm hàng tuần</h1>
           <p className="text-body-md text-[#27496D]">
             Quản lý ngân hàng câu hỏi, lịch mở thi, tổng kết cộng điểm và bài viết kết quả.
