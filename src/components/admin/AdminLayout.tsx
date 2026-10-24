@@ -12,7 +12,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/admin";
   const group = findAdminNavGroup(pathname);
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const [open, setOpen] = useState(false);
   const initial = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
 
@@ -48,7 +48,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               <MaterialIcon className="text-[24px]" name="menu" />
             </button>
             <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-sm">
-              <Link className="text-on-surface-variant hover:text-[#173A67]" href="/admin">
+              <Link className="text-on-surface-variant hover:text-[#173A67]" href={isAdmin ? "/admin" : "/office"}>
                 Quản trị
               </Link>
               <span className="text-outline">/</span>

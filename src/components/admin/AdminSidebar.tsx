@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { BRAND } from "@/lib/brand";
 
@@ -84,12 +85,14 @@ const itemClass = "flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() || "/admin";
   const active = findAdminNavGroup(pathname);
+  const { isAdmin } = useAuth();
+  const overviewHref = isAdmin ? "/admin" : "/office";
 
   return (
     <div className="flex h-full w-[270px] flex-col border-r border-dusty-border bg-surface-container-low text-on-surface-variant">
       <Link
         className="flex h-16 shrink-0 items-center gap-2 whitespace-nowrap border-b border-dusty-border px-5 text-[#173A67]"
-        href="/admin"
+        href={overviewHref}
         onClick={onNavigate}
       >
         <MaterialIcon className="text-[24px]" name="shield" />
@@ -105,7 +108,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
               key={g.key}
               aria-current={isActive ? "page" : undefined}
               className={`${itemClass} ${isActive ? "bg-primary text-white" : "hover:bg-surface-container-high"}`}
-              href={g.href}
+              href={g.key === "overview" ? overviewHref : g.href}
               onClick={onNavigate}
             >
               <MaterialIcon className="text-[20px]" name={g.icon} />

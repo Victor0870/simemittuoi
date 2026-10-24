@@ -20,6 +20,35 @@ const TINT_CLASS: Record<HubTint, string> = {
   surface: "bg-surface-container text-[#173A67]",
 };
 
+export function HubTileGrid({ tiles }: { tiles: HubTile[] }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {tiles.map((t) => (
+        <Link
+          key={t.href + t.title}
+          className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
+          href={t.href}
+        >
+          <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${TINT_CLASS[t.tint ?? "dusty"]}`}>
+            <MaterialIcon className="text-[24px]" name={t.icon} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-bold text-on-surface transition-colors group-hover:text-primary">{t.title}</p>
+              {t.badge ? (
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-light px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                  {t.badge}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{t.description}</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 /** Trang hub của một nhóm quản trị: tiêu đề, hàng chỉ số (tùy chọn) và lưới ô dẫn tới từng module. */
 export function HubPage({
   title,
@@ -54,32 +83,7 @@ export function HubPage({
       ) : null}
 
       {tiles.length ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {tiles.map((t) => (
-            <Link
-              key={t.href + t.title}
-              className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
-              href={t.href}
-            >
-              <div
-                className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${TINT_CLASS[t.tint ?? "dusty"]}`}
-              >
-                <MaterialIcon className="text-[24px]" name={t.icon} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold text-on-surface transition-colors group-hover:text-primary">{t.title}</p>
-                  {t.badge ? (
-                    <span className="shrink-0 whitespace-nowrap rounded-full bg-amber-light px-2 py-0.5 text-[11px] font-bold text-amber-800">
-                      {t.badge}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{t.description}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        <HubTileGrid tiles={tiles} />
       ) : (
         <div className="rounded-2xl border border-border-subtle bg-white p-6 text-center text-sm text-on-surface-variant">
           Bạn chưa được phân quyền sử dụng chức năng nào trong nhóm này. Vui lòng liên hệ Quản trị viên.
