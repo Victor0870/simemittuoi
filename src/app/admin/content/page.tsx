@@ -47,6 +47,7 @@ export default async function ContentHubPage() {
 
   return (
     <HubPage
+      hubKey="content"
       subtitle="Bài viết, hoạt động, album ảnh và thông báo"
       tiles={tiles.filter((t) => t.allowed)}
       title="Quản lý nội dung"

@@ -72,6 +72,7 @@ export default async function MembersHubPage() {
 
   return (
     <HubPage
+      hubKey="members-hub"
       kpis={kpis}
       subtitle="Tài khoản, hồ sơ, danh sách nhân viên và mật khẩu"
       tiles={tiles.filter((t) => t.allowed)}

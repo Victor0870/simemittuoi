@@ -63,6 +63,7 @@ export default async function AdministrationHubPage() {
 
   return (
     <HubPage
+      hubKey="administration"
       subtitle="Tin báo, thăm hỏi, đề nghị thanh toán, thưởng và biểu mẫu"
       tiles={tiles.filter((t) => t.allowed)}
       title="Quản lý hành chính"

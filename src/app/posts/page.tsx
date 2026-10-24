@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackToHubBar } from "@/components/admin/BackToHubBar";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostEditButton } from "@/components/posts/PostEditButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -16,6 +17,7 @@ export default async function PostsPage() {
 
   return (
     <div className="space-y-8">
+      <BackToHubBar />
       <header className="space-y-3 border-b border-dusty-border/70 pb-6">
         <div className="flex items-center gap-2.5">
           <div className="rounded-lg bg-dusty-light p-2 text-primary">

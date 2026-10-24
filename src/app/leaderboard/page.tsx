@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BackToHubBar } from "@/components/admin/BackToHubBar";
 import { LeaderboardInteractiveView } from "@/components/leaderboard/LeaderboardInteractiveView";
 import { MyRankSummary } from "@/components/leaderboard/MyRankSummary";
 import {
@@ -61,6 +62,7 @@ export default async function LeaderboardPage({
 
   return (
     <>
+      <BackToHubBar />
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="mb-2 text-label-md tracking-wider text-on-surface-variant uppercase">

@@ -68,6 +68,7 @@ export default async function CompetitionHubPage() {
 
   return (
     <HubPage
+      hubKey="competition"
       subtitle="Điểm thi đua, bình chọn và trắc nghiệm"
       tiles={tiles.filter((t) => t.allowed)}
       title="Hoạt động thi đua"

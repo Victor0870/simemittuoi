@@ -30,6 +30,7 @@ export default async function SystemHubPage() {
 
   return (
     <HubPage
+      hubKey="system"
       subtitle="Phân quyền và cài đặt tài khoản"
       tiles={tiles.filter((t) => t.allowed)}
       title="Hệ thống"

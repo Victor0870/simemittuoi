@@ -71,6 +71,7 @@ export default async function FinanceHubPage() {
 
   return (
     <HubPage
+      hubKey="finance"
       kpis={kpis}
       subtitle="Sổ quỹ, báo cáo và danh mục thu chi"
       tiles={tiles.filter((t) => t.allowed)}

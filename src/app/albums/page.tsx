@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { BackToHubBar } from "@/components/admin/BackToHubBar";
 import { AlbumsClient } from "@/components/albums/AlbumsClient";
 import { getAlbumMemberContext } from "@/lib/album-access";
 import { getAlbums } from "@/lib/data/albums";
@@ -21,5 +22,10 @@ export default async function AlbumsPage() {
 
   const albums = await getAlbums(ctx.supabase, ctx.canManage);
 
-  return <AlbumsClient albums={albums} canManage={ctx.canManage} />;
+  return (
+    <>
+      <BackToHubBar />
+      <AlbumsClient albums={albums} canManage={ctx.canManage} />
+    </>
+  );
 }

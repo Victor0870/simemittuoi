@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { withHubFrom, type HubKey } from "@/components/admin/hub-keys";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 
 export type HubTint = "dusty" | "amber" | "surface";
@@ -20,14 +21,14 @@ const TINT_CLASS: Record<HubTint, string> = {
   surface: "bg-surface-container text-[#173A67]",
 };
 
-export function HubTileGrid({ tiles }: { tiles: HubTile[] }) {
+export function HubTileGrid({ tiles, hubKey }: { tiles: HubTile[]; hubKey?: HubKey }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {tiles.map((t) => (
         <Link
           key={t.href + t.title}
           className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
-          href={t.href}
+          href={withHubFrom(t.href, hubKey)}
         >
           <div className={`flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-xl ${TINT_CLASS[t.tint ?? "dusty"]}`}>
             <MaterialIcon className="text-[24px]" name={t.icon} />
@@ -55,11 +56,13 @@ export function HubPage({
   subtitle,
   kpis = [],
   tiles,
+  hubKey,
 }: {
   title: string;
   subtitle: string;
   kpis?: HubKpi[];
   tiles: HubTile[];
+  hubKey?: HubKey;
 }) {
   return (
     <div className="space-y-6 pb-10">
@@ -83,7 +86,7 @@ export function HubPage({
       ) : null}
 
       {tiles.length ? (
-        <HubTileGrid tiles={tiles} />
+        <HubTileGrid hubKey={hubKey} tiles={tiles} />
       ) : (
         <div className="rounded-2xl border border-border-subtle bg-white p-6 text-center text-sm text-on-surface-variant">
           Bạn chưa được phân quyền sử dụng chức năng nào trong nhóm này. Vui lòng liên hệ Quản trị viên.
