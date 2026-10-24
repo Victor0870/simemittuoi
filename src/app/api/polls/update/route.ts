@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { parsePollSchedule } from "@/lib/polls/phase";
 import { normalizeRewardMoney } from "@/lib/polls/reward-money";
 import { getCurrentAccess } from "@/lib/auth/guard";
+import { invalidatePollResults } from "@/lib/data/ranking-refresh";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -222,6 +223,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      invalidatePollResults(pollId);
       revalidatePath("/polls");
       revalidatePath(`/polls/${pollId}`);
       revalidatePath("/admin/polls");

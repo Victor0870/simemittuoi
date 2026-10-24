@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import { ensureCurrentSession, loadQuizSettings } from "@/lib/quiz";
 import { requireQuizAdmin } from "@/lib/quiz-access";
 import { formatQuizDate, formatQuizTime } from "@/lib/quiz-shared";
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
 
       revalidatePath("/admin/quiz");
       revalidatePath("/quiz");
-      revalidatePath("/leaderboard");
+      await publishLeaderboardNow();
       revalidatePath("/score-history");
       revalidatePath("/posts");
       revalidatePath("/");
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
 
       revalidatePath("/admin/quiz");
       revalidatePath("/quiz");
-      revalidatePath("/leaderboard");
+      await publishLeaderboardNow();
       revalidatePath("/score-history");
       revalidatePath("/posts");
       revalidatePath("/");

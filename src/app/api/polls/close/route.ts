@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { getPollPhase } from "@/lib/polls/phase";
+import { invalidatePollResults, publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 
 export async function POST(request: NextRequest) {
   try {
@@ -420,6 +421,9 @@ export async function POST(request: NextRequest) {
         winning_predictor_info: winningPredictorInfo,
       })
       .eq("id", pollId);
+
+    invalidatePollResults(pollId);
+    await publishLeaderboardNow();
 
     return NextResponse.json({
       success: true,

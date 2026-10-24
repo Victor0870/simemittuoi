@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth/guard";
+import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
         created_by: guard.access.userId,
       });
       if (error) throw error;
+      await publishLeaderboardNow();
       return NextResponse.json({ ok: true });
     }
 
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest) {
         source: "admin_manual",
       });
       if (error) throw error;
+      await publishLeaderboardNow();
       return NextResponse.json({ ok: true });
     }
 
@@ -89,6 +92,7 @@ export async function DELETE(request: NextRequest) {
     const { data, error } = await service.from(CDILV_TABLE.scoreEvents).delete().eq("id", id).select("id");
     if (error) throw error;
     if (!data?.length) return NextResponse.json({ error: "Không tìm thấy lượt cộng điểm." }, { status: 404 });
+    await publishLeaderboardNow();
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("[admin/scores] DELETE error:", error);

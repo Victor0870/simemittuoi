@@ -149,7 +149,6 @@ export async function POST(request: NextRequest) {
     revalidatePath(`/albums/${albumId}`);
     revalidatePath("/albums");
     if (pointsAwarded > 0) {
-      revalidatePath("/leaderboard");
       revalidatePath("/");
     }
 
@@ -216,7 +215,6 @@ export async function DELETE(request: NextRequest) {
 
     revalidatePath(`/albums/${photo.album_id}`);
     revalidatePath("/albums");
-    revalidatePath("/leaderboard");
     revalidatePath("/");
 
     return NextResponse.json({

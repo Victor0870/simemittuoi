@@ -5,6 +5,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollOption } from "@/lib/data/polls";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { usePollPhase } from "@/components/polls/usePollPhase";
+import { RANKING_UPDATE_NOTE } from "@/lib/ranking-cache";
 
 type Props = {
   poll: PollDetail;
@@ -57,7 +58,7 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
         </div>
         <h3 className="text-title-md font-bold text-[#173A67]">Kết quả đang được cập nhật</h3>
         <p className="text-body-sm text-on-surface-variant max-w-md mx-auto mt-1">
-          Chương trình đang mở bình chọn. Đoàn viên đăng nhập có thể theo dõi thứ hạng trực tiếp; khách có thể xem toàn bộ kết quả sau khi Ban Tổ chức đóng bình chọn.
+          Chương trình đang mở bình chọn. Đoàn viên đăng nhập có thể theo dõi thứ hạng ({RANKING_UPDATE_NOTE.toLowerCase()}); khách có thể xem toàn bộ kết quả sau khi Ban Tổ chức đóng bình chọn.
         </p>
       </div>
     );
@@ -86,7 +87,7 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
               <p className="text-xs sm:text-label-sm text-on-surface-variant">
                 {isClosed
                   ? "Chương trình đã kết thúc – Điểm số và các giải thưởng chính thức"
-                  : "Cập nhật theo thứ hạng mới nhất (Điểm chi tiết và giải thưởng sẽ chốt khi đóng bình chọn)"}
+                  : `${RANKING_UPDATE_NOTE} (Điểm chi tiết và giải thưởng sẽ chốt khi đóng bình chọn)`}
               </p>
             </div>
           </div>
@@ -99,7 +100,7 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
             }`}
           >
             <span className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${isClosed ? "bg-emerald-600" : "bg-amber-600"}`} />
-            {isClosed ? "Đã có kết quả chính thức" : "Đang bình chọn realtime"}
+            {isClosed ? "Đã có kết quả chính thức" : `Đang bình chọn · ${RANKING_UPDATE_NOTE.toLowerCase()}`}
           </span>
         </div>
 

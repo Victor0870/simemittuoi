@@ -106,7 +106,6 @@ export async function POST(request: NextRequest) {
 
     revalidatePath("/quiz");
     revalidatePath("/score-history");
-    revalidatePath("/leaderboard");
     revalidatePath("/");
 
     return NextResponse.json({

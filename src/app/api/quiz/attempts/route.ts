@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import { requireQuizAdmin } from "@/lib/quiz-access";
 import { computeSessionRanking, loadQuizSettings } from "@/lib/quiz";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -184,7 +185,7 @@ export async function DELETE(request: NextRequest) {
 
       revalidatePath("/admin/quiz");
       revalidatePath("/quiz");
-      revalidatePath("/leaderboard");
+      await publishLeaderboardNow();
       revalidatePath("/score-history");
       revalidatePath("/");
 
@@ -232,7 +233,7 @@ export async function DELETE(request: NextRequest) {
 
       revalidatePath("/admin/quiz");
       revalidatePath("/quiz");
-      revalidatePath("/leaderboard");
+      await publishLeaderboardNow();
       revalidatePath("/score-history");
       revalidatePath("/");
 

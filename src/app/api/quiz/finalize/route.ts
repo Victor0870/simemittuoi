@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import { finalizeQuizSession, loadQuizSettings, QUIZ_SUBMIT_GRACE_MS } from "@/lib/quiz";
 import { requireQuizAdmin } from "@/lib/quiz-access";
 import { QUIZ_TIMEZONE, type QuizSessionRow } from "@/lib/quiz-shared";
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     revalidatePath("/quiz");
     revalidatePath("/");
     revalidatePath("/posts");
-    revalidatePath("/leaderboard");
+    await publishLeaderboardNow();
     return NextResponse.json({
       success: true,
       postId: result.postId,

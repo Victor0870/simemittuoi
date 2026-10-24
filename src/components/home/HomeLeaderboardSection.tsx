@@ -7,6 +7,7 @@ import { LeaderboardPodium } from "@/components/leaderboard/LeaderboardPodium";
 import { MemberScoreHistoryModal } from "@/components/leaderboard/MemberScoreHistoryModal";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
+import { RANKING_UPDATE_NOTE } from "@/lib/ranking-cache";
 
 type HomeLeaderboardSectionProps = {
   entries: LeaderboardEntry[];
@@ -42,7 +43,7 @@ export function HomeLeaderboardSection({
         </div>
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-dusty-border bg-white px-3 py-1 text-label-md text-primary">
           <MaterialIcon className="text-[16px]" name="schedule" />
-          Cập nhật realtime
+          {RANKING_UPDATE_NOTE}
         </span>
       </div>
 

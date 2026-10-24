@@ -1,6 +1,8 @@
 import { unstable_cache } from "next/cache";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import { getSessionUserId } from "@/lib/auth/session";
+import { refreshLeaderboardIfStale } from "@/lib/data/ranking-refresh";
+import { LEADERBOARD_CACHE_TAG, RANKING_REVALIDATE_SECONDS } from "@/lib/ranking-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -13,8 +15,6 @@ export type LeaderboardPageData = {
   currentRank: number;
   currentScore: number;
 };
-
-const LEADERBOARD_CACHE_SECONDS = 30;
 
 type LeaderboardRow = {
   id: string | null;
@@ -70,13 +70,14 @@ async function loadLeaderboardRows(limit: number): Promise<{
 
 const getCachedLeaderboardRows = unstable_cache(
   async (limit: number) => {
+    await refreshLeaderboardIfStale();
     const result = await loadLeaderboardRows(limit);
     // Không lưu cache kết quả lỗi, để lần sau truy vấn lại ngay
     if (result.error) throw new Error(result.error);
     return result.rows;
   },
   ["leaderboard-rows"],
-  { revalidate: LEADERBOARD_CACHE_SECONDS, tags: ["leaderboard-rows"] },
+  { revalidate: RANKING_REVALIDATE_SECONDS, tags: [LEADERBOARD_CACHE_TAG] },
 );
 
 async function getLeaderboardRows(limit: number): Promise<LeaderboardRow[]> {

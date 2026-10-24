@@ -346,7 +346,6 @@ export async function POST(request: NextRequest) {
     revalidatePath(`/posts/${postId}`);
     revalidatePath("/posts");
     revalidatePath("/");
-    revalidatePath("/leaderboard");
 
     return NextResponse.json({
       success: true,
@@ -437,7 +436,6 @@ export async function DELETE(request: NextRequest) {
     revalidatePath(`/posts/${comment.post_id}`);
     revalidatePath("/posts");
     revalidatePath("/");
-    revalidatePath("/leaderboard");
 
     return NextResponse.json({
       success: true,

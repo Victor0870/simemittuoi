@@ -6,6 +6,8 @@ import type {
 import { unstable_cache } from "next/cache";
 import { MOCK_GOAL } from "@/lib/mock-data";
 import { getSessionUserId } from "@/lib/auth/session";
+import { refreshLeaderboardIfStale } from "@/lib/data/ranking-refresh";
+import { LEADERBOARD_CACHE_TAG, RANKING_REVALIDATE_SECONDS } from "@/lib/ranking-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -96,7 +98,7 @@ type HomePublicData = {
 async function loadHomePublicData(): Promise<HomePublicData> {
   const publicDb = createPublicClient();
 
-  const [postsResult, activitiesResult, leaderboardResult] = await Promise.all([
+  const [postsResult, activitiesResult] = await Promise.all([
     publicDb
       .from(CDILV_TABLE.posts)
       .select("id, title, content, tag, tag_tone, is_important, is_active, published_at")
@@ -111,20 +113,32 @@ async function loadHomePublicData(): Promise<HomePublicData> {
       )
       .order("event_date", { ascending: false })
       .limit(4),
-    publicDb
-      .from(CDILV_TABLE.leaderboard)
-      .select(
-        "id, full_name, department, avatar_url, employee_code, total_score, rank",
-      )
-      .order("rank", { ascending: true })
-      .limit(10),
   ]);
 
   const errors = [
     postsResult.error?.message,
     activitiesResult.error?.message,
-    leaderboardResult.error?.message,
   ].filter((msg): msg is string => Boolean(msg));
+
+  return {
+    posts: postsResult.data ?? [],
+    activities: activitiesResult.data ?? [],
+    leaderboardRows: [],
+    errors,
+  };
+}
+
+async function loadHomeLeaderboard(): Promise<Pick<HomePublicData, "leaderboardRows" | "errors">> {
+  const publicDb = createPublicClient();
+  const leaderboardResult = await publicDb
+    .from(CDILV_TABLE.leaderboard)
+    .select(
+      "id, full_name, department, avatar_url, employee_code, total_score, rank",
+    )
+    .order("rank", { ascending: true })
+    .limit(10);
+
+  const errors = [leaderboardResult.error?.message].filter((msg): msg is string => Boolean(msg));
 
   let leaderboardRows = leaderboardResult.data ?? [];
 
@@ -143,12 +157,7 @@ async function loadHomePublicData(): Promise<HomePublicData> {
     }
   }
 
-  return {
-    posts: postsResult.data ?? [],
-    activities: activitiesResult.data ?? [],
-    leaderboardRows,
-    errors,
-  };
+  return { leaderboardRows, errors };
 }
 
 const getCachedHomePublicData = unstable_cache(
@@ -162,12 +171,27 @@ const getCachedHomePublicData = unstable_cache(
   { revalidate: HOME_PUBLIC_CACHE_SECONDS, tags: ["home-public-data"] },
 );
 
+const getCachedHomeLeaderboard = unstable_cache(
+  async () => {
+    await refreshLeaderboardIfStale();
+    const data = await loadHomeLeaderboard();
+    if (data.errors.length) throw new Error(data.errors.join(" | "));
+    return data;
+  },
+  ["home-leaderboard-rows"],
+  { revalidate: RANKING_REVALIDATE_SECONDS, tags: [LEADERBOARD_CACHE_TAG] },
+);
+
 async function getHomePublicData(): Promise<HomePublicData> {
-  try {
-    return await getCachedHomePublicData();
-  } catch {
-    return loadHomePublicData();
-  }
+  const [main, board] = await Promise.all([
+    getCachedHomePublicData().catch(() => loadHomePublicData()),
+    getCachedHomeLeaderboard().catch(() => loadHomeLeaderboard()),
+  ]);
+  return {
+    ...main,
+    leaderboardRows: board.leaderboardRows,
+    errors: [...main.errors, ...board.errors],
+  };
 }
 
 async function getSessionInfo(

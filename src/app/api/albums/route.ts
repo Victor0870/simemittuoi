@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import { getAlbumMemberContext, parseAlbumSettings } from "@/lib/album-access";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC, CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
@@ -91,7 +92,7 @@ export async function PATCH(request: NextRequest) {
       } else {
         const { updated = 0, added = 0 } = (resync ?? {}) as { updated?: number; added?: number };
         if (updated + added > 0) {
-          revalidatePath("/leaderboard");
+          await publishLeaderboardNow();
           revalidatePath("/");
           message += ` Đã áp dụng điểm mới cho ${updated + added} ảnh đã đăng.`;
         }
@@ -141,7 +142,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     revalidatePath("/albums");
-    revalidatePath("/leaderboard");
+    await publishLeaderboardNow();
     revalidatePath("/");
     return NextResponse.json({ success: true, message: "Đã xóa album." });
   } catch (err: any) {

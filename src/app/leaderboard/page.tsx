@@ -6,7 +6,9 @@ import {
   LeaderboardViewTabs,
   type LeaderboardTab,
 } from "@/components/leaderboard/LeaderboardViewTabs";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
+import { RANKING_UPDATE_NOTE } from "@/lib/ranking-cache";
 import {
   getLeaderboardPageData,
   type LeaderboardPageData,
@@ -74,6 +76,10 @@ export default async function LeaderboardPage({
           <p className="mt-2 max-w-xl text-body-md text-on-surface-variant">
             Bục vinh danh Top 3, tiếp theo là bảng từ hạng 4 trở xuống (Top{" "}
             {limit}).
+          </p>
+          <p className="mt-1 inline-flex items-center gap-1.5 text-label-md text-primary">
+            <MaterialIcon className="text-[16px]" name="schedule" />
+            {RANKING_UPDATE_NOTE}
           </p>
         </div>
         <LeaderboardViewTabs active={tab} />

@@ -173,7 +173,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (pointsAwarded > 0) {
-      revalidatePath("/leaderboard");
       revalidatePath("/");
     }
 
@@ -233,7 +232,6 @@ export async function DELETE(request: NextRequest) {
       .eq("id", id);
     if (delErr) throw delErr;
 
-    revalidatePath("/leaderboard");
     revalidatePath("/");
 
     return NextResponse.json({ success: true, message: "Đã xóa bình luận thành công." });

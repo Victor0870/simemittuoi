@@ -1,3 +1,5 @@
+import { unstable_cache } from "next/cache";
+import { RANKING_REVALIDATE_SECONDS, pollResultsCacheTag } from "@/lib/ranking-cache";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -140,7 +142,20 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
   return all;
 }
 
+/** Chi tiết + kết quả bình chọn từ cache (làm mới tối đa 15 phút/lần, hoặc ngay khi admin đổi/chốt chương trình). */
 export async function getPollById(id: string): Promise<PollDetail | null> {
+  try {
+    return await unstable_cache(() => getPollByIdUncached(id, true), ["poll-detail", id], {
+      revalidate: RANKING_REVALIDATE_SECONDS,
+      tags: [pollResultsCacheTag(id)],
+    })();
+  } catch {
+    return getPollByIdUncached(id);
+  }
+}
+
+/** Đọc trực tiếp DB (không cache). `strict`: ném lỗi thay vì trả dữ liệu thiếu, để không lưu cache kết quả lỗi. */
+export async function getPollByIdUncached(id: string, strict = false): Promise<PollDetail | null> {
   const db = createPublicClient();
 
   const { data: pollRow, error: pollError } = await db
@@ -149,6 +164,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     .eq("id", id)
     .maybeSingle();
 
+  if (pollError && strict) throw new Error(pollError.message);
   if (pollError || !pollRow) {
     if (pollError) console.error("[polls] getById error:", pollError.message);
     return null;
@@ -161,6 +177,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     .eq("poll_id", id)
     .order("order_num", { ascending: true });
 
+  if (optError && strict) throw new Error(optError.message);
   if (optError) {
     console.error("[polls] getOptions error:", optError.message);
   }
@@ -210,6 +227,7 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
     .select("option_id, is_judge, employee_code, user_id, submission_id, created_at")
     .eq("poll_id", id);
 
+  if (votesError && strict) throw new Error(votesError.message);
   if (votesError) {
     console.error("[polls] getVotes error:", votesError.message);
   } else {

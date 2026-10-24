@@ -68,6 +68,7 @@ export const CDILV_RPC = {
   transferEmployeeScores: "cdilv_transfer_employee_scores",
   updateMyAvatar: "cdilv_update_my_avatar",
   refreshLeaderboardCache: "cdilv_refresh_leaderboard_cache",
+  refreshLeaderboardIfStale: "cdilv_refresh_leaderboard_if_stale",
   awardAlbumPhotoScore: "cdilv_award_album_photo_score",
   awardAlbumCommentScore: "cdilv_award_album_comment_score",
   resyncAlbumPhotoScores: "cdilv_resync_album_photo_scores",
