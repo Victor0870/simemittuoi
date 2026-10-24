@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { isScheduledAt, parseScheduledAt } from "@/lib/post-schedule";
 import { isAllowedPostImageUrl } from "@/lib/post-images";
+import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 
 export async function POST(request: NextRequest) {
   try {
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
     // Làm mới cache các trang liên quan
     revalidatePath("/");
     revalidatePath("/posts");
+    revalidatePath(GUIDE_POST_CATEGORY.href);
     revalidatePath(`/posts/${id}`);
 
     return NextResponse.json({

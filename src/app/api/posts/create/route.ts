@@ -6,6 +6,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { formatScheduleLabel, parseScheduledAt } from "@/lib/post-schedule";
 import { isAllowedPostImageUrl } from "@/lib/post-images";
+import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 
 const MAX_TITLE = 300;
 const MAX_CONTENT = 50000;
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
 
     revalidatePath("/");
     revalidatePath("/posts");
+    revalidatePath(GUIDE_POST_CATEGORY.href);
 
     return NextResponse.json({
       success: true,

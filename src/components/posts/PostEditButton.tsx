@@ -14,6 +14,7 @@ import {
   POST_IMAGE_TYPES,
   postInlineImageMarkup,
 } from "@/lib/post-images";
+import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 import { isScheduledAt, toDateTimeLocalValue } from "@/lib/post-schedule";
 
 type PostEditButtonProps = {
@@ -29,6 +30,8 @@ type PostEditButtonProps = {
     publishedAt?: string;
     imageUrl?: string | null;
   };
+  /** Tag mặc định khi đăng bài mới (vd. đăng từ trang /huong-dan). */
+  defaultTag?: string;
 };
 
 /** Nén (cạnh dài tối đa 1600px, GIF giữ nguyên) rồi tải ảnh bài viết lên Storage qua API. */
@@ -63,9 +66,10 @@ const SUGGESTED_TAGS = [
   "Thông báo quan trọng",
   "Khẩn cấp",
   "Thi đua",
+  GUIDE_POST_CATEGORY.tag,
 ];
 
-export function PostEditButton({ post }: PostEditButtonProps) {
+export function PostEditButton({ post, defaultTag }: PostEditButtonProps) {
   const { can } = useAuth();
   const router = useRouter();
   const isCreate = !post;
@@ -74,7 +78,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState(post?.title ?? "");
   const [content, setContent] = useState(post?.content ?? "");
-  const [tag, setTag] = useState(post?.tag || "Thông báo");
+  const [tag, setTag] = useState(post?.tag || defaultTag || "Thông báo");
   const [isImportant, setIsImportant] = useState(Boolean(post?.isImportant));
   const [isActive, setIsActive] = useState(post?.isActive !== false);
   const [scheduleEnabled, setScheduleEnabled] = useState(wasScheduled);
@@ -106,7 +110,7 @@ export function PostEditButton({ post }: PostEditButtonProps) {
   function handleOpen() {
     setTitle(post?.title ?? "");
     setContent(post?.content ?? "");
-    setTag(post?.tag || "Thông báo");
+    setTag(post?.tag || defaultTag || "Thông báo");
     setIsImportant(Boolean(post?.isImportant));
     setIsActive(post?.isActive !== false);
     setScheduleEnabled(wasScheduled);

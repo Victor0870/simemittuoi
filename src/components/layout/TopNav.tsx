@@ -22,6 +22,7 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
       <div className="hidden items-center gap-3 lg:gap-6 md:flex">
         {NAV_ITEMS.map((item) => {
           const isActive = item.href === activeHref;
+          const shortLabel = "shortLabel" in item ? item.shortLabel : null;
 
           return (
             <Link
@@ -32,8 +33,16 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
                   : "rounded px-2 py-1 text-on-surface-variant hover:bg-surface-container-high"
               }`}
               href={item.href}
+              title={shortLabel ? item.label : undefined}
             >
-              {item.label}
+              {shortLabel ? (
+                <>
+                  <span className="lg:hidden">{shortLabel}</span>
+                  <span className="hidden lg:inline">{item.label}</span>
+                </>
+              ) : (
+                item.label
+              )}
             </Link>
           );
         })}

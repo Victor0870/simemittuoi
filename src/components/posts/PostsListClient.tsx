@@ -10,7 +10,16 @@ import type { PostSummary } from "@/lib/data/posts";
  * Trang /posts được cache chung (chỉ bài đang hiển thị). Người có quyền quản lý bài viết
  * tải thêm danh sách đầy đủ (gồm bài Inactive / hẹn giờ) qua API có kiểm tra quyền.
  */
-export function PostsListClient({ initialPosts }: { initialPosts: PostSummary[] }) {
+export function PostsListClient({
+  initialPosts,
+  categorySlug,
+  emptyMessage = "Chưa có bài viết nào. Vui lòng quay lại sau.",
+}: {
+  initialPosts: PostSummary[];
+  /** Chỉ lấy bài thuộc chuyên mục (slug trong post-categories). */
+  categorySlug?: string;
+  emptyMessage?: string;
+}) {
   const { can, loading, user } = useAuth();
   const canManage = !loading && can(PERMISSIONS.postsManage);
   const userId = user?.id ?? null;
@@ -23,7 +32,8 @@ export function PostsListClient({ initialPosts }: { initialPosts: PostSummary[] 
     }
 
     let cancelled = false;
-    fetch("/api/posts/manage-list", { cache: "no-store" })
+    const query = categorySlug ? `?category=${encodeURIComponent(categorySlug)}` : "";
+    fetch(`/api/posts/manage-list${query}`, { cache: "no-store" })
       .then((res) => (res.ok ? (res.json() as Promise<{ posts: PostSummary[] }>) : null))
       .catch(() => null)
       .then((data) => {
@@ -33,14 +43,14 @@ export function PostsListClient({ initialPosts }: { initialPosts: PostSummary[] 
     return () => {
       cancelled = true;
     };
-  }, [canManage, userId, initialPosts]);
+  }, [canManage, userId, initialPosts, categorySlug]);
 
   const posts = managePosts ?? initialPosts;
 
   if (posts.length === 0) {
     return (
       <p className="rounded-2xl border border-dusty-border bg-white px-4 py-12 text-center text-sm text-on-surface-variant">
-        Chưa có bài viết nào. Vui lòng quay lại sau.
+        {emptyMessage}
       </p>
     );
   }

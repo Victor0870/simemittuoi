@@ -75,7 +75,7 @@ const POST_COLUMNS =
 
 export async function getPosts(
   limit = 50,
-  options?: { includeInactive?: boolean },
+  options?: { includeInactive?: boolean; tag?: string },
 ): Promise<PostSummary[]> {
   const db = options?.includeInactive ? createServiceClient() : createPublicClient();
   let query = db
@@ -86,6 +86,9 @@ export async function getPosts(
 
   if (!options?.includeInactive) {
     query = query.eq("is_active", true).lte("published_at", new Date().toISOString());
+  }
+  if (options?.tag) {
+    query = query.ilike("tag", options.tag.replace(/[\\%_]/g, (ch) => `\\${ch}`));
   }
 
   const { data, error } = await query;
