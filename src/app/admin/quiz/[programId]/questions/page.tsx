@@ -8,12 +8,12 @@ export const revalidate = 0;
 export default async function AdminQuizQuestionsPage({ params }: { params: Promise<{ programId: string }> }) {
   const { programId } = await params;
   const { db, program } = await requireQuizProgramPage(programId, "questions");
-  const { questions, sessionsError } = await loadQuizData(db, program.id);
+  const { questions, sessionsError } = await loadQuizData(db, program);
 
   return (
     <div className="space-y-8 pb-10">
-      <QuizTabs active="questions" programId={program.id} sessionsError={sessionsError?.message ?? null} />
-      <AdminQuizQuestions questions={questions} />
+      <QuizTabs active="questions" program={program} sessionsError={sessionsError?.message ?? null} />
+      <AdminQuizQuestions programId={program.id} questions={questions} />
     </div>
   );
 }

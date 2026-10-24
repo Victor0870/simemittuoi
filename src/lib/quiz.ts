@@ -1,12 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   DEFAULT_QUIZ_SETTINGS,
-  DEFAULT_RESULT_POST_TEMPLATE,
-  DEFAULT_RESULT_POST_TITLE,
+  defaultResultPost,
   describePointRules,
   formatQuizDate,
   formatQuizDuration,
   pointsForRank,
+  quizLabelPrefix,
+  WEEKLY_QUIZ_PROGRAM_ID,
+  type QuizProgramRef,
   type QuizProgramRow,
   type QuizRankingRow,
   type QuizSessionRow,
@@ -46,6 +48,11 @@ export async function loadQuizProgram(db: SupabaseClient, programId: string): Pr
   return (data as QuizProgramRow | null) ?? null;
 }
 
+/** Chương trình theo mã gửi lên từ client; không gửi mã thì là Trắc nghiệm tuần (tương thích cách gọi cũ). */
+export function resolveQuizProgram(db: SupabaseClient, raw: unknown) {
+  return loadQuizProgram(db, typeof raw === "string" && raw ? raw : WEEKLY_QUIZ_PROGRAM_ID);
+}
+
 /** Đọc hết các dòng theo trang (PostgREST giới hạn 1000 dòng mỗi lần). */
 export async function selectAllRows<T>(
   fetchPage: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
@@ -68,7 +75,10 @@ export async function loadQuizSettings(db: SupabaseClient, programId: string): P
     .eq("program_id", programId)
     .maybeSingle();
   if (error) throw error;
-  return { ...DEFAULT_QUIZ_SETTINGS, ...(data ?? {}) } as QuizSettings;
+  // Chương trình mới chưa lưu cài đặt thì không tự mở theo lịch mặc định của Trắc nghiệm tuần.
+  const fallback: QuizSettings =
+    programId === WEEKLY_QUIZ_PROGRAM_ID ? DEFAULT_QUIZ_SETTINGS : { ...DEFAULT_QUIZ_SETTINGS, schedule_mode: "manual" };
+  return { ...fallback, ...(data ?? {}) } as QuizSettings;
 }
 
 function parseHHMM(value: string) {
@@ -106,10 +116,15 @@ function currentAutoWindow(settings: QuizSettings, now: Date) {
   const ymd = `${p.y}-${pad2(p.m + 1)}-${pad2(p.d)}`;
   return {
     key: `auto-${ymd}`,
-    title: `Thi trắc nghiệm tuần ${pad2(p.d)}/${pad2(p.m + 1)}/${p.y}`,
+    dateText: `${pad2(p.d)}/${pad2(p.m + 1)}/${p.y}`,
     startsAt: vnInstant(p.y, p.m, p.d, start),
     endsAt: vnInstant(p.y, p.m, p.d, end),
   };
+}
+
+/** Đang trong khung giờ tự động (chỉ tính toán, không ghi đợt thi). */
+export function isInAutoWindow(settings: QuizSettings, now: Date) {
+  return settings.schedule_mode === "auto" && currentAutoWindow(settings, now) !== null;
 }
 
 export function nextAutoStart(settings: QuizSettings, now: Date): Date | null {
@@ -128,18 +143,20 @@ export function nextAutoStart(settings: QuizSettings, now: Date): Date | null {
 /** Tạo đợt thi tự động (nếu đang trong khung giờ) và trả về đợt thi đang mở. */
 export async function ensureCurrentSession(
   db: SupabaseClient,
-  programId: string,
+  program: QuizProgramRef,
   settings: QuizSettings,
   now = new Date(),
 ): Promise<QuizSessionRow | null> {
+  const programId = program.id;
   if (settings.schedule_mode === "auto") {
     const win = currentAutoWindow(settings, now);
     if (win) {
+      const titlePrefix = programId === WEEKLY_QUIZ_PROGRAM_ID ? "Thi trắc nghiệm tuần" : program.name;
       const { error } = await db.from(CDILV_TABLE.quizSessions).upsert(
         {
           program_id: programId,
           session_key: win.key,
-          title: win.title,
+          title: `${titlePrefix} ${win.dateText}`,
           mode: "auto",
           starts_at: win.startsAt.toISOString(),
           ends_at: win.endsAt.toISOString(),
@@ -273,6 +290,7 @@ function buildResultLines(ranking: QuizRankingRow[], totalQuestions: number) {
  */
 export async function finalizeQuizSession(
   db: SupabaseClient,
+  program: QuizProgramRef,
   session: QuizSessionRow,
   settings: QuizSettings,
   actorId: string | null,
@@ -306,7 +324,7 @@ export async function finalizeQuizSession(
       .map((r) => ({
         user_id: r.user_id,
         points: r.points,
-        note: `Thi trắc nghiệm ${dateText} – Hạng ${r.rank} (+${r.points}đ)`,
+        note: `${quizLabelPrefix(program)} ${dateText} – Hạng ${r.rank} (+${r.points}đ)`,
         award_label: awardLabel,
         created_by: actorId,
       }));
@@ -316,6 +334,7 @@ export async function finalizeQuizSession(
     }
 
     const values = {
+      "{{TEN_CHUONG_TRINH}}": program.name,
       "{{NGAY}}": dateText,
       "{{TEN_DOT}}": session.title,
       "{{SO_CAU}}": String(settings.questions_per_attempt),
@@ -324,11 +343,9 @@ export async function finalizeQuizSession(
       "{{KET_QUA}}": buildResultLines(ranking, settings.questions_per_attempt),
       "{{CO_CAU_DIEM}}": describePointRules(settings),
     };
-    const title = renderTemplate(settings.result_post_title?.trim() || DEFAULT_RESULT_POST_TITLE, values);
-    const content = renderTemplate(
-      settings.result_post_template?.trim() || DEFAULT_RESULT_POST_TEMPLATE,
-      values,
-    );
+    const defaults = defaultResultPost(program.id);
+    const title = renderTemplate(settings.result_post_title?.trim() || defaults.title, values);
+    const content = renderTemplate(settings.result_post_template?.trim() || defaults.template, values);
 
     let postId = session.result_post_id;
     if (!postId) {
@@ -374,11 +391,12 @@ export async function finalizeQuizSession(
 /** Tự tổng kết các đợt đã kết thúc (sau khi hết hạn nộp của lượt cuối) nếu bật auto_finalize. */
 export async function finalizeDueSessions(
   db: SupabaseClient,
-  programId: string,
+  program: QuizProgramRef,
   settings: QuizSettings,
   now = new Date(),
 ) {
   if (!settings.auto_finalize) return [];
+  const programId = program.id;
   const cutoff = new Date(
     now.getTime() - settings.time_limit_seconds * 1000 - QUIZ_SUBMIT_GRACE_MS,
   ).toISOString();
@@ -394,24 +412,24 @@ export async function finalizeDueSessions(
 
   const results = [];
   for (const session of (data ?? []) as QuizSessionRow[]) {
-    results.push(await finalizeQuizSession(db, session, settings, null));
+    results.push(await finalizeQuizSession(db, program, session, settings, null));
   }
   return results;
 }
 
 export async function getQuizStatus(
   db: SupabaseClient,
-  programId: string,
+  program: QuizProgramRef,
   userId: string | null,
   now = new Date(),
 ): Promise<QuizStatus> {
-  const settings = await loadQuizSettings(db, programId);
+  const settings = await loadQuizSettings(db, program.id);
   try {
-    await finalizeDueSessions(db, programId, settings, now);
+    await finalizeDueSessions(db, program, settings, now);
   } catch (err) {
     console.error("[quiz] auto finalize error:", err);
   }
-  const session = await ensureCurrentSession(db, programId, settings, now);
+  const session = await ensureCurrentSession(db, program, settings, now);
 
   let attemptsUsed = 0;
   let hasInProgress = false;

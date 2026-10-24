@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { requireQuizAdmin } from "@/lib/quiz-access";
-import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
+import { resolveQuizProgram } from "@/lib/quiz";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -73,11 +73,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     const writer = createServiceClient();
+    const program = await resolveQuizProgram(writer, body.programId);
+    if (!program) {
+      return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
+    }
     const { error } = await writer
       .from(CDILV_TABLE.quizSettings)
       .upsert(
         {
-          program_id: WEEKLY_QUIZ_PROGRAM_ID,
+          program_id: program.id,
           schedule_mode: scheduleMode,
           schedule_weekday: weekday,
           start_time: startTime,

@@ -6,7 +6,6 @@ import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { BRAND } from "@/lib/brand";
-import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 
 export type AdminNavGroup = {
   key: string;
@@ -92,11 +91,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/scores/history", label: "Lịch sử cộng điểm" },
     { href: "/admin/scores/members", label: "Bảng điểm đoàn viên" },
     { href: "/admin/polls", label: "Bình chọn" },
-    {
-      href: "/admin/quiz",
-      label: "Trắc nghiệm",
-      subpages: [{ href: `/admin/quiz/${WEEKLY_QUIZ_PROGRAM_ID}`, label: "Trắc nghiệm tuần" }],
-    },
+    { href: "/admin/quiz", label: "Trắc nghiệm" },
   ],
   content: [
     { href: "/admin/content/guides", label: "Hướng dẫn sử dụng" },

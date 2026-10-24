@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { computeSessionRanking, loadQuizSettings, QUIZ_SUBMIT_GRACE_MS } from "@/lib/quiz";
+import { computeSessionRanking, loadQuizProgram, loadQuizSettings, QUIZ_SUBMIT_GRACE_MS } from "@/lib/quiz";
 import { requireQuizMember } from "@/lib/quiz-access";
+import { quizLabelPrefix } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -69,7 +70,10 @@ export async function POST(request: NextRequest) {
     if (updErr) throw updErr;
     if (!updated) return NextResponse.json({ error: "Lượt thi này đã được nộp." }, { status: 400 });
 
-    const settings = await loadQuizSettings(db, attempt.program_id);
+    const [settings, program] = await Promise.all([
+      loadQuizSettings(db, attempt.program_id),
+      loadQuizProgram(db, attempt.program_id),
+    ]);
     const attemptPoints = !late ? Number(settings.points_per_attempt ?? 2) : 0;
 
     if (attemptPoints > 0) {
@@ -84,7 +88,7 @@ export async function POST(request: NextRequest) {
         const { error: scoreErr } = await db.from(CDILV_TABLE.scoreEvents).insert({
           user_id: userId,
           points: attemptPoints,
-          note: `Thi trắc nghiệm – Lượt ${attempt.attempt_no} (+${attemptPoints}đ)`,
+          note: `${program ? quizLabelPrefix(program) : "Thi trắc nghiệm"} – Lượt ${attempt.attempt_no} (+${attemptPoints}đ)`,
           award_label: awardLabel,
           created_by: userId,
         });

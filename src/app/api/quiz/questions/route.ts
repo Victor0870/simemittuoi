@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { selectAllRows } from "@/lib/quiz";
+import { resolveQuizProgram, selectAllRows } from "@/lib/quiz";
 import { requireQuizAdmin } from "@/lib/quiz-access";
-import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -69,7 +68,11 @@ export async function POST(request: NextRequest) {
     }
 
     const writer = createServiceClient();
-    const programId = WEEKLY_QUIZ_PROGRAM_ID;
+    const program = await resolveQuizProgram(writer, body.programId);
+    if (!program) {
+      return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
+    }
+    const programId = program.id;
     const existing = await selectAllRows<{ content: string }>((from, to) =>
       writer
         .from(CDILV_TABLE.quizQuestions)
@@ -149,10 +152,15 @@ export async function PATCH(request: NextRequest) {
     if ("error" in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 });
 
     const writer = createServiceClient();
+    const program = await resolveQuizProgram(writer, body.programId);
+    if (!program) {
+      return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
+    }
     const { error } = await writer
       .from(CDILV_TABLE.quizQuestions)
       .update({ ...parsed.values, updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("program_id", program.id);
     if (error) throw error;
 
     revalidatePath("/admin/quiz");
@@ -171,11 +179,20 @@ export async function DELETE(request: NextRequest) {
     const { response } = await requireQuizAdmin();
     if (response) return response;
 
-    const id = new URL(request.url).searchParams.get("id");
+    const params = new URL(request.url).searchParams;
+    const id = params.get("id");
     if (!id) return NextResponse.json({ error: "Thiếu mã câu hỏi." }, { status: 400 });
 
     const writer = createServiceClient();
-    const { error } = await writer.from(CDILV_TABLE.quizQuestions).delete().eq("id", id);
+    const program = await resolveQuizProgram(writer, params.get("programId"));
+    if (!program) {
+      return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
+    }
+    const { error } = await writer
+      .from(CDILV_TABLE.quizQuestions)
+      .delete()
+      .eq("id", id)
+      .eq("program_id", program.id);
     if (error) throw error;
 
     revalidatePath("/admin/quiz");

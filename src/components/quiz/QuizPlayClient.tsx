@@ -40,11 +40,12 @@ type Props = {
   isApproved: boolean;
   pointRules: string;
   isAdmin?: boolean;
+  programId: string;
 };
 
 const OPTION_LABELS = ["1", "2", "3", "4"];
 
-export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRules, isAdmin }: Props) {
+export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRules, isAdmin, programId }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [play, setPlay] = useState<PlayData | null>(null);
@@ -133,7 +134,11 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
     setError(null);
     setResult(null);
     try {
-      const res = await fetch("/api/quiz/start", { method: "POST" });
+      const res = await fetch("/api/quiz/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId }),
+      });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Không thể bắt đầu lượt thi.");
       setPlay({
@@ -193,12 +198,12 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
         <p className="mt-2 text-body-md font-semibold text-on-surface">
           {isLoggedIn
             ? "Tài khoản của bạn cần được phê duyệt để tham gia thi trắc nghiệm."
-            : "Vui lòng đăng nhập để tham gia thi trắc nghiệm hàng tuần."}
+            : "Vui lòng đăng nhập để tham gia thi trắc nghiệm."}
         </p>
         {!isLoggedIn ? (
           <Link
             className="mt-4 inline-flex rounded-xl bg-primary px-5 py-2 font-bold text-white"
-            href="/login?next=/quiz"
+            href={`/login?next=/quiz/${programId}`}
           >
             Đăng nhập
           </Link>

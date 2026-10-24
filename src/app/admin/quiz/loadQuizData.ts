@@ -9,7 +9,7 @@ import {
   QUIZ_SESSION_COLUMNS,
   selectAllRows,
 } from "@/lib/quiz";
-import { WEEKLY_QUIZ_PROGRAM_ID, type QuizQuestionRow } from "@/lib/quiz-shared";
+import type { QuizProgramRef, QuizQuestionRow } from "@/lib/quiz-shared";
 import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -35,10 +35,7 @@ export async function requireQuizAdminPage(nextPath: string) {
   }
 }
 
-/**
- * Kiểm tra quyền admin và tìm chương trình trắc nghiệm theo `programId` (không có → 404).
- * Trang con (cài đặt / lịch sử / ngân hàng câu hỏi) hiện chỉ dành cho chương trình Trắc nghiệm tuần.
- */
+/** Kiểm tra quyền admin và tìm chương trình trắc nghiệm theo `programId` (không có → 404). */
 export async function requireQuizProgramPage(programId: string, section?: QuizTabKey) {
   const db = createServiceClient();
   // Chỉ đọc (không ghi) song song với kiểm tra quyền; lỗi (nếu có) được ném ra sau khi kiểm tra quyền
@@ -47,22 +44,20 @@ export async function requireQuizProgramPage(programId: string, section?: QuizTa
   await requireQuizAdminPage(quizProgramHref(programId, section));
   const program = await programPromise;
   if (!program) notFound();
-  if (section && program.id !== WEEKLY_QUIZ_PROGRAM_ID) {
-    redirect(quizProgramHref(program.id));
-  }
   return { db, program };
 }
 
 /** Tải dữ liệu chung cho các trang của một chương trình trắc nghiệm (cài đặt, đợt thi, câu hỏi). */
-export async function loadQuizData(db: SupabaseClient, programId: string) {
+export async function loadQuizData(db: SupabaseClient, program: QuizProgramRef) {
+  const programId = program.id;
   const now = new Date();
   const settings = await loadQuizSettings(db, programId);
   try {
-    await finalizeDueSessions(db, programId, settings, now);
+    await finalizeDueSessions(db, program, settings, now);
   } catch (err) {
     console.error("[admin/quiz] auto finalize error:", err);
   }
-  const currentSession = await ensureCurrentSession(db, programId, settings, now);
+  const currentSession = await ensureCurrentSession(db, program, settings, now);
 
   const [questions, { data: sessions, error: sessionsError }, displaySession] = await Promise.all([
     selectAllRows<QuizQuestionRow>((from, to) =>

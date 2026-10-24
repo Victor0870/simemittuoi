@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { formatQuizTime, type QuizStatus } from "@/lib/quiz-shared";
+import { formatQuizTime, WEEKLY_QUIZ_PROGRAM_ID, type QuizStatus } from "@/lib/quiz-shared";
 
 const POLL_MS = 120_000;
 
@@ -62,7 +62,7 @@ export function QuizEventPopup() {
   function close(goToQuiz: boolean) {
     if (status?.session) window.sessionStorage.setItem(dismissKey(status.session.id), "1");
     setVisible(false);
-    if (goToQuiz) router.push("/quiz");
+    if (goToQuiz) router.push(`/quiz/${WEEKLY_QUIZ_PROGRAM_ID}`);
   }
 
   return (

@@ -7,6 +7,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { QuizQuestionRow } from "@/lib/quiz-shared";
 
 type Props = {
+  programId: string;
   questions: QuizQuestionRow[];
 };
 
@@ -113,7 +114,7 @@ function parseQuestionSheet(rows: unknown[][]) {
   return { items, errors };
 }
 
-export function AdminQuizQuestions({ questions }: Props) {
+export function AdminQuizQuestions({ programId, questions }: Props) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
@@ -166,7 +167,7 @@ export function AdminQuizQuestions({ questions }: Props) {
       const res = await fetch("/api/quiz/questions", {
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isNew ? form : { ...form, id: editingId }),
+        body: JSON.stringify(isNew ? { ...form, programId } : { ...form, id: editingId, programId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Không thể lưu câu hỏi.");
@@ -186,9 +187,10 @@ export function AdminQuizQuestions({ questions }: Props) {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(`/api/quiz/questions?id=${encodeURIComponent(row.id)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/quiz/questions?id=${encodeURIComponent(row.id)}&programId=${encodeURIComponent(programId)}`,
+        { method: "DELETE" },
+      );
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Không thể xóa câu hỏi.");
       setSuccess(json.message);
@@ -241,7 +243,7 @@ export function AdminQuizQuestions({ questions }: Props) {
       const res = await fetch("/api/quiz/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questions: items }),
+        body: JSON.stringify({ questions: items, programId }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Không thể nhập câu hỏi.");

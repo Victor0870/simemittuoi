@@ -13,6 +13,8 @@ export type QuizProgramRow = {
   created_at: string;
 };
 
+export type QuizProgramRef = Pick<QuizProgramRow, "id" | "name">;
+
 export const WEEKDAY_LABELS = [
   "Chủ nhật",
   "Thứ 2",
@@ -125,7 +127,34 @@ Cơ cấu điểm thưởng: {{CO_CAU_DIEM}} Nếu thời gian bằng nhau, ai l
 
 Xin chúc mừng các đoàn viên đạt thành tích và hẹn gặp lại mọi người ở cuộc thi tuần sau!`;
 
+export const DEFAULT_PROGRAM_RESULT_POST_TITLE = "Kết quả {{TEN_CHUONG_TRINH}} – {{NGAY}}";
+
+export const DEFAULT_PROGRAM_RESULT_POST_TEMPLATE = `Ban Chấp hành Công đoàn CDILV trân trọng thông báo kết quả đợt thi "{{TEN_DOT}}" thuộc chương trình {{TEN_CHUONG_TRINH}} ngày {{NGAY}}.
+
+Tổng số đoàn viên tham gia: {{SO_NGUOI_THAM_GIA}} người.
+Số đoàn viên trả lời đúng cả {{SO_CAU}} câu: {{SO_NGUOI_DAT}} người.
+
+BẢNG THÀNH TÍCH
+{{KET_QUA}}
+
+Cơ cấu điểm thưởng: {{CO_CAU_DIEM}} Nếu thời gian bằng nhau, ai làm bài trước được xếp hạng cao hơn.
+
+Xin chúc mừng các đoàn viên đạt thành tích!`;
+
+/** Mẫu bài kết quả mặc định: Trắc nghiệm tuần giữ mẫu cũ, chương trình khác dùng mẫu theo tên chương trình. */
+export function defaultResultPost(programId: string) {
+  return programId === WEEKLY_QUIZ_PROGRAM_ID
+    ? { title: DEFAULT_RESULT_POST_TITLE, template: DEFAULT_RESULT_POST_TEMPLATE }
+    : { title: DEFAULT_PROGRAM_RESULT_POST_TITLE, template: DEFAULT_PROGRAM_RESULT_POST_TEMPLATE };
+}
+
+/** Tiền tố tên đợt thi và ghi chú điểm: Trắc nghiệm tuần giữ nguyên như trước, chương trình khác dùng tên chương trình. */
+export function quizLabelPrefix(program: Pick<QuizProgramRow, "id" | "name">) {
+  return program.id === WEEKLY_QUIZ_PROGRAM_ID ? "Thi trắc nghiệm" : program.name;
+}
+
 export const QUIZ_TEMPLATE_PLACEHOLDERS = [
+  { key: "{{TEN_CHUONG_TRINH}}", label: "Tên chương trình" },
   { key: "{{NGAY}}", label: "Ngày thi (dd/mm/yyyy)" },
   { key: "{{TEN_DOT}}", label: "Tên đợt thi" },
   { key: "{{SO_CAU}}", label: "Số câu mỗi lượt" },

@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   ensureCurrentSession,
   loadQuizSettings,
   QUIZ_SUBMIT_GRACE_MS,
+  resolveQuizProgram,
   selectAllRows,
 } from "@/lib/quiz";
 import { requireQuizMember } from "@/lib/quiz-access";
-import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -29,16 +29,21 @@ function shuffle<T>(items: T[]) {
 }
 
 /** Bắt đầu lượt mới (hoặc tiếp tục lượt đang làm dở). Không bao giờ trả đáp án đúng về client. */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const { userId, response } = await requireQuizMember();
+    const { ctx, userId, response } = await requireQuizMember();
     if (response) return response;
 
+    const body = await request.json().catch(() => ({}));
     const db = createServiceClient();
-    const programId = WEEKLY_QUIZ_PROGRAM_ID;
+    const program = await resolveQuizProgram(db, body?.programId);
+    if (!program || (!program.is_active && !ctx?.isAdmin)) {
+      return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
+    }
+    const programId = program.id;
     const settings = await loadQuizSettings(db, programId);
     const now = new Date();
-    const session = await ensureCurrentSession(db, programId, settings, now);
+    const session = await ensureCurrentSession(db, program, settings, now);
     if (!session) {
       return NextResponse.json(
         { error: "Sự kiện thi trắc nghiệm hiện chưa mở." },

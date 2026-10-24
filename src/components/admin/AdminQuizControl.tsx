@@ -6,8 +6,7 @@ import { useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
-  DEFAULT_RESULT_POST_TEMPLATE,
-  DEFAULT_RESULT_POST_TITLE,
+  defaultResultPost,
   QUIZ_TEMPLATE_PLACEHOLDERS,
   WEEKDAY_LABELS,
   formatQuizDate,
@@ -18,6 +17,7 @@ import {
 } from "@/lib/quiz-shared";
 
 type Props = {
+  programId: string;
   settings: QuizSettings;
   currentSession: QuizSessionRow | null;
   sessions: QuizSessionRow[];
@@ -51,6 +51,7 @@ const NUMBER_FIELDS: { key: NumberField; label: string; min: number; max: number
 ];
 
 export function AdminQuizControl({
+  programId,
   settings,
   currentSession,
   sessions,
@@ -59,10 +60,11 @@ export function AdminQuizControl({
   serverNow,
 }: Props) {
   const router = useRouter();
+  const defaults = defaultResultPost(programId);
   const [form, setForm] = useState<QuizSettings>({
     ...settings,
-    result_post_title: settings.result_post_title ?? DEFAULT_RESULT_POST_TITLE,
-    result_post_template: settings.result_post_template ?? DEFAULT_RESULT_POST_TEMPLATE,
+    result_post_title: settings.result_post_title ?? defaults.title,
+    result_post_template: settings.result_post_template ?? defaults.template,
   });
   const [duration, setDuration] = useState(60);
   const [busy, setBusy] = useState<string | null>(null);
@@ -280,7 +282,7 @@ export function AdminQuizControl({
               type="button"
               onClick={() => {
                 if (window.confirm("Tắt đợt thi ngay bây giờ? Người đang làm dở vẫn được nộp trong thời gian của lượt."))
-                  void call("close", "/api/quiz/session", { action: "close" });
+                  void call("close", "/api/quiz/session", { action: "close", programId });
               }}
             >
               {busy === "close" ? "Đang tắt..." : "Tắt thi ngay"}
@@ -305,7 +307,9 @@ export function AdminQuizControl({
                 className="rounded-xl bg-tertiary px-5 py-2 font-bold text-on-tertiary disabled:opacity-60"
                 disabled={busy !== null}
                 type="button"
-                onClick={() => void call("open", "/api/quiz/session", { action: "open", durationMinutes: duration })}
+                onClick={() =>
+                  void call("open", "/api/quiz/session", { action: "open", durationMinutes: duration, programId })
+                }
               >
                 {busy === "open" ? "Đang bật..." : "Bật thi ngay"}
               </button>
@@ -354,7 +358,7 @@ export function AdminQuizControl({
           className="mt-4 space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
-            void call("settings", "/api/quiz/settings", form);
+            void call("settings", "/api/quiz/settings", { ...form, programId });
           }}
         >
           <div className="grid gap-3 sm:grid-cols-4">
@@ -472,8 +476,8 @@ export function AdminQuizControl({
                 onClick={() =>
                   setForm((f) => ({
                     ...f,
-                    result_post_title: DEFAULT_RESULT_POST_TITLE,
-                    result_post_template: DEFAULT_RESULT_POST_TEMPLATE,
+                    result_post_title: defaults.title,
+                    result_post_template: defaults.template,
                   }))
                 }
               >

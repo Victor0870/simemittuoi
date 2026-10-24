@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { AdminTrailContext, type AdminTrail } from "@/components/admin/AdminBreadcrumbTrail";
 import { AdminSidebar, resolveAdminLocation } from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
@@ -13,8 +14,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/admin";
   const { group, page, subpage, isHub } = resolveAdminLocation(pathname);
   const { user, profile, isAdmin } = useAuth();
+  const [trail, setTrail] = useState<AdminTrail | null>(null);
+  const extra = page && trail?.pathname === pathname ? trail.items : [];
   const hubHref = group && isAdmin ? group.href : "/office";
-  const backHref = page && subpage ? page.href : hubHref;
+  const parent = extra.length > 1 ? extra[extra.length - 2] : extra.length === 1 || subpage ? page : null;
+  const backHref = parent?.href ?? hubHref;
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const initial = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
@@ -68,7 +72,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </button>
             {group && page ? (
               <Link
-                aria-label={`Quay lại ${subpage ? page.label : group.label}`}
+                aria-label={`Quay lại ${parent?.label ?? group.label}`}
                 className="shrink-0 rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] md:hidden"
                 href={backHref}
               >
@@ -92,7 +96,36 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   >
                     {group.label}
                   </Link>
-                  {page && subpage ? (
+                  {page && extra.length > 0 ? (
+                    <>
+                      <span className="shrink-0 text-outline">/</span>
+                      <Link
+                        className="min-w-0 max-w-[6rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
+                        href={page.href}
+                      >
+                        {page.label}
+                      </Link>
+                      {extra.map((crumb, i) => {
+                        const isLast = i === extra.length - 1;
+                        return (
+                          <Fragment key={crumb.href}>
+                            <span className="shrink-0 text-outline">/</span>
+                            <Link
+                              aria-current={isLast ? "page" : undefined}
+                              className={
+                                isLast
+                                  ? "min-w-0 truncate font-bold text-[#173A67] hover:underline"
+                                  : "min-w-0 max-w-[6rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
+                              }
+                              href={crumb.href}
+                            >
+                              {crumb.label}
+                            </Link>
+                          </Fragment>
+                        );
+                      })}
+                    </>
+                  ) : page && subpage ? (
                     <>
                       <span className="shrink-0 text-outline">/</span>
                       <Link
@@ -136,7 +169,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full min-w-0 max-w-container-max flex-1 p-6 md:p-7 print:max-w-none print:p-0">{children}</main>
+        <main className="mx-auto w-full min-w-0 max-w-container-max flex-1 p-6 md:p-7 print:max-w-none print:p-0">
+          <AdminTrailContext.Provider value={setTrail}>{children}</AdminTrailContext.Provider>
+        </main>
       </div>
     </div>
   );

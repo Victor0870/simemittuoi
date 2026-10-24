@@ -22,7 +22,7 @@ export default async function AdminQuizHistoryPage({
 }) {
   const { programId } = await params;
   const { db, program } = await requireQuizProgramPage(programId, "history");
-  const { settings, currentSession, sessions, sessionsError, displaySession } = await loadQuizData(db, program.id);
+  const { settings, currentSession, sessions, sessionsError, displaySession } = await loadQuizData(db, program);
   const { round } = await searchParams;
 
   const rounds = (sessions ?? []) as QuizSessionRow[];
@@ -34,7 +34,7 @@ export default async function AdminQuizHistoryPage({
 
   return (
     <div className="space-y-8 pb-10">
-      <QuizTabs active="history" programId={program.id} sessionsError={sessionsError?.message ?? null} />
+      <QuizTabs active="history" program={program} sessionsError={sessionsError?.message ?? null} />
 
       <section className="space-y-3">
         <h2 className="text-title-md font-bold text-[#173A67]">Các đợt thi gần đây</h2>

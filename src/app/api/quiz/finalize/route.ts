@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { publishLeaderboardNow } from "@/lib/data/ranking-refresh";
 import {
   finalizeQuizSession,
+  loadQuizProgram,
   loadQuizSettings,
   QUIZ_SESSION_COLUMNS,
   QUIZ_SUBMIT_GRACE_MS,
@@ -37,7 +38,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const settings = await loadQuizSettings(writer, session.program_id);
+    const [settings, program] = await Promise.all([
+      loadQuizSettings(writer, session.program_id),
+      loadQuizProgram(writer, session.program_id),
+    ]);
+    if (!program) return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
     const lastSubmitAt =
       new Date(session.ends_at).getTime() + settings.time_limit_seconds * 1000 + QUIZ_SUBMIT_GRACE_MS;
     if (lastSubmitAt > Date.now()) {
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    const result = await finalizeQuizSession(writer, session as QuizSessionRow, settings, userId!);
+    const result = await finalizeQuizSession(writer, program, session as QuizSessionRow, settings, userId!);
     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 });
 
     revalidatePath("/admin/quiz");

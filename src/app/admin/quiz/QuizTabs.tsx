@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { AdminBreadcrumbTrail } from "@/components/admin/AdminBreadcrumbTrail";
+import type { QuizProgramRow } from "@/lib/quiz-shared";
 
 export type QuizTabKey = "settings" | "history" | "questions";
 
@@ -13,34 +15,48 @@ export function quizProgramHref(programId: string, section?: QuizTabKey) {
   return `/admin/quiz/${programId}${section ? `/${section}` : ""}`;
 }
 
-/** Tiêu đề chung của các trang Trắc nghiệm tuần + thanh tab tới 3 trang con. */
+/** Tiêu đề chung của các trang một chương trình trắc nghiệm + thanh tab tới 3 trang con + breadcrumb. */
 export function QuizTabs({
-  programId,
+  program,
   active,
   sessionsError,
 }: {
-  programId: string;
+  program: Pick<QuizProgramRow, "id" | "name" | "is_active">;
   active?: QuizTabKey;
   sessionsError?: string | null;
 }) {
+  const activeTab = QUIZ_TABS.find((t) => t.key === active);
+  const trail = [{ label: program.name, href: quizProgramHref(program.id) }];
+  if (activeTab) trail.push({ label: activeTab.label, href: quizProgramHref(program.id, activeTab.key) });
+
   return (
     <div className="space-y-4">
+      <AdminBreadcrumbTrail items={trail} />
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-headline-md font-bold text-[#173A67]">Thi trắc nghiệm hàng tuần</h1>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-headline-md font-bold text-[#173A67]">{program.name}</h1>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+                program.is_active ? "bg-emerald-100 text-emerald-800" : "bg-surface-container text-on-surface-variant"
+              }`}
+            >
+              {program.is_active ? "Active" : "Inactive"}
+            </span>
+          </div>
           <p className="text-body-md text-[#27496D]">
             Quản lý ngân hàng câu hỏi, lịch mở thi, tổng kết cộng điểm và bài viết kết quả.
           </p>
         </div>
         <Link
           className="rounded-xl border-2 border-[#173A67] px-4 py-2 font-bold text-[#173A67] transition hover:bg-[#173A67] hover:text-white"
-          href="/quiz"
+          href={`/quiz/${program.id}`}
         >
           Xem trang thi →
         </Link>
       </div>
 
-      <nav aria-label="Các trang trắc nghiệm tuần" className="flex flex-wrap gap-2">
+      <nav aria-label="Các trang của chương trình trắc nghiệm" className="flex flex-wrap gap-2">
         {QUIZ_TABS.map((tab) => {
           const isActive = tab.key === active;
           return (
@@ -52,7 +68,7 @@ export function QuizTabs({
                   ? "bg-[#4a6b82] text-white shadow-sm"
                   : "bg-[#ecf4ff] text-[#173A67] hover:bg-[#d2dfe9]"
               }`}
-              href={quizProgramHref(programId, tab.key)}
+              href={quizProgramHref(program.id, tab.key)}
             >
               {tab.label}
             </Link>

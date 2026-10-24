@@ -1,19 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAlbumMemberContext } from "@/lib/album-access";
-import { getQuizStatus } from "@/lib/quiz";
-import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
+import { getQuizStatus, resolveQuizProgram } from "@/lib/quiz";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const ctx = await getAlbumMemberContext();
-    const status = await getQuizStatus(
-      createServiceClient(),
-      WEEKLY_QUIZ_PROGRAM_ID,
-      ctx.isApproved && ctx.user ? ctx.user.id : null,
-    );
+    const db = createServiceClient();
+    const program = await resolveQuizProgram(db, request.nextUrl.searchParams.get("programId"));
+    if (!program || (!program.is_active && !ctx.isAdmin)) {
+      return NextResponse.json({ error: "Không tìm thấy chương trình trắc nghiệm." }, { status: 404 });
+    }
+    const status = await getQuizStatus(db, program, ctx.isApproved && ctx.user ? ctx.user.id : null);
     return NextResponse.json(status);
   } catch (err: any) {
     console.error("[api/quiz/status] GET error:", err);

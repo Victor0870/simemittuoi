@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { WEEKLY_QUIZ_PROGRAM_ID } from "@/lib/quiz-shared";
+
+const WEEKLY_QUIZ_HREF = `/quiz/${WEEKLY_QUIZ_PROGRAM_ID}`;
 
 /**
  * Kiểm tra xem thời điểm hiện tại có nằm trong khoảng 21:00 đến 22:00 (9h - 10h tối) Thứ 2 hàng tuần theo giờ Việt Nam (Asia/Ho_Chi_Minh).
@@ -114,7 +117,7 @@ export function WeeklyQuizActivityCard() {
       <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <Link href="/quiz" className="flex-1 min-w-0">
+            <Link href={WEEKLY_QUIZ_HREF} className="flex-1 min-w-0">
               <h4 className="text-headline-sm font-bold text-[#173A67] transition-colors group-hover:text-primary leading-snug">
                 Thi trắc nghiệm hàng tuần
               </h4>
@@ -161,7 +164,7 @@ export function WeeklyQuizActivityCard() {
           <div className="flex items-center gap-2 w-full flex-nowrap">
             {/* Button 1: Xem bảng xếp hạng tuần / Thể lệ */}
             <Link
-              href="/quiz"
+              href={WEEKLY_QUIZ_HREF}
               className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-dusty-border bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs md:text-sm font-semibold text-on-surface transition hover:bg-dusty-light/60 hover:text-primary shadow-2xs whitespace-nowrap"
               title="Xem thể lệ và bảng xếp hạng tuần"
             >
@@ -176,7 +179,7 @@ export function WeeklyQuizActivityCard() {
             <div className="flex-1 min-w-0 flex items-center justify-center">
               {isOpen ? (
                 <Link
-                  href="/quiz"
+                  href={WEEKLY_QUIZ_HREF}
                   className="w-full min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl bg-emerald-600 px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs md:text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 animate-pulse whitespace-nowrap"
                   title="Đang trong khung giờ thi! Bấm để vào làm bài ngay"
                 >
