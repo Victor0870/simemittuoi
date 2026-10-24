@@ -6,6 +6,28 @@ import { getPollPhase } from "@/lib/polls/phase";
 
 export const revalidate = 30;
 
+type PollItem = Awaited<ReturnType<typeof getPolls>>[number];
+
+/** Lưới 2 cột; khi chỉ có 1 chương trình thì thẻ giữ bề rộng 1 cột và nằm giữa. */
+function PollGrid({ polls }: { polls: PollItem[] }) {
+  if (polls.length === 1) {
+    return (
+      <div className="grid grid-cols-1 gap-6">
+        <div className="mx-auto w-full md:max-w-[calc(50%-12px)]">
+          <PollCard poll={polls[0]} />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      {polls.map((poll) => (
+        <PollCard key={poll.id} poll={poll} />
+      ))}
+    </div>
+  );
+}
+
 export default async function PollsPage() {
   const polls = await getPolls();
 
@@ -65,11 +87,7 @@ export default async function PollsPage() {
                   Đang Mở Bình Chọn ({openPolls.length})
                 </h2>
               </div>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {openPolls.map((poll) => (
-                  <PollCard key={poll.id} poll={poll} />
-                ))}
-              </div>
+              <PollGrid polls={openPolls} />
             </section>
           ) : null}
 
@@ -84,11 +102,7 @@ export default async function PollsPage() {
               <p className="text-xs sm:text-body-sm text-on-surface-variant -mt-2">
                 Xem trước các tác phẩm và bấm thử để làm quen cách bình chọn. Phiếu thử không được ghi nhận.
               </p>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {upcomingPolls.map((poll) => (
-                  <PollCard key={poll.id} poll={poll} />
-                ))}
-              </div>
+              <PollGrid polls={upcomingPolls} />
             </section>
           ) : null}
 
@@ -101,11 +115,7 @@ export default async function PollsPage() {
                   Chương Trình Đã Kết Thúc ({closedPolls.length})
                 </h2>
               </div>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {closedPolls.map((poll) => (
-                  <PollCard key={poll.id} poll={poll} />
-                ))}
-              </div>
+              <PollGrid polls={closedPolls} />
             </section>
           ) : null}
         </div>
