@@ -752,18 +752,22 @@ export function PostCommentsSection({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-stretch gap-2">
           <button
             type="button"
             onClick={() => setShowRulePopup(true)}
-            className="cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-label-xs sm:text-label-sm font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition"
+            className="cursor-pointer inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-left text-label-xs sm:text-label-sm font-bold leading-tight text-amber-900 shadow-xs hover:bg-amber-100 transition"
             title="Bấm để xem quy định bình luận"
           >
-            <MaterialIcon className="text-[16px] text-amber-600" name="military_tech" />
-            +1đ thi đua / bình luận
-            <MaterialIcon className="text-[14px] text-amber-700/70 ml-0.5" name="info" />
+            <MaterialIcon className="shrink-0 text-[16px] text-amber-600" name="military_tech" />
+            <span>
+              <span className="block whitespace-nowrap sm:inline">+1đ thi đua /</span>
+              <span className="hidden sm:inline"> </span>
+              <span className="block whitespace-nowrap sm:inline">bình luận</span>
+            </span>
+            <MaterialIcon className="shrink-0 text-[14px] text-amber-700/70 ml-0.5" name="info" />
           </button>
-          <span className="rounded-full bg-dusty-light px-3 py-1 text-label-xs sm:text-label-sm font-semibold text-primary">
+          <span className="inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-transparent bg-dusty-light px-3 py-1 text-center text-label-xs sm:text-label-sm font-semibold leading-tight text-primary">
             {commentCount} bình luận
           </span>
         </div>
