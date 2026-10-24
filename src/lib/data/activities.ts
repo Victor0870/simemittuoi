@@ -1,5 +1,13 @@
 import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { isScheduledAt } from "@/lib/post-schedule";
+
+const ACTIVITY_COLUMNS =
+  "id, title, description, location, event_date, points, image_url, image_alt, is_registration_open, is_active, published_at, created_at";
+
+/** includeHidden: kèm hoạt động Inactive / hẹn giờ (chỉ dùng ở trang quản trị / xem trước của admin). */
+type ActivityQueryOptions = { includeHidden?: boolean };
 
 export type ActivityParticipant = {
   id: string;
@@ -24,6 +32,10 @@ export type ActivityDetail = {
   imageUrl: string | null;
   imageAlt: string | null;
   isRegistrationOpen: boolean;
+  isActive: boolean;
+  /** Thời điểm bắt đầu hiển thị; ở tương lai = hoạt động hẹn giờ. */
+  publishedAt: string;
+  isScheduled: boolean;
   createdAt: string;
   participantCount: number;
   participants: ActivityParticipant[];
@@ -52,14 +64,22 @@ function formatDate(date: string | null): string {
   });
 }
 
-export async function getActivities(userId?: string): Promise<ActivityDetail[]> {
-  const db = createPublicClient();
+export async function getActivities(
+  userId?: string,
+  options?: ActivityQueryOptions,
+): Promise<ActivityDetail[]> {
+  const db = options?.includeHidden ? createServiceClient() : createPublicClient();
+
+  let activitiesQuery = db
+    .from(CDILV_TABLE.activities)
+    .select(ACTIVITY_COLUMNS)
+    .order("created_at", { ascending: false });
+  if (!options?.includeHidden) {
+    activitiesQuery = activitiesQuery.eq("is_active", true).lte("published_at", new Date().toISOString());
+  }
 
   const [activitiesRes, registrationsRes] = await Promise.all([
-    db
-      .from(CDILV_TABLE.activities)
-      .select("id, title, description, location, event_date, points, image_url, image_alt, is_registration_open, created_at")
-      .order("created_at", { ascending: false }),
+    activitiesQuery,
     db
       .from(CDILV_TABLE.activityRegistrations)
       .select("id, activity_id, user_id, registered_at, cdilv_profiles(id, full_name, avatar_url, employee_code, department, role)")
@@ -103,6 +123,9 @@ export async function getActivities(userId?: string): Promise<ActivityDetail[]> 
       imageUrl: row.image_url || null,
       imageAlt: row.image_alt || row.title,
       isRegistrationOpen: row.is_registration_open !== false,
+      isActive: row.is_active !== false,
+      publishedAt: row.published_at ?? row.created_at,
+      isScheduled: isScheduledAt(row.published_at ?? row.created_at),
       createdAt: row.created_at,
       participantCount: actRegs.length,
       participants,
@@ -114,15 +137,17 @@ export async function getActivities(userId?: string): Promise<ActivityDetail[]> 
 export async function getActivityById(
   id: string,
   userId?: string,
+  options?: ActivityQueryOptions,
 ): Promise<ActivityDetail | null> {
-  const db = createPublicClient();
+  const db = options?.includeHidden ? createServiceClient() : createPublicClient();
+
+  let activityQuery = db.from(CDILV_TABLE.activities).select(ACTIVITY_COLUMNS).eq("id", id);
+  if (!options?.includeHidden) {
+    activityQuery = activityQuery.eq("is_active", true).lte("published_at", new Date().toISOString());
+  }
 
   const [actRes, regsRes] = await Promise.all([
-    db
-      .from(CDILV_TABLE.activities)
-      .select("id, title, description, location, event_date, points, image_url, image_alt, is_registration_open, created_at")
-      .eq("id", id)
-      .maybeSingle(),
+    activityQuery.maybeSingle(),
     db
       .from(CDILV_TABLE.activityRegistrations)
       .select("id, activity_id, user_id, registered_at, cdilv_profiles(id, full_name, avatar_url, employee_code, department, role)")
@@ -130,12 +155,13 @@ export async function getActivityById(
       .order("registered_at", { ascending: true }),
   ]);
 
-  if (actRes.error || !actRes.data) {
-    console.error("[activities] getActivityById error:", actRes.error?.message);
+  if (actRes.error) {
+    console.error("[activities] getActivityById error:", actRes.error.message);
     return null;
   }
+  if (!actRes.data) return null;
 
-  const row = actRes.data;
+  const row = actRes.data as any;
   const regs = regsRes.data ?? [];
   const isUserRegistered = userId ? regs.some((r: any) => r.user_id === userId) : false;
 
@@ -165,6 +191,9 @@ export async function getActivityById(
     imageUrl: row.image_url || null,
     imageAlt: row.image_alt || row.title,
     isRegistrationOpen: row.is_registration_open !== false,
+    isActive: row.is_active !== false,
+    publishedAt: row.published_at ?? row.created_at,
+    isScheduled: isScheduledAt(row.published_at ?? row.created_at),
     createdAt: row.created_at,
     participantCount: regs.length,
     participants,

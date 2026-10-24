@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { isScheduledAt, parseScheduledAt } from "@/lib/post-schedule";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +46,8 @@ export async function POST(request: NextRequest) {
       imageUrl,
       imageAlt,
       isRegistrationOpen,
+      isActive,
+      scheduledAt,
     } = body;
 
     if (!id) {
@@ -80,6 +83,29 @@ export async function POST(request: NextRequest) {
 
     if (isRegistrationOpen !== undefined) {
       updatePayload.is_registration_open = Boolean(isRegistrationOpen);
+    }
+
+    if (isActive !== undefined) {
+      updatePayload.is_active = Boolean(isActive);
+    }
+
+    // scheduledAt: chuỗi ISO = hẹn giờ mới; null = bỏ hẹn giờ, hiển thị ngay nếu đang chờ giờ.
+    if (typeof scheduledAt === "string") {
+      const parsed = parseScheduledAt(scheduledAt);
+      if (!parsed.ok) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
+      }
+      updatePayload.published_at = parsed.iso;
+    } else if (scheduledAt === null) {
+      const { data: current, error: currentErr } = await publicDb
+        .from(CDILV_TABLE.activities)
+        .select("published_at")
+        .eq("id", id)
+        .maybeSingle();
+      if (currentErr) throw currentErr;
+      if (current?.published_at && isScheduledAt(current.published_at)) {
+        updatePayload.published_at = new Date().toISOString();
+      }
     }
 
     const { data: updatedActivity, error: updateErr } = await publicDb

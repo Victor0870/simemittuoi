@@ -21,7 +21,7 @@ export default async function AdminActivitiesPage() {
       .select("role, approval_status")
       .eq("id", userId)
       .maybeSingle(),
-    getActivities(),
+    getActivities(undefined, { includeHidden: true }),
   ]);
 
   if (me?.role !== "admin" || me?.approval_status !== "approved") {

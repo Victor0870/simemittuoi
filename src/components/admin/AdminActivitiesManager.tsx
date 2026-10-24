@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { ActivityEditorModal } from "@/components/activities/ActivityEditorModal";
 import type { ActivityDetail } from "@/lib/data/activities";
+import { formatScheduleLabel } from "@/lib/post-schedule";
 
 type Props = {
   activities: ActivityDetail[];
@@ -45,6 +46,8 @@ export function AdminActivitiesManager({ activities }: Props) {
       points: act.points,
       imageUrl: act.imageUrl,
       isRegistrationOpen: act.isRegistrationOpen,
+      isActive: act.isActive,
+      publishedAt: act.publishedAt,
     });
     setEditorMode("edit");
     setIsEditorOpen(true);
@@ -194,6 +197,26 @@ export function AdminActivitiesManager({ activities }: Props) {
                         {act.title}
                       </h3>
 
+                      {!act.isActive ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-label-xs font-bold text-slate-600">
+                          <MaterialIcon className="text-[12px]" name="visibility_off" />
+                          Inactive
+                        </span>
+                      ) : act.isScheduled ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 text-label-xs font-bold text-sky-900"
+                          title="Đến giờ hẹn, hoạt động tự hiện với đoàn viên"
+                        >
+                          <MaterialIcon className="text-[12px]" name="schedule_send" />
+                          Hẹn giờ {formatScheduleLabel(act.publishedAt)}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-label-xs font-bold text-emerald-800">
+                          <MaterialIcon className="text-[12px]" name="visibility" />
+                          Active
+                        </span>
+                      )}
+
                       <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-label-xs font-bold text-amber-900">
                         +{act.points}đ
                       </span>
@@ -232,10 +255,16 @@ export function AdminActivitiesManager({ activities }: Props) {
                   <Link
                     href={`/activities/${act.id}`}
                     className="inline-flex items-center gap-1 rounded-xl border border-dusty-border bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-primary hover:bg-dusty-light transition"
-                    title="Xem chi tiết bài viết và danh sách người tham gia"
+                    title={
+                      act.isActive && !act.isScheduled
+                        ? "Xem chi tiết bài viết và danh sách người tham gia"
+                        : "Xem trước hoạt động (chỉ quản trị viên thấy) và danh sách người tham gia"
+                    }
                   >
-                    <MaterialIcon className="text-[16px]" name="groups" />
-                    <span>Xem danh sách ({act.participantCount})</span>
+                    <MaterialIcon className="text-[16px]" name={act.isActive && !act.isScheduled ? "groups" : "visibility"} />
+                    <span>
+                      {act.isActive && !act.isScheduled ? "Xem danh sách" : "Xem trước"} ({act.participantCount})
+                    </span>
                   </Link>
 
                   {/* Toggle registration */}

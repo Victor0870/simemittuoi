@@ -22,6 +22,10 @@ export type Activity = {
   isRegistrationOpen?: boolean;
   participantCount?: number;
   isRegistered?: boolean;
+  /** Không truyền = Active (hoạt động đang hiển thị). */
+  isActive?: boolean;
+  /** Thời điểm bắt đầu hiển thị (ISO); ở tương lai = hẹn giờ. */
+  publishedAt?: string;
 };
 
 export type LeaderboardEntry = {

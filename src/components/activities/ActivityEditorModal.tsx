@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { resizeImageFile } from "@/lib/image-resize";
 import type { Activity } from "@/lib/mock-data";
+import { isScheduledAt, toDateTimeLocalValue } from "@/lib/post-schedule";
+
+function defaultScheduleValue(): string {
+  const d = new Date();
+  d.setMinutes(0, 0, 0);
+  d.setHours(d.getHours() + 1);
+  return toDateTimeLocalValue(d);
+}
 
 type ActivityEditorModalProps = {
   isOpen: boolean;
@@ -30,6 +38,11 @@ export function ActivityEditorModal({
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
+  const [isActive, setIsActive] = useState(true);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState("");
+  const wasScheduled =
+    mode === "edit" && initialActivity?.publishedAt ? isScheduledAt(initialActivity.publishedAt) : false;
 
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -46,6 +59,14 @@ export function ActivityEditorModal({
       setDescription(initialActivity.description || "");
       setImageUrl(initialActivity.imageUrl || null);
       setIsRegistrationOpen(initialActivity.isRegistrationOpen !== false);
+      setIsActive(initialActivity.isActive !== false);
+      const scheduled = initialActivity.publishedAt ? isScheduledAt(initialActivity.publishedAt) : false;
+      setScheduleEnabled(scheduled);
+      setScheduleValue(
+        scheduled && initialActivity.publishedAt
+          ? toDateTimeLocalValue(initialActivity.publishedAt)
+          : defaultScheduleValue(),
+      );
 
       // Extract date YYYY-MM-DD if available
       if (initialActivity.date) {
@@ -72,6 +93,9 @@ export function ActivityEditorModal({
       setDescription("");
       setImageUrl(null);
       setIsRegistrationOpen(true);
+      setIsActive(true);
+      setScheduleEnabled(false);
+      setScheduleValue(defaultScheduleValue());
     }
 
     setErrorMessage(null);
@@ -106,6 +130,22 @@ export function ActivityEditorModal({
       return;
     }
 
+    let scheduledAt: string | null | undefined;
+    if (scheduleEnabled) {
+      const scheduleDate = new Date(scheduleValue);
+      if (!scheduleValue || Number.isNaN(scheduleDate.getTime())) {
+        setErrorMessage("Vui lòng chọn ngày giờ hiển thị hoạt động.");
+        return;
+      }
+      if (scheduleDate.getTime() <= Date.now()) {
+        setErrorMessage("Thời điểm hẹn giờ phải ở tương lai.");
+        return;
+      }
+      scheduledAt = scheduleDate.toISOString();
+    } else if (wasScheduled) {
+      scheduledAt = null;
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
 
@@ -119,6 +159,8 @@ export function ActivityEditorModal({
         description: description.trim() || null,
         imageUrl,
         isRegistrationOpen,
+        isActive,
+        scheduledAt,
       };
 
       if (mode === "edit" && initialActivity) {
@@ -259,6 +301,70 @@ export function ActivityEditorModal({
                 <option value="stopped">🔴 Đã dừng nhận đăng ký (Hết hạn)</option>
               </select>
             </div>
+          </div>
+
+          {/* Hiển thị: Active & hẹn giờ (giống bài viết) */}
+          <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100 transition select-none">
+            <input
+              type="checkbox"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#173A67] focus:ring-[#173A67] cursor-pointer"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-slate-800">
+                <MaterialIcon className="text-[16px] text-[#173A67]" name="visibility" />
+                <span>Active — hiện hoạt động cho mọi người</span>
+              </div>
+              <p className="text-[11px] text-slate-600 leading-normal mt-0.5">
+                Bỏ chọn để giữ Inactive (nháp). Hoạt động Inactive chỉ quản trị viên xem và sửa được.
+              </p>
+            </div>
+          </label>
+
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/60 p-3">
+            <label className="flex items-start gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={scheduleEnabled}
+                onChange={(e) => setScheduleEnabled(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600 cursor-pointer"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5 font-bold text-xs sm:text-sm text-sky-950">
+                  <MaterialIcon className="text-[16px] text-sky-700" name="schedule_send" />
+                  <span>Hẹn giờ hiển thị</span>
+                </div>
+                <p className="text-[11px] text-sky-900/80 leading-normal mt-0.5">
+                  {wasScheduled && !scheduleEnabled
+                    ? "Bỏ hẹn giờ: hoạt động sẽ hiển thị ngay khi lưu."
+                    : "Không chọn = hiển thị ngay. Đến giờ đã chọn, hoạt động tự hiện với đoàn viên; trước đó chỉ quản trị viên xem được."}
+                </p>
+              </div>
+            </label>
+            {scheduleEnabled && (
+              <div className="mt-2.5 space-y-1.5 pl-7">
+                <input
+                  type="datetime-local"
+                  required
+                  step={60}
+                  min={toDateTimeLocalValue(new Date())}
+                  value={scheduleValue}
+                  onChange={(e) => setScheduleValue(e.target.value)}
+                  className="w-full rounded-xl border border-sky-300 bg-white p-2 text-base text-slate-800 focus:border-sky-600 focus:outline-hidden focus:ring-2 focus:ring-sky-600/20 sm:w-auto sm:text-sm"
+                />
+                {mode === "edit" && !wasScheduled && (
+                  <p className="text-[11px] text-sky-900/80">
+                    Hoạt động đang hiển thị sẽ tạm ẩn cho đến giờ hẹn.
+                  </p>
+                )}
+                {!isActive && (
+                  <p className="text-[11px] font-semibold text-amber-800">
+                    Hoạt động đang Inactive: phải bật Active thì đến giờ hoạt động mới hiển thị.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* 4. Ảnh đại diện hoạt động */}

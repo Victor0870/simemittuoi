@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { getCurrentAccess } from "@/lib/auth/guard";
 import { getSessionUserId } from "@/lib/auth/session";
 import { getActivityById } from "@/lib/data/activities";
+import { formatScheduleLabel } from "@/lib/post-schedule";
 import { ActivityDetailActionButtons } from "@/components/activities/ActivityDetailActionButtons";
 
 export const revalidate = 10;
@@ -22,7 +24,16 @@ export default async function ActivityDetailPage({ params }: Props) {
     // ignore
   }
 
-  const activity = await getActivityById(id, currentUserId);
+  let activity = await getActivityById(id, currentUserId);
+  // Hoạt động Inactive / hẹn giờ: chỉ admin xem trước được, người khác coi như không tồn tại.
+  let isPreview = false;
+  if (!activity && currentUserId) {
+    const access = await getCurrentAccess();
+    if (access?.isAdmin) {
+      activity = await getActivityById(id, currentUserId, { includeHidden: true });
+      isPreview = Boolean(activity);
+    }
+  }
   if (!activity) {
     notFound();
   }
@@ -41,6 +52,21 @@ export default async function ActivityDetailPage({ params }: Props) {
         <MaterialIcon className="text-[14px]" name="chevron_right" />
         <span className="line-clamp-1 text-on-surface font-medium">{activity.title}</span>
       </nav>
+
+      {isPreview ? (
+        <p
+          className={`flex items-center gap-1.5 rounded-2xl border px-4 py-2.5 text-xs sm:text-sm font-bold ${
+            activity.isActive
+              ? "border-sky-300 bg-sky-50 text-sky-900"
+              : "border-amber-300 bg-amber-50 text-amber-950"
+          }`}
+        >
+          <MaterialIcon className="text-[18px]" name={activity.isActive ? "schedule_send" : "visibility_off"} />
+          {activity.isActive
+            ? `Xem trước: hoạt động hẹn hiển thị lúc ${formatScheduleLabel(activity.publishedAt)} — đến giờ sẽ tự hiện với đoàn viên.`
+            : "Xem trước: hoạt động đang Inactive — chưa hiện với đoàn viên. Sửa hoạt động rồi bật Active khi muốn hiển thị."}
+        </p>
+      ) : null}
 
       {/* Main Activity Article */}
       <article className="overflow-hidden rounded-3xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm">
@@ -138,12 +164,18 @@ export default async function ActivityDetailPage({ params }: Props) {
 
           {/* Registration Action Buttons */}
           <div className="border-t border-dusty-border/70 pt-5">
-            <ActivityDetailActionButtons
-              activityId={activity.id}
-              activityTitle={activity.title}
-              initialIsRegistered={activity.isRegistered ?? false}
-              initialIsRegistrationOpen={activity.isRegistrationOpen}
-            />
+            {isPreview ? (
+              <p className="text-sm text-on-surface-variant">
+                Nút đăng ký tham gia sẽ hiện khi hoạt động được hiển thị.
+              </p>
+            ) : (
+              <ActivityDetailActionButtons
+                activityId={activity.id}
+                activityTitle={activity.title}
+                initialIsRegistered={activity.isRegistered ?? false}
+                initialIsRegistrationOpen={activity.isRegistrationOpen}
+              />
+            )}
           </div>
         </div>
       </article>

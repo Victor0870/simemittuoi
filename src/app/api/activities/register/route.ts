@@ -33,11 +33,13 @@ export async function POST(request: NextRequest) {
     // Check activity registration status
     const { data: act, error: actErr } = await publicDb
       .from(CDILV_TABLE.activities)
-      .select("id, title, is_registration_open")
+      .select("id, title, is_registration_open, is_active, published_at")
       .eq("id", activityId)
       .maybeSingle();
 
-    if (actErr || !act) {
+    const isVisible =
+      act?.is_active !== false && (!act?.published_at || new Date(act.published_at).getTime() <= Date.now());
+    if (actErr || !act || !isVisible) {
       return NextResponse.json(
         { error: "Hoạt động không tồn tại." },
         { status: 404 },

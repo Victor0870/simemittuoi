@@ -117,6 +117,8 @@ async function loadHomePublicData(): Promise<HomePublicData> {
       .select(
         "id, title, description, location, event_date, points, image_url, image_alt, is_registration_open",
       )
+      .eq("is_active", true)
+      .lte("published_at", new Date().toISOString())
       .order("event_date", { ascending: false })
       .limit(4),
   ]);

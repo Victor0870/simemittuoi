@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { formatScheduleLabel, parseScheduledAt } from "@/lib/post-schedule";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
       imageUrl,
       imageAlt,
       isRegistrationOpen = true,
+      isActive = true,
+      scheduledAt,
     } = body;
 
     const trimmedTitle = (title || "").trim();
@@ -56,6 +59,15 @@ export async function POST(request: NextRequest) {
 
     const pointsNum = Math.max(0, parseInt(String(points), 10) || 0);
 
+    let scheduledIso: string | null = null;
+    if (scheduledAt !== undefined && scheduledAt !== null) {
+      const parsed = parseScheduledAt(scheduledAt);
+      if (!parsed.ok) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
+      }
+      scheduledIso = parsed.iso;
+    }
+
     const { data: newActivity, error: insertErr } = await publicDb
       .from(CDILV_TABLE.activities)
       .insert({
@@ -67,6 +79,8 @@ export async function POST(request: NextRequest) {
         image_url: imageUrl || null,
         image_alt: imageAlt || trimmedTitle,
         is_registration_open: isRegistrationOpen !== false,
+        is_active: isActive !== false,
+        ...(scheduledIso ? { published_at: scheduledIso } : {}),
       })
       .select()
       .single();
@@ -82,7 +96,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Tạo hoạt động mới thành công!",
+      message: scheduledIso
+        ? `Đã tạo hoạt động, hẹn hiển thị lúc ${formatScheduleLabel(scheduledIso)}.`
+        : "Tạo hoạt động mới thành công!",
       activity: newActivity,
     });
   } catch (err: any) {
