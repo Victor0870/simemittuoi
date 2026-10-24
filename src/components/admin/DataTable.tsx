@@ -33,6 +33,7 @@ type DataTableProps<T> = {
   rows: T[];
   columns: DataTableColumn<T>[];
   rowKey: (row: T) => string;
+  rowClassName?: (row: T) => string;
   emptyText?: string;
   defaultPageSize?: DataTablePageSize;
   maxHeightClass?: string;
@@ -58,7 +59,15 @@ function buildCell<T>(column: DataTableColumn<T>, row: T): Cell {
   const type = column.type ?? "text";
   const value = rawValue(column, row);
   if (type === "date") {
-    const date = value == null || value === "" ? null : value instanceof Date ? value : new Date(value);
+    const dateOnly = typeof value === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
+    const date =
+      value == null || value === ""
+        ? null
+        : value instanceof Date
+          ? value
+          : dateOnly
+            ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+            : new Date(value);
     if (!date || Number.isNaN(date.getTime())) return { label: "", norm: "", num: null, day: null, sortValue: null };
     const label = `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
     const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -132,6 +141,7 @@ export function DataTable<T>({
   rows,
   columns,
   rowKey,
+  rowClassName,
   emptyText = "Không có dữ liệu",
   defaultPageSize = 20,
   maxHeightClass = "max-h-[calc(100vh-320px)] min-h-[240px]",
@@ -141,10 +151,11 @@ export function DataTable<T>({
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(null);
   const [pageSize, setPageSize] = useState<DataTablePageSize>(defaultPageSize);
   const [page, setPage] = useState(1);
-  const [rowCount, setRowCount] = useState(rows.length);
+  const rowsSignature = rows.map(rowKey).join("\u0001");
+  const [seenSignature, setSeenSignature] = useState(rowsSignature);
 
-  if (rowCount !== rows.length) {
-    setRowCount(rows.length);
+  if (seenSignature !== rowsSignature) {
+    setSeenSignature(rowsSignature);
     setPage(1);
   }
 
@@ -298,7 +309,10 @@ export function DataTable<T>({
                 </tr>
               ) : (
                 pageRows.map(({ row }) => (
-                  <tr key={rowKey(row)} className="border-t border-outline-variant hover:bg-surface-container-low/50">
+                  <tr
+                    key={rowKey(row)}
+                    className={`border-t border-outline-variant hover:bg-surface-container-low/50 ${rowClassName?.(row) ?? ""}`}
+                  >
                     {columns.map((column) => (
                       <td key={column.key} className={`px-4 py-3 ${column.className ?? ""}`}>
                         {column.render ? column.render(row) : (() => {

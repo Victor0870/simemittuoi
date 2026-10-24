@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { MemberProfileSummary } from "@/lib/members/profile-server";
 import {
@@ -67,6 +68,80 @@ export function OfficeMembersTable({ rows }: Props) {
       return true;
     });
   }, [rows, search, dept, status, marital]);
+
+  const columns: DataTableColumn<MemberProfileSummary>[] = [
+    {
+      key: "employee_code",
+      header: "Mã NV",
+      className: "font-semibold text-[#173A67] whitespace-nowrap",
+      render: (r) => r.employee_code ?? "—",
+    },
+    {
+      key: "full_name",
+      header: "Họ tên",
+      render: (r) => (
+        <Link className="font-semibold text-[#173A67] hover:underline" href={`/office/members/${r.id}`}>
+          {r.full_name}
+        </Link>
+      ),
+    },
+    {
+      key: "department",
+      header: "Bộ phận",
+      type: "enum",
+      className: "text-on-surface-variant",
+      render: (r) => r.department ?? "—",
+    },
+    {
+      key: "date_of_birth",
+      header: "Ngày sinh",
+      type: "date",
+      className: "whitespace-nowrap",
+      render: (r) => formatDateVi(r.date_of_birth),
+    },
+    {
+      key: "marital_status",
+      header: "Hôn nhân",
+      type: "enum",
+      accessor: (r) => (r.marital_status ? MARITAL_STATUS_LABEL[r.marital_status] : null),
+      className: "whitespace-nowrap",
+      headerClassName: "whitespace-nowrap",
+      render: (r) => (r.marital_status ? MARITAL_STATUS_LABEL[r.marital_status] : "—"),
+    },
+    {
+      key: "children_count",
+      header: "Số con",
+      type: "number",
+      className: "text-center",
+      headerClassName: "text-center",
+      render: (r) => r.children_count || "—",
+    },
+    {
+      key: "completeness",
+      header: "Hồ sơ",
+      type: "enum",
+      accessor: (r) =>
+        r.completeness_done === r.completeness_total ? "Đã khai đủ" : r.completeness_done === 0 ? "Chưa khai" : "Chưa đủ",
+      className: "whitespace-nowrap",
+      render: (r) => {
+        const complete = r.completeness_done === r.completeness_total;
+        return (
+          <span
+            className={`rounded-full px-2 py-1 text-xs font-bold ${
+              complete
+                ? "bg-[#D9F2EC] text-[#173A67]"
+                : r.completeness_done === 0
+                  ? "bg-error-container text-on-error-container"
+                  : "bg-amber-100 text-amber-900"
+            }`}
+            title={r.missing.length ? `Còn thiếu: ${r.missing.join(", ")}` : "Đã khai đủ"}
+          >
+            {complete ? "Đủ" : `${r.completeness_done}/${r.completeness_total}`}
+          </span>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-4">
@@ -134,63 +209,12 @@ export function OfficeMembersTable({ rows }: Props) {
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            <tr>
-              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Mã NV</th>
-              <th className="px-3 py-2.5 font-bold">Họ tên</th>
-              <th className="px-3 py-2.5 font-bold">Bộ phận</th>
-              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Ngày sinh</th>
-              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Hôn nhân</th>
-              <th className="px-3 py-2.5 text-center font-bold whitespace-nowrap">Số con</th>
-              <th className="px-3 py-2.5 font-bold whitespace-nowrap">Hồ sơ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={7}>
-                  Không có đoàn viên phù hợp.
-                </td>
-              </tr>
-            ) : null}
-            {filtered.map((r) => {
-              const complete = r.completeness_done === r.completeness_total;
-              return (
-                <tr key={r.id} className="border-t border-outline-variant hover:bg-surface-container-low/60">
-                  <td className="px-3 py-2.5 font-semibold text-[#173A67]">{r.employee_code ?? "—"}</td>
-                  <td className="px-3 py-2.5">
-                    <Link className="font-semibold text-[#173A67] hover:underline" href={`/office/members/${r.id}`}>
-                      {r.full_name}
-                    </Link>
-                  </td>
-                  <td className="px-3 py-2.5 text-on-surface-variant">{r.department ?? "—"}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">{formatDateVi(r.date_of_birth)}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    {r.marital_status ? MARITAL_STATUS_LABEL[r.marital_status] : "—"}
-                  </td>
-                  <td className="px-3 py-2.5 text-center">{r.children_count || "—"}</td>
-                  <td className="px-3 py-2.5 whitespace-nowrap">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-bold ${
-                        complete
-                          ? "bg-[#D9F2EC] text-[#173A67]"
-                          : r.completeness_done === 0
-                            ? "bg-error-container text-on-error-container"
-                            : "bg-amber-100 text-amber-900"
-                      }`}
-                      title={r.missing.length ? `Còn thiếu: ${r.missing.join(", ")}` : "Đã khai đủ"}
-                    >
-                      {complete ? "Đủ" : `${r.completeness_done}/${r.completeness_total}`}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={columns}
+        emptyText="Không có đoàn viên phù hợp."
+        rowKey={(r) => r.id}
+        rows={filtered}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -78,20 +79,6 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
   const [regFilter, setRegFilter] = useState("all");
   const [activeFilter, setActiveFilter] = useState("all");
   const [hardshipFilter, setHardshipFilter] = useState<"all" | "yes" | "no">("all");
-
-  // Sắp xếp cột
-  type SortColumn = "code" | "name" | "dept" | "reg" | "status";
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>("code");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  function handleSort(col: SortColumn) {
-    if (sortColumn === col) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(col);
-      setSortDirection("asc");
-    }
-  }
 
   const hasActiveFilters = Boolean(
     search.trim() ||
@@ -195,27 +182,7 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
       return true;
     });
 
-    if (!sortColumn) return list;
-
-    return [...list].sort((a, b) => {
-      let cmp = 0;
-      if (sortColumn === "code") {
-        cmp = a.employee_code.localeCompare(b.employee_code, "vi", { numeric: true });
-      } else if (sortColumn === "name") {
-        cmp = a.full_name.localeCompare(b.full_name, "vi");
-      } else if (sortColumn === "dept") {
-        const dA = a.department ?? "";
-        const dB = b.department ?? "";
-        cmp = dA.localeCompare(dB, "vi");
-      } else if (sortColumn === "reg") {
-        const rA = registeredStatus[a.employee_code.toUpperCase()] ?? "";
-        const rB = registeredStatus[b.employee_code.toUpperCase()] ?? "";
-        cmp = rA.localeCompare(rB, "vi");
-      } else if (sortColumn === "status") {
-        cmp = (a.is_active ? 1 : 0) - (b.is_active ? 1 : 0);
-      }
-      return sortDirection === "asc" ? cmp : -cmp;
-    });
+    return [...list].sort((a, b) => a.employee_code.localeCompare(b.employee_code, "vi", { numeric: true }));
   }, [
     employees,
     registeredStatus,
@@ -226,8 +193,6 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
     regFilter,
     activeFilter,
     hardshipFilter,
-    sortColumn,
-    sortDirection,
   ]);
 
   const normalizedCode = normalizeEmployeeCode(code);
@@ -355,6 +320,183 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
 
     router.refresh();
   }
+
+  const columns: DataTableColumn<WhitelistEmployeeRow>[] = [
+    {
+      key: "employee_code",
+      header: "Mã NV",
+      className: "font-semibold text-[#173A67]",
+    },
+    {
+      key: "full_name",
+      header: "Họ tên",
+      render: (row) =>
+        editingCode === row.employee_code ? (
+          <input
+            className={inputClass}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+          />
+        ) : (
+          row.full_name
+        ),
+    },
+    {
+      key: "department",
+      header: "Bộ phận",
+      type: "enum",
+      className: "text-on-surface-variant",
+      render: (row) =>
+        editingCode === row.employee_code ? (
+          <input
+            className={inputClass}
+            list="whitelistDepartments"
+            value={editDept}
+            onChange={(e) => setEditDept(e.target.value)}
+          />
+        ) : (
+          (row.department ?? "—")
+        ),
+    },
+    {
+      key: "registration",
+      header: "Tài khoản",
+      type: "enum",
+      accessor: (row) =>
+        REGISTRATION_LABEL[registeredStatus[row.employee_code.toUpperCase()] ?? ""]?.label ?? "Chưa đăng ký",
+      render: (row) => {
+        const registration =
+          REGISTRATION_LABEL[registeredStatus[row.employee_code.toUpperCase()] ?? ""];
+        return registration ? (
+          <span
+            className={`rounded-full px-2 py-1 text-xs font-bold ${registration.className}`}
+          >
+            {registration.label}
+          </span>
+        ) : (
+          <span className="text-xs text-on-surface-variant">Chưa đăng ký</span>
+        );
+      },
+    },
+    {
+      key: "is_active",
+      header: "Trạng thái",
+      type: "enum",
+      accessor: (row) => (row.is_active ? "Cho phép" : "Đã ngừng"),
+      render: (row) => (
+        <span
+          className={`rounded-full px-2 py-1 text-xs font-bold ${
+            row.is_active
+              ? "bg-[#D9F2EC] text-[#173A67]"
+              : "bg-surface-container-high text-on-surface-variant"
+          }`}
+        >
+          {row.is_active ? "Cho phép" : "Đã ngừng"}
+        </span>
+      ),
+    },
+    {
+      key: "is_hardship",
+      header: "Diện khó khăn",
+      type: "enum",
+      accessor: (row) => (row.is_hardship ? "Khó khăn" : "Bình thường"),
+      className: "text-xs",
+      render: (row) =>
+        editingCode === row.employee_code ? (
+          <div className="min-w-[180px] space-y-1.5">
+            <label className="flex items-center gap-2 font-semibold">
+              <input
+                checked={editHardship}
+                className="h-4 w-4 accent-amber-700"
+                type="checkbox"
+                onChange={(e) => setEditHardship(e.target.checked)}
+              />
+              Thuộc diện khó khăn
+            </label>
+            {editHardship ? (
+              <input
+                className={`${inputClass} text-xs`}
+                maxLength={HARDSHIP_NOTE_MAX}
+                placeholder="Ghi chú hoàn cảnh (không bắt buộc)"
+                value={editHardshipNote}
+                onChange={(e) => setEditHardshipNote(e.target.value)}
+              />
+            ) : null}
+          </div>
+        ) : row.is_hardship ? (
+          <div className="max-w-[220px]">
+            <span className="rounded-full bg-amber-100 px-2 py-1 font-bold text-amber-900">
+              Khó khăn
+            </span>
+            {row.hardship_note ? (
+              <p className="mt-1 line-clamp-2 text-on-surface-variant" title={row.hardship_note}>
+                {row.hardship_note}
+              </p>
+            ) : null}
+          </div>
+        ) : (
+          <span className="text-on-surface-variant">—</span>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      render: (row) => {
+        const isEditing = editingCode === row.employee_code;
+        const isBusy = busyCode === row.employee_code;
+        return (
+          <div className="flex flex-wrap gap-2">
+            {!canManage ? (
+              <span className="text-xs text-on-surface-variant">Chỉ xem</span>
+            ) : isEditing ? (
+              <>
+                <button
+                  className="rounded-lg bg-tertiary px-3 py-1.5 text-xs font-bold text-on-tertiary disabled:opacity-50"
+                  disabled={isBusy}
+                  type="button"
+                  onClick={() => void saveEdit(row)}
+                >
+                  Lưu
+                </button>
+                <button
+                  className="rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-bold text-on-surface-variant"
+                  disabled={isBusy}
+                  type="button"
+                  onClick={() => setEditingCode(null)}
+                >
+                  Hủy
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="rounded-lg border border-[#173A67] px-3 py-1.5 text-xs font-bold text-[#173A67] disabled:opacity-50"
+                  disabled={isBusy}
+                  type="button"
+                  onClick={() => startEdit(row)}
+                >
+                  Sửa
+                </button>
+                <button
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50 ${
+                    row.is_active
+                      ? "border border-error text-error"
+                      : "bg-tertiary text-on-tertiary"
+                  }`}
+                  disabled={isBusy}
+                  type="button"
+                  onClick={() => void toggleActive(row)}
+                >
+                  {row.is_active ? "Ngừng" : "Kích hoạt"}
+                </button>
+              </>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -574,400 +716,115 @@ export function AdminEmployeesManager({ employees, registeredStatus, canManage =
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            {/* Hàng 1: Tiêu đề cột & Nút bấm sắp xếp */}
-            <tr className="border-b border-[#173A67]/15">
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("code")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Bấm để sắp xếp theo Mã NV"
-                >
-                  <span>Mã NV</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "code"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("name")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Bấm để sắp xếp theo Họ tên"
-                >
-                  <span>Họ tên</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "name"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("dept")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Bấm để sắp xếp theo Bộ phận"
-                >
-                  <span>Bộ phận</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "dept"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("reg")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Bấm để sắp xếp theo Trạng thái tài khoản"
-                >
-                  <span>Tài khoản</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "reg"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("status")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Bấm để sắp xếp theo Trạng thái"
-                >
-                  <span>Trạng thái</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "status"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 font-bold text-[#173A67] whitespace-nowrap">Diện khó khăn</th>
-              <th className="px-3 py-2.5 text-right font-bold text-[#173A67] whitespace-nowrap">
-                Thao tác
-              </th>
-            </tr>
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-outline-variant bg-surface-container-low/80 p-2">
+        <span className="px-1 text-[11px] font-medium text-on-surface-variant/60 whitespace-nowrap">Bộ lọc cột</span>
 
-            {/* Hàng 2: Bộ lọc riêng từng cột */}
-            <tr className="bg-surface-container-low/80 border-b border-outline-variant font-normal">
-              {/* Cột 1: Lọc Mã NV */}
-              <th className="p-2 font-normal">
-                <div className="relative flex items-center min-w-[90px]">
-                  <input
-                    type="text"
-                    value={codeFilter}
-                    onChange={(e) => setCodeFilter(e.target.value)}
-                    placeholder="Lọc mã..."
-                    className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                  />
-                  {codeFilter ? (
-                    <button
-                      type="button"
-                      onClick={() => setCodeFilter("")}
-                      className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
-                      title="Xóa lọc mã"
-                    >
-                      <MaterialIcon className="text-[14px]" name="close" />
-                    </button>
-                  ) : null}
-                </div>
-              </th>
+        {/* Lọc Mã NV */}
+        <div className="relative flex w-[120px] items-center">
+          <input
+            aria-label="Lọc mã NV"
+            type="text"
+            value={codeFilter}
+            onChange={(e) => setCodeFilter(e.target.value)}
+            placeholder="Lọc mã..."
+            className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
+          />
+          {codeFilter ? (
+            <button
+              type="button"
+              onClick={() => setCodeFilter("")}
+              className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
+              title="Xóa lọc mã"
+            >
+              <MaterialIcon className="text-[14px]" name="close" />
+            </button>
+          ) : null}
+        </div>
 
-              {/* Cột 2: Lọc Họ tên */}
-              <th className="p-2 font-normal">
-                <div className="relative flex items-center min-w-[130px]">
-                  <input
-                    type="text"
-                    value={nameFilter}
-                    onChange={(e) => setNameFilter(e.target.value)}
-                    placeholder="Lọc họ tên..."
-                    className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                  />
-                  {nameFilter ? (
-                    <button
-                      type="button"
-                      onClick={() => setNameFilter("")}
-                      className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
-                      title="Xóa lọc họ tên"
-                    >
-                      <MaterialIcon className="text-[14px]" name="close" />
-                    </button>
-                  ) : null}
-                </div>
-              </th>
+        {/* Lọc Họ tên */}
+        <div className="relative flex w-[170px] items-center">
+          <input
+            aria-label="Lọc họ tên"
+            type="text"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            placeholder="Lọc họ tên..."
+            className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
+          />
+          {nameFilter ? (
+            <button
+              type="button"
+              onClick={() => setNameFilter("")}
+              className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
+              title="Xóa lọc họ tên"
+            >
+              <MaterialIcon className="text-[14px]" name="close" />
+            </button>
+          ) : null}
+        </div>
 
-              {/* Cột 3: Lọc Bộ phận */}
-              <th className="p-2 font-normal">
-                <select
-                  value={deptFilter}
-                  onChange={(e) => setDeptFilter(e.target.value)}
-                  className="w-full min-w-[120px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả ({departments.length})</option>
-                  {departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                  <option value="__none__">Chưa có bộ phận</option>
-                </select>
-              </th>
+        {/* Lọc Bộ phận */}
+        <select
+          aria-label="Lọc bộ phận"
+          value={deptFilter}
+          onChange={(e) => setDeptFilter(e.target.value)}
+          className="min-w-[120px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Tất cả bộ phận ({departments.length})</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+          <option value="__none__">Chưa có bộ phận</option>
+        </select>
 
-              {/* Cột 4: Lọc Tài khoản */}
-              <th className="p-2 font-normal">
-                <select
-                  value={regFilter}
-                  onChange={(e) => setRegFilter(e.target.value)}
-                  className="w-full min-w-[110px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả tài khoản</option>
-                  <option value="approved">Đã duyệt</option>
-                  <option value="pending">Chờ duyệt</option>
-                  <option value="rejected">Bị từ chối</option>
-                  <option value="unregistered">Chưa đăng ký</option>
-                </select>
-              </th>
+        {/* Lọc Tài khoản */}
+        <select
+          aria-label="Lọc tài khoản"
+          value={regFilter}
+          onChange={(e) => setRegFilter(e.target.value)}
+          className="min-w-[110px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Tất cả tài khoản</option>
+          <option value="approved">Đã duyệt</option>
+          <option value="pending">Chờ duyệt</option>
+          <option value="rejected">Bị từ chối</option>
+          <option value="unregistered">Chưa đăng ký</option>
+        </select>
 
-              {/* Cột 5: Lọc Trạng thái hoạt động */}
-              <th className="p-2 font-normal">
-                <select
-                  value={activeFilter}
-                  onChange={(e) => setActiveFilter(e.target.value)}
-                  className="w-full min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="active">Cho phép</option>
-                  <option value="inactive">Đã ngừng</option>
-                </select>
-              </th>
+        {/* Lọc Trạng thái hoạt động */}
+        <select
+          aria-label="Lọc trạng thái"
+          value={activeFilter}
+          onChange={(e) => setActiveFilter(e.target.value)}
+          className="min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Mọi trạng thái</option>
+          <option value="active">Cho phép</option>
+          <option value="inactive">Đã ngừng</option>
+        </select>
 
-              {/* Cột 6: Lọc Diện khó khăn */}
-              <th className="p-2 font-normal">
-                <select
-                  value={hardshipFilter}
-                  onChange={(e) => setHardshipFilter(e.target.value as typeof hardshipFilter)}
-                  className="w-full min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="yes">Khó khăn</option>
-                  <option value="no">Bình thường</option>
-                </select>
-              </th>
-
-              {/* Cột 7: Thao tác & Reset filter */}
-              <th className="p-2 text-right font-normal">
-                {hasActiveFilters ? (
-                  <button
-                    type="button"
-                    onClick={clearAllFilters}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-100 transition shadow-2xs whitespace-nowrap"
-                    title="Xóa tất cả các bộ lọc cột đang chọn"
-                  >
-                    <MaterialIcon className="text-[13px]" name="filter_alt_off" />
-                    <span>Xóa lọc</span>
-                  </button>
-                ) : (
-                  <span className="text-[11px] font-medium text-on-surface-variant/60 whitespace-nowrap">
-                    Bộ lọc cột
-                  </span>
-                )}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-center text-on-surface-variant" colSpan={7}>
-                  Không có nhân viên phù hợp.
-                </td>
-              </tr>
-            ) : null}
-            {filtered.map((row) => {
-              const isEditing = editingCode === row.employee_code;
-              const isBusy = busyCode === row.employee_code;
-              const registration =
-                REGISTRATION_LABEL[registeredStatus[row.employee_code.toUpperCase()] ?? ""];
-
-              return (
-                <tr
-                  key={row.employee_code}
-                  className={`border-t border-outline-variant ${row.is_active ? "" : "opacity-60"}`}
-                >
-                  <td className="px-4 py-3 font-semibold text-[#173A67]">{row.employee_code}</td>
-                  <td className="px-4 py-3">
-                    {isEditing ? (
-                      <input
-                        className={inputClass}
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                      />
-                    ) : (
-                      row.full_name
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-on-surface-variant">
-                    {isEditing ? (
-                      <input
-                        className={inputClass}
-                        list="whitelistDepartments"
-                        value={editDept}
-                        onChange={(e) => setEditDept(e.target.value)}
-                      />
-                    ) : (
-                      (row.department ?? "—")
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {registration ? (
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-bold ${registration.className}`}
-                      >
-                        {registration.label}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-on-surface-variant">Chưa đăng ký</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-bold ${
-                        row.is_active
-                          ? "bg-[#D9F2EC] text-[#173A67]"
-                          : "bg-surface-container-high text-on-surface-variant"
-                      }`}
-                    >
-                      {row.is_active ? "Cho phép" : "Đã ngừng"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    {isEditing ? (
-                      <div className="min-w-[180px] space-y-1.5">
-                        <label className="flex items-center gap-2 font-semibold">
-                          <input
-                            checked={editHardship}
-                            className="h-4 w-4 accent-amber-700"
-                            type="checkbox"
-                            onChange={(e) => setEditHardship(e.target.checked)}
-                          />
-                          Thuộc diện khó khăn
-                        </label>
-                        {editHardship ? (
-                          <input
-                            className={`${inputClass} text-xs`}
-                            maxLength={HARDSHIP_NOTE_MAX}
-                            placeholder="Ghi chú hoàn cảnh (không bắt buộc)"
-                            value={editHardshipNote}
-                            onChange={(e) => setEditHardshipNote(e.target.value)}
-                          />
-                        ) : null}
-                      </div>
-                    ) : row.is_hardship ? (
-                      <div className="max-w-[220px]">
-                        <span className="rounded-full bg-amber-100 px-2 py-1 font-bold text-amber-900">
-                          Khó khăn
-                        </span>
-                        {row.hardship_note ? (
-                          <p className="mt-1 line-clamp-2 text-on-surface-variant" title={row.hardship_note}>
-                            {row.hardship_note}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <span className="text-on-surface-variant">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      {!canManage ? (
-                        <span className="text-xs text-on-surface-variant">Chỉ xem</span>
-                      ) : isEditing ? (
-                        <>
-                          <button
-                            className="rounded-lg bg-tertiary px-3 py-1.5 text-xs font-bold text-on-tertiary disabled:opacity-50"
-                            disabled={isBusy}
-                            type="button"
-                            onClick={() => void saveEdit(row)}
-                          >
-                            Lưu
-                          </button>
-                          <button
-                            className="rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-bold text-on-surface-variant"
-                            disabled={isBusy}
-                            type="button"
-                            onClick={() => setEditingCode(null)}
-                          >
-                            Hủy
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            className="rounded-lg border border-[#173A67] px-3 py-1.5 text-xs font-bold text-[#173A67] disabled:opacity-50"
-                            disabled={isBusy}
-                            type="button"
-                            onClick={() => startEdit(row)}
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            className={`rounded-lg px-3 py-1.5 text-xs font-bold disabled:opacity-50 ${
-                              row.is_active
-                                ? "border border-error text-error"
-                                : "bg-tertiary text-on-tertiary"
-                            }`}
-                            disabled={isBusy}
-                            type="button"
-                            onClick={() => void toggleActive(row)}
-                          >
-                            {row.is_active ? "Ngừng" : "Kích hoạt"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Lọc Diện khó khăn */}
+        <select
+          aria-label="Lọc diện khó khăn"
+          value={hardshipFilter}
+          onChange={(e) => setHardshipFilter(e.target.value as typeof hardshipFilter)}
+          className="min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Mọi hoàn cảnh</option>
+          <option value="yes">Khó khăn</option>
+          <option value="no">Bình thường</option>
+        </select>
       </div>
+
+      <DataTable
+        columns={columns}
+        emptyText="Không có nhân viên phù hợp."
+        rowClassName={(row) => (row.is_active ? "" : "opacity-60")}
+        rowKey={(row) => row.employee_code}
+        rows={filtered}
+      />
     </div>
   );
 }

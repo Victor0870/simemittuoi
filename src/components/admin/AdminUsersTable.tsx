@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { TempPasswordDialog, useTempPasswordReset } from "@/components/admin/TempPasswordReset";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
@@ -49,20 +50,6 @@ export function AdminUsersTable({ users }: Props) {
   const [deptFilter, setDeptFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [roleFilter, setRoleFilter] = useState("all");
-
-  // Sắp xếp
-  type SortColumn = "code" | "name" | "dept" | "status" | "role";
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>("name");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
-
-  function handleSort(col: SortColumn) {
-    if (sortColumn === col) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortColumn(col);
-      setSortDirection("asc");
-    }
-  }
 
   const departments = useMemo(() => {
     const set = new Set<string>();
@@ -136,24 +123,98 @@ export function AdminUsersTable({ users }: Props) {
       return true;
     });
 
-    if (!sortColumn) return list;
+    return [...list].sort((a, b) => a.full_name.localeCompare(b.full_name, "vi"));
+  }, [users, search, codeFilter, nameFilter, deptFilter, statusFilter, roleFilter]);
 
-    return [...list].sort((a, b) => {
-      let cmp = 0;
-      if (sortColumn === "code") {
-        cmp = (a.employee_code ?? "").localeCompare(b.employee_code ?? "", "vi", { numeric: true });
-      } else if (sortColumn === "name") {
-        cmp = a.full_name.localeCompare(b.full_name, "vi");
-      } else if (sortColumn === "dept") {
-        cmp = (a.department ?? "").localeCompare(b.department ?? "", "vi");
-      } else if (sortColumn === "status") {
-        cmp = a.approval_status.localeCompare(b.approval_status, "vi");
-      } else if (sortColumn === "role") {
-        cmp = a.role.localeCompare(b.role, "vi");
-      }
-      return sortDirection === "asc" ? cmp : -cmp;
-    });
-  }, [users, search, codeFilter, nameFilter, deptFilter, statusFilter, roleFilter, sortColumn, sortDirection]);
+  const columns: DataTableColumn<AdminUserRow>[] = [
+    {
+      key: "employee_code",
+      header: "Mã NV",
+      className: "font-semibold text-[#173A67]",
+      render: (row) => row.employee_code ?? "—",
+    },
+    {
+      key: "full_name",
+      header: "Họ tên",
+      className: "font-semibold text-on-surface",
+    },
+    {
+      key: "department",
+      header: "Bộ phận",
+      type: "enum",
+      className: "text-on-surface-variant",
+      render: (row) => row.department ?? "—",
+    },
+    {
+      key: "approval_status",
+      header: "Trạng thái",
+      type: "enum",
+      accessor: (row) => STATUS_MAP[row.approval_status]?.label ?? row.approval_status,
+      render: (row) => {
+        const statusCfg = STATUS_MAP[row.approval_status] ?? {
+          label: row.approval_status,
+          className: "bg-surface-container-high text-on-surface",
+        };
+        return (
+          <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${statusCfg.className}`}>
+            {statusCfg.label}
+          </span>
+        );
+      },
+    },
+    {
+      key: "role",
+      header: "Vai trò",
+      type: "enum",
+      accessor: (row) => (row.role === "admin" ? "Admin" : "Đoàn viên"),
+      className: "text-xs font-semibold text-on-surface-variant",
+      render: (row) =>
+        row.role === "admin" ? (
+          <span className="rounded-md bg-purple-50 text-purple-700 px-2 py-0.5 border border-purple-200">
+            Admin
+          </span>
+        ) : (
+          "Đoàn viên"
+        ),
+    },
+    {
+      key: "actions",
+      header: "Thao tác",
+      filterable: false,
+      className: "text-right",
+      headerClassName: "text-right",
+      render: (row) => (
+        <div className="flex flex-wrap justify-end gap-1.5">
+          <button
+            className="rounded-lg bg-tertiary px-3 py-1.5 text-xs font-bold text-on-tertiary transition hover:shadow-xs disabled:opacity-50"
+            disabled={busyId === row.id || row.approval_status === "approved"}
+            type="button"
+            onClick={() => void updateStatus(row.id, "approved")}
+          >
+            Duyệt
+          </button>
+          <button
+            className="rounded-lg border border-error px-3 py-1.5 text-xs font-bold text-error transition hover:bg-error/10 disabled:opacity-50"
+            disabled={busyId === row.id || row.approval_status === "rejected"}
+            type="button"
+            onClick={() => void updateStatus(row.id, "rejected")}
+          >
+            Từ chối
+          </button>
+          <button
+            className="inline-flex items-center gap-1 rounded-lg border border-[#173A67]/40 px-2.5 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#173A67]/5 disabled:opacity-50"
+            disabled={tempReset.busyUserId === row.id}
+            title="Cấp mật khẩu tạm khi đoàn viên quên mật khẩu"
+            type="button"
+            onClick={() => void tempReset.issue(row.id, row.full_name)}
+          >
+            <MaterialIcon className="text-[15px]" name="key" />
+            MK tạm
+          </button>
+        </div>
+      ),
+    },
+  ];
 
   async function updateStatus(userId: string, approval_status: "approved" | "rejected") {
     setBusyId(userId);
@@ -295,301 +356,101 @@ export function AdminUsersTable({ users }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-outline-variant bg-surface-container-lowest">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-[#D9F2EC] text-[#173A67]">
-            {/* Hàng 1: Tiêu đề cột & Sắp xếp */}
-            <tr className="border-b border-[#173A67]/15">
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("code")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Sắp xếp theo Mã NV"
-                >
-                  <span>Mã NV</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "code"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("name")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Sắp xếp theo Họ tên"
-                >
-                  <span>Họ tên</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "name"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("dept")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Sắp xếp theo Bộ phận"
-                >
-                  <span>Bộ phận</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "dept"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("status")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Sắp xếp theo Trạng thái"
-                >
-                  <span>Trạng thái</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "status"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 whitespace-nowrap">
-                <button
-                  type="button"
-                  onClick={() => handleSort("role")}
-                  className="inline-flex items-center gap-1 font-bold text-[#173A67] hover:text-primary transition"
-                  title="Sắp xếp theo Vai trò"
-                >
-                  <span>Vai trò</span>
-                  <MaterialIcon
-                    className="text-[16px]"
-                    name={
-                      sortColumn === "role"
-                        ? sortDirection === "asc"
-                          ? "arrow_upward"
-                          : "arrow_downward"
-                        : "unfold_more"
-                    }
-                  />
-                </button>
-              </th>
-              <th className="px-3 py-2.5 text-right font-bold text-[#173A67] whitespace-nowrap">
-                Thao tác
-              </th>
-            </tr>
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-outline-variant bg-surface-container-low/80 p-2">
+        <span className="px-1 text-[11px] font-medium text-on-surface-variant/60 whitespace-nowrap">Bộ lọc cột</span>
 
-            {/* Hàng 2: Bộ lọc riêng từng cột */}
-            <tr className="bg-surface-container-low/80 border-b border-outline-variant font-normal">
-              {/* Cột 1: Lọc Mã NV */}
-              <th className="p-2 font-normal">
-                <div className="relative flex items-center min-w-[90px]">
-                  <input
-                    type="text"
-                    value={codeFilter}
-                    onChange={(e) => setCodeFilter(e.target.value)}
-                    placeholder="Lọc mã..."
-                    className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                  />
-                  {codeFilter ? (
-                    <button
-                      type="button"
-                      onClick={() => setCodeFilter("")}
-                      className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
-                      title="Xóa lọc mã"
-                    >
-                      <MaterialIcon className="text-[14px]" name="close" />
-                    </button>
-                  ) : null}
-                </div>
-              </th>
+        {/* Lọc Mã NV */}
+        <div className="relative flex w-[120px] items-center">
+          <input
+            aria-label="Lọc mã NV"
+            type="text"
+            value={codeFilter}
+            onChange={(e) => setCodeFilter(e.target.value)}
+            placeholder="Lọc mã..."
+            className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
+          />
+          {codeFilter ? (
+            <button
+              type="button"
+              onClick={() => setCodeFilter("")}
+              className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
+              title="Xóa lọc mã"
+            >
+              <MaterialIcon className="text-[14px]" name="close" />
+            </button>
+          ) : null}
+        </div>
 
-              {/* Cột 2: Lọc Họ tên */}
-              <th className="p-2 font-normal">
-                <div className="relative flex items-center min-w-[130px]">
-                  <input
-                    type="text"
-                    value={nameFilter}
-                    onChange={(e) => setNameFilter(e.target.value)}
-                    placeholder="Lọc họ tên..."
-                    className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                  />
-                  {nameFilter ? (
-                    <button
-                      type="button"
-                      onClick={() => setNameFilter("")}
-                      className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
-                      title="Xóa lọc tên"
-                    >
-                      <MaterialIcon className="text-[14px]" name="close" />
-                    </button>
-                  ) : null}
-                </div>
-              </th>
+        {/* Lọc Họ tên */}
+        <div className="relative flex w-[170px] items-center">
+          <input
+            aria-label="Lọc họ tên"
+            type="text"
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            placeholder="Lọc họ tên..."
+            className="w-full rounded-lg border border-outline-variant bg-white px-2 py-1 pr-6 text-xs text-on-surface outline-none focus:border-[#173A67]"
+          />
+          {nameFilter ? (
+            <button
+              type="button"
+              onClick={() => setNameFilter("")}
+              className="absolute right-1.5 text-on-surface-variant/60 hover:text-on-surface"
+              title="Xóa lọc tên"
+            >
+              <MaterialIcon className="text-[14px]" name="close" />
+            </button>
+          ) : null}
+        </div>
 
-              {/* Cột 3: Lọc Bộ phận */}
-              <th className="p-2 font-normal">
-                <select
-                  value={deptFilter}
-                  onChange={(e) => setDeptFilter(e.target.value)}
-                  className="w-full min-w-[120px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả ({departments.length})</option>
-                  {departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                  <option value="__none__">Chưa có bộ phận</option>
-                </select>
-              </th>
+        {/* Lọc Bộ phận */}
+        <select
+          aria-label="Lọc bộ phận"
+          value={deptFilter}
+          onChange={(e) => setDeptFilter(e.target.value)}
+          className="min-w-[120px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Tất cả bộ phận ({departments.length})</option>
+          {departments.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+          <option value="__none__">Chưa có bộ phận</option>
+        </select>
 
-              {/* Cột 4: Lọc Trạng thái duyệt */}
-              <th className="p-2 font-normal">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full min-w-[110px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="pending">Chờ duyệt</option>
-                  <option value="approved">Đã duyệt</option>
-                  <option value="rejected">Bị từ chối</option>
-                </select>
-              </th>
+        {/* Lọc Trạng thái duyệt */}
+        <select
+          aria-label="Lọc trạng thái"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="min-w-[110px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Mọi trạng thái</option>
+          <option value="pending">Chờ duyệt</option>
+          <option value="approved">Đã duyệt</option>
+          <option value="rejected">Bị từ chối</option>
+        </select>
 
-              {/* Cột 5: Lọc Vai trò */}
-              <th className="p-2 font-normal">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
-                >
-                  <option value="all">Tất cả</option>
-                  <option value="admin">Quản trị viên</option>
-                  <option value="user">Đoàn viên</option>
-                </select>
-              </th>
-
-              {/* Cột 6: Thao tác & Reset filter */}
-              <th className="p-2 text-right font-normal">
-                {hasActiveFilters ? (
-                  <button
-                    type="button"
-                    onClick={clearAllFilters}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-100 transition shadow-2xs whitespace-nowrap"
-                    title="Xóa tất cả các bộ lọc đang chọn"
-                  >
-                    <MaterialIcon className="text-[13px]" name="filter_alt_off" />
-                    <span>Xóa lọc</span>
-                  </button>
-                ) : (
-                  <span className="text-[11px] font-medium text-on-surface-variant/60 whitespace-nowrap">
-                    Bộ lọc cột
-                  </span>
-                )}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredAndSorted.length === 0 ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-on-surface-variant" colSpan={6}>
-                  <MaterialIcon className="mx-auto mb-1 text-[28px] text-on-surface-variant/40" name="search_off" />
-                  <p className="font-semibold text-on-surface">Không tìm thấy tài khoản phù hợp với bộ lọc.</p>
-                </td>
-              </tr>
-            ) : null}
-            {filteredAndSorted.map((row) => {
-              const statusCfg = STATUS_MAP[row.approval_status] ?? {
-                label: row.approval_status,
-                className: "bg-surface-container-high text-on-surface",
-              };
-              return (
-                <tr key={row.id} className="border-t border-outline-variant hover:bg-surface-container-low/50 transition">
-                  <td className="px-4 py-3 font-semibold text-[#173A67]">
-                    {row.employee_code ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 font-semibold text-on-surface">{row.full_name}</td>
-                  <td className="px-4 py-3 text-on-surface-variant">
-                    {row.department ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${statusCfg.className}`}>
-                      {statusCfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs font-semibold text-on-surface-variant">
-                    {row.role === "admin" ? (
-                      <span className="rounded-md bg-purple-50 text-purple-700 px-2 py-0.5 border border-purple-200">
-                        Admin
-                      </span>
-                    ) : (
-                      "Đoàn viên"
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5">
-                      <button
-                        className="rounded-lg bg-tertiary px-3 py-1.5 text-xs font-bold text-on-tertiary transition hover:shadow-xs disabled:opacity-50"
-                        disabled={busyId === row.id || row.approval_status === "approved"}
-                        type="button"
-                        onClick={() => void updateStatus(row.id, "approved")}
-                      >
-                        Duyệt
-                      </button>
-                      <button
-                        className="rounded-lg border border-error px-3 py-1.5 text-xs font-bold text-error transition hover:bg-error/10 disabled:opacity-50"
-                        disabled={busyId === row.id || row.approval_status === "rejected"}
-                        type="button"
-                        onClick={() => void updateStatus(row.id, "rejected")}
-                      >
-                        Từ chối
-                      </button>
-                      <button
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#173A67]/40 px-2.5 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#173A67]/5 disabled:opacity-50"
-                        disabled={tempReset.busyUserId === row.id}
-                        title="Cấp mật khẩu tạm khi đoàn viên quên mật khẩu"
-                        type="button"
-                        onClick={() => void tempReset.issue(row.id, row.full_name)}
-                      >
-                        <MaterialIcon className="text-[15px]" name="key" />
-                        MK tạm
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Lọc Vai trò */}
+        <select
+          aria-label="Lọc vai trò"
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="min-w-[100px] rounded-lg border border-outline-variant bg-white px-2 py-1 text-xs text-on-surface outline-none focus:border-[#173A67]"
+        >
+          <option value="all">Mọi vai trò</option>
+          <option value="admin">Quản trị viên</option>
+          <option value="user">Đoàn viên</option>
+        </select>
       </div>
+
+      <DataTable
+        columns={columns}
+        emptyText="Không tìm thấy tài khoản phù hợp với bộ lọc."
+        rowKey={(row) => row.id}
+        rows={filteredAndSorted}
+      />
     </div>
   );
 }
