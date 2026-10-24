@@ -29,7 +29,7 @@ import {
 } from "@/lib/members/profile-shared";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
-const DETAIL_COLUMNS =
+export const DETAIL_COLUMNS =
   "date_of_birth, gender, phone, permanent_address, current_address, marital_status, no_children, bank_account_no, bank_name, bank_branch, bank_account_holder, consent_at, updated_at";
 
 function maskBankAccount(value: string | null): string | null {

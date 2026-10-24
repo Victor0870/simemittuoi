@@ -15,6 +15,8 @@ export default async function OfficeMembersPage() {
 
   const rows = await loadMemberProfileSummaries(createServiceClient());
   const canExport = hasPermission(access, PERMISSIONS.membersExport);
+  const canImport =
+    hasPermission(access, PERMISSIONS.membersImport) && hasPermission(access, PERMISSIONS.membersEdit);
 
   return (
     <div className="space-y-5 pb-10">
@@ -26,7 +28,7 @@ export default async function OfficeMembersPage() {
           </p>
         </div>
       </div>
-      <OfficeMembersTable canExport={canExport} rows={rows} />
+      <OfficeMembersTable canExport={canExport} canImport={canImport} rows={rows} />
     </div>
   );
 }

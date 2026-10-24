@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { MemberImportButton } from "@/components/members/MemberImportButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   MEMBER_EXPORT_COLUMNS,
@@ -23,7 +24,7 @@ import {
   type MaritalStatus,
 } from "@/lib/members/profile-shared";
 
-type Props = { rows: MemberProfileSummary[]; canExport?: boolean };
+type Props = { rows: MemberProfileSummary[]; canExport?: boolean; canImport?: boolean };
 
 const selectClass =
   "rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
@@ -195,7 +196,7 @@ function ColumnChooser({
   );
 }
 
-export function OfficeMembersTable({ rows, canExport = false }: Props) {
+export function OfficeMembersTable({ rows, canExport = false, canImport = false }: Props) {
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("all");
   const [status, setStatus] = useState<"all" | "complete" | "incomplete" | "empty">("all");
@@ -427,6 +428,7 @@ export function OfficeMembersTable({ rows, canExport = false }: Props) {
             showExportFields={canExport}
             onChange={updateSelectedColumns}
           />
+          {canImport ? <MemberImportButton /> : null}
           {canExport ? (
             <a
               className={`${toolbarButtonClass} border-[#4a6b82] bg-[#4a6b82] text-white hover:bg-[#173A67]`}
