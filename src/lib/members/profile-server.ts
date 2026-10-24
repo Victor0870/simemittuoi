@@ -242,6 +242,35 @@ export async function loadMemberProfileSummaries(db: SupabaseClient): Promise<Me
   });
 }
 
+export type MemberExportRow = MemberProfileSummary & {
+  details: MemberDetails;
+  /** Số CCCD đã che (chỉ 4 số cuối). */
+  id_masked: string | null;
+};
+
+/** Dữ liệu xuất Excel: tổng hợp hồ sơ + thông tin chi tiết; không bao giờ chứa số CCCD đầy đủ. */
+export async function loadMemberExportRows(db: SupabaseClient): Promise<MemberExportRow[]> {
+  const [summaries, { data: details, error: detailsError }, { data: identities, error: identitiesError }] =
+    await Promise.all([
+      loadMemberProfileSummaries(db),
+      db.from(CDILV_TABLE.memberDetails).select(`user_id, ${DETAIL_COLUMNS}`),
+      db.from(CDILV_TABLE.memberIdentity).select("user_id, id_last4"),
+    ]);
+  if (detailsError) throw detailsError;
+  if (identitiesError) throw identitiesError;
+
+  const detailsById = new Map(
+    (details ?? []).map((d) => [d.user_id as string, normalizeDetails(d as unknown as MemberDetails)]),
+  );
+  const last4ById = new Map((identities ?? []).map((i) => [i.user_id as string, i.id_last4 as string | null]));
+
+  return summaries.map((s) => ({
+    ...s,
+    details: detailsById.get(s.id) ?? EMPTY_DETAILS,
+    id_masked: maskIdNumber(last4ById.get(s.id)),
+  }));
+}
+
 export type SaveResult =
   | { ok: true; changed: number; awardedPoints: number; awardedLabels: string[] }
   | { ok: false; status: number; errors: string[] };

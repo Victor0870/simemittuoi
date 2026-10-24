@@ -24,6 +24,8 @@ export const PERMISSIONS = {
   employeesManage: "employees.manage",
   membersView: "members.view",
   membersEdit: "members.edit",
+  membersExport: "members.export",
+  membersImport: "members.import",
   albumsManage: "albums.manage",
   postsManage: "posts.manage",
   pollsManage: "polls.manage",
@@ -85,6 +87,19 @@ export const PERMISSION_MODULES: PermissionModule[] = [
         name: "Sửa hồ sơ hộ đoàn viên",
         description: "Cập nhật hồ sơ thay cho đoàn viên (mọi thay đổi đều được ghi lịch sử).",
         requires: [PERMISSIONS.membersView],
+      },
+      {
+        code: PERMISSIONS.membersExport,
+        name: "Xuất danh sách Excel",
+        description: "Tải danh sách hồ sơ đoàn viên ra file Excel (số CCCD luôn được che).",
+        requires: [PERMISSIONS.membersView],
+      },
+      {
+        code: PERMISSIONS.membersImport,
+        name: "Nhập hồ sơ từ Excel",
+        description:
+          "Tải file Excel để cập nhật hàng loạt hồ sơ đoàn viên theo mã NV, có xem trước và xác nhận.",
+        requires: [PERMISSIONS.membersView, PERMISSIONS.membersEdit],
       },
     ],
   },

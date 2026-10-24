@@ -1,20 +1,70 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import {
+  MEMBER_EXPORT_COLUMNS,
+  MEMBER_EXPORT_DETAIL_COLUMNS,
+  MEMBER_TABLE_COLUMNS,
+  MEMBER_TABLE_COLUMN_LABEL,
+  MEMBER_TABLE_DEFAULT_COLUMNS,
+  isMemberTableColumn,
+  type MemberExportColumnKey,
+  type MemberTableColumnKey,
+} from "@/lib/members/member-columns";
 import type { MemberProfileSummary } from "@/lib/members/profile-server";
 import {
+  DETAIL_FIELD_LABEL,
+  GENDER_LABEL,
   MARITAL_STATUS_LABEL,
   formatDateVi,
   type MaritalStatus,
 } from "@/lib/members/profile-shared";
 
-type Props = { rows: MemberProfileSummary[] };
+type Props = { rows: MemberProfileSummary[]; canExport?: boolean };
 
 const selectClass =
   "rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
+
+const toolbarButtonClass =
+  "inline-flex items-center gap-1.5 rounded-xl border border-[#d2dfe9] px-3 py-2 text-sm font-semibold transition";
+
+const COLUMNS_STORAGE_KEY = "cdilv.officeMembers.columns";
+
+/** Cột bảng mặc định + mọi thông tin chi tiết (chỉ có trong file Excel). */
+const DEFAULT_SELECTED_COLUMNS: MemberExportColumnKey[] = [
+  ...MEMBER_TABLE_DEFAULT_COLUMNS,
+  ...MEMBER_EXPORT_DETAIL_COLUMNS,
+];
+
+const updatedAtFormat = new Intl.DateTimeFormat("vi-VN", {
+  timeZone: "Asia/Ho_Chi_Minh",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function readStoredColumns(): MemberExportColumnKey[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(COLUMNS_STORAGE_KEY) ?? "null");
+    if (!Array.isArray(parsed)) return null;
+    const keys = MEMBER_EXPORT_COLUMNS.filter((k) => parsed.includes(k));
+    return keys.some(isMemberTableColumn) ? keys : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredColumns(keys: MemberExportColumnKey[]) {
+  try {
+    window.localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(keys));
+  } catch {
+    // Trình duyệt chặn localStorage: vẫn dùng được, chỉ không nhớ lựa chọn.
+  }
+}
 
 function removeVietnameseTones(str: string): string {
   return str
@@ -25,11 +75,142 @@ function removeVietnameseTones(str: string): string {
     .toLowerCase();
 }
 
-export function OfficeMembersTable({ rows }: Props) {
+function ColumnChooser({
+  selected,
+  showExportFields,
+  onChange,
+}: {
+  selected: MemberExportColumnKey[];
+  showExportFields: boolean;
+  onChange: (keys: MemberExportColumnKey[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const visibleCount = selected.filter(isMemberTableColumn).length;
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  function toggle(key: MemberExportColumnKey) {
+    const next = selected.includes(key)
+      ? selected.filter((k) => k !== key)
+      : MEMBER_EXPORT_COLUMNS.filter((k) => k === key || selected.includes(k));
+    if (!next.some(isMemberTableColumn)) return;
+    onChange(next);
+  }
+
+  function renderOption(key: MemberExportColumnKey, label: string) {
+    const checked = selected.includes(key);
+    const locked = checked && isMemberTableColumn(key) && visibleCount === 1;
+    return (
+      <li key={key}>
+        <label
+          className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${
+            locked ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-[#ecf4ff]"
+          }`}
+          title={locked ? "Cần giữ ít nhất 1 cột hiển thị" : undefined}
+        >
+          <input
+            checked={checked}
+            className="h-4 w-4 accent-[#4a6b82]"
+            disabled={locked}
+            type="checkbox"
+            onChange={() => toggle(key)}
+          />
+          <span className="text-[#173A67]">{label}</span>
+        </label>
+      </li>
+    );
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className={`${toolbarButtonClass} bg-white text-[#4a6b82] hover:bg-[#ecf4ff]`}
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <MaterialIcon className="text-[18px]" name="view_column" />
+        <span>Cột hiển thị</span>
+        <span className="text-xs font-normal text-on-surface-variant">
+          {visibleCount}/{MEMBER_TABLE_COLUMNS.length}
+        </span>
+      </button>
+      {open ? (
+        <div
+          aria-label="Chọn cột hiển thị"
+          className="absolute right-0 z-30 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl border border-[#d2dfe9] bg-white p-3 text-sm shadow-lg"
+          role="dialog"
+        >
+          <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold">
+            <button
+              className="text-[#4a6b82] hover:text-[#173A67] hover:underline"
+              type="button"
+              onClick={() => onChange([...MEMBER_EXPORT_COLUMNS])}
+            >
+              Hiện tất cả
+            </button>
+            <button
+              className="text-[#4a6b82] hover:text-[#173A67] hover:underline"
+              type="button"
+              onClick={() => onChange([...DEFAULT_SELECTED_COLUMNS])}
+            >
+              Mặc định
+            </button>
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            <ul className="space-y-0.5">
+              {MEMBER_TABLE_COLUMNS.map((key) => renderOption(key, MEMBER_TABLE_COLUMN_LABEL[key]))}
+            </ul>
+            {showExportFields ? (
+              <>
+                <p className="mt-3 mb-1 border-t border-[#d2dfe9] px-2 pt-2 text-xs font-semibold text-on-surface-variant">
+                  Chỉ có trong file Excel
+                </p>
+                <ul className="space-y-0.5">
+                  {MEMBER_EXPORT_DETAIL_COLUMNS.map((key) => renderOption(key, DETAIL_FIELD_LABEL[key]))}
+                </ul>
+              </>
+            ) : null}
+          </div>
+          <p className="mt-2 px-2 text-[11px] text-on-surface-variant">Cần giữ ít nhất 1 cột hiển thị.</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function OfficeMembersTable({ rows, canExport = false }: Props) {
   const [search, setSearch] = useState("");
   const [dept, setDept] = useState("all");
   const [status, setStatus] = useState<"all" | "complete" | "incomplete" | "empty">("all");
   const [marital, setMarital] = useState<"all" | MaritalStatus | "none">("all");
+  const [selectedColumns, setSelectedColumns] = useState<MemberExportColumnKey[]>(DEFAULT_SELECTED_COLUMNS);
+
+  useEffect(() => {
+    const stored = readStoredColumns();
+    if (stored) setSelectedColumns(stored);
+  }, []);
+
+  function updateSelectedColumns(keys: MemberExportColumnKey[]) {
+    setSelectedColumns(keys);
+    writeStoredColumns(keys);
+  }
 
   const departments = useMemo(
     () =>
@@ -69,16 +250,16 @@ export function OfficeMembersTable({ rows }: Props) {
     });
   }, [rows, search, dept, status, marital]);
 
-  const columns: DataTableColumn<MemberProfileSummary>[] = [
+  const allColumns: (DataTableColumn<MemberProfileSummary> & { key: MemberTableColumnKey })[] = [
     {
       key: "employee_code",
-      header: "Mã NV",
+      header: MEMBER_TABLE_COLUMN_LABEL.employee_code,
       className: "font-semibold text-[#173A67] whitespace-nowrap",
       render: (r) => r.employee_code ?? "—",
     },
     {
       key: "full_name",
-      header: "Họ tên",
+      header: MEMBER_TABLE_COLUMN_LABEL.full_name,
       render: (r) => (
         <Link className="font-semibold text-[#173A67] hover:underline" href={`/office/members/${r.id}`}>
           {r.full_name}
@@ -87,21 +268,29 @@ export function OfficeMembersTable({ rows }: Props) {
     },
     {
       key: "department",
-      header: "Bộ phận",
+      header: MEMBER_TABLE_COLUMN_LABEL.department,
       type: "enum",
       className: "text-on-surface-variant",
       render: (r) => r.department ?? "—",
     },
     {
       key: "date_of_birth",
-      header: "Ngày sinh",
+      header: MEMBER_TABLE_COLUMN_LABEL.date_of_birth,
       type: "date",
       className: "whitespace-nowrap",
       render: (r) => formatDateVi(r.date_of_birth),
     },
     {
+      key: "gender",
+      header: MEMBER_TABLE_COLUMN_LABEL.gender,
+      type: "enum",
+      accessor: (r) => (r.gender ? GENDER_LABEL[r.gender] : null),
+      className: "whitespace-nowrap",
+      render: (r) => (r.gender ? GENDER_LABEL[r.gender] : "—"),
+    },
+    {
       key: "marital_status",
-      header: "Hôn nhân",
+      header: MEMBER_TABLE_COLUMN_LABEL.marital_status,
       type: "enum",
       accessor: (r) => (r.marital_status ? MARITAL_STATUS_LABEL[r.marital_status] : null),
       className: "whitespace-nowrap",
@@ -110,15 +299,23 @@ export function OfficeMembersTable({ rows }: Props) {
     },
     {
       key: "children_count",
-      header: "Số con",
+      header: MEMBER_TABLE_COLUMN_LABEL.children_count,
       type: "number",
       className: "text-center",
       headerClassName: "text-center",
       render: (r) => r.children_count || "—",
     },
     {
+      key: "has_identity",
+      header: MEMBER_TABLE_COLUMN_LABEL.has_identity,
+      type: "enum",
+      accessor: (r) => (r.has_identity ? "Đã khai" : "Chưa khai"),
+      className: "whitespace-nowrap",
+      render: (r) => (r.has_identity ? "Đã khai" : <span className="text-on-surface-variant">Chưa khai</span>),
+    },
+    {
       key: "completeness",
-      header: "Hồ sơ",
+      header: MEMBER_TABLE_COLUMN_LABEL.completeness,
       type: "enum",
       accessor: (r) =>
         r.completeness_done === r.completeness_total ? "Đã khai đủ" : r.completeness_done === 0 ? "Chưa khai" : "Chưa đủ",
@@ -141,7 +338,24 @@ export function OfficeMembersTable({ rows }: Props) {
         );
       },
     },
+    {
+      key: "missing",
+      header: MEMBER_TABLE_COLUMN_LABEL.missing,
+      accessor: (r) => r.missing.join(", "),
+      className: "min-w-[200px] text-xs text-on-surface-variant",
+      render: (r) => r.missing.join(", ") || "—",
+    },
+    {
+      key: "updated_at",
+      header: MEMBER_TABLE_COLUMN_LABEL.updated_at,
+      type: "date",
+      className: "whitespace-nowrap",
+      render: (r) => (r.updated_at ? updatedAtFormat.format(new Date(r.updated_at)) : "—"),
+    },
   ];
+
+  const columns = allColumns.filter((c) => selectedColumns.includes(c.key));
+  const exportHref = `/api/members/export?cols=${MEMBER_EXPORT_COLUMNS.filter((k) => selectedColumns.includes(k)).join(",")}`;
 
   return (
     <div className="space-y-4">
@@ -207,6 +421,23 @@ export function OfficeMembersTable({ rows }: Props) {
         <span className="text-xs font-semibold text-on-surface-variant">
           {filtered.length} / {rows.length}
         </span>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <ColumnChooser
+            selected={selectedColumns}
+            showExportFields={canExport}
+            onChange={updateSelectedColumns}
+          />
+          {canExport ? (
+            <a
+              className={`${toolbarButtonClass} border-[#4a6b82] bg-[#4a6b82] text-white hover:bg-[#173A67]`}
+              href={exportHref}
+              title="Tải danh sách hồ sơ toàn bộ đoàn viên đã duyệt theo các cột đã chọn (số CCCD được che)"
+            >
+              <MaterialIcon className="text-[18px]" name="download" />
+              <span>Xuất Excel</span>
+            </a>
+          ) : null}
+        </div>
       </div>
 
       <DataTable
