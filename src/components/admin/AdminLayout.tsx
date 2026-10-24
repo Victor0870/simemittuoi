@@ -11,9 +11,10 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 /** Khung chung cho /admin/* và /office/*: sidebar cố định (drawer trên mobile), thanh tiêu đề, vùng nội dung. */
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/admin";
-  const { group, page, isHub } = resolveAdminLocation(pathname);
+  const { group, page, subpage, isHub } = resolveAdminLocation(pathname);
   const { user, profile, isAdmin } = useAuth();
   const hubHref = group && isAdmin ? group.href : "/office";
+  const backHref = page && subpage ? page.href : hubHref;
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const initial = (profile?.full_name || user?.email || "?").slice(0, 1).toUpperCase();
@@ -67,9 +68,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </button>
             {group && page ? (
               <Link
-                aria-label={`Quay lại ${group.label}`}
+                aria-label={`Quay lại ${subpage ? page.label : group.label}`}
                 className="shrink-0 rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] md:hidden"
-                href={hubHref}
+                href={backHref}
               >
                 <MaterialIcon className="text-[20px]" name="arrow_back" />
               </Link>
@@ -91,7 +92,21 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   >
                     {group.label}
                   </Link>
-                  {page ? (
+                  {page && subpage ? (
+                    <>
+                      <span className="shrink-0 text-outline">/</span>
+                      <Link
+                        className="min-w-0 max-w-[7rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
+                        href={page.href}
+                      >
+                        {page.label}
+                      </Link>
+                      <span className="shrink-0 text-outline">/</span>
+                      <span aria-current="page" className="min-w-0 truncate font-bold text-[#173A67]">
+                        {subpage.label}
+                      </span>
+                    </>
+                  ) : page ? (
                     <>
                       <span className="shrink-0 text-outline">/</span>
                       <span aria-current="page" className="min-w-0 truncate font-bold text-[#173A67]">

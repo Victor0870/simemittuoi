@@ -72,7 +72,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
-export type AdminChildPage = { href: string; label: string };
+export type AdminChildPage = {
+  href: string;
+  label: string;
+  /** Trang con cấp 4 (breadcrumb: hub / trang / trang con). */
+  subpages?: AdminChildPage[];
+};
 
 /** Trang con của từng hub (nhãn trùng với ô trên trang hub), dùng cho breadcrumb 3 cấp. */
 export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
@@ -86,7 +91,15 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/scores/history", label: "Lịch sử cộng điểm" },
     { href: "/admin/scores/members", label: "Bảng điểm đoàn viên" },
     { href: "/admin/polls", label: "Bình chọn" },
-    { href: "/admin/quiz", label: "Trắc nghiệm tuần" },
+    {
+      href: "/admin/quiz",
+      label: "Trắc nghiệm tuần",
+      subpages: [
+        { href: "/admin/quiz/settings", label: "Cài đặt" },
+        { href: "/admin/quiz/history", label: "Lịch sử thi" },
+        { href: "/admin/quiz/questions", label: "Ngân hàng câu hỏi" },
+      ],
+    },
   ],
   content: [
     { href: "/admin/activities", label: "Hoạt động & phong trào" },
@@ -123,20 +136,26 @@ export function findAdminNavGroup(pathname: string): AdminNavGroup | null {
   );
 }
 
-/** Nhóm, trang con (nếu có) và cờ "đang ở chính trang hub" cho breadcrumb. */
+function longestMatch(pathname: string, pages: AdminChildPage[] | undefined): AdminChildPage | null {
+  return (
+    (pages ?? []).filter((c) => matchesPath(pathname, c.href)).sort((a, b) => b.href.length - a.href.length)[0] ??
+    null
+  );
+}
+
+/** Nhóm, trang con, trang con cấp 4 (nếu có) và cờ "đang ở chính trang hub" cho breadcrumb. */
 export function resolveAdminLocation(pathname: string): {
   group: AdminNavGroup | null;
   page: AdminChildPage | null;
+  subpage: AdminChildPage | null;
   isHub: boolean;
 } {
   const group = findAdminNavGroup(pathname);
-  if (!group) return { group: null, page: null, isHub: false };
-  const page =
-    (ADMIN_CHILD_PAGES[group.key] ?? [])
-      .filter((c) => matchesPath(pathname, c.href))
-      .sort((a, b) => b.href.length - a.href.length)[0] ?? null;
+  if (!group) return { group: null, page: null, subpage: null, isHub: false };
+  const page = longestMatch(pathname, ADMIN_CHILD_PAGES[group.key]);
+  const subpage = longestMatch(pathname, page?.subpages);
   const isHub = group.key === "overview" || pathname === group.href;
-  return { group, page, isHub };
+  return { group, page, subpage, isHub };
 }
 
 const itemClass = "flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-semibold transition";
