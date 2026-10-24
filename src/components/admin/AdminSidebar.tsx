@@ -82,7 +82,9 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/employees", label: "DS nhân viên được đăng ký" },
   ],
   competition: [
-    { href: "/admin/scores", label: "Cộng điểm thi đua" },
+    { href: "/admin/scores", label: "Cộng điểm" },
+    { href: "/admin/scores/history", label: "Lịch sử cộng điểm" },
+    { href: "/admin/scores/members", label: "Bảng điểm đoàn viên" },
     { href: "/admin/polls", label: "Bình chọn" },
     { href: "/admin/quiz", label: "Trắc nghiệm tuần" },
   ],

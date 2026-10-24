@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { readableAwardLabel } from "@/lib/score-labels";
@@ -48,7 +49,36 @@ type Props = {
   activities: AdminActivityItem[];
   recentEvents: AdminScoreEventItem[];
   whitelist: AdminWhitelistItem[];
+  view?: AdminScoresView;
+  /** Id đoàn viên chọn sẵn trên form (từ ?user= khi bấm "Cộng điểm" ở bảng điểm). */
+  initialSelectedUserId?: string | null;
 };
+
+export type AdminScoresView = "form" | "history" | "members";
+
+const VIEW_PAGES: { view: AdminScoresView; href: string; label: string; icon: string; subtitle: string }[] = [
+  {
+    view: "form",
+    href: "/admin/scores",
+    label: "Cộng điểm",
+    icon: "military_tech",
+    subtitle: "Cộng / trừ điểm phong trào, khen thưởng các giải thi đấu và tự động cập nhật bảng xếp hạng thi đua.",
+  },
+  {
+    view: "history",
+    href: "/admin/scores/history",
+    label: "Lịch sử cộng điểm",
+    icon: "history",
+    subtitle: "Các lượt cộng / trừ điểm gần nhất; thu hồi lượt cộng nhầm, điểm và xếp hạng tự tính lại.",
+  },
+  {
+    view: "members",
+    href: "/admin/scores/members",
+    label: "Bảng điểm đoàn viên",
+    icon: "leaderboard",
+    subtitle: "Điểm tích lũy và thứ hạng của từng đoàn viên; bấm “Cộng điểm” để mở form cộng điểm cho người đó.",
+  },
+];
 
 const QUICK_POINTS = [
   { label: "+10đ (Tham gia / Khích lệ)", value: 10 },
@@ -66,6 +96,8 @@ export function AdminScoresManager({
   activities,
   recentEvents,
   whitelist,
+  view = "form",
+  initialSelectedUserId = null,
 }: Props) {
   const router = useRouter();
   const formRef = useRef<HTMLDivElement>(null);
@@ -165,6 +197,15 @@ export function AdminScoresManager({
       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
+
+  const appliedInitialUserRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialSelectedUserId || appliedInitialUserRef.current === initialSelectedUserId) return;
+    const user = profiles.find((p) => p.id === initialSelectedUserId);
+    if (!user) return;
+    appliedInitialUserRef.current = initialSelectedUserId;
+    handleSelectFromTable(user);
+  }, [initialSelectedUserId, profiles]);
 
   // Submit award points
   async function handleSubmit(e: React.FormEvent) {
@@ -445,27 +486,38 @@ export function AdminScoresManager({
       className: "text-right",
       headerClassName: "text-right",
       render: (p) => (
-        <button
+        <Link
           className="inline-flex items-center gap-1 rounded-xl bg-amber-500/15 border border-amber-400 px-3 py-1 text-xs font-bold text-amber-900 hover:bg-amber-500 hover:text-white transition shadow-2xs"
-          type="button"
-          onClick={() => handleSelectFromTable(p)}
+          href={`/admin/scores?user=${encodeURIComponent(p.id)}`}
         >
           <MaterialIcon className="text-[14px]" name="add" />
           <span>Cộng điểm</span>
-        </button>
+        </Link>
       ),
     },
   ];
+
+  const currentPage = VIEW_PAGES.find((p) => p.view === view) ?? VIEW_PAGES[0];
 
   return (
     <div className="space-y-8">
       {/* 1. Header with Admin Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-6">
         <div>
-          <h1 className="text-headline-md font-extrabold text-[#173A67]">Quản lý Điểm Thi Đua Đoàn Viên</h1>
-          <p className="text-body-md text-[#27496D]">
-            Cộng / trừ điểm phong trào, khen thưởng các giải thi đấu và tự động cập nhật bảng xếp hạng thi đua.
-          </p>
+          <h1 className="text-headline-md font-extrabold text-[#173A67]">{currentPage.label}</h1>
+          <p className="text-body-md text-[#27496D]">{currentPage.subtitle}</p>
+          <nav aria-label="Các trang điểm thi đua" className="mt-2 flex flex-wrap items-center gap-2">
+            {VIEW_PAGES.filter((p) => p.view !== view).map((p) => (
+              <Link
+                key={p.view}
+                className="inline-flex items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm font-semibold text-primary transition hover:text-[#173A67]"
+                href={p.href}
+              >
+                <MaterialIcon className="text-[16px]" name={p.icon} />
+                <span>{p.label}</span>
+              </Link>
+            ))}
+          </nav>
         </div>
 
         <div className="flex items-center gap-3">
@@ -529,6 +581,7 @@ export function AdminScoresManager({
       ) : null}
 
       {/* 3. Main Form: Cộng điểm đoàn viên */}
+      {view === "form" ? (
       <div
         ref={formRef}
         className="overflow-hidden rounded-2xl border border-amber-300/80 bg-surface-container-lowest shadow-md"
@@ -829,8 +882,10 @@ export function AdminScoresManager({
           </div>
         </form>
       </div>
+      ) : null}
 
       {/* 4. Recent Score Events History */}
+      {view === "history" ? (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -847,8 +902,10 @@ export function AdminScoresManager({
           rows={recentEvents}
         />
       </div>
+      ) : null}
 
       {/* 5. Member Roster Table with Quick Award Action */}
+      {view === "members" ? (
       <div className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -889,6 +946,7 @@ export function AdminScoresManager({
           rows={filteredProfiles}
         />
       </div>
+      ) : null}
     </div>
   );
 }

@@ -25,9 +25,25 @@ export default async function CompetitionHubPage() {
   const tiles: (HubTile & { allowed: boolean })[] = [
     {
       href: "/admin/scores",
-      title: "Cộng điểm thi đua",
+      title: "Cộng điểm",
       description: "Cộng / trừ điểm phong trào cho đoàn viên, nhập theo file hoặc mã nhân viên, cập nhật bảng xếp hạng.",
       icon: "military_tech",
+      tint: "amber",
+      allowed: access.isAdmin,
+    },
+    {
+      href: "/admin/scores/history",
+      title: "Lịch sử cộng điểm",
+      description: "Xem các lượt cộng / trừ điểm gần nhất và thu hồi lượt cộng nhầm.",
+      icon: "history",
+      tint: "amber",
+      allowed: access.isAdmin,
+    },
+    {
+      href: "/admin/scores/members",
+      title: "Bảng điểm đoàn viên",
+      description: "Điểm tích lũy và thứ hạng của từng đoàn viên, cộng điểm nhanh cho từng người.",
+      icon: "leaderboard",
       tint: "amber",
       allowed: access.isAdmin,
     },
