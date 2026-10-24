@@ -44,6 +44,11 @@ type DataTableProps<T> = {
   footerRows?: ReactNode;
   /** Ghi chú hiện khi đang sắp xếp theo một cột. */
   sortHint?: ReactNode;
+  /**
+   * Từ lg trở lên: bảng giãn hết chiều cao khung cha (cha cần chiều cao cố định, min-h-0),
+   * chỉ thân bảng cuộn, thanh phân trang luôn ở đáy. Dưới lg vẫn dùng maxHeightClass.
+   */
+  fill?: boolean;
 };
 
 type Cell = { label: string; norm: string; num: number | null; day: string | null; sortValue: number | string | null };
@@ -155,6 +160,7 @@ export function DataTable<T>({
   pinnedRows,
   footerRows,
   sortHint,
+  fill = false,
 }: DataTableProps<T>) {
   const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({});
   const [sort, setSort] = useState<{ key: string; dir: SortDir } | null>(null);
@@ -237,9 +243,9 @@ export function DataTable<T>({
     "inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-40";
 
   return (
-    <div className="space-y-3">
+    <div className={fill ? "flex flex-col gap-3 lg:h-full lg:min-h-0 lg:flex-1" : "space-y-3"}>
       {sort && sortHint ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant print:hidden">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs text-on-surface-variant print:hidden">
           <MaterialIcon className="text-[#4a6b82]" name="info" size={16} />
           <span>{sortHint}</span>
           <button
@@ -256,7 +262,7 @@ export function DataTable<T>({
       ) : null}
 
       {isFiltered ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs print:hidden">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs print:hidden">
           {activeFilters.map(({ column, filter }) => (
             <span
               key={column.key}
@@ -288,8 +294,16 @@ export function DataTable<T>({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xs">
-        <div className={`overflow-auto ${maxHeightClass} print:max-h-none print:overflow-visible`}>
+      <div
+        className={`overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-xs ${
+          fill ? "flex flex-col lg:min-h-0 lg:flex-1" : ""
+        }`}
+      >
+        <div
+          className={`overflow-auto ${maxHeightClass} ${
+            fill ? "lg:max-h-none lg:min-h-0 lg:flex-1" : ""
+          } print:max-h-none print:overflow-visible`}
+        >
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 z-10 bg-[#ecf4ff] text-[#173A67]">
               <tr>
@@ -356,7 +370,7 @@ export function DataTable<T>({
           </table>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-outline-variant bg-white px-4 py-2.5 text-xs text-on-surface-variant print:hidden">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-outline-variant bg-white px-4 py-2.5 text-xs text-on-surface-variant print:hidden">
           <span>
             Hiển thị {from}–{to} / {isFiltered ? `${total} (lọc từ ${rows.length})` : `tổng ${total}`}
           </span>
@@ -410,7 +424,7 @@ export function DataTable<T>({
           </nav>
         </div>
         {footerNote ? (
-          <div className="border-t border-outline-variant/60 bg-white px-4 py-2 text-xs italic text-on-surface-variant">{footerNote}</div>
+          <div className="shrink-0 border-t border-outline-variant/60 bg-white px-4 py-2 text-xs italic text-on-surface-variant">{footerNote}</div>
         ) : null}
       </div>
     </div>

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { ScoreHistoryRangeFilter } from "@/components/admin/ScoreHistoryRangeFilter";
+import { HISTORY_FROM_ALL, type ScoreHistoryFrom } from "@/components/admin/scoreHistoryRange";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { readableAwardLabel } from "@/lib/score-labels";
 
@@ -52,6 +54,10 @@ type Props = {
   view?: AdminScoresView;
   /** Id đoàn viên chọn sẵn trên form (từ ?user= khi bấm "Cộng điểm" ở bảng điểm). */
   initialSelectedUserId?: string | null;
+  /** Trang Lịch sử: mốc "Từ ngày" đang lọc ("YYYY-MM-DD" hoặc "all"), hôm nay (giờ VN) và cờ chạm trần 5.000 dòng. */
+  historyFrom?: ScoreHistoryFrom;
+  historyToday?: string;
+  historyCapped?: boolean;
 };
 
 export type AdminScoresView = "form" | "history" | "members";
@@ -98,6 +104,9 @@ export function AdminScoresManager({
   whitelist,
   view = "form",
   initialSelectedUserId = null,
+  historyFrom,
+  historyToday,
+  historyCapped = false,
 }: Props) {
   const router = useRouter();
   const formRef = useRef<HTMLDivElement>(null);
@@ -498,9 +507,94 @@ export function AdminScoresManager({
   ];
 
   const currentPage = VIEW_PAGES.find((p) => p.view === view) ?? VIEW_PAGES[0];
+  /** Lịch sử & Bảng điểm: bố cục gọn, từ lg trở lên vừa một màn hình (trừ thanh tiêu đề 64px + lề main 2×28px). */
+  const compact = view !== "form";
+  const compactKpis = [
+    {
+      label: "Tổng đoàn viên",
+      value: profiles.length,
+      unit: null,
+      hint: "Đoàn viên chính thức",
+      icon: "groups",
+      box: "border-outline-variant bg-surface-container-lowest",
+      iconBox: "bg-primary/10 text-primary",
+      text: "text-[#173A67]",
+    },
+    {
+      label: "Tổng điểm thi đua",
+      value: totalPointsAwarded.toLocaleString("vi-VN"),
+      unit: "điểm",
+      hint: "Đang ghi nhận trên toàn hệ thống",
+      icon: "military_tech",
+      box: "border-amber-200 bg-amber-50/50",
+      iconBox: "bg-amber-500/10 text-amber-700",
+      text: "text-amber-900",
+    },
+    {
+      label: "Lượt ghi nhận gần đây",
+      value: recentEvents.length,
+      unit: null,
+      hint: "Lịch sử cộng điểm lưu trữ",
+      icon: "history",
+      box: "border-outline-variant bg-surface-container-lowest",
+      iconBox: "bg-tertiary-container text-on-tertiary-container",
+      text: "text-[#173A67]",
+    },
+  ];
+  const historyFromLabel =
+    historyFrom && historyFrom !== HISTORY_FROM_ALL ? historyFrom.split("-").reverse().join("/") : null;
 
   return (
-    <div className="space-y-8">
+    <div
+      className={
+        compact ? "flex flex-col gap-3 lg:h-[calc(100dvh-120px)] lg:min-h-0 lg:overflow-hidden" : "space-y-8"
+      }
+    >
+      {compact ? (
+        <>
+          <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+            <h1 className="text-lg font-extrabold text-[#173A67]" title={currentPage.subtitle}>
+              {currentPage.label}
+            </h1>
+            <nav aria-label="Các trang điểm thi đua" className="flex flex-wrap items-center gap-1.5">
+              {VIEW_PAGES.filter((p) => p.view !== view).map((p) => (
+                <Link
+                  key={p.view}
+                  className="inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2 py-0.5 text-xs font-semibold text-[#4a6b82] transition hover:bg-[#ecf4ff] hover:text-[#173A67]"
+                  href={p.href}
+                >
+                  <MaterialIcon className="text-[14px]" name={p.icon} />
+                  <span>{p.label}</span>
+                </Link>
+              ))}
+            </nav>
+            <span className="ml-auto hidden text-xs text-on-surface-variant sm:inline-block">
+              Quản trị viên: <strong className="text-[#173A67]">{currentAdminName}</strong>
+            </span>
+          </div>
+
+          <div className="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-3">
+            {compactKpis.map((k) => (
+              <div key={k.label} className={`flex items-center gap-2.5 rounded-xl border p-2.5 shadow-xs ${k.box}`}>
+                <div className={`shrink-0 rounded-lg p-1.5 ${k.iconBox}`}>
+                  <MaterialIcon className="text-[20px]" name={k.icon} />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-on-surface-variant">{k.label}</p>
+                  <p className="flex min-w-0 items-baseline gap-1.5">
+                    <span className={`text-lg font-black leading-tight ${k.text}`}>
+                      {k.value}
+                      {k.unit ? <span className="ml-1 text-xs font-bold">{k.unit}</span> : null}
+                    </span>
+                    <span className="truncate text-xs text-on-surface-variant">{k.hint}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
       {/* 1. Header with Admin Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-6">
         <div>
@@ -564,17 +658,19 @@ export function AdminScoresManager({
           <p className="text-label-sm text-on-surface-variant mt-1">Lịch sử cộng điểm lưu trữ</p>
         </div>
       </div>
+        </>
+      )}
 
       {/* Success & Error Banners */}
       {successMessage ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900 shadow-xs">
+        <div className={`flex shrink-0 items-center gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 text-emerald-900 shadow-xs ${compact ? "p-2.5" : "p-4"}`}>
           <MaterialIcon className="text-[24px] text-emerald-600 shrink-0" name="check_circle" />
           <p className="text-body-md font-medium">{successMessage}</p>
         </div>
       ) : null}
 
       {errorMessage ? (
-        <div className="flex items-center gap-3 rounded-2xl border border-error/40 bg-error-container/40 p-4 text-on-error-container shadow-xs">
+        <div className={`flex shrink-0 items-center gap-3 rounded-2xl border border-error/40 bg-error-container/40 text-on-error-container shadow-xs ${compact ? "p-2.5" : "p-4"}`}>
           <MaterialIcon className="text-[24px] text-error shrink-0" name="error" />
           <p className="text-body-md font-medium">{errorMessage}</p>
         </div>
@@ -886,34 +982,52 @@ export function AdminScoresManager({
 
       {/* 4. Recent Score Events History */}
       {view === "history" ? (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MaterialIcon className="text-[24px] text-[#173A67]" name="history" />
-            <h2 className="text-title-lg font-bold text-[#173A67]">Lịch sử cộng điểm gần đây</h2>
-          </div>
+      <div className="flex flex-col gap-2 lg:min-h-0 lg:flex-1">
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
+          <MaterialIcon className="text-[20px] text-[#173A67]" name="history" />
+          {historyFrom && historyToday ? (
+            <ScoreHistoryRangeFilter from={historyFrom} today={historyToday} />
+          ) : null}
         </div>
 
-        <DataTable
-          columns={historyColumns}
-          emptyText="Chưa có lượt cộng điểm nào trong hệ thống."
-          footerNote="Đang hiển thị 50 lượt cộng điểm gần nhất"
-          rowKey={(evt) => evt.id}
-          rows={recentEvents}
-        />
+        {historyCapped ? (
+          <p className="flex shrink-0 items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900">
+            <MaterialIcon className="text-[16px] text-amber-700" name="warning" />
+            Đã hiển thị tối đa 5.000 lượt. Hãy thu hẹp khoảng thời gian để xem đầy đủ.
+          </p>
+        ) : null}
+
+        <div className="flex flex-col lg:min-h-0 lg:flex-1">
+          <DataTable
+            columns={historyColumns}
+            emptyText={
+              historyFrom ? "Không có lượt cộng điểm nào trong khoảng thời gian này." : "Chưa có lượt cộng điểm nào trong hệ thống."
+            }
+            fill
+            footerNote={
+              historyFrom
+                ? `Đang hiển thị ${recentEvents.length.toLocaleString("vi-VN")} lượt cộng điểm ${
+                    historyFromLabel ? `từ ${historyFromLabel}` : "từ trước đến nay"
+                  }`
+                : "Đang hiển thị 50 lượt cộng điểm gần nhất"
+            }
+            rowKey={(evt) => evt.id}
+            rows={recentEvents}
+          />
+        </div>
       </div>
       ) : null}
 
       {/* 5. Member Roster Table with Quick Award Action */}
       {view === "members" ? (
-      <div className="space-y-4 pt-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-col gap-2 lg:min-h-0 lg:flex-1">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
           <div className="flex items-center gap-2">
-            <MaterialIcon className="text-[24px] text-[#173A67]" name="leaderboard" />
-            <h2 className="text-title-lg font-bold text-[#173A67]">Danh sách đoàn viên & Điểm tích lũy</h2>
+            <MaterialIcon className="text-[20px] text-[#173A67]" name="leaderboard" />
+            <h2 className="text-sm font-bold text-[#173A67]">Danh sách đoàn viên & Điểm tích lũy</h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             {/* Dept filter */}
             <select
               className="rounded-xl border border-outline-variant bg-white px-3 py-1.5 text-sm text-on-surface focus:border-primary"
@@ -939,12 +1053,15 @@ export function AdminScoresManager({
           </div>
         </div>
 
-        <DataTable
-          columns={rosterColumns}
-          emptyText="Không tìm thấy đoàn viên nào phù hợp."
-          rowKey={(p) => p.id}
-          rows={filteredProfiles}
-        />
+        <div className="flex flex-col lg:min-h-0 lg:flex-1">
+          <DataTable
+            columns={rosterColumns}
+            emptyText="Không tìm thấy đoàn viên nào phù hợp."
+            fill
+            rowKey={(p) => p.id}
+            rows={filteredProfiles}
+          />
+        </div>
       </div>
       ) : null}
     </div>

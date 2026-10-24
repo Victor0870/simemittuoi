@@ -14,10 +14,22 @@ export type AdminScoresData = {
   activities: AdminActivityItem[];
   recentEvents: AdminScoreEventItem[];
   whitelist: AdminWhitelistItem[];
+  /** Lịch sử chạm trần HISTORY_MAX_ROWS dòng (chỉ khi gọi với historyFrom). */
+  historyCapped: boolean;
+};
+
+export const HISTORY_MAX_ROWS = 5000;
+const HISTORY_PAGE_SIZE = 1000;
+
+type ScoreEventRow = AdminScoreEventItem;
+
+export type LoadScoresOptions = {
+  /** Chỉ trang Lịch sử: "YYYY-MM-DD" (từ 00:00 giờ Việt Nam) hoặc "all"; thay limit(50) bằng tối đa 5.000 dòng. */
+  historyFrom?: string | null;
 };
 
 /** Kiểm tra quyền admin và tải dữ liệu chung cho 3 trang điểm thi đua; `nextPath` là trang quay lại sau đăng nhập. */
-export async function loadScoresData(nextPath: string): Promise<AdminScoresData> {
+export async function loadScoresData(nextPath: string, options?: LoadScoresOptions): Promise<AdminScoresData> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -51,11 +63,30 @@ export async function loadScoresData(nextPath: string): Promise<AdminScoresData>
     .order("event_date", { ascending: false });
 
   // 3. Load recent score events
-  const { data: eventsData } = await supabase
-    .from(CDILV_TABLE.scoreEvents)
-    .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const historyFrom = options?.historyFrom;
+  let eventsData: ScoreEventRow[] | null;
+  if (historyFrom) {
+    const fromIso = historyFrom === "all" ? null : new Date(`${historyFrom}T00:00:00+07:00`).toISOString();
+    eventsData = [];
+    for (let from = 0; from < HISTORY_MAX_ROWS; from += HISTORY_PAGE_SIZE) {
+      let query = supabase
+        .from(CDILV_TABLE.scoreEvents)
+        .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code");
+      if (fromIso) query = query.gte("created_at", fromIso);
+      const { data: page } = await query
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, Math.min(from + HISTORY_PAGE_SIZE, HISTORY_MAX_ROWS) - 1);
+      eventsData.push(...((page ?? []) as ScoreEventRow[]));
+      if (!page || page.length < HISTORY_PAGE_SIZE) break;
+    }
+  } else {
+    ({ data: eventsData } = await supabase
+      .from(CDILV_TABLE.scoreEvents)
+      .select("id, user_id, points, note, award_label, activity_id, created_at, created_by, employee_code")
+      .order("created_at", { ascending: false })
+      .limit(50));
+  }
 
   // 4. Load employee whitelist (for matching employees without accounts yet)
   const { data: whitelistData } = await supabase
@@ -106,5 +137,6 @@ export async function loadScoresData(nextPath: string): Promise<AdminScoresData>
     activities,
     recentEvents,
     whitelist,
+    historyCapped: Boolean(historyFrom) && recentEvents.length >= HISTORY_MAX_ROWS,
   };
 }
