@@ -234,21 +234,23 @@ export async function getHomeSessionInfo(activityIds: string[]): Promise<HomeSes
     let rank = profile?.rank ? Number(profile.rank) : 0;
 
     if (!rank && score === 0) {
-      const { data: byId } = await publicDb
-        .from(CDILV_TABLE.leaderboard)
-        .select("total_score, rank")
-        .eq("id", authUserId)
-        .maybeSingle();
-
-      let myRank = byId;
-      if (!myRank && profile?.employee_code) {
-        const { data: byCode } = await publicDb
+      // Tra theo id và theo mã nhân viên song song; vẫn ưu tiên kết quả theo id như trước
+      const [{ data: byId }, byCodeResult] = await Promise.all([
+        publicDb
           .from(CDILV_TABLE.leaderboard)
           .select("total_score, rank")
-          .eq("employee_code", profile.employee_code)
-          .maybeSingle();
-        myRank = byCode;
-      }
+          .eq("id", authUserId)
+          .maybeSingle(),
+        profile?.employee_code
+          ? publicDb
+              .from(CDILV_TABLE.leaderboard)
+              .select("total_score, rank")
+              .eq("employee_code", profile.employee_code)
+              .maybeSingle()
+          : null,
+      ]);
+
+      const myRank = byId ?? byCodeResult?.data ?? null;
 
       if (myRank) {
         score = myRank.total_score ?? 0;

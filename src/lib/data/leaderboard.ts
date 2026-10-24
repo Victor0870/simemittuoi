@@ -131,21 +131,23 @@ export async function getMyLeaderboardPosition(): Promise<MyLeaderboardPosition>
         result.currentRank = Number(profile.rank);
         result.currentScore = profile.total_score ?? 0;
       } else {
-        const { data: byId } = await publicDb
-          .from(CDILV_TABLE.leaderboard)
-          .select("total_score, rank, id, employee_code")
-          .eq("id", userId)
-          .maybeSingle();
-
-        let mine = byId;
-        if (!mine && result.currentEmployeeCode) {
-          const { data: byCode } = await publicDb
+        // Tra theo id và theo mã nhân viên song song; vẫn ưu tiên kết quả theo id như trước
+        const [{ data: byId }, byCodeResult] = await Promise.all([
+          publicDb
             .from(CDILV_TABLE.leaderboard)
             .select("total_score, rank, id, employee_code")
-            .eq("employee_code", result.currentEmployeeCode)
-            .maybeSingle();
-          mine = byCode;
-        }
+            .eq("id", userId)
+            .maybeSingle(),
+          result.currentEmployeeCode
+            ? publicDb
+                .from(CDILV_TABLE.leaderboard)
+                .select("total_score, rank, id, employee_code")
+                .eq("employee_code", result.currentEmployeeCode)
+                .maybeSingle()
+            : null,
+        ]);
+
+        const mine = byId ?? byCodeResult?.data ?? null;
 
         if (mine) {
           result.currentRank = Number(mine.rank);
