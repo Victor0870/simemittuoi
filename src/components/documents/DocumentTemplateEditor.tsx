@@ -14,9 +14,14 @@ import {
   DOCUMENT_TYPE_LABEL,
   PRESET_ARTICLES,
   STANDARD_TEMPLATE_FIELDS,
+  TEMPLATE_CATEGORIES,
+  TEMPLATE_CATEGORY_LABEL,
   TEMPLATE_FIELD_TYPES,
   TEMPLATE_FIELD_TYPE_LABEL,
   extractPlaceholders,
+  formatTemplateNameWithCategory,
+  getTemplateCategory,
+  getTemplateDisplayName,
   parseStructuredDocument,
   parseTemplateFields,
   placeholderToken,
@@ -27,6 +32,7 @@ import {
   type DocumentTemplate,
   type DocumentType,
   type StructuredDocument,
+  type TemplateCategory,
   type TemplateField,
   type TemplateFieldType,
 } from "@/lib/documents/templates";
@@ -34,6 +40,7 @@ import {
 export type TemplateDraft = {
   id?: string;
   name: string;
+  category?: TemplateCategory;
   docType: DocumentType;
   body: string;
   fields: TemplateField[];
@@ -60,10 +67,9 @@ const iconButton =
 
 /**
  * Hộp soạn mẫu văn bản:
- * - Chế độ "Căn cứ & Các Điều": thêm/bớt từng dòng Căn cứ, thêm/bớt từng Điều (Tiêu đề + Ô nhập nội dung),
- *   tự động gắn với thông tin cố định của Đơn vị trong Cài đặt.
- * - Chế độ "Văn bản thô": sửa trực tiếp toàn văn.
- * - Chế độ "Xem trước": hiển thị theo bố cục hành chính chuẩn (2 cột Quốc hiệu / Tên CĐCS, Căn cứ, Các Điều, Nơi nhận, Chữ ký).
+ * - Hỗ trợ phân loại "Mẫu chuẩn (QĐ 933)" và "Mẫu tùy chỉnh".
+ * - Cho phép mở một Mẫu chuẩn lên sửa Căn cứ / Các Điều / Nội dung rồi bấm "Lưu thành Mẫu tùy chỉnh"
+ *   (tạo mẫu tùy chỉnh mới mà vẫn giữ nguyên mẫu chuẩn gốc).
  */
 export function DocumentTemplateEditor({
   initial,
@@ -72,6 +78,10 @@ export function DocumentTemplateEditor({
   onClose,
   onSaved,
 }: Props) {
+  const initialCategory: TemplateCategory = initial.category ?? getTemplateCategory(initial.name);
+  const [category, setCategory] = useState<TemplateCategory>(initialCategory);
+  const [displayName, setDisplayName] = useState<string>(() => getTemplateDisplayName(initial.name));
+
   const [draft, setDraft] = useState<TemplateDraft>(() => {
     if (!initial.body.trim() && (initial.docType === "quyet_dinh" || initial.docType === "quy_dinh")) {
       const defaultStruct = parseStructuredDocument("", initial.docType);
@@ -86,9 +96,13 @@ export function DocumentTemplateEditor({
   const [structured, setStructured] = useState<StructuredDocument>(() =>
     parseStructuredDocument(draft.body, draft.docType),
   );
-  const [mode, setMode] = useState<EditorMode>(
-    initial.docType === "quyet_dinh" || initial.docType === "quy_dinh" ? "structured" : "raw",
-  );
+  const [mode, setMode] = useState<EditorMode>(() => {
+    const hasArticles = /(^|\n)\s*Điều\s+\d+\s*[.:]/i.test(draft.body);
+    if (hasArticles || (!draft.body.trim() && (initial.docType === "quyet_dinh" || initial.docType === "quy_dinh"))) {
+      return "structured";
+    }
+    return "raw";
+  });
   const [activeArticleIndex, setActiveArticleIndex] = useState<number>(0);
   const [showPresetBases, setShowPresetBases] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,7 +111,11 @@ export function DocumentTemplateEditor({
   const articleContentRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   const isNew = !initial.id;
-  const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
+  const isEditingExistingStandard = !isNew && initialCategory === "standard";
+  const dirty =
+    displayName !== getTemplateDisplayName(initial.name) ||
+    category !== initialCategory ||
+    JSON.stringify({ ...draft, name: "" }) !== JSON.stringify({ ...initial, name: "" });
 
   const placeholders = extractPlaceholders(draft.body);
   const fieldKeys = new Set(draft.fields.map((f) => f.key));
@@ -253,8 +271,9 @@ export function DocumentTemplateEditor({
     });
   }
 
-  async function save() {
-    if (!draft.name.trim()) {
+  async function save(saveAsNewCustom = false) {
+    const cleanTitle = displayName.trim();
+    if (!cleanTitle) {
       setError("Vui lòng nhập tên mẫu.");
       return;
     }
@@ -263,14 +282,27 @@ export function DocumentTemplateEditor({
       setError(parsed.error);
       return;
     }
+
+    const targetCategory: TemplateCategory = saveAsNewCustom ? "custom" : category;
+    const rawForFormat = targetCategory === "standard" && initialCategory === "standard" ? initial.name : cleanTitle;
+    const finalName =
+      targetCategory === "standard"
+        ? formatTemplateNameWithCategory(
+            rawForFormat.startsWith("[") ? rawForFormat.replace(/\].*$/, `] ${cleanTitle}`) : cleanTitle,
+            "standard",
+          )
+        : formatTemplateNameWithCategory(cleanTitle, "custom");
+
+    const createNewRecord = isNew || saveAsNewCustom;
+
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(isNew ? "/api/documents/templates" : `/api/documents/templates/${initial.id}`, {
-        method: isNew ? "POST" : "PATCH",
+      const res = await fetch(createNewRecord ? "/api/documents/templates" : `/api/documents/templates/${initial.id}`, {
+        method: createNewRecord ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: draft.name,
+          name: finalName,
           docType: draft.docType,
           body: draft.body,
           fields: parsed.fields,
@@ -279,7 +311,7 @@ export function DocumentTemplateEditor({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; template?: DocumentTemplate };
       if (!res.ok || !data.template) throw new Error(data.error || "Không lưu được mẫu văn bản.");
-      onSaved(data.template, isNew);
+      onSaved(data.template, createNewRecord);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không lưu được mẫu văn bản.");
     } finally {
@@ -298,8 +330,21 @@ export function DocumentTemplateEditor({
         <div className="flex shrink-0 items-center gap-2 border-b border-outline-variant bg-white px-4 py-2.5">
           <MaterialIcon className="text-[22px] text-[#173A67]" name="description" />
           <h2 id="document-template-editor-title" className="text-base font-extrabold text-[#173A67]">
-            {isNew ? "Thêm mẫu văn bản" : "Sửa mẫu văn bản"}
+            {isNew
+              ? "Thêm mẫu văn bản"
+              : isEditingExistingStandard
+                ? "Xem / Tùy chỉnh từ Mẫu chuẩn (QĐ 933/QĐ-TLĐ)"
+                : "Sửa mẫu văn bản tùy chỉnh"}
           </h2>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+              category === "standard"
+                ? "bg-[#ecf4ff] text-[#173A67]"
+                : "border border-amber-300 bg-amber-50 text-amber-900"
+            }`}
+          >
+            {TEMPLATE_CATEGORY_LABEL[category]}
+          </span>
           {dirty ? <span className="text-xs font-semibold text-amber-700">Chưa lưu</span> : null}
           <div className="ml-auto flex items-center gap-2">
             {onOpenSettings ? (
@@ -319,22 +364,49 @@ export function DocumentTemplateEditor({
           </div>
         </div>
 
+        {isEditingExistingStandard ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[#c5d9f0] bg-[#eef5ff] px-4 py-2 text-xs text-[#173A67]">
+            <MaterialIcon className="text-[18px]" name="info" />
+            <span>
+              Đây là <strong>Mẫu chuẩn (QĐ 933/QĐ-TLĐ)</strong>. Bạn có thể sửa tên, thêm/bớt Căn cứ, thêm/bớt các Điều rồi bấm{" "}
+              <strong>“Lưu thành Mẫu tùy chỉnh mới”</strong> ở góc dưới để tạo mẫu riêng cho đơn vị (mẫu chuẩn gốc vẫn giữ nguyên).
+            </span>
+          </div>
+        ) : null}
+
         <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-3">
-            {/* Thông tin tên mẫu & loại văn bản */}
-            <div className="grid gap-3 rounded-xl border border-[#d2dfe9] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_190px]">
+            {/* Thông tin tên mẫu, nhóm mẫu & loại văn bản */}
+            <div className="grid gap-3 rounded-xl border border-[#d2dfe9] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_175px_185px]">
               <div>
                 <label className={labelClass} htmlFor="tpl-name">
-                  Tên mẫu *
+                  Tên mẫu văn bản *
                 </label>
                 <input
                   className={inputClass}
                   id="tpl-name"
-                  maxLength={DOCUMENT_TEMPLATE_LIMITS.name}
+                  maxLength={DOCUMENT_TEMPLATE_LIMITS.name - 30}
                   placeholder="VD: Quyết định tổ chức cuộc thi cắm hoa 20/10"
-                  value={draft.name}
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                 />
+              </div>
+              <div>
+                <label className={labelClass} htmlFor="tpl-category">
+                  Nhóm mẫu *
+                </label>
+                <select
+                  className={inputClass}
+                  id="tpl-category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as TemplateCategory)}
+                >
+                  {TEMPLATE_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {TEMPLATE_CATEGORY_LABEL[cat]}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelClass} htmlFor="tpl-type">
@@ -360,7 +432,7 @@ export function DocumentTemplateEditor({
                   ))}
                 </select>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-3">
                 <label className="flex items-center gap-2 text-sm font-semibold text-on-surface">
                   <input
                     checked={draft.isActive}
@@ -666,7 +738,7 @@ export function DocumentTemplateEditor({
                             <MaterialIcon className="text-[18px]" name="arrow_upward" />
                           </button>
                           <button
-                            aria-label="Đưa Điều xuống"
+                            aria-label="Xuống"
                             className={iconButton}
                             disabled={idx === structured.articles.length - 1}
                             title="Đưa Điều xuống"
@@ -752,60 +824,11 @@ export function DocumentTemplateEditor({
                     </div>
                   </div>
 
-                  <div className="my-5 text-center">
-                    <h3 className="text-lg font-bold uppercase">{DOCUMENT_HEADING_UPPER[draft.docType]}</h3>
-                    {structured.subject ? (
-                      <p className="mt-1 font-bold">
-                        V/v: {previewDocumentWithOrgSettings(structured.subject, orgSettings)}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="space-y-1.5 italic">
-                    {structured.bases.map((b, i) => (
-                      <p key={i}>{previewDocumentWithOrgSettings(b, orgSettings)}</p>
-                    ))}
-                  </div>
-
-                  {draft.docType === "quyet_dinh" ? (
-                    <p className="my-4 text-center text-base font-bold uppercase">QUYẾT ĐỊNH</p>
-                  ) : null}
-
-                  <div className="mt-3 space-y-3">
-                    {structured.articles.map((art, i) => (
-                      <div key={i}>
-                        <p>
-                          <strong>
-                            Điều {i + 1}: {previewDocumentWithOrgSettings(art.title, orgSettings)}
-                          </strong>
-                        </p>
-                        {art.content ? (
-                          <p className="mt-0.5 whitespace-pre-line">
-                            {previewDocumentWithOrgSettings(art.content, orgSettings)}
-                          </p>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-8 grid grid-cols-2 gap-4">
-                    <div className="text-[12px]">
-                      {structured.includeRecipients ? (
-                        <>
-                          <p className="font-bold italic underline">Nơi nhận:</p>
-                          {orgSettings.defaultRecipients.map((r, i) => (
-                            <p key={i}>- {r}</p>
-                          ))}
-                        </>
-                      ) : null}
-                    </div>
-                    <div className="text-center">
-                      <p className="font-bold uppercase">{orgSettings.signAuthority}</p>
-                      <p className="font-bold uppercase">{orgSettings.signerTitle}</p>
-                      <p className="mt-12 font-bold">
-                        {orgSettings.signerName || "{{nguoi_ky}}"}
-                      </p>
-                    </div>
+                  <div className="my-5 whitespace-pre-line font-serif text-[14px]">
+                    {previewDocumentWithOrgSettings(draft.body, orgSettings)
+                      .split("\n")
+                      .slice(6)
+                      .join("\n")}
                   </div>
                 </div>
               </div>
@@ -981,15 +1004,41 @@ export function DocumentTemplateEditor({
           >
             Hủy
           </button>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-4 py-1.5 text-sm font-bold text-white transition hover:bg-[#1E4A7D] disabled:opacity-60"
-            disabled={saving}
-            type="button"
-            onClick={() => void save()}
-          >
-            <MaterialIcon className="text-[18px]" name="save" />
-            {saving ? "Đang lưu…" : isNew ? "Tạo mẫu" : "Lưu mẫu"}
-          </button>
+
+          {isEditingExistingStandard ? (
+            <>
+              <button
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#173A67] bg-white px-3.5 py-1.5 text-sm font-bold text-[#173A67] transition hover:bg-[#ecf4ff] disabled:opacity-60"
+                disabled={saving}
+                title="Cập nhật trực tiếp vào mẫu chuẩn này"
+                type="button"
+                onClick={() => void save(false)}
+              >
+                <MaterialIcon className="text-[18px]" name="save" />
+                Cập nhật mẫu chuẩn gốc
+              </button>
+              <button
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-4 py-1.5 text-sm font-bold text-white transition hover:bg-[#1E4A7D] disabled:opacity-60"
+                disabled={saving}
+                title="Giữ nguyên mẫu chuẩn gốc và lưu bản vừa chỉnh sửa thành một Mẫu tùy chỉnh mới"
+                type="button"
+                onClick={() => void save(true)}
+              >
+                <MaterialIcon className="text-[18px]" name="library_add" />
+                {saving ? "Đang lưu…" : "Lưu thành Mẫu tùy chỉnh mới"}
+              </button>
+            </>
+          ) : (
+            <button
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-4 py-1.5 text-sm font-bold text-white transition hover:bg-[#1E4A7D] disabled:opacity-60"
+              disabled={saving}
+              type="button"
+              onClick={() => void save(false)}
+            >
+              <MaterialIcon className="text-[18px]" name="save" />
+              {saving ? "Đang lưu…" : isNew ? "Tạo mẫu" : "Lưu mẫu"}
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -11,12 +11,18 @@ import {
   DOCUMENT_TYPES,
   DOCUMENT_TYPE_LABEL,
   STANDARD_TEMPLATE_FIELDS,
+  TEMPLATE_CATEGORY_LABEL,
+  getStandardTemplateBadge,
+  getTemplateCategory,
+  getTemplateDisplayName,
   parseStructuredDocument,
   type DocumentTemplate,
   type DocumentType,
+  type TemplateCategory,
 } from "@/lib/documents/templates";
 
 type ActiveFilter = "all" | "active" | "inactive";
+type CategoryFilter = "all" | TemplateCategory;
 
 const controlClass =
   "h-8 rounded-lg border border-outline-variant bg-white px-2 text-xs text-on-surface outline-none focus:border-[#173A67]";
@@ -25,7 +31,7 @@ function normalize(text: string): string {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/gi, "d").toLowerCase();
 }
 
-/** Thư viện mẫu văn bản: lọc theo loại / trạng thái, tìm theo tên, thêm – sửa – ngừng dùng, cài đặt thông tin cố định đơn vị. */
+/** Thư viện mẫu văn bản: phân nhóm Mẫu chuẩn (QĐ 933/QĐ-TLĐ) & Mẫu tùy chỉnh, tạo mẫu tùy chỉnh từ mẫu chuẩn. */
 export function DocumentTemplatesManager({
   templates,
   initialSettings = DEFAULT_DOCUMENT_ORG_SETTINGS,
@@ -35,6 +41,7 @@ export function DocumentTemplatesManager({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [typeFilter, setTypeFilter] = useState<DocumentType | "">("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
   const [draft, setDraft] = useState<TemplateDraft | null>(null);
@@ -45,21 +52,26 @@ export function DocumentTemplatesManager({
   const [error, setError] = useState<string | null>(null);
 
   const activeCount = templates.filter((t) => t.isActive).length;
+  const standardCount = templates.filter((t) => getTemplateCategory(t.name) === "standard").length;
+  const customCount = templates.filter((t) => getTemplateCategory(t.name) === "custom").length;
+
   const rows = useMemo(() => {
     const q = normalize(query.trim());
     return templates.filter(
       (t) =>
+        (categoryFilter === "all" || getTemplateCategory(t.name) === categoryFilter) &&
         (!typeFilter || t.docType === typeFilter) &&
         (activeFilter === "all" || (activeFilter === "active") === t.isActive) &&
         (!q || normalize(t.name).includes(q)),
     );
-  }, [templates, query, typeFilter, activeFilter]);
+  }, [templates, query, categoryFilter, typeFilter, activeFilter]);
 
   function openNew() {
     setError(null);
     setMessage(null);
     setDraft({
       name: "",
+      category: categoryFilter === "standard" ? "standard" : "custom",
       docType: typeFilter || "quyet_dinh",
       body: "",
       fields: STANDARD_TEMPLATE_FIELDS.map((f) => ({ ...f })),
@@ -73,6 +85,7 @@ export function DocumentTemplatesManager({
     setDraft({
       id: t.id,
       name: t.name,
+      category: getTemplateCategory(t.name),
       docType: t.docType,
       body: t.body,
       fields: t.fields.map((f) => ({ ...f })),
@@ -80,8 +93,28 @@ export function DocumentTemplatesManager({
     });
   }
 
+  /** Mở Mẫu chuẩn dưới dạng tạo mới یک Mẫu tùy chỉnh (sửa thoải mái rồi lưu thành mẫu tùy chỉnh). */
+  function openCustomizeFromStandard(t: DocumentTemplate) {
+    setError(null);
+    setMessage(null);
+    const cleanName = getTemplateDisplayName(t.name);
+    setDraft({
+      name: `[Mẫu tùy chỉnh] ${cleanName}`,
+      category: "custom",
+      docType: t.docType,
+      body: t.body,
+      fields: t.fields.map((f) => ({ ...f })),
+      isActive: true,
+    });
+  }
+
   async function toggleActive(t: DocumentTemplate) {
-    if (t.isActive && !window.confirm(`Ngừng dùng mẫu “${t.name}”? Mẫu vẫn được lưu và có thể dùng lại bất cứ lúc nào.`)) return;
+    if (
+      t.isActive &&
+      !window.confirm(`Ngừng dùng mẫu “${getTemplateDisplayName(t.name)}”? Mẫu vẫn được lưu và có thể dùng lại bất cứ lúc nào.`)
+    ) {
+      return;
+    }
     setBusyId(t.id);
     setError(null);
     setMessage(null);
@@ -93,7 +126,11 @@ export function DocumentTemplatesManager({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(data.error || "Không lưu được mẫu văn bản.");
-      setMessage(t.isActive ? `Đã ngừng dùng mẫu “${t.name}”.` : `Đã dùng lại mẫu “${t.name}”.`);
+      setMessage(
+        t.isActive
+          ? `Đã ngừng dùng mẫu “${getTemplateDisplayName(t.name)}”.`
+          : `Đã dùng lại mẫu “${getTemplateDisplayName(t.name)}”.`,
+      );
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không lưu được mẫu văn bản.");
@@ -106,17 +143,36 @@ export function DocumentTemplatesManager({
     {
       key: "name",
       header: "Tên mẫu",
-      accessor: (t) => t.name,
+      accessor: (t) => getTemplateDisplayName(t.name),
       render: (t) => (
         <button
           className={`text-left font-semibold hover:underline ${t.isActive ? "text-[#173A67]" : "text-on-surface-variant line-through"}`}
           type="button"
           onClick={() => openEdit(t)}
         >
-          {t.name}
+          {getTemplateDisplayName(t.name)}
         </button>
       ),
       className: "min-w-[240px]",
+    },
+    {
+      key: "category",
+      header: "Nhóm mẫu",
+      accessor: (t) => TEMPLATE_CATEGORY_LABEL[getTemplateCategory(t.name)],
+      render: (t) => {
+        const cat = getTemplateCategory(t.name);
+        const badge = getStandardTemplateBadge(t.name);
+        return cat === "standard" ? (
+          <span className="inline-flex whitespace-nowrap rounded-full border border-[#b9d2ee] bg-[#ecf4ff] px-2 py-0.5 text-[11px] font-bold text-[#173A67]">
+            {badge || "Mẫu chuẩn (QĐ 933)"}
+          </span>
+        ) : (
+          <span className="inline-flex whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+            Mẫu tùy chỉnh
+          </span>
+        );
+      },
+      className: "whitespace-nowrap",
     },
     {
       key: "docType",
@@ -126,13 +182,17 @@ export function DocumentTemplatesManager({
     },
     {
       key: "structure",
-      header: "Cấu trúc (Căn cứ / Điều)",
+      header: "Cấu trúc",
       filterable: false,
       accessor: (t) => {
         const s = parseStructuredDocument(t.body, t.docType);
         return `${s.bases.length} căn cứ • ${s.articles.length} điều`;
       },
       render: (t) => {
+        const hasArticles = /(^|\n)\s*Điều\s+\d+\s*[.:]/i.test(t.body);
+        if (!hasArticles && t.docType !== "quyet_dinh") {
+          return <span className="whitespace-nowrap text-xs text-on-surface-variant">Theo biểu mẫu</span>;
+        }
         const s = parseStructuredDocument(t.body, t.docType);
         return (
           <span className="whitespace-nowrap text-xs text-on-surface-variant">
@@ -178,35 +238,50 @@ export function DocumentTemplatesManager({
       filterable: false,
       className: "sticky right-0 w-px whitespace-nowrap bg-white text-right shadow-[-6px_0_6px_-6px_rgb(0_0_0/0.18)]",
       headerClassName: "sticky right-0 z-10 bg-[#ecf4ff]",
-      render: (t) => (
-        <span className="inline-flex items-center gap-1">
-          <button
-            aria-label={`Sửa mẫu ${t.name}`}
-            className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-            title="Sửa mẫu (Căn cứ, Các Điều, Ô nhập)"
-            type="button"
-            onClick={() => openEdit(t)}
-          >
-            <MaterialIcon className="text-[16px]" name="edit" />
-            <span className="hidden sm:inline">Sửa</span>
-          </button>
-          <button
-            aria-label={t.isActive ? `Ngừng dùng mẫu ${t.name}` : `Dùng lại mẫu ${t.name}`}
-            className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
-              t.isActive
-                ? "border-outline-variant text-on-surface-variant hover:border-error hover:text-error"
-                : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-            }`}
-            disabled={busyId === t.id}
-            title={t.isActive ? "Ngừng dùng" : "Dùng lại"}
-            type="button"
-            onClick={() => void toggleActive(t)}
-          >
-            <MaterialIcon className="text-[16px]" name={t.isActive ? "block" : "restart_alt"} />
-            <span className="hidden sm:inline">{t.isActive ? "Ngừng dùng" : "Dùng lại"}</span>
-          </button>
-        </span>
-      ),
+      render: (t) => {
+        const isStd = getTemplateCategory(t.name) === "standard";
+        return (
+          <span className="inline-flex items-center gap-1">
+            {isStd ? (
+              <button
+                aria-label={`Tạo mẫu tùy chỉnh từ ${t.name}`}
+                className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#173A67] bg-[#ecf4ff] px-2 text-xs font-bold text-[#173A67] hover:bg-[#173A67] hover:text-white"
+                title="Dùng Mẫu chuẩn này để sửa và lưu thành Mẫu tùy chỉnh riêng của đơn vị"
+                type="button"
+                onClick={() => openCustomizeFromStandard(t)}
+              >
+                <MaterialIcon className="text-[15px]" name="tune" />
+                <span className="hidden sm:inline">Tạo tùy chỉnh</span>
+              </button>
+            ) : null}
+            <button
+              aria-label={`Sửa mẫu ${t.name}`}
+              className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+              title="Xem / Sửa mẫu"
+              type="button"
+              onClick={() => openEdit(t)}
+            >
+              <MaterialIcon className="text-[16px]" name="edit" />
+              <span className="hidden sm:inline">Sửa</span>
+            </button>
+            <button
+              aria-label={t.isActive ? `Ngừng dùng mẫu ${t.name}` : `Dùng lại mẫu ${t.name}`}
+              className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
+                t.isActive
+                  ? "border-outline-variant text-on-surface-variant hover:border-error hover:text-error"
+                  : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+              }`}
+              disabled={busyId === t.id}
+              title={t.isActive ? "Ngừng dùng" : "Dùng lại"}
+              type="button"
+              onClick={() => void toggleActive(t)}
+            >
+              <MaterialIcon className="text-[16px]" name={t.isActive ? "block" : "restart_alt"} />
+              <span className="hidden sm:inline">{t.isActive ? "Ngừng dùng" : "Dùng lại"}</span>
+            </button>
+          </span>
+        );
+      },
     },
   ];
 
@@ -215,7 +290,8 @@ export function DocumentTemplatesManager({
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
         <h1 className="text-lg font-extrabold text-[#173A67]">Mẫu văn bản</h1>
         <span className="text-xs text-on-surface-variant">
-          <strong className="text-[#173A67]">{activeCount}</strong> đang dùng / {templates.length} mẫu
+          <strong className="text-[#173A67]">{activeCount}</strong> đang dùng •{" "}
+          <strong>{standardCount}</strong> mẫu chuẩn (QĐ 933) • <strong>{customCount}</strong> mẫu tùy chỉnh
         </span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <button
@@ -236,7 +312,7 @@ export function DocumentTemplatesManager({
             onClick={openNew}
           >
             <MaterialIcon className="text-[18px]" name="add" />
-            Thêm mẫu
+            Thêm mẫu tùy chỉnh
           </button>
         </div>
       </div>
@@ -265,6 +341,42 @@ export function DocumentTemplatesManager({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
+        <div className="inline-flex rounded-lg border border-[#d2dfe9] bg-surface-container-low p-0.5">
+          <button
+            className={`rounded-md px-2.5 py-1 text-xs font-bold transition ${
+              categoryFilter === "all"
+                ? "bg-[#173A67] text-white shadow-sm"
+                : "text-on-surface-variant hover:text-[#173A67]"
+            }`}
+            type="button"
+            onClick={() => setCategoryFilter("all")}
+          >
+            Tất cả ({templates.length})
+          </button>
+          <button
+            className={`rounded-md px-2.5 py-1 text-xs font-bold transition ${
+              categoryFilter === "standard"
+                ? "bg-[#173A67] text-white shadow-sm"
+                : "text-on-surface-variant hover:text-[#173A67]"
+            }`}
+            type="button"
+            onClick={() => setCategoryFilter("standard")}
+          >
+            Mẫu chuẩn QĐ 933 ({standardCount})
+          </button>
+          <button
+            className={`rounded-md px-2.5 py-1 text-xs font-bold transition ${
+              categoryFilter === "custom"
+                ? "bg-[#173A67] text-white shadow-sm"
+                : "text-on-surface-variant hover:text-[#173A67]"
+            }`}
+            type="button"
+            onClick={() => setCategoryFilter("custom")}
+          >
+            Mẫu tùy chỉnh ({customCount})
+          </button>
+        </div>
+
         <label className="relative min-w-[180px] flex-1 sm:max-w-xs">
           <MaterialIcon
             className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant"
@@ -302,12 +414,13 @@ export function DocumentTemplatesManager({
           <option value="active">Đang dùng</option>
           <option value="inactive">Ngừng dùng</option>
         </select>
-        {query || typeFilter || activeFilter !== "all" ? (
+        {query || categoryFilter !== "all" || typeFilter || activeFilter !== "all" ? (
           <button
             className="text-xs font-semibold text-[#4a6b82] hover:text-[#173A67] hover:underline"
             type="button"
             onClick={() => {
               setQuery("");
+              setCategoryFilter("all");
               setTypeFilter("");
               setActiveFilter("all");
             }}
@@ -332,7 +445,11 @@ export function DocumentTemplatesManager({
         <DataTable
           columns={columns}
           density="compact"
-          emptyText={templates.length ? "Không có mẫu nào khớp điều kiện lọc." : "Chưa có mẫu văn bản nào. Bấm “Thêm mẫu” để tạo."}
+          emptyText={
+            templates.length
+              ? "Không có mẫu nào khớp điều kiện lọc."
+              : "Chưa có mẫu văn bản nào. Bấm “Thêm mẫu tùy chỉnh” để tạo."
+          }
           fill
           rowClassName={(t) => (t.isActive ? "" : "bg-surface-container-low/40")}
           rowKey={(t) => t.id}
@@ -348,7 +465,11 @@ export function DocumentTemplatesManager({
           onOpenSettings={() => setShowSettingsModal(true)}
           onSaved={(saved, created) => {
             setDraft(null);
-            setMessage(created ? `Đã tạo mẫu “${saved.name}”.` : `Đã lưu mẫu “${saved.name}”.`);
+            setMessage(
+              created
+                ? `Đã tạo mẫu “${getTemplateDisplayName(saved.name)}” (${TEMPLATE_CATEGORY_LABEL[getTemplateCategory(saved.name)]}).`
+                : `Đã lưu mẫu “${getTemplateDisplayName(saved.name)}”.`,
+            );
             router.refresh();
           }}
         />

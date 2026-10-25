@@ -11,7 +11,7 @@ export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
 export const DOCUMENT_TYPE_LABEL: Record<DocumentType, string> = {
   quyet_dinh: "Quyết định",
-  quy_dinh: "Quy định",
+  quy_dinh: "Quy định / Văn bản",
   bien_ban_lam_viec: "Biên bản làm việc",
   bien_ban_cuoc_hop: "Biên bản cuộc họp",
 };
@@ -22,6 +22,45 @@ export const DOCUMENT_HEADING_UPPER: Record<DocumentType, string> = {
   bien_ban_lam_viec: "BIÊN BẢN LÀM VIỆC",
   bien_ban_cuoc_hop: "BIÊN BẢN CUỘC HỌP",
 };
+
+export const TEMPLATE_CATEGORIES = ["standard", "custom"] as const;
+export type TemplateCategory = (typeof TEMPLATE_CATEGORIES)[number];
+
+export const TEMPLATE_CATEGORY_LABEL: Record<TemplateCategory, string> = {
+  standard: "Mẫu chuẩn (QĐ 933)",
+  custom: "Mẫu tùy chỉnh",
+};
+
+/** Nhận diện Mẫu chuẩn (theo QĐ 933/QĐ-TLĐ) hay Mẫu tùy chỉnh (của đơn vị). */
+export function getTemplateCategory(name: string): TemplateCategory {
+  return /^\[?Mẫu chuẩn\b/i.test(name.trim()) ? "standard" : "custom";
+}
+
+/** Bỏ tiền tố [Mẫu chuẩn ...] hoặc [Mẫu tùy chỉnh] để hiển thị tên gọn. */
+export function getTemplateDisplayName(name: string): string {
+  return name
+    .trim()
+    .replace(/^\[(Mẫu chuẩn[^\]]*|Mẫu tùy chỉnh[^\]]*)\]\s*/i, "")
+    .trim();
+}
+
+/** Mã hiệu mẫu chuẩn nếu có (VD: "Mẫu 1.3 - QĐ 933"). */
+export function getStandardTemplateBadge(name: string): string | null {
+  const m = name.trim().match(/^\[(Mẫu chuẩn[^\]]*)\]/i);
+  if (m) return m[1];
+  return getTemplateCategory(name) === "standard" ? "Mẫu chuẩn (QĐ 933)" : null;
+}
+
+/** Gắn tiền tố theo nhóm mẫu khi lưu. */
+export function formatTemplateNameWithCategory(rawName: string, category: TemplateCategory): string {
+  const clean = getTemplateDisplayName(rawName);
+  if (!clean) return "";
+  if (category === "standard") {
+    const existingBadge = getStandardTemplateBadge(rawName) || "Mẫu chuẩn - QĐ 933";
+    return `[${existingBadge}] ${clean}`.slice(0, DOCUMENT_TEMPLATE_LIMITS.name);
+  }
+  return `[Mẫu tùy chỉnh] ${clean}`.slice(0, DOCUMENT_TEMPLATE_LIMITS.name);
+}
 
 export const TEMPLATE_FIELD_TYPES = ["text", "textarea", "date", "number"] as const;
 export type TemplateFieldType = (typeof TEMPLATE_FIELD_TYPES)[number];
@@ -59,7 +98,7 @@ export type DecisionArticle = {
 export type StructuredDocument = {
   /** Trích yếu văn bản (V/v: ...) */
   subject: string;
-  /** Danh sách các dòng Căn cứ (thêm/bớt được) */
+  /** Danh sách các dòng Căn cứ / Theo đề nghị (thêm/bớt được) */
   bases: string[];
   /** Danh sách các Điều (Điều 1, Điều 2... thêm/bớt được, có tiêu đề + ô nhập nội dung) */
   articles: DecisionArticle[];
@@ -196,7 +235,7 @@ export function serializeStructuredDocument(docType: DocumentType, doc: Structur
 
   const cleanBases = doc.bases.map((b) => b.trim()).filter(Boolean);
   for (const b of cleanBases) {
-    const normalized = /^căn cứ/i.test(b) ? b : `Căn cứ ${b}`;
+    const normalized = /^(Căn cứ|Theo đề nghị|Xét\b)/i.test(b) ? b : `Căn cứ ${b}`;
     lines.push(normalized);
   }
 
@@ -285,7 +324,9 @@ export function parseStructuredDocument(body: string, docType: DocumentType): St
     }
 
     if (
-      /^(\{\{tham_quyen_ky\}\}|TM\.\s*BCH|NGƯỜI KÝ|CHỦ TỊCH|\{\{chuc_vu_ky\}\}|\{\{nguoi_ky\}\})/i.test(line)
+      /^(\{\{tham_quyen_ky\}\}|TM\.\s*BCH|TM\.\s*BAN|TM\.\s*ĐOÀN|QUYỀN HẠN|THƯ KÝ|NGƯỜI KÝ|CHỦ TỊCH|\{\{chuc_vu_ky\}\}|\{\{nguoi_ky\}\})/i.test(
+        line,
+      )
     ) {
       inFooter = true;
       if (currentArticle) {
@@ -297,7 +338,7 @@ export function parseStructuredDocument(body: string, docType: DocumentType): St
 
     if (inFooter) continue;
 
-    if (!subject && /^V\/v\s*:/i.test(line)) {
+    if (!subject && /^(V\/v\s*:|Về việc\b|Ban hành\b)/i.test(line)) {
       subject = line.replace(/^V\/v\s*:\s*/i, "").trim();
       continue;
     }
@@ -318,7 +359,7 @@ export function parseStructuredDocument(body: string, docType: DocumentType): St
       continue;
     }
 
-    if (/^Căn cứ(\s|$)/i.test(line)) {
+    if (/^(Căn cứ|Theo đề nghị|Xét đề nghị)(\s|$)/i.test(line)) {
       bases.push(line);
     }
   }

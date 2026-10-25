@@ -35,4 +35,8 @@
 2026-10-24 21:31 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | cập nhật 4 mẫu Quyết định từ thực tế, thêm trình dựng Căn cứ/Điều thêm bớt được và cài đặt thông tin cố định của đơn vị | | không
 2026-10-24 21:50 (UTC+7) | XONG | Văn bản: Mẫu văn bản | nạp 4 mẫu Quyết định thực tế vào cdilv_document_templates, thêm trình dựng Căn cứ & Điều thêm/bớt được + Cài đặt cố định đơn vị (document_settings) | f8f3aa2 | không
 2026-10-25 07:28 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | sửa regex nhận diện dòng Căn cứ trong parseStructuredDocument | | không
-2026-10-25 07:29 (UTC+7) | XONG | Văn bản: Mẫu văn bản | đổi regex /^Căn cứ\b/i thành /^Căn cứ(\s|$)/i trong src/lib/documents/templates.ts để đếm và giữ đúng các dòng Căn cứ tiếng Việt | HEAD | không
+2026-10-25 07:29 (UTC+7) | XONG | Văn bản: Mẫu văn bản | đổi regex /^Căn cứ\b/i thành /^Căn cứ(\s|$)/i trong src/lib/documents/templates.ts để đếm và giữ đúng các dòng Căn cứ tiếng Việt | e34c643 | không
+2026-10-25 08:30 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | phân loại Mẫu tùy chỉnh & bổ sung bộ Mẫu chuẩn theo QĐ 933/QĐ-TLĐ, hỗ trợ sửa Mẫu chuẩn và lưu chuyển thành Mẫu tùy chỉnh | | không
+2026-10-25 08:39 (UTC+7) | XONG | Văn bản: Mẫu văn bản | đổi tên 5 mẫu đã nạp thành Mẫu tùy chỉnh, bổ sung 12 Mẫu chuẩn theo QĐ 933/QĐ-TLĐ (Mẫu 1.1 đến 1.10) từ thư mục mau van ban CD, hỗ trợ lọc Mẫu chuẩn/Mẫu tùy chỉnh và chuyển Mẫu chuẩn thành Mẫu tùy chỉnh | HEAD | không
+
+
