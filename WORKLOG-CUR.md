@@ -47,6 +47,7 @@
 | Tài chính: Quy chế chi tiêu | BÀN GIAO CHO AGY | khung xong, AGY điền nội dung; chỉ admin xem (/admin/finance/regulations, bc57233) |
 | Mẫu văn bản (.docx) | CHƯA BẮT ĐẦU | Cursor sẽ dựng khung trước |
 | Văn bản: Mẫu văn bản | BÀN GIAO CHO AGY | khung xong (237e1da); AGY điền nội dung mẫu tại /admin/documents/templates (bảng cdilv_document_templates) |
+| Văn bản: Soạn văn bản | BÀN GIAO CHO AGY | khung xong (0f0a69c); /admin/documents/compose, bản nháp ở bảng cdilv_documents (status nhap); chưa làm bước ban hành |
 
 ## Nhật ký
 2026-10-24 17:38 (UTC+7) | XONG | Hoạt động công đoàn | hẹn giờ active | 6014a49 | migration hẹn giờ hoạt động
@@ -59,3 +60,5 @@
 2026-10-24 19:48 (UTC+7) | XONG | Văn bản: Mẫu văn bản | hub /admin/documents + trang /admin/documents/templates (quyền posts.manage) | 237e1da | migration_document_templates.sql (đã chạy)
 2026-10-24 19:52 (UTC+7) | BẮT ĐẦU | Tài chính: Quy chế chi tiêu | ẩn trang đoàn viên (chỉ admin / finance.manage xem tại /admin/finance/regulations) | | không
 2026-10-24 19:56 (UTC+7) | XONG | Tài chính: Quy chế chi tiêu | ẩn trang đoàn viên: /quy-che-chi-tieu trả 404, bỏ khỏi menu; chỉ admin / finance.manage xem; nội dung giữ nguyên | bc57233 | không
+2026-10-25 06:59 (UTC+7) | BẮT ĐẦU | Văn bản | Soạn văn bản | | migration_documents.sql (bảng cdilv_documents, không có dữ liệu mẫu)
+2026-10-25 07:12 (UTC+7) | XONG | Văn bản | Soạn văn bản: trang /admin/documents/compose (chọn mẫu đang dùng, form theo trường mẫu, xem trước, Lưu nháp, Xuất .docx bằng thư viện docx, danh sách bản nháp Mở lại / Xóa); quyền posts.manage; nút hub đã bật | 0f0a69c | migration_documents.sql (đã chạy, bảng cdilv_documents trống)

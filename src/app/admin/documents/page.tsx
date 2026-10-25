@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { HubPage, type HubKpi, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { countDocumentDrafts } from "@/lib/documents/drafts-server";
 import { countDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -13,12 +14,16 @@ export default async function DocumentsHubPage() {
   if (!access) redirect("/login?next=/admin/documents");
 
   const canTemplates = hasPermission(access, PERMISSIONS.postsManage);
-  const counts = canTemplates ? await countDocumentTemplates(createServiceClient()) : null;
+  const db = canTemplates ? createServiceClient() : null;
+  const [counts, draftCount] = db
+    ? await Promise.all([countDocumentTemplates(db), countDocumentDrafts(db)])
+    : [null, 0];
 
   const kpis: HubKpi[] = counts
     ? [
         { label: "Mẫu đang dùng", value: counts.active, icon: "task_alt" },
         { label: "Tổng số mẫu", value: counts.total, icon: "description" },
+        { label: "Bản nháp", value: draftCount, icon: "edit_note" },
       ]
     : [];
 
@@ -34,11 +39,9 @@ export default async function DocumentsHubPage() {
     {
       href: "/admin/documents/compose",
       title: "Soạn văn bản",
-      description: "Chọn mẫu, điền thông tin theo form và xuất file Word (.docx).",
+      description: "Chọn mẫu, điền thông tin theo form, lưu nháp và xuất file Word (.docx).",
       icon: "edit_document",
       tint: "surface",
-      badge: "Sắp có",
-      disabled: true,
       allowed: canTemplates,
     },
     {

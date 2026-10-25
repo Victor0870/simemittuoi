@@ -49,6 +49,12 @@ export async function loadDocumentTemplates(db: SupabaseClient): Promise<Documen
     );
 }
 
+export async function loadDocumentTemplate(db: SupabaseClient, id: string): Promise<DocumentTemplate | null> {
+  const { data, error } = await db.from(CDILV_TABLE.documentTemplates).select(COLUMNS).eq("id", id).maybeSingle();
+  if (error) throw new Error(`Không tải được mẫu văn bản: ${error.message}`);
+  return data ? mapRow(data as TemplateRow) : null;
+}
+
 export async function countDocumentTemplates(db: SupabaseClient): Promise<{ total: number; active: number }> {
   const { data, error } = await db.from(CDILV_TABLE.documentTemplates).select("is_active").limit(2000);
   if (error) throw new Error(`Không tải được mẫu văn bản: ${error.message}`);

@@ -525,6 +525,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.postsManage,
   },
   {
+    href: "/admin/documents/compose",
+    title: "Soạn văn bản",
+    description: "Chọn mẫu, điền thông tin theo form, lưu nháp và xuất file Word (.docx).",
+    icon: "edit_document",
+    permission: PERMISSIONS.postsManage,
+  },
+  {
     href: "/admin/polls",
     title: "Quản lý bình chọn",
     description: "Tạo, sửa, mở / đóng chương trình bình chọn và tổng kết trao điểm.",
