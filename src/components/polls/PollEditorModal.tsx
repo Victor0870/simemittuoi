@@ -654,7 +654,7 @@ export function PollEditorModal({
                         <input
                           id={`modal-opt-title-${optIdx}`}
                           className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm font-semibold text-on-surface focus:border-primary"
-                          placeholder="VD: Hương Sắc Tháng 10"
+                          placeholder="VD: Bài dự thi số 1 – Đội Sản xuất"
                           required
                           type="text"
                           value={opt.title}
@@ -667,12 +667,12 @@ export function PollEditorModal({
                       </div>
                       <div>
                         <label className="text-label-xs font-bold text-[#173A67]" htmlFor={`modal-opt-desc-${optIdx}`}>
-                          Mô tả / Ý nghĩa tác phẩm:
+                          Mô tả bài dự thi / phương án:
                         </label>
                         <input
                           id={`modal-opt-desc-${optIdx}`}
                           className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm text-on-surface focus:border-primary"
-                          placeholder="Ý nghĩa, các loại hoa, chủ đề..."
+                          placeholder="Ý tưởng, chủ đề, nội dung chính..."
                           type="text"
                           value={opt.description}
                           onChange={(e) => {
@@ -841,7 +841,7 @@ export function PollEditorModal({
                   <input
                     id="m-poll-title"
                     className="mt-1 w-full rounded-xl border border-outline-variant bg-white px-4 py-2.5 text-body-md font-semibold text-on-surface focus:border-primary"
-                    placeholder="VD: Bình chọn Cuộc thi cắm hoa chào mừng ngày Phụ nữ Việt Nam 20-10"
+                    placeholder="VD: Bình chọn bài dự thi – Cuộc thi Sáng kiến cải tiến 2026"
                     required
                     type="text"
                     value={title}
