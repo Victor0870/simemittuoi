@@ -37,6 +37,6 @@
 2026-10-25 07:28 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | sửa regex nhận diện dòng Căn cứ trong parseStructuredDocument | | không
 2026-10-25 07:29 (UTC+7) | XONG | Văn bản: Mẫu văn bản | đổi regex /^Căn cứ\b/i thành /^Căn cứ(\s|$)/i trong src/lib/documents/templates.ts để đếm và giữ đúng các dòng Căn cứ tiếng Việt | e34c643 | không
 2026-10-25 08:30 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | phân loại Mẫu tùy chỉnh & bổ sung bộ Mẫu chuẩn theo QĐ 933/QĐ-TLĐ, hỗ trợ sửa Mẫu chuẩn và lưu chuyển thành Mẫu tùy chỉnh | | không
-2026-10-25 08:39 (UTC+7) | XONG | Văn bản: Mẫu văn bản | đổi tên 5 mẫu đã nạp thành Mẫu tùy chỉnh, bổ sung 12 Mẫu chuẩn theo QĐ 933/QĐ-TLĐ (Mẫu 1.1 đến 1.10) từ thư mục mau van ban CD, hỗ trợ lọc Mẫu chuẩn/Mẫu tùy chỉnh và chuyển Mẫu chuẩn thành Mẫu tùy chỉnh | HEAD | không
-
-
+2026-10-25 08:39 (UTC+7) | XONG | Văn bản: Mẫu văn bản | đổi tên 5 mẫu đã nạp thành Mẫu tùy chỉnh, bổ sung 12 Mẫu chuẩn theo QĐ 933/QĐ-TLĐ (Mẫu 1.1 đến 1.10) từ thư mục mau van ban CD, hỗ trợ lọc Mẫu chuẩn/Mẫu tùy chỉnh và chuyển Mẫu chuẩn thành Mẫu tùy chỉnh | c085330 | không
+2026-10-25 08:50 (UTC+7) | BẮT ĐẦU | Văn bản: Mẫu văn bản | tạo thẻ màu nhẹ (pastel tags, thẻ lọc nhanh và màu nền dòng nhẹ) để phân biệt trực quan Mẫu chuẩn (QĐ 933) và Mẫu tùy chỉnh | | không
+2026-10-25 08:55 (UTC+7) | XONG | Văn bản: Mẫu văn bản | thêm thẻ màu pastel nhẹ (xanh sky cho Mẫu chuẩn QĐ 933, vàng amber cho Mẫu tùy chỉnh), thanh chỉ thị màu đầu dòng và nền dòng nhẹ trong bảng Mẫu văn bản | HEAD | không

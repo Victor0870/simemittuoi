@@ -144,15 +144,34 @@ export function DocumentTemplatesManager({
       key: "name",
       header: "Tên mẫu",
       accessor: (t) => getTemplateDisplayName(t.name),
-      render: (t) => (
-        <button
-          className={`text-left font-semibold hover:underline ${t.isActive ? "text-[#173A67]" : "text-on-surface-variant line-through"}`}
-          type="button"
-          onClick={() => openEdit(t)}
-        >
-          {getTemplateDisplayName(t.name)}
-        </button>
-      ),
+      render: (t) => {
+        const cat = getTemplateCategory(t.name);
+        const isStd = cat === "standard";
+        return (
+          <div className="flex items-start gap-2">
+            <span
+              aria-hidden="true"
+              className={`mt-0.5 inline-block h-4 w-1 shrink-0 rounded-full ${
+                !t.isActive
+                  ? "bg-outline-variant"
+                  : isStd
+                    ? "bg-sky-400"
+                    : "bg-amber-400"
+              }`}
+              title={TEMPLATE_CATEGORY_LABEL[cat]}
+            />
+            <button
+              className={`text-left font-semibold hover:underline ${
+                t.isActive ? "text-[#173A67]" : "text-on-surface-variant line-through"
+              }`}
+              type="button"
+              onClick={() => openEdit(t)}
+            >
+              {getTemplateDisplayName(t.name)}
+            </button>
+          </div>
+        );
+      },
       className: "min-w-[240px]",
     },
     {
@@ -163,11 +182,13 @@ export function DocumentTemplatesManager({
         const cat = getTemplateCategory(t.name);
         const badge = getStandardTemplateBadge(t.name);
         return cat === "standard" ? (
-          <span className="inline-flex whitespace-nowrap rounded-full border border-[#b9d2ee] bg-[#ecf4ff] px-2 py-0.5 text-[11px] font-bold text-[#173A67]">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-sky-200 bg-sky-100/80 px-2 py-0.5 text-[11px] font-bold text-sky-900 shadow-2xs">
+            <MaterialIcon className="text-[13px] text-sky-700" name="menu_book" />
             {badge || "Mẫu chuẩn (QĐ 933)"}
           </span>
         ) : (
-          <span className="inline-flex whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+          <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-amber-200 bg-amber-100/80 px-2 py-0.5 text-[11px] font-bold text-amber-900 shadow-2xs">
+            <MaterialIcon className="text-[13px] text-amber-700" name="tune" />
             Mẫu tùy chỉnh
           </span>
         );
@@ -236,7 +257,7 @@ export function DocumentTemplatesManager({
       key: "actions",
       header: "",
       filterable: false,
-      className: "sticky right-0 w-px whitespace-nowrap bg-white text-right shadow-[-6px_0_6px_-6px_rgb(0_0_0/0.18)]",
+      className: "sticky right-0 w-px whitespace-nowrap bg-white/95 backdrop-blur-xs text-right shadow-[-6px_0_6px_-6px_rgb(0_0_0/0.18)]",
       headerClassName: "sticky right-0 z-10 bg-[#ecf4ff]",
       render: (t) => {
         const isStd = getTemplateCategory(t.name) === "standard";
@@ -245,12 +266,12 @@ export function DocumentTemplatesManager({
             {isStd ? (
               <button
                 aria-label={`Tạo mẫu tùy chỉnh từ ${t.name}`}
-                className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#173A67] bg-[#ecf4ff] px-2 text-xs font-bold text-[#173A67] hover:bg-[#173A67] hover:text-white"
+                className="inline-flex h-7 items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2 text-xs font-bold text-amber-900 hover:border-amber-400 hover:bg-amber-100"
                 title="Dùng Mẫu chuẩn này để sửa và lưu thành Mẫu tùy chỉnh riêng của đơn vị"
                 type="button"
                 onClick={() => openCustomizeFromStandard(t)}
               >
-                <MaterialIcon className="text-[15px]" name="tune" />
+                <MaterialIcon className="text-[15px] text-amber-700" name="tune" />
                 <span className="hidden sm:inline">Tạo tùy chỉnh</span>
               </button>
             ) : null}
@@ -289,10 +310,19 @@ export function DocumentTemplatesManager({
     <div className="flex flex-col gap-2 lg:h-[calc(100dvh-120px)] lg:min-h-0 lg:overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5">
         <h1 className="text-lg font-extrabold text-[#173A67]">Mẫu văn bản</h1>
-        <span className="text-xs text-on-surface-variant">
-          <strong className="text-[#173A67]">{activeCount}</strong> đang dùng •{" "}
-          <strong>{standardCount}</strong> mẫu chuẩn (QĐ 933) • <strong>{customCount}</strong> mẫu tùy chỉnh
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-slate-100/80 px-2 py-0.5 font-semibold text-slate-700">
+            <strong className="text-[#173A67]">{activeCount}</strong> đang dùng
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 font-semibold text-sky-900">
+            <span className="h-2 w-2 rounded-full bg-sky-400" />
+            <strong>{standardCount}</strong> mẫu chuẩn (QĐ 933)
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 font-semibold text-amber-900">
+            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <strong>{customCount}</strong> mẫu tùy chỉnh
+          </span>
+        </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <button
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#173A67] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#ecf4ff]"
@@ -341,12 +371,12 @@ export function DocumentTemplatesManager({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
-        <div className="inline-flex rounded-lg border border-[#d2dfe9] bg-surface-container-low p-0.5">
+        <div className="inline-flex flex-wrap items-center gap-1.5">
           <button
-            className={`rounded-md px-2.5 py-1 text-xs font-bold transition ${
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
               categoryFilter === "all"
-                ? "bg-[#173A67] text-white shadow-sm"
-                : "text-on-surface-variant hover:text-[#173A67]"
+                ? "border-[#173A67] bg-[#173A67] text-white shadow-xs"
+                : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-slate-100"
             }`}
             type="button"
             onClick={() => setCategoryFilter("all")}
@@ -354,25 +384,27 @@ export function DocumentTemplatesManager({
             Tất cả ({templates.length})
           </button>
           <button
-            className={`rounded-md px-2.5 py-1 text-xs font-bold transition ${
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
               categoryFilter === "standard"
-                ? "bg-[#173A67] text-white shadow-sm"
-                : "text-on-surface-variant hover:text-[#173A67]"
+                ? "border-sky-500 bg-sky-100 text-sky-950 ring-2 ring-sky-200"
+                : "border-sky-200 bg-sky-50/80 text-sky-900 hover:border-sky-300 hover:bg-sky-100/70"
             }`}
             type="button"
             onClick={() => setCategoryFilter("standard")}
           >
+            <MaterialIcon className="text-[15px] text-sky-700" name="menu_book" />
             Mẫu chuẩn QĐ 933 ({standardCount})
           </button>
           <button
-            className={`rounded-md px-2.5 py-1 text-xs font-bold transition ${
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition ${
               categoryFilter === "custom"
-                ? "bg-[#173A67] text-white shadow-sm"
-                : "text-on-surface-variant hover:text-[#173A67]"
+                ? "border-amber-500 bg-amber-100 text-amber-950 ring-2 ring-amber-200"
+                : "border-amber-200 bg-amber-50/80 text-amber-900 hover:border-amber-300 hover:bg-amber-100/70"
             }`}
             type="button"
             onClick={() => setCategoryFilter("custom")}
           >
+            <MaterialIcon className="text-[15px] text-amber-700" name="tune" />
             Mẫu tùy chỉnh ({customCount})
           </button>
         </div>
@@ -451,7 +483,12 @@ export function DocumentTemplatesManager({
               : "Chưa có mẫu văn bản nào. Bấm “Thêm mẫu tùy chỉnh” để tạo."
           }
           fill
-          rowClassName={(t) => (t.isActive ? "" : "bg-surface-container-low/40")}
+          rowClassName={(t) => {
+            if (!t.isActive) return "bg-surface-container-low/50 opacity-75";
+            return getTemplateCategory(t.name) === "standard"
+              ? "bg-sky-50/40 hover:bg-sky-100/45"
+              : "bg-amber-50/40 hover:bg-amber-100/45";
+          }}
           rowKey={(t) => t.id}
           rows={rows}
         />

@@ -337,12 +337,16 @@ export function DocumentTemplateEditor({
                 : "Sửa mẫu văn bản tùy chỉnh"}
           </h2>
           <span
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+            className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-0.5 text-[11px] font-bold shadow-2xs ${
               category === "standard"
-                ? "bg-[#ecf4ff] text-[#173A67]"
-                : "border border-amber-300 bg-amber-50 text-amber-900"
+                ? "border-sky-200 bg-sky-100/80 text-sky-900"
+                : "border-amber-200 bg-amber-100/80 text-amber-900"
             }`}
           >
+            <MaterialIcon
+              className={`text-[13px] ${category === "standard" ? "text-sky-700" : "text-amber-700"}`}
+              name={category === "standard" ? "menu_book" : "tune"}
+            />
             {TEMPLATE_CATEGORY_LABEL[category]}
           </span>
           {dirty ? <span className="text-xs font-semibold text-amber-700">Chưa lưu</span> : null}
