@@ -20,7 +20,8 @@ export const maxDuration = 60;
 
 /**
  * Đánh dấu bản nháp đã ban hành.
- * Body: { soVanBan, ngayBanHanh (YYYY-MM-DD), uploadId, total, mime, size } – các phần bản scan đã tải lên trước qua /scan.
+ * Body: { ngayBanHanh (YYYY-MM-DD), soVanBan?, uploadId, total, mime, size } – các phần bản scan đã tải lên trước qua /scan.
+ * Bỏ trống soVanBan: số cấp tự động ở máy chủ theo cấu hình số văn bản. soVanBan nhập tay chỉ Quản trị viên được gửi.
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const guard = await requirePermission(PERMISSIONS.postsManage);
@@ -38,13 +39,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const parsed = parseIssueInput(raw);
     if (parsed.error !== null) return NextResponse.json({ error: parsed.error }, { status: 400 });
+    const manual = parsed.value.soVanBan;
+    if (manual && !guard.access.isAdmin) {
+      return NextResponse.json({ error: "Chỉ Quản trị viên được nhập số văn bản thủ công." }, { status: 403 });
+    }
 
     const row = await loadDocumentRecord(db, id);
     if (!row) return NextResponse.json({ error: "Không tìm thấy văn bản." }, { status: 404 });
     if (row.status !== "nhap") return NextResponse.json({ error: "Văn bản đã được ban hành." }, { status: 409 });
-    if (await isIssueNumberTaken(db, row, parsed.value)) {
+    if (manual && (await isIssueNumberTaken(db, row, { ...parsed.value, soVanBan: manual }))) {
       return NextResponse.json(
-        { error: `Số “${parsed.value.soVanBan}” đã dùng cho văn bản cùng loại trong năm ${parsed.value.ngayBanHanh.slice(0, 4)}.` },
+        { error: `Số “${manual}” đã dùng cho văn bản cùng loại trong năm ${parsed.value.ngayBanHanh.slice(0, 4)}.` },
         { status: 409 },
       );
     }

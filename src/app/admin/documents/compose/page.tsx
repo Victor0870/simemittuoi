@@ -30,6 +30,7 @@ export default async function DocumentComposePage({
     <DocumentComposer
       initialDraftId={typeof draft === "string" ? draft : null}
       initialDrafts={drafts}
+      isAdmin={access.isAdmin}
       settings={settings}
       templates={templates}
     />

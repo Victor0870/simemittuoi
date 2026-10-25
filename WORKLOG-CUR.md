@@ -49,6 +49,7 @@
 | Văn bản: Mẫu văn bản | BÀN GIAO CHO AGY | khung xong (237e1da); AGY điền nội dung mẫu tại /admin/documents/templates (bảng cdilv_document_templates) |
 | Văn bản: Soạn văn bản | BÀN GIAO CHO AGY | khung xong (0f0a69c); /admin/documents/compose, bản nháp ở bảng cdilv_documents (status nhap); chưa làm bước ban hành |
 | Văn bản: Sổ văn bản | BÀN GIAO CHO AGY | khung xong (e8d86f2); /admin/documents/registry, bản scan ở bucket riêng tư cdilv-documents; cờ cong_khai chỉ lưu, chưa có trang đoàn viên |
+| Văn bản: Số văn bản tự động | BÀN GIAO CHO AGY | khung xong (40d0c5a); cấu hình ở bảng cdilv_document_number_series (nút Cấu hình số trong Sổ văn bản), số cấp bằng hàm cdilv_document_issue |
 
 ## Nhật ký
 2026-10-24 17:38 (UTC+7) | XONG | Hoạt động công đoàn | hẹn giờ active | 6014a49 | migration hẹn giờ hoạt động
@@ -65,3 +66,5 @@
 2026-10-25 07:12 (UTC+7) | XONG | Văn bản | Soạn văn bản: trang /admin/documents/compose (chọn mẫu đang dùng, form theo trường mẫu, xem trước, Lưu nháp, Xuất .docx bằng thư viện docx, danh sách bản nháp Mở lại / Xóa); quyền posts.manage; nút hub đã bật | 0f0a69c | migration_documents.sql (đã chạy, bảng cdilv_documents trống)
 2026-10-25 07:43 (UTC+7) | BẮT ĐẦU | Văn bản | Sổ văn bản | | migration_document_registry.sql (bucket riêng tư cdilv-documents cho bản scan, thêm cột cong_khai; không đổi dữ liệu)
 2026-10-25 13:27 (UTC+7) | XONG | Văn bản | Sổ văn bản: trang /admin/documents/registry (Đã ban hành / Chờ ban hành, lọc loại – năm – số/tiêu đề, công khai, xem bản scan qua link 60 giây, tải lại .docx); Đánh dấu đã ban hành ở bản nháp (số, ngày, bản scan); Hủy ban hành chỉ admin (về bản nháp, xóa bản scan); quyền posts.manage | e8d86f2 | migration_document_registry.sql (đã chạy; bucket cdilv-documents riêng tư 10 MB, cột cong_khai)
+2026-10-25 13:40 (UTC+7) | BẮT ĐẦU | Văn bản | Số văn bản tự động: cấu hình mẫu số và chu kỳ đếm theo loại, cấp số phía máy chủ khi ban hành | | migration_document_numbering.sql (bảng cấu hình mẫu số, bảng bộ đếm, hàm cấp số khóa dòng; không đổi số đã ban hành)
+2026-10-25 14:20 (UTC+7) | XONG | Văn bản | Số văn bản tự động: nút Cấu hình số ở /admin/documents/registry (mẫu số {so}-{yy}/QĐ-CĐCS…, số chữ số, đếm lại theo năm hoặc tháng; quyền posts.manage); số cấp ở máy chủ lúc ban hành bằng hàm cdilv_document_issue (khóa bộ đếm, bỏ qua số đã dùng, không cấp cho bản nháp); hộp thoại ban hành xem trước số dự kiến, Quản trị viên được nhập số thủ công (vẫn chịu ràng buộc số duy nhất) | 40d0c5a | migration_document_numbering.sql (đã chạy; bảng cdilv_document_number_series 4 dòng mặc định, cdilv_document_number_counters trống)

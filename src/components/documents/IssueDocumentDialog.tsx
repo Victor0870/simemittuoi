@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { SCAN_LIMITS, isScanMimeType, type IssuedDocument } from "@/lib/documents/registry";
 import { DOCUMENT_TYPE_LABEL, type DocumentType } from "@/lib/documents/templates";
@@ -12,26 +12,53 @@ function formatSize(bytes: number): string {
   return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-/** Hộp thoại Đánh dấu đã ban hành: số, ngày ban hành, bản scan đã ký và đóng dấu (tải lên từng phần qua API). */
+/**
+ * Hộp thoại Đánh dấu đã ban hành: ngày ban hành, bản scan đã ký và đóng dấu (tải lên từng phần qua API).
+ * Số văn bản cấp tự động ở máy chủ lúc ban hành (hộp thoại chỉ xem trước); Quản trị viên được nhập số thủ công.
+ */
 export function IssueDocumentDialog({
   document: doc,
   defaultNumber,
   defaultDate,
+  canOverride,
   onClose,
   onIssued,
 }: {
   document: { id: string; title: string; type: DocumentType };
   defaultNumber: string;
   defaultDate: string;
+  canOverride: boolean;
   onClose: () => void;
   onIssued: (issued: IssuedDocument) => void;
 }) {
+  const [manual, setManual] = useState(false);
   const [soVanBan, setSoVanBan] = useState(defaultNumber);
   const [ngayBanHanh, setNgayBanHanh] = useState(defaultDate);
+  const [preview, setPreview] = useState<{ key: string; number: string | null }>({ key: "", number: null });
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const busy = progress !== null;
+  const previewKey = `${doc.type}|${ngayBanHanh}`;
+  const previewNumber = preview.key === previewKey ? preview.number : undefined;
+
+  useEffect(() => {
+    if (!ngayBanHanh) return;
+    const controller = new AbortController();
+    const key = `${doc.type}|${ngayBanHanh}`;
+    fetch(`/api/documents/numbering/preview?type=${doc.type}&date=${ngayBanHanh}`, { signal: controller.signal })
+      .then((res) => res.json().then((data: { number?: string }) => (res.ok && data.number ? data.number : null)))
+      .catch(() => null)
+      .then((number) => {
+        if (!controller.signal.aborted) setPreview({ key, number });
+      });
+    return () => controller.abort();
+  }, [doc.type, ngayBanHanh]);
+
+  function toggleManual(next: boolean) {
+    setManual(next);
+    if (next && !soVanBan.trim() && previewNumber) setSoVanBan(previewNumber);
+  }
 
   function pickFile(next: File | null) {
     setError(null);
@@ -54,7 +81,7 @@ export function IssueDocumentDialog({
 
   async function submit() {
     setError(null);
-    if (!soVanBan.trim()) return setError("Vui lòng nhập số văn bản.");
+    if (manual && !soVanBan.trim()) return setError("Vui lòng nhập số văn bản.");
     if (!ngayBanHanh) return setError("Vui lòng chọn ngày ban hành.");
     if (!file) return setError("Vui lòng chọn bản scan đã ký, đóng dấu.");
 
@@ -80,7 +107,14 @@ export function IssueDocumentDialog({
       const res = await fetch(`/api/documents/drafts/${doc.id}/issue`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ soVanBan, ngayBanHanh, uploadId, total, mime: file.type, size: file.size }),
+        body: JSON.stringify({
+          soVanBan: manual ? soVanBan : null,
+          ngayBanHanh,
+          uploadId,
+          total,
+          mime: file.type,
+          size: file.size,
+        }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; document?: IssuedDocument };
       if (!res.ok || !data.document) throw new Error(data.error || "Không ban hành được văn bản.");
@@ -119,20 +153,51 @@ export function IssueDocumentDialog({
           <p className="text-xs text-on-surface-variant">
             {DOCUMENT_TYPE_LABEL[doc.type]}: <strong className="text-[#173A67]">{doc.title}</strong>
           </p>
-          <label className="block">
-            <span className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant">
-              Số văn bản <span className="text-error">*</span>
+          <div>
+            <div className="mb-0.5 flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-on-surface-variant">Số văn bản</span>
+              {canOverride ? (
+                <label className="ml-auto inline-flex items-center gap-1 text-[11px] font-semibold text-[#173A67]">
+                  <input
+                    checked={manual}
+                    className="h-3.5 w-3.5 accent-[#173A67]"
+                    disabled={busy}
+                    type="checkbox"
+                    onChange={(e) => toggleManual(e.target.checked)}
+                  />
+                  Nhập số thủ công
+                </label>
+              ) : null}
+            </div>
+            {manual ? (
+              <input
+                aria-label="Số văn bản nhập thủ công"
+                autoFocus
+                className={inputClass}
+                disabled={busy}
+                maxLength={SCAN_LIMITS.number}
+                placeholder="VD: 02-26/QĐ-CĐCS"
+                value={soVanBan}
+                onChange={(e) => setSoVanBan(e.target.value)}
+              />
+            ) : (
+              <div className="flex h-9 items-center gap-1.5 rounded-lg border border-dashed border-[#9fb7cf] bg-[#f4f8fc] px-2.5 text-sm">
+                <MaterialIcon className="text-[16px] text-[#4a6b82]" name="pin" />
+                {previewNumber ? (
+                  <strong className="tabular-nums text-[#173A67]">{previewNumber}</strong>
+                ) : (
+                  <span className="text-xs text-on-surface-variant">
+                    {previewNumber === null ? "Không xem trước được – số vẫn được cấp khi ban hành" : "Đang tính số…"}
+                  </span>
+                )}
+              </div>
+            )}
+            <span className="mt-0.5 block text-[11px] text-on-surface-variant">
+              {manual
+                ? "Số không được trùng với văn bản cùng loại trong năm ban hành."
+                : "Số dự kiến – hệ thống cấp số chính thức lúc bấm Ban hành (có thể tăng nếu có văn bản khác ban hành trước)."}
             </span>
-            <input
-              autoFocus
-              className={inputClass}
-              disabled={busy}
-              maxLength={SCAN_LIMITS.number}
-              placeholder="VD: 02-26/QĐ-CĐCS"
-              value={soVanBan}
-              onChange={(e) => setSoVanBan(e.target.value)}
-            />
-          </label>
+          </div>
           <label className="block">
             <span className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant">
               Ngày ban hành <span className="text-error">*</span>

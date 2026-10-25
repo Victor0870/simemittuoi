@@ -98,12 +98,15 @@ export function DocumentComposer({
   settings,
   initialDrafts,
   initialDraftId = null,
+  isAdmin = false,
 }: {
   templates: DocumentTemplate[];
   settings: DocumentOrgSettings;
   initialDrafts: DocumentDraft[];
   /** Mở sẵn bản nháp này (từ Sổ văn bản: /admin/documents/compose?draft=…). */
   initialDraftId?: string | null;
+  /** Quản trị viên được nhập số văn bản thủ công khi ban hành. */
+  isAdmin?: boolean;
 }) {
   const opened = initialDrafts.find(
     (d) => d.id === initialDraftId && templates.some((t) => t.id === d.templateId),
@@ -607,6 +610,7 @@ export function DocumentComposer({
 
       {issuing && issuingDefaults ? (
         <IssueDocumentDialog
+          canOverride={isAdmin}
           defaultDate={issuingDefaults.date}
           defaultNumber={issuingDefaults.number}
           document={issuing}

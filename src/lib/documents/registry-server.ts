@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_RPC, CDILV_STORAGE, CDILV_TABLE } from "@/lib/supabase/tables";
 import { isValidDateValue, type FieldValues } from "./compose";
 import { loadNames } from "./drafts-server";
 import { SCAN_EXT, SCAN_LIMITS, isScanMimeType, type IssuedDocument, type ScanMimeType } from "./registry";
@@ -161,19 +161,23 @@ export async function assembleScan(db: SupabaseClient, documentId: string, uploa
 
 export class ScanError extends Error {}
 
-export type IssueInput = { soVanBan: string; ngayBanHanh: string };
+/** soVanBan null: số cấp tự động theo cấu hình số văn bản; có giá trị: số nhập tay. */
+export type IssueInput = { soVanBan: string | null; ngayBanHanh: string };
 
 export function parseIssueInput(raw: Record<string, unknown>): { value: IssueInput; error: null } | { value: null; error: string } {
   const soVanBan = typeof raw.soVanBan === "string" ? raw.soVanBan.trim().replace(/\s+/g, " ") : "";
-  if (!soVanBan) return { value: null, error: "Vui lòng nhập số văn bản." };
   if (soVanBan.length > SCAN_LIMITS.number) return { value: null, error: "Số văn bản quá dài." };
   const ngayBanHanh = typeof raw.ngayBanHanh === "string" ? raw.ngayBanHanh.trim() : "";
   if (!isValidDateValue(ngayBanHanh)) return { value: null, error: "Ngày ban hành không hợp lệ." };
-  return { value: { soVanBan, ngayBanHanh }, error: null };
+  return { value: { soVanBan: soVanBan || null, ngayBanHanh }, error: null };
 }
 
 /** Số văn bản đã dùng cho văn bản khác cùng loại, cùng năm ban hành. */
-export async function isIssueNumberTaken(db: SupabaseClient, row: DocumentRecord, input: IssueInput): Promise<boolean> {
+export async function isIssueNumberTaken(
+  db: SupabaseClient,
+  row: DocumentRecord,
+  input: IssueInput & { soVanBan: string },
+): Promise<boolean> {
   const year = input.ngayBanHanh.slice(0, 4);
   const { data, error } = await db
     .from(CDILV_TABLE.documents)
@@ -189,35 +193,31 @@ export async function isIssueNumberTaken(db: SupabaseClient, row: DocumentRecord
   return (data ?? []).some((d) => String(d.so_van_ban ?? "").trim().toLocaleLowerCase("vi") === target);
 }
 
-/** Chuyển bản nháp sang đã ban hành. Trả về false nếu văn bản không còn là bản nháp. */
+/**
+ * Chuyển bản nháp sang đã ban hành qua hàm cdilv_document_issue: số tự động được cấp trong cùng giao dịch
+ * (khóa bộ đếm theo loại + kỳ), số nhập tay vẫn chịu ràng buộc số duy nhất theo loại + năm.
+ */
 export async function markIssued(
   db: SupabaseClient,
   id: string,
   input: IssueInput,
   scanPath: string,
   actorId: string,
-): Promise<{ ok: true } | { ok: false; duplicate: boolean }> {
-  const now = new Date().toISOString();
-  const { data, error } = await db
-    .from(CDILV_TABLE.documents)
-    .update({
-      status: "da_ban_hanh",
-      so_van_ban: input.soVanBan,
-      ngay_ban_hanh: input.ngayBanHanh,
-      scan_path: scanPath,
-      issued_at: now,
-      issued_by: actorId,
-      updated_at: now,
-    })
-    .eq("id", id)
-    .eq("status", "nhap")
-    .select("id")
-    .maybeSingle();
+): Promise<{ ok: true; soVanBan: string } | { ok: false; duplicate: boolean }> {
+  const { data, error } = await db.rpc(CDILV_RPC.documentIssue, {
+    p_id: id,
+    p_date: input.ngayBanHanh,
+    p_scan_path: scanPath,
+    p_actor_id: actorId,
+    p_number: input.soVanBan,
+  });
   if (error) {
     if (error.code === "23505") return { ok: false, duplicate: true };
     throw new Error(`Không ban hành được văn bản: ${error.message}`);
   }
-  return data ? { ok: true } : { ok: false, duplicate: false };
+  const result = (data ?? {}) as { ok?: boolean; so_van_ban?: string; reason?: string };
+  if (result.ok && result.so_van_ban) return { ok: true, soVanBan: result.so_van_ban };
+  return { ok: false, duplicate: result.reason === "duplicate" };
 }
 
 /**

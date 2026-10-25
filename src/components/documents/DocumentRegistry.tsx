@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { DocumentNumberingDialog } from "@/components/documents/DocumentNumberingDialog";
 import { IssueDocumentDialog } from "@/components/documents/IssueDocumentDialog";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { DocumentDraft } from "@/lib/documents/compose";
@@ -53,6 +54,7 @@ export function DocumentRegistry({
   const [year, setYear] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [issuing, setIssuing] = useState<DocumentDraft | null>(null);
+  const [numbering, setNumbering] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -285,7 +287,7 @@ export function DocumentRegistry({
           <button
             aria-label={`Đánh dấu đã ban hành ${d.title}`}
             className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-300 px-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
-            title="Đánh dấu đã ban hành (nhập số, ngày, bản scan đã ký)"
+            title="Đánh dấu đã ban hành (số cấp tự động, ngày, bản scan đã ký)"
             type="button"
             onClick={() => {
               clearNotice();
@@ -323,8 +325,17 @@ export function DocumentRegistry({
             Chờ ban hành ({drafts.length})
           </button>
         </div>
+        <button
+          className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#173A67] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#ecf4ff]"
+          title="Mẫu số và chu kỳ đếm của số văn bản tự động theo loại"
+          type="button"
+          onClick={() => setNumbering(true)}
+        >
+          <MaterialIcon className="text-[17px]" name="pin" />
+          Cấu hình số
+        </button>
         <Link
-          className="ml-auto inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
+          className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
           href="/admin/documents/compose"
         >
           <MaterialIcon className="text-[17px]" name="edit_document" />
@@ -424,6 +435,7 @@ export function DocumentRegistry({
 
       {issuing && issuingDefaults ? (
         <IssueDocumentDialog
+          canOverride={isAdmin}
           defaultDate={issuingDefaults.date}
           defaultNumber={issuingDefaults.number}
           document={issuing}
@@ -431,6 +443,7 @@ export function DocumentRegistry({
           onIssued={afterIssued}
         />
       ) : null}
+      {numbering ? <DocumentNumberingDialog onClose={() => setNumbering(false)} /> : null}
     </div>
   );
 }

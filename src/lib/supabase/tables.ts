@@ -64,6 +64,7 @@ export const CDILV_TABLE = {
   counterparties: "cdilv_counterparties",
   documentTemplates: "cdilv_document_templates",
   documents: "cdilv_documents",
+  documentNumberSeries: "cdilv_document_number_series",
 } as const;
 
 export const CDILV_RPC = {
@@ -89,6 +90,8 @@ export const CDILV_RPC = {
   paymentRequestLog: "cdilv_payment_request_log",
   fundEntrySave: "cdilv_fund_entry_save",
   fundEntryVoid: "cdilv_fund_entry_void",
+  documentIssue: "cdilv_document_issue",
+  documentNumberPreview: "cdilv_document_number_preview",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */
