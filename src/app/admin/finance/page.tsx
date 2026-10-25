@@ -44,10 +44,18 @@ export default async function FinanceHubPage() {
 
   const tiles: (HubTile & { allowed: boolean })[] = [
     {
-      href: "/admin/finance/summary",
-      title: "Tổng hợp thu chi",
-      description: "Tổng hợp thu và tổng hợp chi theo danh mục (tháng / quý / năm), số dư đầu kỳ kết chuyển từ sổ cũ, nhập và xuất Excel.",
-      icon: "summarize",
+      href: "/admin/finance/income",
+      title: "Tổng hợp thu",
+      description: "Tổng hợp các khoản thu theo danh mục (tháng / quý / năm), số dư đầu kỳ kết chuyển từ sổ cũ, nhập và xuất Excel khoản thu.",
+      icon: "south_west",
+      tint: "dusty",
+      allowed: canFinance,
+    },
+    {
+      href: "/admin/finance/expense",
+      title: "Tổng hợp chi",
+      description: "Tổng hợp các khoản chi theo danh mục (tháng / quý / năm), số dư đầu kỳ kết chuyển từ sổ cũ, nhập và xuất Excel khoản chi.",
+      icon: "north_east",
       tint: "dusty",
       allowed: canFinance,
     },

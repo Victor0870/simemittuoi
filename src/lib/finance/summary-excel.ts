@@ -18,20 +18,36 @@ import type { ComputedFinanceSummary } from "./summary";
 export const FINANCE_IMPORT_MAX_BYTES = 2 * 1024 * 1024;
 export const FINANCE_IMPORT_MAX_ROWS = 1000;
 
-export const FINANCE_TEMPLATE_HEADERS = [
+export const FINANCE_INCOME_TEMPLATE_HEADERS = [
   "Ngày",
-  "Loại thu/chi",
-  "Danh mục",
-  "Nội dung",
-  "Số tiền",
+  "Danh mục thu",
+  "Nội dung thu",
+  "Số tiền thu",
   "Ghi chú",
 ] as const;
+
+export const FINANCE_EXPENSE_TEMPLATE_HEADERS = [
+  "Ngày",
+  "Danh mục chi",
+  "Nội dung chi",
+  "Số tiền chi",
+  "Ghi chú",
+] as const;
+
+export function getFinanceTemplateHeaders(kind: CategoryKind): readonly string[] {
+  return kind === "income" ? FINANCE_INCOME_TEMPLATE_HEADERS : FINANCE_EXPENSE_TEMPLATE_HEADERS;
+}
+
+export function parseSummaryKind(raw: unknown, fallback: CategoryKind = "income"): CategoryKind {
+  if (raw === "income" || raw === "expense") return raw;
+  return fallback;
+}
 
 export type FinanceImportPreviewRow = {
   row: number;
   entryDate: string | null;
   entryDateDisplay: string;
-  kind: CategoryKind | null;
+  kind: CategoryKind;
   kindLabel: string;
   categoryId: string | null;
   categoryName: string;
@@ -42,6 +58,7 @@ export type FinanceImportPreviewRow = {
 };
 
 export type FinanceImportPreviewResult = {
+  kind: CategoryKind;
   rows: FinanceImportPreviewRow[];
   columns: string[];
 };
@@ -169,12 +186,13 @@ function parseAmountValue(raw: unknown): number | null {
 
 function matchCategory(
   rawCategory: string,
-  kind: CategoryKind | null,
+  expectedKind: CategoryKind,
   categories: FundCategory[],
 ): { matched: FundCategory | null; error: string | null } {
+  const kindLabel = expectedKind === "income" ? "thu" : "chi";
   const trimmed = rawCategory.trim();
   if (!trimmed) {
-    return { matched: null, error: "Thiếu danh mục thu/chi." };
+    return { matched: null, error: `Thiếu danh mục ${kindLabel}.` };
   }
   const f = fold(trimmed);
   const activeCategories = categories.filter((c) => c.is_active);
@@ -187,32 +205,27 @@ function matchCategory(
   );
 
   if (candidates.length === 0) {
-    // Thử khớp một phần nếu chỉ có duy nhất 1 danh mục cùng loại chứa từ khóa
     const partial = activeCategories.filter(
-      (c) => (!kind || c.kind === kind) && (fold(c.name).includes(f) || f.includes(fold(c.name))),
+      (c) => c.kind === expectedKind && (fold(c.name).includes(f) || f.includes(fold(c.name))),
     );
     if (partial.length === 1) {
       return { matched: partial[0], error: null };
     }
     return {
       matched: null,
-      error: `Danh mục “${trimmed}” không tồn tại trong hệ thống (vui lòng chọn đúng tên danh mục ở trang Danh mục & Hướng dẫn).`,
+      error: `Danh mục ${kindLabel} “${trimmed}” không tồn tại trong hệ thống (vui lòng chọn đúng tên ở trang Danh mục & Hướng dẫn).`,
     };
   }
 
-  if (kind) {
-    const sameKind = candidates.find((c) => c.kind === kind);
-    if (!sameKind) {
-      const wrongKind = candidates[0];
-      return {
-        matched: null,
-        error: `Danh mục “${wrongKind.name}” thuộc nhóm ${wrongKind.kind === "income" ? "Thu" : "Chi"}, không khớp với loại “${kind === "income" ? "Thu" : "Chi"}”.`,
-      };
-    }
-    return { matched: sameKind, error: null };
+  const sameKind = candidates.find((c) => c.kind === expectedKind);
+  if (!sameKind) {
+    const wrongKind = candidates[0];
+    return {
+      matched: null,
+      error: `Danh mục “${wrongKind.name}” thuộc nhóm ${wrongKind.kind === "income" ? "Thu" : "Chi"}, không phải danh mục ${expectedKind === "income" ? "Thu" : "Chi"}.`,
+    };
   }
-
-  return { matched: candidates[0], error: null };
+  return { matched: sameKind, error: null };
 }
 
 type HeaderMapping = {
@@ -238,19 +251,52 @@ function detectHeaders(ws: ExcelJS.Worksheet): HeaderMapping | null {
       const val = plainCellValue(cell.value);
       if (typeof val !== "string") return;
       const f = fold(val);
-      if (!dateCol && ["ngay", "ngay ghi so", "ngay phat sinh", "date"].includes(f)) dateCol = col;
+      if (!dateCol && ["ngay", "ngay ghi so", "ngay phat sinh", "ngay thu", "ngay chi", "date"].includes(f))
+        dateCol = col;
       else if (!kindCol && ["loai thu/chi", "loai", "loai phieu", "thu/chi", "thu / chi", "type"].includes(f))
         kindCol = col;
-      else if (!categoryCol && ["danh muc", "danh muc thu chi", "danh muc thu/chi", "category"].includes(f))
+      else if (
+        !categoryCol &&
+        [
+          "danh muc",
+          "danh muc thu",
+          "danh muc chi",
+          "danh muc thu chi",
+          "danh muc thu/chi",
+          "category",
+        ].includes(f)
+      )
         categoryCol = col;
-      else if (!contentCol && ["noi dung", "dien giai", "noi dung thu chi", "content", "description"].includes(f))
+      else if (
+        !contentCol &&
+        [
+          "noi dung",
+          "noi dung thu",
+          "noi dung chi",
+          "dien giai",
+          "noi dung thu chi",
+          "content",
+          "description",
+        ].includes(f)
+      )
         contentCol = col;
-      else if (!amountCol && ["so tien", "so tien (vnd)", "so tien vnd", "thanh tien", "amount"].includes(f))
+      else if (
+        !amountCol &&
+        [
+          "so tien",
+          "so tien thu",
+          "so tien chi",
+          "so tien (vnd)",
+          "so tien vnd",
+          "thanh tien",
+          "amount",
+        ].includes(f)
+      )
         amountCol = col;
       else if (!noteCol && ["ghi chu", "chu thich", "note", "notes"].includes(f)) noteCol = col;
     });
 
-    if (dateCol && kindCol && categoryCol && contentCol && amountCol) {
+    if (dateCol && categoryCol && contentCol && amountCol) {
       return { headerRow: r, dateCol, kindCol, categoryCol, contentCol, amountCol, noteCol };
     }
   }
@@ -259,6 +305,7 @@ function detectHeaders(ws: ExcelJS.Worksheet): HeaderMapping | null {
 
 function validateImportRow(params: {
   row: number;
+  expectedKind: CategoryKind;
   dateRaw: unknown;
   kindRaw: unknown;
   categoryRaw: unknown;
@@ -269,6 +316,9 @@ function validateImportRow(params: {
   lockedThrough: string | null;
 }): FinanceImportPreviewRow {
   const errors: string[] = [];
+  const isIncome = params.expectedKind === "income";
+  const kindNoun = isIncome ? "thu" : "chi";
+  const kindTitle = isIncome ? "Thu" : "Chi";
 
   const entryDate = parseExcelDate(params.dateRaw);
   const entryDateDisplay = entryDate
@@ -282,35 +332,33 @@ function validateImportRow(params: {
     errors.push(`Ngày ${formatDateVi(entryDate)} thuộc kỳ đã khóa sổ (đến hết ${formatDateVi(params.lockedThrough)}).`);
   }
 
-  const kind = parseKindValue(params.kindRaw);
-  const kindLabel =
-    kind === "income"
-      ? "Thu"
-      : kind === "expense"
-        ? "Chi"
-        : isBlank(params.kindRaw)
-          ? "—"
-          : String(params.kindRaw).trim();
-  if (!kind) {
-    errors.push("Loại thu/chi chỉ nhận “Thu” hoặc “Chi”.");
+  if (!isBlank(params.kindRaw)) {
+    const parsedKind = parseKindValue(params.kindRaw);
+    if (!parsedKind) {
+      errors.push(`Loại phiếu “${String(params.kindRaw).trim()}” không hợp lệ (chỉ nhận “${kindTitle}”).`);
+    } else if (parsedKind !== params.expectedKind) {
+      errors.push(
+        `Trang Tổng hợp ${kindNoun} chỉ nhận các khoản ${kindTitle} (dòng này đang ghi “${parsedKind === "income" ? "Thu" : "Chi"}”).`,
+      );
+    }
   }
 
   const categoryText = isBlank(params.categoryRaw) ? "" : String(params.categoryRaw).trim();
-  const catMatch = matchCategory(categoryText, kind, params.categories);
+  const catMatch = matchCategory(categoryText, params.expectedKind, params.categories);
   if (catMatch.error) {
     errors.push(catMatch.error);
   }
 
   const content = isBlank(params.contentRaw) ? "" : String(params.contentRaw).trim().replace(/\s+/g, " ");
   if (!content) {
-    errors.push("Thiếu nội dung thu/chi.");
+    errors.push(`Thiếu nội dung khoản ${kindNoun}.`);
   } else if (content.length > FINANCE_LIMITS.description) {
     errors.push(`Nội dung tối đa ${FINANCE_LIMITS.description} ký tự.`);
   }
 
   const amount = parseAmountValue(params.amountRaw);
   if (amount === null || amount <= 0) {
-    errors.push("Số tiền phải là số nguyên dương lớn hơn 0.");
+    errors.push(`Số tiền ${kindNoun} phải là số nguyên dương lớn hơn 0.`);
   } else if (amount > FINANCE_LIMITS.maxAmount) {
     errors.push("Số tiền vượt quá giới hạn cho phép.");
   }
@@ -324,8 +372,8 @@ function validateImportRow(params: {
     row: params.row,
     entryDate,
     entryDateDisplay,
-    kind,
-    kindLabel,
+    kind: params.expectedKind,
+    kindLabel: kindTitle,
     categoryId: catMatch.matched?.id ?? null,
     categoryName: catMatch.matched?.name ?? (categoryText || "—"),
     content,
@@ -338,6 +386,7 @@ function validateImportRow(params: {
 export async function previewFinanceImport(
   db: SupabaseClient,
   buffer: ArrayBuffer,
+  expectedKind: CategoryKind,
 ): Promise<FinanceImportPreviewResult | { error: string }> {
   const wb = new ExcelJS.Workbook();
   try {
@@ -348,10 +397,11 @@ export async function previewFinanceImport(
   const ws = wb.worksheets[0];
   if (!ws) return { error: "File Excel không có trang tính nào." };
 
+  const headers = getFinanceTemplateHeaders(expectedKind);
   const mapping = detectHeaders(ws);
   if (!mapping) {
     return {
-      error: `Không tìm thấy dòng tiêu đề chuẩn (${FINANCE_TEMPLATE_HEADERS.slice(0, 5).join(", ")}). Vui lòng tải và dùng đúng file mẫu.`,
+      error: `Không tìm thấy dòng tiêu đề chuẩn (${headers.slice(0, 4).join(", ")}). Vui lòng tải và dùng đúng file mẫu.`,
     };
   }
 
@@ -361,7 +411,7 @@ export async function previewFinanceImport(
   for (let r = mapping.headerRow + 1; r <= ws.rowCount; r++) {
     const rowObj = ws.getRow(r);
     const dateRaw = plainCellValue(rowObj.getCell(mapping.dateCol).value);
-    const kindRaw = plainCellValue(rowObj.getCell(mapping.kindCol).value);
+    const kindRaw = mapping.kindCol ? plainCellValue(rowObj.getCell(mapping.kindCol).value) : null;
     const categoryRaw = plainCellValue(rowObj.getCell(mapping.categoryCol).value);
     const contentRaw = plainCellValue(rowObj.getCell(mapping.contentCol).value);
     const amountRaw = plainCellValue(rowObj.getCell(mapping.amountCol).value);
@@ -385,6 +435,7 @@ export async function previewFinanceImport(
     rows.push(
       validateImportRow({
         row: r,
+        expectedKind,
         dateRaw,
         kindRaw,
         categoryRaw,
@@ -402,8 +453,9 @@ export async function previewFinanceImport(
   }
 
   return {
+    kind: expectedKind,
     rows,
-    columns: [...FINANCE_TEMPLATE_HEADERS],
+    columns: [...headers],
   };
 }
 
@@ -411,8 +463,14 @@ export async function commitFinanceImport(
   db: SupabaseClient,
   actorId: string,
   body: unknown,
+  fallbackKind: CategoryKind = "income",
 ): Promise<FinanceImportCommitResult | { error: string }> {
-  const rawRows = (body as { rows?: unknown } | null)?.rows;
+  const payload = (body && typeof body === "object" ? body : {}) as {
+    kind?: unknown;
+    rows?: unknown;
+  };
+  const expectedKind = parseSummaryKind(payload.kind, fallbackKind);
+  const rawRows = payload.rows;
   if (!Array.isArray(rawRows) || rawRows.length === 0) {
     return { error: "Không có dòng dữ liệu hợp lệ nào để lưu." };
   }
@@ -454,7 +512,7 @@ export async function commitFinanceImport(
     const r = (rawRows[i] && typeof rawRows[i] === "object" ? rawRows[i] : {}) as Record<string, unknown>;
     const rowNum = Number.isInteger(r.row) && Number(r.row) > 0 ? Number(r.row) : i + 1;
     const entryDate = typeof r.entryDate === "string" ? r.entryDate.trim() : "";
-    const kind = r.kind === "income" || r.kind === "expense" ? r.kind : null;
+    const rowKind = r.kind === "income" || r.kind === "expense" ? r.kind : expectedKind;
     const categoryId = typeof r.categoryId === "string" ? r.categoryId.trim() : "";
     const content = typeof r.content === "string" ? r.content.trim().replace(/\s+/g, " ") : "";
     const amount = Math.round(Number(r.amount));
@@ -465,10 +523,14 @@ export async function commitFinanceImport(
     else if (lockedThrough && entryDate <= lockedThrough) {
       rowErrors.push(`Ngày ${formatDateVi(entryDate)} thuộc kỳ đã khóa sổ.`);
     }
-    if (!kind) rowErrors.push("Loại thu/chi không hợp lệ.");
+    if (rowKind !== expectedKind) {
+      rowErrors.push(`Chỉ cho phép nhập khoản ${expectedKind === "income" ? "thu" : "chi"}.`);
+    }
     const cat = categoryById.get(categoryId);
     if (!cat) rowErrors.push("Danh mục không tồn tại.");
-    else if (kind && cat.kind !== kind) rowErrors.push("Danh mục không khớp loại thu/chi.");
+    else if (cat.kind !== expectedKind) {
+      rowErrors.push(`Danh mục không thuộc nhóm ${expectedKind === "income" ? "thu" : "chi"}.`);
+    }
     if (!content || content.length > FINANCE_LIMITS.description) rowErrors.push("Nội dung không hợp lệ.");
     if (!Number.isFinite(amount) || amount <= 0 || amount > FINANCE_LIMITS.maxAmount) {
       rowErrors.push("Số tiền không hợp lệ.");
@@ -477,7 +539,7 @@ export async function commitFinanceImport(
       rowErrors.push("Ghi chú quá dài.");
     }
 
-    if (rowErrors.length > 0 || !kind || !cat) {
+    if (rowErrors.length > 0 || !cat) {
       result.skipped += 1;
       result.errors.push({ row: rowNum, message: rowErrors.join(" ") });
       continue;
@@ -486,7 +548,7 @@ export async function commitFinanceImport(
     validItems.push({
       row: rowNum,
       entryDate,
-      kind,
+      kind: expectedKind,
       categoryId: cat.id,
       content,
       amount,
@@ -547,21 +609,29 @@ export async function commitFinanceImport(
   return result;
 }
 
-export async function buildFinanceImportTemplate(categories: FundCategory[]): Promise<Buffer> {
+export async function buildFinanceImportTemplate(
+  categories: FundCategory[],
+  kind: CategoryKind,
+): Promise<Buffer> {
+  const isIncome = kind === "income";
+  const kindNoun = isIncome ? "thu" : "chi";
+  const headers = getFinanceTemplateHeaders(kind);
+  const sheetTitle = isIncome ? "Nhập khoản thu" : "Nhập khoản chi";
+  const guideTitle = isIncome ? "Danh mục thu & Hướng dẫn" : "Danh mục chi & Hướng dẫn";
+
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Nhập thu chi", { views: [{ state: "frozen", ySplit: 1 }] });
+  const ws = wb.addWorksheet(sheetTitle, { views: [{ state: "frozen", ySplit: 1 }] });
 
   ws.columns = [
     { width: 16, style: { numFmt: "@" } },
-    { width: 16, style: { numFmt: "@" } },
-    { width: 38, style: { numFmt: "@" } },
-    { width: 46, style: { numFmt: "@" } },
-    { width: 18, style: { numFmt: "#,##0" } },
+    { width: 40, style: { numFmt: "@" } },
+    { width: 48, style: { numFmt: "@" } },
+    { width: 20, style: { numFmt: "#,##0" } },
     { width: 32, style: { numFmt: "@" } },
   ];
 
   const headerRow = ws.getRow(1);
-  FINANCE_TEMPLATE_HEADERS.forEach((text, idx) => {
+  headers.forEach((text, idx) => {
     const cell = headerRow.getCell(idx + 1);
     cell.value = text;
     cell.font = { bold: true, color: { argb: "FF173A67" } };
@@ -576,16 +646,20 @@ export async function buildFinanceImportTemplate(categories: FundCategory[]): Pr
   });
   headerRow.height = 28;
 
-  const activeIncome = categories.filter((c) => c.is_active && c.kind === "income");
-  const activeExpense = categories.filter((c) => c.is_active && c.kind === "expense");
-  const sampleIncomeCat = activeIncome[0]?.name ?? "Thu đoàn phí công đoàn";
-  const sampleExpenseCat = activeExpense[0]?.name ?? "Chi thăm hỏi, trợ cấp đoàn viên";
+  const activeOfKind = categories.filter((c) => c.is_active && c.kind === kind);
+  const firstCat = activeOfKind[0]?.name ?? (isIncome ? "Thu đoàn phí công đoàn" : "Chi thăm hỏi, trợ cấp đoàn viên");
+  const secondCat =
+    activeOfKind[1]?.name ?? firstCat;
 
-  // Dòng mẫu minh họa
-  const sampleRows: [string, string, string, string, number, string][] = [
-    ["15/10/2026", "Thu", sampleIncomeCat, "Thu đoàn phí công đoàn tháng 10/2026", 15000000, "Theo danh sách trích nộp T10"],
-    ["20/10/2026", "Chi", sampleExpenseCat, "Chi thăm hỏi đoàn viên ốm đau tháng 10/2026", 2000000, "Kèm đề nghị thăm hỏi"],
-  ];
+  const sampleRows: [string, string, string, number, string][] = isIncome
+    ? [
+        ["15/10/2026", firstCat, "Thu đoàn phí công đoàn tháng 10/2026", 15000000, "Theo danh sách trích nộp T10"],
+        ["20/10/2026", secondCat, "Kinh phí công đoàn cấp bổ sung đợt 2", 10000000, "Chứng từ ngân hàng"],
+      ]
+    : [
+        ["20/10/2026", firstCat, "Chi thăm hỏi đoàn viên ốm đau tháng 10/2026", 2000000, "Kèm đề nghị thăm hỏi"],
+        ["25/10/2026", secondCat, "Chi tổ chức hoạt động phong trào tháng 10/2026", 5000000, "Theo quyết định duyệt chi"],
+      ];
 
   sampleRows.forEach((vals, idx) => {
     const row = ws.getRow(idx + 2);
@@ -594,32 +668,21 @@ export async function buildFinanceImportTemplate(categories: FundCategory[]): Pr
     });
   });
 
-  // Data validation cho cột Loại thu/chi (cột 2)
-  for (let r = 2; r <= 500; r++) {
-    ws.getCell(r, 2).dataValidation = {
-      type: "list",
-      allowBlank: true,
-      formulae: ['"Thu,Chi"'],
-      showErrorMessage: true,
-      errorTitle: "Loại thu/chi",
-      error: "Chỉ chọn Thu hoặc Chi",
-    };
-  }
-
-  // Sheet 2: Danh mục & Hướng dẫn
-  const guide = wb.addWorksheet("Danh mục & Hướng dẫn");
-  guide.columns = [{ width: 22 }, { width: 45 }, { width: 55 }];
+  // Sheet 2: Danh mục & Hướng dẫn (chỉ gồm danh mục của đúng loại Thu hoặc Chi)
+  const guide = wb.addWorksheet(guideTitle);
+  guide.columns = [{ width: 24 }, { width: 45 }, { width: 55 }];
 
   const titleRow = guide.getRow(1);
-  titleRow.getCell(1).value = "HƯỚNG DẪN NHẬP THU – CHI TỪ EXCEL";
+  titleRow.getCell(1).value = isIncome
+    ? "HƯỚNG DẪN NHẬP CÁC KHOẢN THU TỪ EXCEL"
+    : "HƯỚNG DẪN NHẬP CÁC KHOẢN CHI TỪ EXCEL";
   titleRow.getCell(1).font = { bold: true, size: 12, color: { argb: "FF173A67" } };
 
   const instructions: [string, string][] = [
     ["Cột Ngày", "Nhập theo định dạng dd/mm/yyyy (VD: 25/10/2026) hoặc yyyy-mm-dd."],
-    ["Cột Loại thu/chi", "Ghi “Thu” (phiếu thu) hoặc “Chi” (phiếu chi)."],
-    ["Cột Danh mục", "Ghi đúng tên danh mục (hoặc mã danh mục) theo bảng danh mục bên dưới."],
-    ["Cột Nội dung", "Diễn giải chi tiết nội dung khoản thu/chi (bắt buộc, tối đa 300 ký tự)."],
-    ["Cột Số tiền", "Số tiền VNĐ nguyên dương (VD: 15000000)."],
+    [`Cột Danh mục ${kindNoun}`, `Chọn hoặc ghi đúng tên danh mục ${kindNoun} (hoặc mã danh mục) theo bảng bên dưới.`],
+    [`Cột Nội dung ${kindNoun}`, `Diễn giải chi tiết khoản ${kindNoun} (bắt buộc, tối đa 300 ký tự).`],
+    [`Cột Số tiền ${kindNoun}`, `Số tiền ${kindNoun} nguyên dương tính bằng VNĐ (VD: 15000000).`],
     ["Cột Ghi chú", "Ghi chú bổ sung (tùy chọn)."],
   ];
 
@@ -632,20 +695,33 @@ export async function buildFinanceImportTemplate(categories: FundCategory[]): Pr
 
   const catStartRow = instructions.length + 5;
   const catHeader = guide.getRow(catStartRow);
-  ["Loại", "Mã danh mục", "Tên danh mục chuẩn trong hệ thống"].forEach((h, i) => {
+  ["STT", `Mã danh mục ${kindNoun}`, `Tên danh mục ${kindNoun} chuẩn trong hệ thống`].forEach((h, i) => {
     const cell = catHeader.getCell(i + 1);
     cell.value = h;
     cell.font = { bold: true, color: { argb: "FF173A67" } };
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9F2EC" } };
   });
 
-  const allActive = [...activeIncome, ...activeExpense];
-  allActive.forEach((c, idx) => {
+  activeOfKind.forEach((c, idx) => {
     const r = guide.getRow(catStartRow + 1 + idx);
-    r.getCell(1).value = c.kind === "income" ? "Thu" : "Chi";
+    r.getCell(1).value = idx + 1;
     r.getCell(2).value = c.code ?? "";
     r.getCell(3).value = c.name;
   });
+
+  if (activeOfKind.length > 0) {
+    const firstCatRow = catStartRow + 1;
+    const lastCatRow = catStartRow + activeOfKind.length;
+    const formulaRange = `'${guideTitle}'!$C$${firstCatRow}:$C$${lastCatRow}`;
+    for (let r = 2; r <= 500; r++) {
+      ws.getCell(r, 2).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [formulaRange],
+        showErrorMessage: false,
+      };
+    }
+  }
 
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
@@ -653,11 +729,20 @@ export async function buildFinanceImportTemplate(categories: FundCategory[]): Pr
 export async function buildFinanceSummaryExport(
   summary: ComputedFinanceSummary,
   unionName: string,
+  kind: CategoryKind,
 ): Promise<Buffer> {
+  const isIncome = kind === "income";
+  const kindNoun = isIncome ? "thu" : "chi";
+  const kindUpper = isIncome ? "THU" : "CHI";
+  const categoryRows = isIncome ? summary.incomeRows : summary.expenseRows;
+  const totalKindAmount = isIncome ? summary.totalIncome : summary.totalExpense;
+  const totalKindCount = isIncome ? summary.incomeEntryCount : summary.expenseEntryCount;
+  const detailRows = summary.detailRows.filter((d) => d.kind === kind);
+
   const wb = new ExcelJS.Workbook();
 
-  // Sheet 1: Tổng hợp thu chi
-  const ws = wb.addWorksheet("Tổng hợp thu chi");
+  // Sheet 1: Tổng hợp thu (hoặc Tổng hợp chi)
+  const ws = wb.addWorksheet(isIncome ? "Tổng hợp thu" : "Tổng hợp chi");
   ws.columns = [
     { width: 8 },
     { width: 16 },
@@ -668,22 +753,18 @@ export async function buildFinanceSummaryExport(
     { width: 36 },
   ];
 
-  const addHeaderBlock = () => {
-    ws.getRow(1).getCell(1).value = unionName.toUpperCase();
-    ws.getRow(1).getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
+  ws.getRow(1).getCell(1).value = unionName.toUpperCase();
+  ws.getRow(1).getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
 
-    ws.getRow(2).getCell(1).value = `BÁO CÁO TỔNG HỢP THU – CHI CÔNG ĐOÀN (${summary.periodLabel.toUpperCase()})`;
-    ws.getRow(2).getCell(1).font = { bold: true, size: 14, color: { argb: "FF173A67" } };
+  ws.getRow(2).getCell(1).value = `BÁO CÁO TỔNG HỢP ${kindUpper} CÔNG ĐOÀN (${summary.periodLabel.toUpperCase()})`;
+  ws.getRow(2).getCell(1).font = { bold: true, size: 14, color: { argb: "FF173A67" } };
 
-    ws.getRow(3).getCell(1).value = `Kỳ báo cáo: ${summary.periodLabel} (Từ ngày ${formatDateVi(summary.fromDate)} đến ngày ${formatDateVi(summary.toDate)})`;
-    ws.getRow(3).getCell(1).font = { italic: true, size: 10 };
-  };
-  addHeaderBlock();
+  ws.getRow(3).getCell(1).value = `Kỳ báo cáo: ${summary.periodLabel} (Từ ngày ${formatDateVi(summary.fromDate)} đến ngày ${formatDateVi(summary.toDate)})`;
+  ws.getRow(3).getCell(1).font = { italic: true, size: 10 };
 
-  // Khối cân đối số dư
   let cursor = 5;
   const balanceHeader = ws.getRow(cursor++);
-  balanceHeader.getCell(1).value = "I. CÂN ĐỐI THU – CHI & SỐ DƯ TRONG KỲ";
+  balanceHeader.getCell(1).value = `I. SỐ DƯ ĐẦU KỲ & TỔNG HỢP ${kindUpper} TRONG KỲ`;
   balanceHeader.getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
 
   const sourceLabel =
@@ -693,18 +774,26 @@ export async function buildFinanceSummaryExport(
         ? `Tự động kết chuyển từ ${summary.openingCheckpointLabel ?? "kỳ trước"}`
         : "Tự động tính từ số dư đầu kỳ các quỹ";
 
-  const balanceItems: [string, number, string][] = [
-    ["1. Số dư đầu kỳ", summary.openingBalance, sourceLabel],
-    ["2. Tổng thu trong kỳ", summary.totalIncome, `${summary.incomeEntryCount} bút toán thu`],
-    ["3. Tổng chi trong kỳ", summary.totalExpense, `${summary.expenseEntryCount} bút toán chi`],
-    ["4. Chênh lệch thu – chi trong kỳ (Thu - Chi)", summary.netAmount, ""],
-    ["5. Số dư cuối kỳ (Đầu kỳ + Thu - Chi)", summary.closingBalance, "Kết chuyển sang kỳ tiếp theo"],
-  ];
+  const balanceItems: [string, number, string][] = isIncome
+    ? [
+        ["1. Số dư đầu kỳ", summary.openingBalance, sourceLabel],
+        ["2. Tổng thu trong kỳ", summary.totalIncome, `${summary.incomeEntryCount} phiếu thu`],
+        ["3. Tổng nguồn quỹ khả dụng trong kỳ (Đầu kỳ + Tổng thu)", summary.openingBalance + summary.totalIncome, ""],
+        ["4. Tổng chi đối ứng trong kỳ", summary.totalExpense, `${summary.expenseEntryCount} phiếu chi`],
+        ["5. Số dư cuối kỳ (Đầu kỳ + Thu - Chi)", summary.closingBalance, "Kết chuyển sang kỳ tiếp theo"],
+      ]
+    : [
+        ["1. Số dư đầu kỳ", summary.openingBalance, sourceLabel],
+        ["2. Tổng chi trong kỳ", summary.totalExpense, `${summary.expenseEntryCount} phiếu chi`],
+        ["3. Tổng thu đối ứng trong kỳ", summary.totalIncome, `${summary.incomeEntryCount} phiếu thu`],
+        ["4. Chênh lệch thu – chi trong kỳ (Thu - Chi)", summary.netAmount, ""],
+        ["5. Số dư cuối kỳ (Đầu kỳ + Thu - Chi)", summary.closingBalance, "Kết chuyển sang kỳ tiếp theo"],
+      ];
 
   for (const [label, amount, note] of balanceItems) {
     const r = ws.getRow(cursor++);
     r.getCell(1).value = label;
-    r.getCell(1).font = { bold: label.startsWith("1.") || label.startsWith("5.") };
+    r.getCell(1).font = { bold: label.startsWith("1.") || label.startsWith("2.") || label.startsWith("5.") };
     ws.mergeCells(r.number, 1, r.number, 3);
     const amountCell = r.getCell(5);
     amountCell.value = amount;
@@ -715,143 +804,46 @@ export async function buildFinanceSummaryExport(
 
   cursor += 1;
 
-  // Khối Tổng hợp thu
-  const writeCategoryTable = (
-    sectionTitle: string,
-    rows: ComputedFinanceSummary["incomeRows"],
-    totalAmount: number,
-    totalCount: number,
-  ) => {
-    const secRow = ws.getRow(cursor++);
-    secRow.getCell(1).value = sectionTitle;
-    secRow.getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
+  // Khối Bảng tổng hợp theo danh mục (chỉ Thu hoặc chỉ Chi)
+  const secRow = ws.getRow(cursor++);
+  secRow.getCell(1).value = `II. BẢNG TỔNG HỢP ${kindUpper} THEO DANH MỤC`;
+  secRow.getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
 
-    const tblHeader = ws.getRow(cursor++);
-    ["STT", "Mã DM", "Danh mục", "Số bút toán", "Tổng số tiền (VNĐ)", "Tỷ trọng (%)", "Ghi chú / Diễn giải"].forEach(
-      (h, i) => {
-        const c = tblHeader.getCell(i + 1);
-        c.value = h;
-        c.font = { bold: true, color: { argb: "FF173A67" } };
-        c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9F2EC" } };
-        c.border = {
-          top: { style: "thin" },
-          bottom: { style: "thin" },
-          left: { style: "thin" },
-          right: { style: "thin" },
-        };
-      },
-    );
+  const tblHeader = ws.getRow(cursor++);
+  [
+    "STT",
+    `Mã DM ${kindNoun}`,
+    `Danh mục ${kindNoun}`,
+    `Số phiếu ${kindNoun}`,
+    `Tổng tiền ${kindNoun} (VNĐ)`,
+    "Tỷ trọng (%)",
+    "Ghi chú / Diễn giải",
+  ].forEach((h, i) => {
+    const c = tblHeader.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, color: { argb: "FF173A67" } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9F2EC" } };
+    c.border = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
 
-    rows.forEach((item, idx) => {
-      const r = ws.getRow(cursor++);
-      r.getCell(1).value = idx + 1;
-      r.getCell(2).value = item.code ?? "";
-      r.getCell(3).value = item.name;
-      r.getCell(4).value = item.entryCount;
-      r.getCell(4).numFmt = "#,##0";
-      r.getCell(5).value = item.totalAmount;
-      r.getCell(5).numFmt = "#,##0";
-      r.getCell(6).value = item.percentage;
-      r.getCell(6).numFmt = "0.0";
-      r.getCell(7).value = item.sampleNote ?? "";
-      for (let col = 1; col <= 7; col++) {
-        r.getCell(col).border = {
-          top: { style: "thin" },
-          bottom: { style: "thin" },
-          left: { style: "thin" },
-          right: { style: "thin" },
-        };
-      }
-    });
-
-    const totalRow = ws.getRow(cursor++);
-    totalRow.getCell(1).value = "";
-    totalRow.getCell(2).value = "";
-    totalRow.getCell(3).value = "Tổng cộng";
-    totalRow.getCell(4).value = totalCount;
-    totalRow.getCell(4).numFmt = "#,##0";
-    totalRow.getCell(5).value = totalAmount;
-    totalRow.getCell(5).numFmt = "#,##0";
-    totalRow.getCell(6).value = totalAmount > 0 ? 100 : 0;
-    totalRow.getCell(6).numFmt = "0.0";
-    totalRow.getCell(7).value = "";
-    for (let col = 1; col <= 7; col++) {
-      totalRow.getCell(col).font = { bold: true, color: { argb: "FF173A67" } };
-      totalRow.getCell(col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F7FB" } };
-      totalRow.getCell(col).border = {
-        top: { style: "thin" },
-        bottom: { style: "double" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-    }
-
-    cursor += 1;
-  };
-
-  writeCategoryTable(
-    "II. BẢNG TỔNG HỢP THU THEO DANH MỤC",
-    summary.incomeRows,
-    summary.totalIncome,
-    summary.incomeEntryCount,
-  );
-
-  writeCategoryTable(
-    "III. BẢNG TỔNG HỢP CHI THEO DANH MỤC",
-    summary.expenseRows,
-    summary.totalExpense,
-    summary.expenseEntryCount,
-  );
-
-  // Sheet 2: Chi tiết phát sinh thu chi trong kỳ
-  const detailWs = wb.addWorksheet("Chi tiết thu chi", { views: [{ state: "frozen", ySplit: 4 }] });
-  detailWs.columns = [
-    { width: 8 },
-    { width: 14 },
-    { width: 16 },
-    { width: 12 },
-    { width: 32 },
-    { width: 44 },
-    { width: 18 },
-    { width: 18 },
-    { width: 30 },
-  ];
-
-  detailWs.getRow(1).getCell(1).value = unionName.toUpperCase();
-  detailWs.getRow(1).getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
-  detailWs.getRow(2).getCell(1).value = `CHI TIẾT CÁC KHOẢN THU – CHI TRONG KỲ (${summary.periodLabel.toUpperCase()})`;
-  detailWs.getRow(2).getCell(1).font = { bold: true, size: 13, color: { argb: "FF173A67" } };
-
-  const dHeader = detailWs.getRow(4);
-  ["STT", "Ngày", "Số phiếu", "Loại", "Danh mục", "Nội dung", "Số tiền thu", "Số tiền chi", "Ghi chú"].forEach(
-    (h, i) => {
-      const c = dHeader.getCell(i + 1);
-      c.value = h;
-      c.font = { bold: true, color: { argb: "FF173A67" } };
-      c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9F2EC" } };
-      c.border = {
-        top: { style: "thin" },
-        bottom: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-      };
-    },
-  );
-
-  summary.detailRows.forEach((d, idx) => {
-    const r = detailWs.getRow(5 + idx);
+  categoryRows.forEach((item, idx) => {
+    const r = ws.getRow(cursor++);
     r.getCell(1).value = idx + 1;
-    r.getCell(2).value = formatDateVi(d.entryDate);
-    r.getCell(3).value = d.code;
-    r.getCell(4).value = d.kind === "income" ? "Thu" : "Chi";
-    r.getCell(5).value = d.categoryName;
-    r.getCell(6).value = d.description;
-    r.getCell(7).value = d.kind === "income" ? d.amount : null;
-    r.getCell(7).numFmt = "#,##0";
-    r.getCell(8).value = d.kind === "expense" ? d.amount : null;
-    r.getCell(8).numFmt = "#,##0";
-    r.getCell(9).value = d.note ?? "";
-    for (let col = 1; col <= 9; col++) {
+    r.getCell(2).value = item.code ?? "";
+    r.getCell(3).value = item.name;
+    r.getCell(4).value = item.entryCount;
+    r.getCell(4).numFmt = "#,##0";
+    r.getCell(5).value = item.totalAmount;
+    r.getCell(5).numFmt = "#,##0";
+    r.getCell(6).value = item.percentage;
+    r.getCell(6).numFmt = "0.0";
+    r.getCell(7).value = item.sampleNote ?? "";
+    for (let col = 1; col <= 7; col++) {
       r.getCell(col).border = {
         top: { style: "thin" },
         bottom: { style: "thin" },
@@ -861,13 +853,97 @@ export async function buildFinanceSummaryExport(
     }
   });
 
-  const dTotalRow = detailWs.getRow(5 + summary.detailRows.length);
-  dTotalRow.getCell(6).value = "Tổng cộng phát sinh trong kỳ";
-  dTotalRow.getCell(7).value = summary.totalIncome;
-  dTotalRow.getCell(7).numFmt = "#,##0";
-  dTotalRow.getCell(8).value = summary.totalExpense;
-  dTotalRow.getCell(8).numFmt = "#,##0";
-  for (let col = 1; col <= 9; col++) {
+  const totalRow = ws.getRow(cursor++);
+  totalRow.getCell(1).value = "";
+  totalRow.getCell(2).value = "";
+  totalRow.getCell(3).value = `Tổng cộng ${kindNoun}`;
+  totalRow.getCell(4).value = totalKindCount;
+  totalRow.getCell(4).numFmt = "#,##0";
+  totalRow.getCell(5).value = totalKindAmount;
+  totalRow.getCell(5).numFmt = "#,##0";
+  totalRow.getCell(6).value = totalKindAmount > 0 ? 100 : 0;
+  totalRow.getCell(6).numFmt = "0.0";
+  totalRow.getCell(7).value = "";
+  for (let col = 1; col <= 7; col++) {
+    totalRow.getCell(col).font = { bold: true, color: { argb: "FF173A67" } };
+    totalRow.getCell(col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F7FB" } };
+    totalRow.getCell(col).border = {
+      top: { style: "thin" },
+      bottom: { style: "double" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+  }
+
+  // Sheet 2: Chi tiết các khoản thu (hoặc chi) trong kỳ — chỉ các cột của đúng loại đó
+  const detailWs = wb.addWorksheet(isIncome ? "Chi tiết khoản thu" : "Chi tiết khoản chi", {
+    views: [{ state: "frozen", ySplit: 4 }],
+  });
+  detailWs.columns = [
+    { width: 8 },
+    { width: 14 },
+    { width: 16 },
+    { width: 34 },
+    { width: 46 },
+    { width: 20 },
+    { width: 22 },
+    { width: 30 },
+  ];
+
+  detailWs.getRow(1).getCell(1).value = unionName.toUpperCase();
+  detailWs.getRow(1).getCell(1).font = { bold: true, size: 11, color: { argb: "FF173A67" } };
+  detailWs.getRow(2).getCell(1).value = `CHI TIẾT CÁC KHOẢN ${kindUpper} TRONG KỲ (${summary.periodLabel.toUpperCase()})`;
+  detailWs.getRow(2).getCell(1).font = { bold: true, size: 13, color: { argb: "FF173A67" } };
+
+  const dHeader = detailWs.getRow(4);
+  [
+    "STT",
+    "Ngày",
+    `Số phiếu ${kindNoun}`,
+    `Danh mục ${kindNoun}`,
+    `Nội dung ${kindNoun}`,
+    `Số tiền ${kindNoun} (VNĐ)`,
+    "Quỹ",
+    "Ghi chú",
+  ].forEach((h, i) => {
+    const c = dHeader.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, color: { argb: "FF173A67" } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9F2EC" } };
+    c.border = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  detailRows.forEach((d, idx) => {
+    const r = detailWs.getRow(5 + idx);
+    r.getCell(1).value = idx + 1;
+    r.getCell(2).value = formatDateVi(d.entryDate);
+    r.getCell(3).value = d.code;
+    r.getCell(4).value = d.categoryName;
+    r.getCell(5).value = d.description;
+    r.getCell(6).value = d.amount;
+    r.getCell(6).numFmt = "#,##0";
+    r.getCell(7).value = d.fundName;
+    r.getCell(8).value = d.note ?? "";
+    for (let col = 1; col <= 8; col++) {
+      r.getCell(col).border = {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" },
+      };
+    }
+  });
+
+  const dTotalRow = detailWs.getRow(5 + detailRows.length);
+  dTotalRow.getCell(5).value = `Tổng cộng ${kindNoun} trong kỳ`;
+  dTotalRow.getCell(6).value = totalKindAmount;
+  dTotalRow.getCell(6).numFmt = "#,##0";
+  for (let col = 1; col <= 8; col++) {
     dTotalRow.getCell(col).font = { bold: true, color: { argb: "FF173A67" } };
     dTotalRow.getCell(col).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF2F7FB" } };
     dTotalRow.getCell(col).border = {

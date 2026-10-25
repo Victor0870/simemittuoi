@@ -4,14 +4,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useState, type ChangeEvent } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import type { CategoryKind } from "@/lib/finance/registry";
 import type {
   FinanceImportCommitResult,
   FinanceImportPreviewResult,
   FinanceImportPreviewRow,
 } from "@/lib/finance/summary-excel";
+import { formatVnd } from "@/lib/visits/registry";
 
 const FINANCE_IMPORT_MAX_BYTES = 2 * 1024 * 1024;
-import { formatVnd } from "@/lib/visits/registry";
 
 type Step = "choose" | "preview" | "result";
 
@@ -25,90 +26,72 @@ async function readApiError(res: Response, fallback: string): Promise<string> {
   return data?.error || fallback;
 }
 
-const previewColumns: DataTableColumn<FinanceImportPreviewRow>[] = [
-  {
-    key: "row",
-    header: "Dòng",
-    type: "number",
-    className: "whitespace-nowrap text-on-surface-variant",
-  },
-  {
-    key: "entryDateDisplay",
-    header: "Ngày",
-    className: "whitespace-nowrap font-medium",
-  },
-  {
-    key: "kindLabel",
-    header: "Loại",
-    className: "whitespace-nowrap",
-    render: (r) => (
-      <span
-        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
-          r.kind === "income"
-            ? "bg-emerald-100 text-emerald-800"
-            : r.kind === "expense"
-              ? "bg-rose-100 text-rose-800"
-              : "bg-slate-100 text-slate-700"
-        }`}
-      >
-        {r.kindLabel}
-      </span>
-    ),
-  },
-  {
-    key: "categoryName",
-    header: "Danh mục",
-    className: "min-w-[180px] font-medium text-[#173A67]",
-  },
-  {
-    key: "content",
-    header: "Nội dung",
-    className: "min-w-[220px]",
-    render: (r) => r.content || "—",
-  },
-  {
-    key: "amount",
-    header: "Số tiền",
-    type: "number",
-    headerClassName: "text-right",
-    className: "whitespace-nowrap text-right font-bold",
-    render: (r) =>
-      r.amount !== null ? (
-        <span className={r.kind === "expense" ? "text-rose-700" : "text-emerald-700"}>
-          {formatVnd(r.amount)}
-        </span>
-      ) : (
-        "—"
-      ),
-  },
-  {
-    key: "note",
-    header: "Ghi chú",
-    className: "min-w-[140px] text-xs text-on-surface-variant",
-    render: (r) => r.note ?? "—",
-  },
-  {
-    key: "errors",
-    header: "Kiểm tra",
-    accessor: (r) => (r.errors.length ? r.errors.join(" ") : "Hợp lệ"),
-    className: "min-w-[240px]",
-    render: (r) =>
-      r.errors.length > 0 ? (
-        <ul className="space-y-0.5 text-xs font-medium text-rose-700">
-          {r.errors.map((err, i) => (
-            <li key={i}>• {err}</li>
-          ))}
-        </ul>
-      ) : (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
-          <MaterialIcon className="text-[15px]" name="check_circle" />
-          Hợp lệ
-        </span>
-      ),
-  },
-];
+function buildPreviewColumns(kind: CategoryKind): DataTableColumn<FinanceImportPreviewRow>[] {
+  const isIncome = kind === "income";
+  const kindNoun = isIncome ? "thu" : "chi";
+  const amountColor = isIncome ? "text-emerald-700" : "text-rose-700";
 
-export function FinanceImportModal() {
+  return [
+    {
+      key: "row",
+      header: "Dòng",
+      type: "number",
+      className: "whitespace-nowrap text-on-surface-variant",
+    },
+    {
+      key: "entryDateDisplay",
+      header: "Ngày",
+      className: "whitespace-nowrap font-medium",
+    },
+    {
+      key: "categoryName",
+      header: `Danh mục ${kindNoun}`,
+      className: "min-w-[190px] font-medium text-[#173A67]",
+    },
+    {
+      key: "content",
+      header: `Nội dung ${kindNoun}`,
+      className: "min-w-[230px]",
+      render: (r) => r.content || "—",
+    },
+    {
+      key: "amount",
+      header: `Số tiền ${kindNoun}`,
+      type: "number",
+      headerClassName: "text-right",
+      className: "whitespace-nowrap text-right font-bold",
+      render: (r) =>
+        r.amount !== null ? <span className={amountColor}>{formatVnd(r.amount)}</span> : "—",
+    },
+    {
+      key: "note",
+      header: "Ghi chú",
+      className: "min-w-[140px] text-xs text-on-surface-variant",
+      render: (r) => r.note ?? "—",
+    },
+    {
+      key: "errors",
+      header: "Kiểm tra",
+      accessor: (r) => (r.errors.length ? r.errors.join(" ") : "Hợp lệ"),
+      className: "min-w-[240px]",
+      render: (r) =>
+        r.errors.length > 0 ? (
+          <ul className="space-y-0.5 text-xs font-medium text-rose-700">
+            {r.errors.map((err, i) => (
+              <li key={i}>• {err}</li>
+            ))}
+          </ul>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700">
+            <MaterialIcon className="text-[15px]" name="check_circle" />
+            Hợp lệ
+          </span>
+        ),
+    },
+  ];
+}
+
+export function FinanceImportModal({ kind }: { kind: CategoryKind }) {
   const router = useRouter();
   const titleId = useId();
   const [open, setOpen] = useState(false);
@@ -120,21 +103,19 @@ export function FinanceImportModal() {
   const [busy, setBusy] = useState<"preview" | "commit" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isIncome = kind === "income";
+  const kindNoun = isIncome ? "thu" : "chi";
+  const previewColumns = useMemo(() => buildPreviewColumns(kind), [kind]);
+
   const counts = useMemo(() => {
     const rows = preview?.rows ?? [];
     const validRows = rows.filter((r) => r.errors.length === 0);
     const errorRows = rows.filter((r) => r.errors.length > 0);
-    const totalIncome = validRows
-      .filter((r) => r.kind === "income")
-      .reduce((sum, r) => sum + (r.amount ?? 0), 0);
-    const totalExpense = validRows
-      .filter((r) => r.kind === "expense")
-      .reduce((sum, r) => sum + (r.amount ?? 0), 0);
+    const totalAmount = validRows.reduce((sum, r) => sum + (r.amount ?? 0), 0);
     return {
       valid: validRows.length,
       error: errorRows.length,
-      totalIncome,
-      totalExpense,
+      totalAmount,
     };
   }, [preview]);
 
@@ -195,7 +176,8 @@ export function FinanceImportModal() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/finance/summary/import/preview", {
+      formData.append("kind", kind);
+      const res = await fetch(`/api/finance/summary/import/preview?kind=${kind}`, {
         method: "POST",
         body: formData,
       });
@@ -218,7 +200,7 @@ export function FinanceImportModal() {
     if (!preview || counts.valid === 0) return;
     if (
       !window.confirm(
-        `Xác nhận lưu ${counts.valid} khoản thu/chi hợp lệ vào sổ quỹ công đoàn?`,
+        `Xác nhận lưu ${counts.valid} khoản ${kindNoun} hợp lệ vào sổ quỹ công đoàn?`,
       )
     ) {
       return;
@@ -231,19 +213,19 @@ export function FinanceImportModal() {
         .map((r) => ({
           row: r.row,
           entryDate: r.entryDate,
-          kind: r.kind,
+          kind,
           categoryId: r.categoryId,
           content: r.content,
           amount: r.amount,
           note: r.note,
         }));
-      const res = await fetch("/api/finance/summary/import/commit", {
+      const res = await fetch(`/api/finance/summary/import/commit?kind=${kind}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rows }),
+        body: JSON.stringify({ kind, rows }),
       });
       if (!res.ok) {
-        setError(await readApiError(res, "Không lưu được dữ liệu thu chi, vui lòng thử lại."));
+        setError(await readApiError(res, `Không lưu được dữ liệu khoản ${kindNoun}, vui lòng thử lại.`));
         return;
       }
       const data = (await res.json()) as FinanceImportCommitResult;
@@ -261,7 +243,7 @@ export function FinanceImportModal() {
     <>
       <button className={secondaryButton} type="button" onClick={() => setOpen(true)}>
         <MaterialIcon className="text-[18px]" name="upload_file" />
-        <span>Nhập Excel</span>
+        <span>Nhập Excel khoản {kindNoun}</span>
       </button>
 
       {open ? (
@@ -278,7 +260,7 @@ export function FinanceImportModal() {
             <div className="flex items-center justify-between gap-3 border-b border-outline-variant px-4 py-3 sm:px-5">
               <h2 className="flex items-center gap-2 text-base font-bold text-[#173A67]" id={titleId}>
                 <MaterialIcon className="text-[20px] text-[#173A67]" name="upload_file" />
-                Nhập thu – chi từ Excel (.xlsx)
+                Nhập các khoản {kindNoun} từ Excel (.xlsx)
               </h2>
               <button
                 aria-label="Đóng"
@@ -295,24 +277,23 @@ export function FinanceImportModal() {
               {step === "choose" ? (
                 <>
                   <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3.5 text-xs leading-relaxed text-sky-950">
-                    <p className="font-bold text-[#173A67]">Cấu trúc 6 cột chuẩn của file mẫu:</p>
+                    <p className="font-bold text-[#173A67]">
+                      Cấu trúc 5 cột chuẩn của file mẫu khoản {kindNoun}:
+                    </p>
                     <ul className="mt-1 list-disc space-y-1 pl-5">
                       <li>
                         <strong>Ngày</strong>: định dạng <code>dd/mm/yyyy</code> (ví dụ <code>15/10/2026</code>) hoặc{" "}
                         <code>yyyy-mm-dd</code>.
                       </li>
                       <li>
-                        <strong>Loại thu/chi</strong>: điền <code>Thu</code> hoặc <code>Chi</code>.
+                        <strong>Danh mục {kindNoun}</strong>: tên hoặc mã danh mục {kindNoun} đang có trong hệ thống (xem
+                        trang tính <em>Danh mục {kindNoun} &amp; Hướng dẫn</em> trong file mẫu).
                       </li>
                       <li>
-                        <strong>Danh mục</strong>: tên hoặc mã danh mục thu/chi đang có trong hệ thống (xem trang tính{" "}
-                        <em>Danh mục &amp; Hướng dẫn</em> trong file mẫu).
+                        <strong>Nội dung {kindNoun}</strong>: diễn giải chi tiết khoản {kindNoun} (bắt buộc).
                       </li>
                       <li>
-                        <strong>Nội dung</strong>: diễn giải chi tiết khoản thu/chi (bắt buộc).
-                      </li>
-                      <li>
-                        <strong>Số tiền</strong>: số tiền nguyên dương (VNĐ).
+                        <strong>Số tiền {kindNoun}</strong>: số tiền nguyên dương (VNĐ).
                       </li>
                       <li>
                         <strong>Ghi chú</strong>: ghi chú bổ sung (tùy chọn).
@@ -323,10 +304,10 @@ export function FinanceImportModal() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <a
                       className="inline-flex items-center gap-1.5 rounded-xl border border-[#173A67]/30 bg-[#173A67]/5 px-3.5 py-2 text-sm font-bold text-[#173A67] hover:bg-[#173A67]/10"
-                      href="/api/finance/summary/import/template"
+                      href={`/api/finance/summary/import/template?kind=${kind}`}
                     >
                       <MaterialIcon className="text-[18px]" name="download" />
-                      Tải file mẫu Excel (.xlsx)
+                      Tải file mẫu nhập {kindNoun} (.xlsx)
                     </a>
                     <span className="text-xs text-on-surface-variant">
                       Hệ thống sẽ kiểm tra lỗi từng dòng và hiển thị bản xem trước trước khi lưu.
@@ -334,7 +315,9 @@ export function FinanceImportModal() {
                   </div>
 
                   <label className="block cursor-pointer rounded-xl border border-dashed border-outline-variant bg-surface-container-lowest p-4 hover:border-[#173A67]">
-                    <span className="mb-2 block font-semibold text-[#173A67]">Chọn file Excel (.xlsx) từ máy tính</span>
+                    <span className="mb-2 block font-semibold text-[#173A67]">
+                      Chọn file Excel khoản {kindNoun} (.xlsx) từ máy tính
+                    </span>
                     <input
                       accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                       className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#173A67] file:px-3 file:py-1.5 file:font-semibold file:text-white"
@@ -353,8 +336,10 @@ export function FinanceImportModal() {
                       <span className="font-bold text-emerald-700">{counts.valid} dòng hợp lệ</span>
                       <span className="font-bold text-rose-700">{counts.error} dòng lỗi</span>
                       <span className="text-xs text-on-surface-variant">
-                        Tổng thu hợp lệ: <strong className="text-emerald-700">{formatVnd(counts.totalIncome)}</strong> ·{" "}
-                        Tổng chi hợp lệ: <strong className="text-rose-700">{formatVnd(counts.totalExpense)}</strong>
+                        Tổng tiền {kindNoun} hợp lệ:{" "}
+                        <strong className={isIncome ? "text-emerald-700" : "text-rose-700"}>
+                          {formatVnd(counts.totalAmount)}
+                        </strong>
                       </span>
                     </div>
                     <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-on-surface-variant">
@@ -386,11 +371,11 @@ export function FinanceImportModal() {
                     <MaterialIcon className="text-[24px] text-emerald-600" name="check_circle" />
                     <div>
                       <p className="font-bold">
-                        Đã nhập thành công {result.imported} khoản thu/chi vào sổ quỹ công đoàn
+                        Đã nhập thành công {result.imported} khoản {kindNoun} vào sổ quỹ công đoàn
                         {result.skipped > 0 ? ` (bỏ qua ${result.skipped} dòng)` : ""}.
                       </p>
                       <p className="text-xs text-emerald-800">
-                        Bảng tổng hợp thu – chi đã được cập nhật tự động theo dữ liệu vừa nhập.
+                        Bảng Tổng hợp {kindNoun} đã được cập nhật tự động theo dữ liệu vừa nhập.
                       </p>
                     </div>
                   </div>
@@ -459,7 +444,7 @@ export function FinanceImportModal() {
                     onClick={() => void handleCommit()}
                   >
                     <MaterialIcon className="text-[18px]" name={busy === "commit" ? "hourglass_top" : "task_alt"} />
-                    {busy === "commit" ? "Đang lưu..." : `Xác nhận lưu ${counts.valid} dòng hợp lệ`}
+                    {busy === "commit" ? "Đang lưu..." : `Xác nhận lưu ${counts.valid} khoản ${kindNoun}`}
                   </button>
                 </>
               ) : null}

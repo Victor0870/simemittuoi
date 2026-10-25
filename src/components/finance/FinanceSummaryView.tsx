@@ -6,11 +6,10 @@ import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { FinanceImportModal } from "@/components/finance/FinanceImportModal";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import type { Fund, FundCategory, FundEntry } from "@/lib/finance/registry";
+import type { CategoryKind, Fund, FundCategory, FundEntry } from "@/lib/finance/registry";
 import {
   collectAvailableYears,
   computeFinanceSummary,
-  type CategorySummaryRow,
   type StoredOpeningBalances,
   type SummaryDetailRow,
   type SummaryFilter,
@@ -20,6 +19,7 @@ import { formatDateVi } from "@/lib/members/profile-shared";
 import { formatVnd } from "@/lib/visits/registry";
 
 type Props = {
+  kind: CategoryKind;
   funds: Fund[];
   categories: FundCategory[];
   entries: FundEntry[];
@@ -33,6 +33,9 @@ type Props = {
 const inputClass =
   "rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 
+const navButtonClass =
+  "inline-flex items-center gap-1 rounded-xl border border-outline-variant bg-white px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]";
+
 const QUARTER_OPTIONS = [
   { value: 1, label: "Quý I (T1 – T3)" },
   { value: 2, label: "Quý II (T4 – T6)" },
@@ -41,6 +44,7 @@ const QUARTER_OPTIONS = [
 ];
 
 export function FinanceSummaryView({
+  kind,
   funds,
   categories,
   entries,
@@ -51,6 +55,14 @@ export function FinanceSummaryView({
   canWrite,
 }: Props) {
   const router = useRouter();
+  const isIncome = kind === "income";
+  const kindNoun = isIncome ? "thu" : "chi";
+  const pageTitle = isIncome ? "Tổng hợp thu" : "Tổng hợp chi";
+  const amountColor = isIncome ? "text-emerald-700" : "text-rose-700";
+  const badgeBg = isIncome
+    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+    : "bg-rose-50 text-rose-800 border-rose-200";
+
   const [filter, setFilter] = useState<SummaryFilter>(initialFilter);
   const [openingBalances, setOpeningBalances] = useState<StoredOpeningBalances>(initialOpeningBalances);
   const [includeZeroCategories, setIncludeZeroCategories] = useState(true);
@@ -80,6 +92,24 @@ export function FinanceSummaryView({
       }),
     [filter, funds, categories, entries, entryNotes, openingBalances, includeZeroCategories],
   );
+
+  const categoryRows = isIncome ? summary.incomeRows : summary.expenseRows;
+  const totalKindAmount = isIncome ? summary.totalIncome : summary.totalExpense;
+  const totalKindCount = isIncome ? summary.incomeEntryCount : summary.expenseEntryCount;
+  const detailRows = useMemo(
+    () => summary.detailRows.filter((r) => r.kind === kind),
+    [summary.detailRows, kind],
+  );
+
+  const periodQuery = useMemo(() => {
+    const params = new URLSearchParams({
+      periodType: filter.periodType,
+      year: String(filter.year),
+      month: String(filter.month),
+      quarter: String(filter.quarter),
+    });
+    return params.toString();
+  }, [filter]);
 
   function openOpeningEditor() {
     const manual = openingBalances.periods[summary.periodKey];
@@ -132,6 +162,7 @@ export function FinanceSummaryView({
 
   const exportHref = useMemo(() => {
     const params = new URLSearchParams({
+      kind,
       periodType: filter.periodType,
       year: String(filter.year),
       month: String(filter.month),
@@ -139,177 +170,129 @@ export function FinanceSummaryView({
       includeZero: includeZeroCategories ? "1" : "0",
     });
     return `/api/finance/summary/export?${params.toString()}`;
-  }, [filter, includeZeroCategories]);
+  }, [kind, filter, includeZeroCategories]);
 
-  const detailColumns: DataTableColumn<SummaryDetailRow>[] = [
-    {
-      key: "entryDate",
-      header: "Ngày",
-      type: "date",
-      accessor: (r) => r.entryDate,
-      className: "whitespace-nowrap",
-      render: (r) => formatDateVi(r.entryDate),
-    },
-    {
-      key: "code",
-      header: "Số phiếu",
-      accessor: (r) => r.code,
-      className: "whitespace-nowrap",
-      render: (r) => (
-        <Link className="font-bold text-[#173A67] hover:underline" href={`/office/finance/${r.id}`}>
-          {r.code}
-        </Link>
-      ),
-    },
-    {
-      key: "kind",
-      header: "Loại",
-      accessor: (r) => (r.kind === "income" ? "Thu" : "Chi"),
-      className: "whitespace-nowrap",
-      render: (r) => (
-        <span
-          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-bold ${
-            r.kind === "income" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
-          }`}
-        >
-          {r.kind === "income" ? "Thu" : "Chi"}
-        </span>
-      ),
-    },
-    {
-      key: "categoryName",
-      header: "Danh mục",
-      accessor: (r) => r.categoryName,
-      className: "min-w-[180px] font-medium text-[#173A67]",
-    },
-    {
-      key: "description",
-      header: "Nội dung",
-      accessor: (r) => r.description,
-      className: "min-w-[240px]",
-    },
-    {
-      key: "amount",
-      header: "Số tiền",
-      type: "number",
-      accessor: (r) => r.amount,
-      headerClassName: "text-right",
-      className: "whitespace-nowrap text-right font-bold",
-      render: (r) => (
-        <span className={r.kind === "income" ? "text-emerald-700" : "text-rose-700"}>
-          {r.kind === "income" ? "+" : "-"}
-          {formatVnd(r.amount)}
-        </span>
-      ),
-    },
-    {
-      key: "note",
-      header: "Ghi chú",
-      accessor: (r) => r.note ?? "",
-      className: "min-w-[160px] text-xs text-on-surface-variant",
-      render: (r) => r.note ?? "—",
-    },
-  ];
-
-  function renderCategoryTable(params: {
-    title: string;
-    subtitle: string;
-    icon: string;
-    tone: "income" | "expense";
-    rows: CategorySummaryRow[];
-    totalAmount: number;
-    totalCount: number;
-  }) {
-    const isIncome = params.tone === "income";
-    const amountColor = isIncome ? "text-emerald-700" : "text-rose-700";
-    const badgeBg = isIncome ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-rose-50 text-rose-800 border-rose-200";
-
-    return (
-      <section className="flex flex-col rounded-2xl border border-outline-variant bg-white shadow-xs">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant px-4 py-3.5 sm:px-5">
-          <div>
-            <h2 className="flex items-center gap-2 text-base font-extrabold text-[#173A67]">
-              <MaterialIcon className={`text-[20px] ${amountColor}`} name={params.icon} />
-              {params.title}
-            </h2>
-            <p className="text-xs text-on-surface-variant">{params.subtitle}</p>
-          </div>
-          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${badgeBg}`}>
-            {params.totalCount} bút toán · {formatVnd(params.totalAmount)}
+  const detailColumns: DataTableColumn<SummaryDetailRow>[] = useMemo(
+    () => [
+      {
+        key: "entryDate",
+        header: "Ngày",
+        type: "date",
+        accessor: (r) => r.entryDate,
+        className: "whitespace-nowrap",
+        render: (r) => formatDateVi(r.entryDate),
+      },
+      {
+        key: "code",
+        header: `Số phiếu ${kindNoun}`,
+        accessor: (r) => r.code,
+        className: "whitespace-nowrap",
+        render: (r) => (
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/finance/${r.id}`}>
+            {r.code}
+          </Link>
+        ),
+      },
+      {
+        key: "categoryName",
+        header: `Danh mục ${kindNoun}`,
+        accessor: (r) => r.categoryName,
+        className: "min-w-[190px] font-medium text-[#173A67]",
+      },
+      {
+        key: "description",
+        header: `Nội dung ${kindNoun}`,
+        accessor: (r) => r.description,
+        className: "min-w-[240px]",
+      },
+      {
+        key: "amount",
+        header: `Số tiền ${kindNoun}`,
+        type: "number",
+        accessor: (r) => r.amount,
+        headerClassName: "text-right",
+        className: "whitespace-nowrap text-right font-bold",
+        render: (r) => (
+          <span className={amountColor}>
+            {isIncome ? "+" : "-"}
+            {formatVnd(r.amount)}
           </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-[#D9F2EC]/70 text-xs font-bold text-[#173A67]">
-              <tr className="[&>th]:px-3.5 [&>th]:py-2.5 [&>th]:whitespace-nowrap">
-                <th className="w-12 text-center">STT</th>
-                <th>Danh mục {isIncome ? "thu" : "chi"}</th>
-                <th className="text-right">Số phiếu</th>
-                <th className="text-right">Tổng tiền</th>
-                <th className="text-right">Tỷ trọng</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant/60">
-              {params.rows.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-6 text-center text-sm text-on-surface-variant" colSpan={5}>
-                    Chưa có khoản {isIncome ? "thu" : "chi"} nào trong {summary.periodLabel}.
-                  </td>
-                </tr>
-              ) : (
-                params.rows.map((r, idx) => (
-                  <tr
-                    key={r.categoryId}
-                    className={`transition hover:bg-surface-container-lowest [&>td]:px-3.5 [&>td]:py-2.5 ${
-                      r.totalAmount === 0 ? "text-on-surface-variant/75" : ""
-                    }`}
-                  >
-                    <td className="text-center text-xs font-semibold text-on-surface-variant">{idx + 1}</td>
-                    <td>
-                      <p className="font-semibold text-on-surface">
-                        {r.code ? (
-                          <span className="mr-1.5 rounded bg-surface-container px-1.5 py-0.5 text-[11px] font-bold text-[#173A67]">
-                            {r.code}
-                          </span>
-                        ) : null}
-                        {r.name}
-                      </p>
-                      {r.sampleNote ? (
-                        <p className="mt-0.5 line-clamp-1 text-[11px] text-on-surface-variant">
-                          VD: {r.sampleNote}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="whitespace-nowrap text-right font-medium">
-                      {r.entryCount > 0 ? r.entryCount : "–"}
-                    </td>
-                    <td className={`whitespace-nowrap text-right font-bold ${r.totalAmount > 0 ? amountColor : ""}`}>
-                      {r.totalAmount > 0 ? formatVnd(r.totalAmount) : "0 đ"}
-                    </td>
-                    <td className="whitespace-nowrap text-right text-xs font-semibold text-on-surface-variant">
-                      {r.totalAmount > 0 ? `${r.percentage.toFixed(1)}%` : "0%"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-[#173A67]/20 bg-surface-container-low/60 font-extrabold text-[#173A67] [&>td]:px-3.5 [&>td]:py-3">
-                <td colSpan={2}>Tổng cộng {isIncome ? "thu" : "chi"}</td>
-                <td className="whitespace-nowrap text-right">{params.totalCount}</td>
-                <td className={`whitespace-nowrap text-right ${amountColor}`}>{formatVnd(params.totalAmount)}</td>
-                <td className="whitespace-nowrap text-right">{params.totalAmount > 0 ? "100%" : "0%"}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </section>
-    );
-  }
+        ),
+      },
+      {
+        key: "fundName",
+        header: "Quỹ",
+        accessor: (r) => r.fundName,
+        className: "whitespace-nowrap text-xs font-medium text-on-surface-variant",
+      },
+      {
+        key: "note",
+        header: "Ghi chú",
+        accessor: (r) => r.note ?? "",
+        className: "min-w-[160px] text-xs text-on-surface-variant",
+        render: (r) => r.note ?? "—",
+      },
+    ],
+    [kindNoun, amountColor, isIncome],
+  );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-10">
+      {/* Tiêu đề trang + Chuyển nhanh giữa Tổng hợp thu / Tổng hợp chi */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+            <Link className="hover:text-[#173A67] hover:underline" href="/admin/finance">
+              Tài chính công đoàn
+            </Link>
+            <span>/</span>
+            <span className="text-[#173A67]">{pageTitle}</span>
+          </div>
+          <h1 className="text-headline-md font-extrabold text-[#173A67]">{pageTitle}</h1>
+          <p className="text-sm text-on-surface-variant">
+            {isIncome
+              ? "Tổng hợp các khoản thu theo danh mục (lọc theo tháng / quý / năm), ngữ cảnh số dư đầu kỳ kết chuyển từ sổ cũ, nhập và xuất Excel khoản thu."
+              : "Tổng hợp các khoản chi theo danh mục (lọc theo tháng / quý / năm), ngữ cảnh số dư đầu kỳ kết chuyển từ sổ cũ, nhập và xuất Excel khoản chi."}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-xl border border-outline-variant bg-surface-container-lowest p-1">
+            <Link
+              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold transition ${
+                isIncome
+                  ? "bg-emerald-700 text-white shadow-xs"
+                  : "text-on-surface-variant hover:text-[#173A67]"
+              }`}
+              href={`/admin/finance/income?${periodQuery}`}
+            >
+              <MaterialIcon className="text-[17px]" name="south_west" />
+              Tổng hợp thu
+            </Link>
+            <Link
+              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold transition ${
+                !isIncome
+                  ? "bg-rose-700 text-white shadow-xs"
+                  : "text-on-surface-variant hover:text-[#173A67]"
+              }`}
+              href={`/admin/finance/expense?${periodQuery}`}
+            >
+              <MaterialIcon className="text-[17px]" name="north_east" />
+              Tổng hợp chi
+            </Link>
+          </div>
+
+          <Link className={navButtonClass} href="/admin/finance">
+            <MaterialIcon className="text-[18px]" name="arrow_back" />
+            Về Tài chính
+          </Link>
+          <Link className={navButtonClass} href="/office/finance">
+            <MaterialIcon className="text-[18px]" name="account_balance_wallet" />
+            Mở Sổ quỹ
+          </Link>
+        </div>
+      </div>
+
       {/* Thanh công cụ lọc kỳ + Nhập / Xuất Excel */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -397,18 +380,18 @@ export function FinanceSummaryView({
               type="checkbox"
               onChange={(e) => setIncludeZeroCategories(e.target.checked)}
             />
-            Hiện danh mục 0 đ
+            Hiện danh mục {kindNoun} 0 đ
           </label>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {canWrite ? <FinanceImportModal /> : null}
+          {canWrite ? <FinanceImportModal kind={kind} /> : null}
           <a
             className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-3.5 py-2 text-sm font-bold text-white transition hover:bg-[#1E4A7D]"
             href={exportHref}
           >
             <MaterialIcon className="text-[18px]" name="download" />
-            Xuất Excel ({summary.periodLabel})
+            Xuất Excel {pageTitle} ({summary.periodLabel})
           </a>
         </div>
       </div>
@@ -426,7 +409,7 @@ export function FinanceSummaryView({
         </div>
       ) : null}
 
-      {/* 4 Thẻ chỉ số cân đối kỳ: Số dư đầu kỳ, Tổng thu, Tổng chi, Số dư cuối kỳ */}
+      {/* 4 Thẻ ngữ cảnh số dư đầu kỳ & tổng hợp trong kỳ */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-outline-variant bg-white p-4">
           <div className="flex items-start justify-between gap-2">
@@ -461,19 +444,43 @@ export function FinanceSummaryView({
         </div>
 
         <div className="rounded-2xl border border-outline-variant bg-white p-4">
-          <p className="text-xs font-bold text-on-surface-variant">Tổng thu ({summary.periodLabel})</p>
-          <p className="mt-1 text-xl font-extrabold text-emerald-700">{formatVnd(summary.totalIncome)}</p>
+          <p className="text-xs font-bold text-on-surface-variant">
+            Tổng {kindNoun} ({summary.periodLabel})
+          </p>
+          <p className={`mt-1 text-xl font-extrabold ${amountColor}`}>{formatVnd(totalKindAmount)}</p>
           <p className="mt-1.5 text-[11px] text-on-surface-variant">
-            {summary.incomeEntryCount} phiếu thu trong kỳ
+            {totalKindCount} phiếu {kindNoun} phát sinh trong kỳ
           </p>
         </div>
 
         <div className="rounded-2xl border border-outline-variant bg-white p-4">
-          <p className="text-xs font-bold text-on-surface-variant">Tổng chi ({summary.periodLabel})</p>
-          <p className="mt-1 text-xl font-extrabold text-rose-700">{formatVnd(summary.totalExpense)}</p>
-          <p className="mt-1.5 text-[11px] text-on-surface-variant">
-            {summary.expenseEntryCount} phiếu chi trong kỳ
-          </p>
+          {isIncome ? (
+            <>
+              <p className="text-xs font-bold text-on-surface-variant">
+                Tổng nguồn quỹ khả dụng (Đầu kỳ + Thu)
+              </p>
+              <p className="mt-1 text-xl font-extrabold text-[#173A67]">
+                {formatVnd(summary.openingBalance + summary.totalIncome)}
+              </p>
+              <p className="mt-1.5 text-[11px] text-on-surface-variant">
+                Chi đối ứng trong kỳ: <strong className="text-rose-700">{formatVnd(summary.totalExpense)}</strong> (
+                {summary.expenseEntryCount} phiếu)
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-bold text-on-surface-variant">
+                Tổng thu đối ứng ({summary.periodLabel})
+              </p>
+              <p className="mt-1 text-xl font-extrabold text-emerald-700">{formatVnd(summary.totalIncome)}</p>
+              <p className="mt-1.5 text-[11px] text-on-surface-variant">
+                Nguồn quỹ khả dụng:{" "}
+                <strong className="text-[#173A67]">
+                  {formatVnd(summary.openingBalance + summary.totalIncome)}
+                </strong>
+              </p>
+            </>
+          )}
         </div>
 
         <div className="rounded-2xl border border-[#173A67]/30 bg-[#173A67]/[0.03] p-4">
@@ -588,39 +595,105 @@ export function FinanceSummaryView({
         </section>
       ) : null}
 
-      {/* Hai bảng tổng hợp: Tổng hợp thu & Tổng hợp chi theo danh mục */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {renderCategoryTable({
-          title: "Tổng hợp thu",
-          subtitle: `Nhóm theo danh mục thu (${summary.periodLabel})`,
-          icon: "south_west",
-          tone: "income",
-          rows: summary.incomeRows,
-          totalAmount: summary.totalIncome,
-          totalCount: summary.incomeEntryCount,
-        })}
+      {/* Bảng tổng hợp theo danh mục (chỉ Thu hoặc chỉ Chi) */}
+      <section className="flex flex-col rounded-2xl border border-outline-variant bg-white shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant px-4 py-3.5 sm:px-5">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-extrabold text-[#173A67]">
+              <MaterialIcon
+                className={`text-[20px] ${amountColor}`}
+                name={isIncome ? "south_west" : "north_east"}
+              />
+              {pageTitle} theo danh mục ({summary.periodLabel})
+            </h2>
+            <p className="text-xs text-on-surface-variant">
+              Tổng hợp số phiếu {kindNoun}, tổng tiền {kindNoun} và tỷ trọng từng danh mục {kindNoun} từ ngày{" "}
+              {formatDateVi(summary.fromDate)} đến ngày {formatDateVi(summary.toDate)}.
+            </p>
+          </div>
+          <span className={`rounded-full border px-3 py-1 text-xs font-bold ${badgeBg}`}>
+            {totalKindCount} phiếu {kindNoun} · {formatVnd(totalKindAmount)}
+          </span>
+        </div>
 
-        {renderCategoryTable({
-          title: "Tổng hợp chi",
-          subtitle: `Nhóm theo danh mục chi (${summary.periodLabel})`,
-          icon: "north_east",
-          tone: "expense",
-          rows: summary.expenseRows,
-          totalAmount: summary.totalExpense,
-          totalCount: summary.expenseEntryCount,
-        })}
-      </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="bg-[#D9F2EC]/70 text-xs font-bold text-[#173A67]">
+              <tr className="[&>th]:px-3.5 [&>th]:py-2.5 [&>th]:whitespace-nowrap">
+                <th className="w-12 text-center">STT</th>
+                <th>Danh mục {kindNoun}</th>
+                <th className="text-right">Số phiếu {kindNoun}</th>
+                <th className="text-right">Tổng tiền {kindNoun}</th>
+                <th className="text-right">Tỷ trọng</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline-variant/60">
+              {categoryRows.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-6 text-center text-sm text-on-surface-variant" colSpan={5}>
+                    Chưa có khoản {kindNoun} nào trong {summary.periodLabel}.
+                  </td>
+                </tr>
+              ) : (
+                categoryRows.map((r, idx) => (
+                  <tr
+                    key={r.categoryId}
+                    className={`transition hover:bg-surface-container-lowest [&>td]:px-3.5 [&>td]:py-2.5 ${
+                      r.totalAmount === 0 ? "text-on-surface-variant/75" : ""
+                    }`}
+                  >
+                    <td className="text-center text-xs font-semibold text-on-surface-variant">{idx + 1}</td>
+                    <td>
+                      <p className="font-semibold text-on-surface">
+                        {r.code ? (
+                          <span className="mr-1.5 rounded bg-surface-container px-1.5 py-0.5 text-[11px] font-bold text-[#173A67]">
+                            {r.code}
+                          </span>
+                        ) : null}
+                        {r.name}
+                      </p>
+                      {r.sampleNote ? (
+                        <p className="mt-0.5 line-clamp-1 text-[11px] text-on-surface-variant">
+                          VD: {r.sampleNote}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="whitespace-nowrap text-right font-medium">
+                      {r.entryCount > 0 ? r.entryCount : "–"}
+                    </td>
+                    <td className={`whitespace-nowrap text-right font-bold ${r.totalAmount > 0 ? amountColor : ""}`}>
+                      {r.totalAmount > 0 ? formatVnd(r.totalAmount) : "0 đ"}
+                    </td>
+                    <td className="whitespace-nowrap text-right text-xs font-semibold text-on-surface-variant">
+                      {r.totalAmount > 0 ? `${r.percentage.toFixed(1)}%` : "0%"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-[#173A67]/20 bg-surface-container-low/60 font-extrabold text-[#173A67] [&>td]:px-3.5 [&>td]:py-3">
+                <td colSpan={2}>Tổng cộng {kindNoun}</td>
+                <td className="whitespace-nowrap text-right">{totalKindCount}</td>
+                <td className={`whitespace-nowrap text-right ${amountColor}`}>{formatVnd(totalKindAmount)}</td>
+                <td className="whitespace-nowrap text-right">{totalKindAmount > 0 ? "100%" : "0%"}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </section>
 
-      {/* Bảng chi tiết các bút toán phát sinh trong kỳ */}
+      {/* Bảng chi tiết các khoản thu (hoặc chi) phát sinh trong kỳ */}
       <section className="space-y-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="flex items-center gap-2 text-base font-extrabold text-[#173A67]">
               <MaterialIcon className="text-[20px]" name="receipt_long" />
-              Chi tiết phát sinh thu – chi trong {summary.periodLabel}
+              Chi tiết các khoản {kindNoun} trong {summary.periodLabel}
             </h2>
             <p className="text-xs text-on-surface-variant">
-              Từ ngày {formatDateVi(summary.fromDate)} đến ngày {formatDateVi(summary.toDate)} ({summary.detailRows.length} bút toán). Khi xuất Excel sẽ bao gồm cả bảng tổng hợp và toàn bộ danh sách chi tiết này.
+              Từ ngày {formatDateVi(summary.fromDate)} đến ngày {formatDateVi(summary.toDate)} ({detailRows.length} phiếu{" "}
+              {kindNoun}). Khi xuất Excel sẽ bao gồm cả bảng {pageTitle} theo danh mục và danh sách chi tiết khoản {kindNoun} này.
             </p>
           </div>
         </div>
@@ -628,22 +701,21 @@ export function FinanceSummaryView({
         <DataTable
           columns={detailColumns}
           defaultPageSize={20}
-          emptyText={`Không có phát sinh thu – chi nào trong ${summary.periodLabel}.`}
+          emptyText={`Không có khoản ${kindNoun} nào phát sinh trong ${summary.periodLabel}.`}
           footerRows={
             <tr className="border-t-2 border-[#173A67]/20 font-bold text-[#173A67] [&>td]:px-4 [&>td]:py-3">
-              <td colSpan={5}>
-                Cộng phát sinh trong {summary.periodLabel} (Thu: {formatVnd(summary.totalIncome)} · Chi:{" "}
-                {formatVnd(summary.totalExpense)})
+              <td colSpan={4}>
+                Tổng cộng các khoản {kindNoun} trong {summary.periodLabel} ({totalKindCount} phiếu {kindNoun})
               </td>
-              <td className="whitespace-nowrap text-right">
-                {summary.netAmount >= 0 ? "+" : ""}
-                {formatVnd(summary.netAmount)}
+              <td className={`whitespace-nowrap text-right ${amountColor}`}>
+                {isIncome ? "+" : "-"}
+                {formatVnd(totalKindAmount)}
               </td>
-              <td>Cuối kỳ: {formatVnd(summary.closingBalance)}</td>
+              <td colSpan={2}>Số dư cuối kỳ: {formatVnd(summary.closingBalance)}</td>
             </tr>
           }
           rowKey={(r) => r.id}
-          rows={summary.detailRows}
+          rows={detailRows}
         />
       </section>
     </div>

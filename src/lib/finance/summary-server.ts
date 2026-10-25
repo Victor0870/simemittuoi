@@ -1,15 +1,28 @@
+import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Fund, FundCategory, FundEntry } from "@/lib/finance/registry";
-import { loadCategories, loadEntries, loadFunds, loadLockedThrough } from "@/lib/finance/server";
+import { getCurrentAccess } from "@/lib/auth/guard";
+import type { CategoryKind, Fund, FundCategory, FundEntry } from "@/lib/finance/registry";
+import { financeAbilities, loadCategories, loadEntries, loadFunds, loadLockedThrough } from "@/lib/finance/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
+import { todayInVietnam } from "@/lib/life-events/registry";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import {
   normalizeStoredOpeningBalances,
+  parseSummaryFilter,
   type PeriodOpeningEntry,
   type StoredOpeningBalances,
+  type SummaryFilter,
 } from "./summary";
 
 export const FINANCE_OPENING_BALANCES_KEY = "finance_opening_balances";
+
+export type SummaryPageSearchParams = {
+  periodType?: string;
+  year?: string;
+  month?: string;
+  quarter?: string;
+};
 
 export type FinanceSummaryDataset = {
   funds: Fund[];
@@ -110,5 +123,35 @@ export async function loadFinanceSummaryDataset(db: SupabaseClient): Promise<Fin
     lockedThrough,
     openingBalances,
     unionName: formSettings.unionName,
+  };
+}
+
+export async function prepareFinanceSummaryPage(
+  kind: CategoryKind,
+  searchParams: Promise<SummaryPageSearchParams>,
+): Promise<{
+  canWrite: boolean;
+  dataset: FinanceSummaryDataset;
+  initialFilter: SummaryFilter;
+  today: string;
+}> {
+  const params = await searchParams;
+  const access = await getCurrentAccess();
+  const nextPath = kind === "income" ? "/admin/finance/income" : "/admin/finance/expense";
+  if (!access) redirect(`/login?next=${nextPath}`);
+
+  const can = financeAbilities(access);
+  if (!can.view && !can.record && !can.manage) redirect("/");
+
+  const today = todayInVietnam();
+  const initialFilter = parseSummaryFilter(params, today);
+  const db = createServiceClient();
+  const dataset = await loadFinanceSummaryDataset(db);
+
+  return {
+    canWrite: can.record || can.manage,
+    dataset,
+    initialFilter,
+    today,
   };
 }

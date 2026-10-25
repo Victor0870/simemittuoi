@@ -114,6 +114,8 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/office/print-settings", label: "Cài đặt biểu mẫu in" },
   ],
   finance: [
+    { href: "/admin/finance/income", label: "Tổng hợp thu" },
+    { href: "/admin/finance/expense", label: "Tổng hợp chi" },
     { href: "/office/finance", label: "Sổ quỹ" },
     { href: "/office/reports", label: "Báo cáo tổng hợp" },
     { href: "/office/catalogs", label: "Danh mục thu chi" },

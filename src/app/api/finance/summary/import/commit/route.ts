@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { commitFinanceImport, requireFinanceWriteAccess } from "@/lib/finance/summary-excel";
+import {
+  commitFinanceImport,
+  parseSummaryKind,
+  requireFinanceWriteAccess,
+} from "@/lib/finance/summary-excel";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -15,7 +19,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dữ liệu xác nhận không hợp lệ." }, { status: 400 });
     }
 
-    const result = await commitFinanceImport(createServiceClient(), access.userId, body);
+    const fallbackKind = parseSummaryKind(request.nextUrl.searchParams.get("kind"), "income");
+    const result = await commitFinanceImport(createServiceClient(), access.userId, body, fallbackKind);
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
@@ -23,6 +28,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (err: unknown) {
     console.error("[api/finance/summary/import/commit] error:", err);
-    return NextResponse.json({ error: "Không lưu được dữ liệu thu chi từ Excel." }, { status: 500 });
+    return NextResponse.json({ error: "Không lưu được dữ liệu từ Excel." }, { status: 500 });
   }
 }

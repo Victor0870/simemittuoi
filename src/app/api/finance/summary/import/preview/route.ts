@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   FINANCE_IMPORT_MAX_BYTES,
+  parseSummaryKind,
   previewFinanceImport,
   requireFinanceWriteAccess,
 } from "@/lib/finance/summary-excel";
@@ -26,8 +27,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "File vượt quá giới hạn 2 MB." }, { status: 400 });
     }
 
+    const kind = parseSummaryKind(
+      form?.get("kind") ?? request.nextUrl.searchParams.get("kind"),
+      "income",
+    );
     const buffer = await file.arrayBuffer();
-    const result = await previewFinanceImport(createServiceClient(), buffer);
+    const result = await previewFinanceImport(createServiceClient(), buffer, kind);
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
