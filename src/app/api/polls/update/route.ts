@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { parsePollSchedule } from "@/lib/polls/phase";
 import { normalizeRewardMoney } from "@/lib/polls/reward-money";
+import { normalizePointsBudget, normalizeVoteMode } from "@/lib/polls/vote-mode";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { invalidatePollResults } from "@/lib/data/ranking-refresh";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
@@ -116,6 +117,43 @@ export async function POST(request: NextRequest) {
 
     if (typeof isActive === "boolean") {
       updateData.is_active = isActive;
+    }
+
+    const { data: currentMode, error: currentModeError } = await publicDb
+      .from(CDILV_TABLE.polls)
+      .select("vote_mode")
+      .eq("id", pollId)
+      .maybeSingle();
+    if (currentModeError) throw currentModeError;
+    const previousVoteMode = normalizeVoteMode(currentMode?.vote_mode);
+    const nextVoteMode = body.voteMode === undefined ? previousVoteMode : normalizeVoteMode(body.voteMode);
+    if (nextVoteMode !== previousVoteMode) {
+      const [{ count: voteRows }, { count: pointRows }] = await Promise.all([
+        publicDb.from(CDILV_TABLE.pollVotes).select("id", { count: "exact", head: true }).eq("poll_id", pollId),
+        publicDb
+          .from(CDILV_TABLE.pollPointAllocations)
+          .select("id", { count: "exact", head: true })
+          .eq("poll_id", pollId),
+      ]);
+      if ((voteRows ?? 0) > 0 || (pointRows ?? 0) > 0) {
+        return NextResponse.json(
+          { error: "Chương trình đã có người bình chọn nên không đổi được hình thức bình chọn." },
+          { status: 400 },
+        );
+      }
+      updateData.vote_mode = nextVoteMode;
+    }
+    if (nextVoteMode === "points") {
+      updateData.has_prediction = false;
+    }
+    if (body.pointsPerVoter !== undefined) {
+      updateData.points_per_voter = normalizePointsBudget(body.pointsPerVoter);
+    }
+    if (body.pointsPerTeam !== undefined) {
+      updateData.points_per_team = normalizePointsBudget(body.pointsPerTeam);
+    }
+    if (typeof body.allowSelfVote === "boolean") {
+      updateData.allow_self_vote = body.allowSelfVote;
     }
 
     if (status && ["open", "closed", "draft", "upcoming"].includes(status)) {

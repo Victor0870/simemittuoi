@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ensureJudgeToken } from "@/lib/polls/judge-access";
 import { parsePollSchedule } from "@/lib/polls/phase";
 import { normalizeRewardMoney } from "@/lib/polls/reward-money";
+import { normalizePointsBudget, normalizeVoteMode } from "@/lib/polls/vote-mode";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: schedule.error }, { status: 400 });
     }
 
+    const voteMode = normalizeVoteMode(body.voteMode);
+
     // 1. Insert poll
     const { data: poll, error: pollError } = await publicDb
       .from(CDILV_TABLE.polls)
@@ -90,7 +93,11 @@ export async function POST(request: NextRequest) {
         is_active: isActive !== false,
         max_votes_per_user: parseInt(String(maxVotesPerUser), 10) || 3,
         max_guest_votes: parseInt(String(maxGuestVotes), 10) || 250,
-        has_prediction: Boolean(hasPrediction),
+        has_prediction: voteMode === "points" ? false : Boolean(hasPrediction),
+        vote_mode: voteMode,
+        points_per_voter: normalizePointsBudget(body.pointsPerVoter),
+        points_per_team: normalizePointsBudget(body.pointsPerTeam),
+        allow_self_vote: Boolean(body.allowSelfVote),
         prediction_question:
           predictionQuestion?.trim() ||
           "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",

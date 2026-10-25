@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { getPollPhase } from "@/lib/polls/phase";
 import { invalidatePollResults, publishLeaderboardNow } from "@/lib/data/ranking-refresh";
+import { loadPointTally } from "@/lib/polls/points-server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -114,6 +115,23 @@ export async function POST(request: NextRequest) {
     for (const v of votesData ?? []) {
       realVotesByOpt.set(v.option_id, (realVotesByOpt.get(v.option_id) || 0) + 1);
     }
+
+    // Vote theo point: xếp hạng theo tổng điểm; tỉ lệ BGK/công khai tính trên tổng điểm của từng nhóm.
+    let judgeDenominator: number | null = null;
+    let otherDenominator: number | null = null;
+    if (poll.vote_mode === "points") {
+      const tally = await loadPointTally(publicDb, pollId);
+      judgeVotesByOpt.clear();
+      otherVotesByOpt.clear();
+      lastVoteAtByOpt.clear();
+      realVotesByOpt.clear();
+      tally.judgeByOption.forEach((v, k) => judgeVotesByOpt.set(k, v));
+      tally.publicByOption.forEach((v, k) => otherVotesByOpt.set(k, v));
+      tally.lastAtByOption.forEach((v, k) => lastVoteAtByOpt.set(k, v));
+      tally.totalByOption.forEach((v, k) => realVotesByOpt.set(k, v));
+      judgeDenominator = tally.judgePointsTotal;
+      otherDenominator = tally.publicPointsTotal;
+    }
     for (const opt of options) {
       const real = realVotesByOpt.get(opt.id) || 0;
       if (opt.vote_count !== real) {
@@ -139,8 +157,10 @@ export async function POST(request: NextRequest) {
         if (poll.has_judges) {
           judgeVotes = judgeVotesByOpt.get(opt.id) || 0;
           otherVotes = otherVotesByOpt.get(opt.id) || 0;
-          const judgeRatio = totalJudgesVoted > 0 ? judgeVotes / totalJudgesVoted : 0;
-          const otherRatio = totalOthersVoted > 0 ? otherVotes / totalOthersVoted : 0;
+          const judgeTotal = judgeDenominator ?? totalJudgesVoted;
+          const otherTotal = otherDenominator ?? totalOthersVoted;
+          const judgeRatio = judgeTotal > 0 ? judgeVotes / judgeTotal : 0;
+          const otherRatio = otherTotal > 0 ? otherVotes / otherTotal : 0;
           judgeScore = Math.round(judgeRatio * judgeWeight * 100) / 100;
           otherScore = Math.round(otherRatio * otherWeight * 100) / 100;
           weightedScore = Math.round((judgeScore + otherScore) * 100) / 100;

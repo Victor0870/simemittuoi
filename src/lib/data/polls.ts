@@ -5,6 +5,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import type { PollStatus } from "@/lib/polls/phase";
 import { normalizeRewardMoney, type RewardMoney } from "@/lib/polls/reward-money";
+import { loadPointTally } from "@/lib/polls/points-server";
+import { normalizeVoteMode, type PollVoteMode } from "@/lib/polls/vote-mode";
 
 export type JudgeMember = {
   employeeCode: string;
@@ -66,6 +68,10 @@ export type PollSummary = {
   consolationPrizePoints: number;
   consolationPrizeCount: number;
   rewardMoney: RewardMoney;
+  voteMode: PollVoteMode;
+  pointsPerVoter: number;
+  pointsPerTeam: number;
+  allowSelfVote: boolean;
   hasJudges?: boolean;
   judgeWeightPercent?: number;
   judgeList?: JudgeMember[];
@@ -122,6 +128,10 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     consolationPrizePoints: row.consolation_prize_points ?? 0,
     consolationPrizeCount: row.consolation_prize_count ?? 2,
     rewardMoney: normalizeRewardMoney(row.reward_money),
+    voteMode: normalizeVoteMode(row.vote_mode),
+    pointsPerVoter: row.points_per_voter ?? 10,
+    pointsPerTeam: row.points_per_team ?? 10,
+    allowSelfVote: Boolean(row.allow_self_vote),
     hasJudges: Boolean(row.has_judges),
     judgeWeightPercent: row.judge_weight_percent ?? 30,
     judgeList: Array.isArray(row.judge_list)
@@ -269,6 +279,33 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     totalOthersVoted = othersVotedSet.size;
   }
 
+  // Vote theo point: số "phiếu" của mỗi bài thi là tổng điểm; tỉ lệ BGK/công khai tính trên tổng điểm của từng nhóm.
+  const voteMode = normalizeVoteMode(pollRow.vote_mode);
+  const pointTotalsByOpt = new Map<string, number>();
+  let judgeDenominator = totalJudgesVoted;
+  let otherDenominator = totalOthersVoted;
+  if (voteMode === "points") {
+    try {
+      const tally = await loadPointTally(createServiceClient(), id);
+      judgeVotesByOpt.clear();
+      otherVotesByOpt.clear();
+      firstVoteAtByOpt.clear();
+      lastVoteAtByOpt.clear();
+      tally.judgeByOption.forEach((v, k) => judgeVotesByOpt.set(k, v));
+      tally.publicByOption.forEach((v, k) => otherVotesByOpt.set(k, v));
+      tally.firstAtByOption.forEach((v, k) => firstVoteAtByOpt.set(k, v));
+      tally.lastAtByOption.forEach((v, k) => lastVoteAtByOpt.set(k, v));
+      tally.totalByOption.forEach((v, k) => pointTotalsByOpt.set(k, v));
+      totalJudgesVoted = tally.judgeVoters;
+      totalOthersVoted = tally.publicVoters;
+      judgeDenominator = tally.judgePointsTotal;
+      otherDenominator = tally.publicPointsTotal;
+    } catch (tallyError: any) {
+      if (strict) throw tallyError;
+      console.error("[polls] getPointTally error:", tallyError?.message);
+    }
+  }
+
   const judgeWeight = judgeWeightPercent / 10; // e.g. 30% -> 3.0
   const otherWeight = (100 - judgeWeightPercent) / 10; // e.g. 70% -> 7.0
 
@@ -283,8 +320,8 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
       judgeVotes = judgeVotesByOpt.get(row.id) || 0;
       otherVotes = otherVotesByOpt.get(row.id) || 0;
 
-      const judgeRatio = totalJudgesVoted > 0 ? judgeVotes / totalJudgesVoted : 0;
-      const otherRatio = totalOthersVoted > 0 ? otherVotes / totalOthersVoted : 0;
+      const judgeRatio = judgeDenominator > 0 ? judgeVotes / judgeDenominator : 0;
+      const otherRatio = otherDenominator > 0 ? otherVotes / otherDenominator : 0;
 
       judgeScore = Math.round(judgeRatio * judgeWeight * 100) / 100;
       otherScore = Math.round(otherRatio * otherWeight * 100) / 100;
@@ -302,7 +339,7 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
         : typeof row.image_urls === "string"
         ? JSON.parse(row.image_urls || "[]")
         : [],
-      voteCount: row.vote_count ?? 0,
+      voteCount: (voteMode === "points" ? pointTotalsByOpt.get(row.id) : undefined) ?? row.vote_count ?? 0,
       finalRank: row.final_rank,
       isActive: row.is_active !== false,
       members: membersByOption.get(row.id) || [],
@@ -346,6 +383,10 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     consolationPrizePoints: pollRow.consolation_prize_points ?? 0,
     consolationPrizeCount: pollRow.consolation_prize_count ?? 2,
     rewardMoney: normalizeRewardMoney(pollRow.reward_money),
+    voteMode,
+    pointsPerVoter: pollRow.points_per_voter ?? 10,
+    pointsPerTeam: pollRow.points_per_team ?? 10,
+    allowSelfVote: Boolean(pollRow.allow_self_vote),
     hasJudges,
     judgeWeightPercent,
     judgeList,

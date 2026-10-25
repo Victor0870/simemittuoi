@@ -7,6 +7,13 @@ import type { JudgeMember, PollDetail, PollOption } from "@/lib/data/polls";
 import type { PollScheduleMode } from "@/lib/polls/phase";
 import { EmployeeSuggestInput, type EmployeeSuggestion } from "@/components/polls/EmployeeSuggestInput";
 import { EMPTY_REWARD_MONEY, REWARD_KINDS, type RewardMoney } from "@/lib/polls/reward-money";
+import {
+  POINTS_BUDGET_MAX,
+  POINTS_DEFAULT,
+  VOTE_MODE_LABEL,
+  normalizePointsBudget,
+  type PollVoteMode,
+} from "@/lib/polls/vote-mode";
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return "";
@@ -108,6 +115,10 @@ export function PollEditorModal({
   const [voterRewardPoints, setVoterRewardPoints] = useState(10);
   const [entryRewardPoints, setEntryRewardPoints] = useState(0);
   const [predictorRewardPoints, setPredictorRewardPoints] = useState(50);
+  const [voteMode, setVoteMode] = useState<PollVoteMode>("standard");
+  const [pointsPerVoter, setPointsPerVoter] = useState(POINTS_DEFAULT);
+  const [pointsPerTeam, setPointsPerTeam] = useState(POINTS_DEFAULT);
+  const [allowSelfVote, setAllowSelfVote] = useState(false);
 
   // Judge state
   const [hasJudges, setHasJudges] = useState(false);
@@ -166,6 +177,10 @@ export function PollEditorModal({
       setVoterRewardPoints(initialPoll.voterRewardPoints ?? 10);
       setEntryRewardPoints(initialPoll.entryRewardPoints ?? 0);
       setPredictorRewardPoints(initialPoll.predictorRewardPoints ?? 50);
+      setVoteMode(initialPoll.voteMode ?? "standard");
+      setPointsPerVoter(initialPoll.pointsPerVoter ?? POINTS_DEFAULT);
+      setPointsPerTeam(initialPoll.pointsPerTeam ?? POINTS_DEFAULT);
+      setAllowSelfVote(Boolean(initialPoll.allowSelfVote));
       setHasJudges(Boolean(initialPoll.hasJudges));
       setJudgeWeightPercent(initialPoll.judgeWeightPercent ?? 30);
       setJudgeList(initialPoll.judgeList || []);
@@ -207,6 +222,10 @@ export function PollEditorModal({
       setVoterRewardPoints(10);
       setEntryRewardPoints(0);
       setHasPrediction(true);
+      setVoteMode("standard");
+      setPointsPerVoter(POINTS_DEFAULT);
+      setPointsPerTeam(POINTS_DEFAULT);
+      setAllowSelfVote(false);
       setHasJudges(false);
       setJudgeWeightPercent(30);
       setJudgeList([]);
@@ -423,7 +442,11 @@ export function PollEditorModal({
         votingEndsAt: fromLocalInput(votingEndsAtLocal),
         maxVotesPerUser,
         maxGuestVotes,
-        hasPrediction,
+        hasPrediction: voteMode === "points" ? false : hasPrediction,
+        voteMode,
+        pointsPerVoter,
+        pointsPerTeam,
+        allowSelfVote,
         predictionQuestion,
         voterRewardPoints,
         entryRewardPoints,
@@ -1002,25 +1025,95 @@ export function PollEditorModal({
                 </div>
               </div>
 
-              {/* Voting limit */}
+              {/* Hình thức bình chọn */}
               <div className="rounded-2xl border border-outline-variant bg-white p-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-sm font-bold text-[#173A67]">
-                      Số lượng tác phẩm mỗi người được vote tối đa
-                    </h4>
-                    <p className="text-xs text-on-surface-variant">
-                      Ví dụ: 3 tác phẩm (mỗi phiếu bầu tương ứng 1 điểm)
-                    </p>
-                  </div>
-                  <input
-                    className="w-24 rounded-xl border border-primary bg-primary/5 px-3 py-2 text-center text-title-md font-black text-primary"
-                    min={1}
-                    type="number"
-                    value={maxVotesPerUser}
-                    onChange={(e) => setMaxVotesPerUser(Number(e.target.value))}
-                  />
+                <div>
+                  <h4 className="text-sm font-bold text-[#173A67]">Hình thức bình chọn</h4>
+                  <p className="text-xs text-on-surface-variant">
+                    Không đổi được sau khi đã có người bình chọn.
+                  </p>
                 </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(["standard", "points"] as PollVoteMode[]).map((value) => (
+                    <button
+                      key={value}
+                      className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold transition cursor-pointer ${
+                        voteMode === value
+                          ? "border-[#173A67] bg-[#173A67]/5 text-[#173A67]"
+                          : "border-outline-variant text-on-surface-variant hover:border-[#173A67]/50"
+                      }`}
+                      type="button"
+                      onClick={() => setVoteMode(value)}
+                    >
+                      {VOTE_MODE_LABEL[value]}
+                      <span className="block text-xs font-medium text-on-surface-variant">
+                        {value === "standard"
+                          ? "Mỗi người chọn tối đa N tác phẩm, mỗi lựa chọn là 1 phiếu."
+                          : "Mỗi người/đội có số điểm riêng, tự chia cho một hoặc nhiều bài thi."}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {voteMode === "points" ? (
+                  <div className="space-y-3 rounded-xl bg-[#173A67]/5 p-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="block space-y-1">
+                        <span className="text-xs font-bold text-[#173A67]">Điểm mỗi người bình chọn</span>
+                        <input
+                          className="w-full rounded-xl border border-primary bg-white px-3 py-2 text-center text-title-md font-black text-primary"
+                          max={POINTS_BUDGET_MAX}
+                          min={0}
+                          type="number"
+                          value={pointsPerVoter}
+                          onChange={(e) => setPointsPerVoter(normalizePointsBudget(e.target.value, 0))}
+                        />
+                      </label>
+                      <label className="block space-y-1">
+                        <span className="text-xs font-bold text-[#173A67]">Điểm mỗi đội chơi</span>
+                        <input
+                          className="w-full rounded-xl border border-primary bg-white px-3 py-2 text-center text-title-md font-black text-primary"
+                          max={POINTS_BUDGET_MAX}
+                          min={0}
+                          type="number"
+                          value={pointsPerTeam}
+                          onChange={(e) => setPointsPerTeam(normalizePointsBudget(e.target.value, 0))}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-on-surface-variant">
+                      Thành viên của một đội chơi (có mã nhân viên trong danh sách thành viên bài thi) dùng chung số điểm của đội.
+                      Người khác và Ban giám khảo dùng điểm cá nhân. Quản trị viên cộng thêm điểm cho từng người/đội ở trang chương trình.
+                    </p>
+                    <label className="flex cursor-pointer items-start gap-2 text-sm font-semibold text-[#173A67]">
+                      <input
+                        checked={allowSelfVote}
+                        className="mt-0.5 h-4 w-4 accent-[#173A67]"
+                        type="checkbox"
+                        onChange={(e) => setAllowSelfVote(e.target.checked)}
+                      />
+                      <span>Cho phép đội/người chơi bình chọn điểm cho đội/bài thi của chính mình</span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#173A67]">
+                        Số lượng tác phẩm mỗi người được vote tối đa
+                      </h4>
+                      <p className="text-xs text-on-surface-variant">
+                        Ví dụ: 3 tác phẩm (mỗi phiếu bầu tương ứng 1 điểm)
+                      </p>
+                    </div>
+                    <input
+                      className="w-24 rounded-xl border border-primary bg-primary/5 px-3 py-2 text-center text-title-md font-black text-primary"
+                      min={1}
+                      type="number"
+                      value={maxVotesPerUser}
+                      onChange={(e) => setMaxVotesPerUser(Number(e.target.value))}
+                    />
+                  </div>
+                )}
 
                 <div className="border-t border-outline-variant/60 pt-4">
                   <ParticipationPointsFields
@@ -1174,15 +1267,31 @@ export function PollEditorModal({
                           <MaterialIcon className="text-[16px] text-primary" name="info" />
                           <span>Quy tắc tính điểm theo trọng số (Thang 10 điểm):</span>
                         </div>
-                        <p>
-                          • <strong>Điểm BGK</strong> = (Số phiếu BGK bầu cho tác phẩm / <em>Tổng số BGK thực tế tham gia bình chọn</em>) × {(judgeWeightPercent / 10).toFixed(1)}
-                        </p>
-                        <p>
-                          • <strong>Điểm Khác</strong> = (Số phiếu khác bầu cho tác phẩm / <em>Tổng số người khác thực tế tham gia bình chọn</em>) × {((100 - judgeWeightPercent) / 10).toFixed(1)}
-                        </p>
-                        <p className="text-amber-800 font-medium">
-                          ✦ Tính theo số người thực tế tham gia bình chọn chứ không chia theo toàn bộ danh sách.
-                        </p>
+                        {voteMode === "points" ? (
+                          <>
+                            <p>
+                              • <strong>Điểm BGK</strong> = (Số điểm BGK cho bài thi / <em>Tổng số điểm BGK đã phân bổ</em>) × {(judgeWeightPercent / 10).toFixed(1)}
+                            </p>
+                            <p>
+                              • <strong>Điểm Khác</strong> = (Số điểm người khác cho bài thi / <em>Tổng số điểm người khác đã phân bổ</em>) × {((100 - judgeWeightPercent) / 10).toFixed(1)}
+                            </p>
+                            <p className="text-amber-800 font-medium">
+                              ✦ Vote theo point: mỗi giám khảo dùng điểm cá nhân như người bình chọn khác.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p>
+                              • <strong>Điểm BGK</strong> = (Số phiếu BGK bầu cho tác phẩm / <em>Tổng số BGK thực tế tham gia bình chọn</em>) × {(judgeWeightPercent / 10).toFixed(1)}
+                            </p>
+                            <p>
+                              • <strong>Điểm Khác</strong> = (Số phiếu khác bầu cho tác phẩm / <em>Tổng số người khác thực tế tham gia bình chọn</em>) × {((100 - judgeWeightPercent) / 10).toFixed(1)}
+                            </p>
+                            <p className="text-amber-800 font-medium">
+                              ✦ Tính theo số người thực tế tham gia bình chọn chứ không chia theo toàn bộ danh sách.
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -1311,15 +1420,21 @@ export function PollEditorModal({
               <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-5 space-y-4">
                 <label className="flex items-center gap-2.5 cursor-pointer font-bold text-amber-950 text-sm">
                   <input
-                    checked={hasPrediction}
+                    checked={voteMode !== "points" && hasPrediction}
                     className="h-5 w-5 rounded border-amber-400 text-amber-600"
+                    disabled={voteMode === "points"}
                     type="checkbox"
                     onChange={(e) => setHasPrediction(e.target.checked)}
                   />
                   <span>Kích hoạt câu hỏi: &ldquo;Tìm người dự đoán đúng nhất&rdquo;</span>
                 </label>
+                {voteMode === "points" ? (
+                  <p className="text-xs text-amber-900">
+                    Hình thức Vote theo point không dùng câu hỏi dự đoán (câu hỏi đếm số phiếu).
+                  </p>
+                ) : null}
 
-                {hasPrediction && (
+                {voteMode !== "points" && hasPrediction && (
                   <div className="space-y-3 pt-2">
                     <div>
                       <label className="text-label-xs font-bold text-amber-900" htmlFor="m-pred-q">

@@ -18,6 +18,8 @@ export const CDILV_TABLE = {
   pollOptionMembers: "cdilv_poll_option_members",
   pollVotes: "cdilv_poll_votes",
   pollPredictions: "cdilv_poll_predictions",
+  pollPointAllocations: "cdilv_poll_point_allocations",
+  pollPointGrants: "cdilv_poll_point_grants",
   postComments: "cdilv_post_comments",
   activityRegistrations: "cdilv_activity_registrations",
   feedbacks: "cdilv_feedbacks",
@@ -94,6 +96,7 @@ export const CDILV_RPC = {
   documentNumberPreview: "cdilv_document_number_preview",
   documentNumberState: "cdilv_document_number_state",
   documentNumberConfigure: "cdilv_document_number_configure",
+  pollPointsSave: "cdilv_poll_points_save",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */

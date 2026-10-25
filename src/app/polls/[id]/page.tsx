@@ -4,6 +4,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPollById } from "@/lib/data/polls";
 import { PollPodiumResults } from "@/components/polls/PollPodiumResults";
 import { PollVotingSection } from "@/components/polls/PollVotingSection";
+import { PollPointsVotingSection } from "@/components/polls/PollPointsVotingSection";
 import { PollAdminToolbar } from "@/components/polls/PollAdminToolbar";
 import { PollQrButton } from "@/components/polls/PollQrButton";
 import { PollPhaseBadge } from "@/components/polls/PollPhaseBadge";
@@ -106,10 +107,17 @@ export default async function PollDetailPage({ params }: Props) {
 
         {/* Reward info chips */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 border-t border-outline-variant/60 pt-3 sm:pt-4 text-xs sm:text-body-sm text-[#27496D]">
-          <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
-            <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="how_to_vote" />
-            Được chọn tối đa: <strong>{poll.maxVotesPerUser} tác phẩm</strong>
-          </span>
+          {poll.voteMode === "points" ? (
+            <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
+              <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="scoreboard" />
+              Vote theo point: <strong>{poll.pointsPerVoter} điểm/người · {poll.pointsPerTeam} điểm/đội</strong>
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
+              <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="how_to_vote" />
+              Được chọn tối đa: <strong>{poll.maxVotesPerUser} tác phẩm</strong>
+            </span>
+          )}
           {poll.hasPrediction ? (
             <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-900 border border-emerald-200">
               <MaterialIcon className="text-[16px] sm:text-[18px] text-emerald-600" name="stars" />
@@ -135,7 +143,11 @@ export default async function PollDetailPage({ params }: Props) {
         className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-8 shadow-xs scroll-mt-20"
         id="binh-chon"
       >
-        <PollVotingSection initialNow={now} poll={poll} />
+        {poll.voteMode === "points" ? (
+          <PollPointsVotingSection initialNow={now} poll={poll} />
+        ) : (
+          <PollVotingSection initialNow={now} poll={poll} />
+        )}
       </section>
 
       {/* Bottom navigation */}

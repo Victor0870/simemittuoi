@@ -16,6 +16,9 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
   const { isGuest } = useAuth();
   const phase = usePollPhase(poll, initialNow);
   const isClosed = phase === "closed";
+  const isPoints = poll.voteMode === "points";
+  const unit = isPoints ? "điểm" : "phiếu";
+  const splitUnit = isPoints ? " điểm" : "";
 
   // Guest can only see results when poll is closed
   const canSeeResults = isClosed || !isGuest;
@@ -111,7 +114,8 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
               <MaterialIcon className="text-[18px] text-amber-700" name="gavel" />
               <span>
                 Tính điểm theo trọng số: <strong>Ban Giám Khảo ({poll.judgeWeightPercent ?? 30}%)</strong> +{" "}
-                <strong>Bình chọn khác ({100 - (poll.judgeWeightPercent ?? 30)}%)</strong> (Thang 10 điểm).
+                <strong>Bình chọn khác ({100 - (poll.judgeWeightPercent ?? 30)}%)</strong> (Thang 10 điểm
+                {isPoints ? ", tỉ lệ theo tổng điểm của từng nhóm" : ""}).
               </span>
             </div>
             <span className="text-[11px] font-semibold text-slate-600">
@@ -154,12 +158,12 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
                         ⭐ {top2.weightedScore?.toFixed(2)} đ
                       </span>
                       <span className="text-[9px] sm:text-[10px] text-slate-600 font-semibold">
-                        BGK: {top2.judgeVotes ?? 0} · Khác: {top2.otherVotes ?? 0}
+                        BGK: {top2.judgeVotes ?? 0}{splitUnit} · Khác: {top2.otherVotes ?? 0}{splitUnit}
                       </span>
                     </div>
                   ) : (
                     <span className="inline-block rounded-full bg-slate-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-slate-800">
-                      {top2.voteCount} phiếu
+                      {top2.voteCount} {unit}
                     </span>
                   )
                 ) : null}
@@ -201,12 +205,12 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
                         🏆 {top1.weightedScore?.toFixed(2)} đ (Vô địch)
                       </span>
                       <span className="text-[9px] sm:text-[10px] text-amber-900 font-bold">
-                        BGK: {top1.judgeVotes ?? 0} · Khác: {top1.otherVotes ?? 0}
+                        BGK: {top1.judgeVotes ?? 0}{splitUnit} · Khác: {top1.otherVotes ?? 0}{splitUnit}
                       </span>
                     </div>
                   ) : (
                     <span className="inline-block rounded-full bg-amber-400 px-2 sm:px-3 py-0.5 text-[10px] sm:text-xs font-black text-amber-950 shadow-2xs">
-                      {top1.voteCount} phiếu (Vô địch)
+                      {top1.voteCount} {unit} (Vô địch)
                     </span>
                   )
                 ) : null}
@@ -247,12 +251,12 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
                         ⭐ {top3.weightedScore?.toFixed(2)} đ
                       </span>
                       <span className="text-[9px] sm:text-[10px] text-amber-900 font-semibold">
-                        BGK: {top3.judgeVotes ?? 0} · Khác: {top3.otherVotes ?? 0}
+                        BGK: {top3.judgeVotes ?? 0}{splitUnit} · Khác: {top3.otherVotes ?? 0}{splitUnit}
                       </span>
                     </div>
                   ) : (
                     <span className="inline-block rounded-full bg-amber-200 px-2 py-0.5 text-[10px] sm:text-xs font-extrabold text-amber-900">
-                      {top3.voteCount} phiếu
+                      {top3.voteCount} {unit}
                     </span>
                   )
                 ) : null}
@@ -297,12 +301,12 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
                           ⭐ {opt.weightedScore?.toFixed(2)} đ
                         </span>
                         <p className="text-[10px] text-slate-500 mt-0.5">
-                          BGK: {opt.judgeVotes ?? 0} · Khác: {opt.otherVotes ?? 0}
+                          BGK: {opt.judgeVotes ?? 0}{splitUnit} · Khác: {opt.otherVotes ?? 0}{splitUnit}
                         </p>
                       </div>
                     ) : (
                       <span className="rounded-lg bg-white px-2.5 py-1 text-xs font-bold text-primary border border-outline-variant shrink-0">
-                        {opt.voteCount} phiếu
+                        {opt.voteCount} {unit}
                       </span>
                     )
                   ) : null}

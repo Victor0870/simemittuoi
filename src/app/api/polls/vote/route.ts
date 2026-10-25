@@ -71,6 +71,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (poll.vote_mode === "points") {
+      return NextResponse.json(
+        { error: "Chương trình này dùng hình thức Vote theo point. Vui lòng tải lại trang để phân bổ điểm." },
+        { status: 400 },
+      );
+    }
+
     const phase = getPollPhase({
       status: poll.status,
       opensAt: poll.opens_at,

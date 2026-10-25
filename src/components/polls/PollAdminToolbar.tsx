@@ -8,6 +8,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { PollDetail } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
+import { PollPointGrantsModal } from "@/components/polls/PollPointGrantsModal";
 import { PollQrButton } from "@/components/polls/PollQrButton";
 import { usePollPhase } from "@/components/polls/usePollPhase";
 
@@ -19,6 +20,7 @@ export function PollAdminToolbar({ poll }: Props) {
   const router = useRouter();
   const { can, loading } = useAuth();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isGrantsOpen, setIsGrantsOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(poll.isActive);
@@ -195,6 +197,17 @@ export function PollAdminToolbar({ poll }: Props) {
               />
             ) : null}
 
+            {poll.voteMode === "points" ? (
+              <button
+                className="flex items-center justify-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#173A67] shadow-xs hover:bg-amber-100 transition cursor-pointer sm:px-3.5 sm:py-2 sm:text-xs"
+                type="button"
+                onClick={() => setIsGrantsOpen(true)}
+              >
+                <MaterialIcon className="text-[15px] sm:text-[16px]" name="add_circle" />
+                <span>Cộng điểm</span>
+              </button>
+            ) : null}
+
             {/* BUTTON CÀI ĐẶT & CHỈNH SỬA CUỘC THI */}
             <button
               className="flex flex-1 sm:flex-none items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-black text-slate-900 shadow-xs hover:bg-amber-300 transition cursor-pointer"
@@ -307,6 +320,10 @@ export function PollAdminToolbar({ poll }: Props) {
           router.refresh();
         }}
       />
+
+      {poll.voteMode === "points" ? (
+        <PollPointGrantsModal isOpen={isGrantsOpen} poll={poll} onClose={() => setIsGrantsOpen(false)} />
+      ) : null}
     </>
   );
 }
