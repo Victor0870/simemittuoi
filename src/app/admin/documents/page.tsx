@@ -3,6 +3,7 @@ import { HubPage, type HubKpi, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { countDocumentDrafts } from "@/lib/documents/drafts-server";
+import { countIssuedDocuments } from "@/lib/documents/registry-server";
 import { countDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -15,15 +16,16 @@ export default async function DocumentsHubPage() {
 
   const canTemplates = hasPermission(access, PERMISSIONS.postsManage);
   const db = canTemplates ? createServiceClient() : null;
-  const [counts, draftCount] = db
-    ? await Promise.all([countDocumentTemplates(db), countDocumentDrafts(db)])
-    : [null, 0];
+  const [counts, draftCount, issuedCount] = db
+    ? await Promise.all([countDocumentTemplates(db), countDocumentDrafts(db), countIssuedDocuments(db)])
+    : [null, 0, 0];
 
   const kpis: HubKpi[] = counts
     ? [
         { label: "Mẫu đang dùng", value: counts.active, icon: "task_alt" },
         { label: "Tổng số mẫu", value: counts.total, icon: "description" },
         { label: "Bản nháp", value: draftCount, icon: "edit_note" },
+        { label: "Đã ban hành", value: issuedCount, icon: "menu_book" },
       ]
     : [];
 
@@ -47,11 +49,9 @@ export default async function DocumentsHubPage() {
     {
       href: "/admin/documents/registry",
       title: "Sổ văn bản đã ban hành",
-      description: "Theo dõi số, ngày ban hành, người ký và tra cứu các văn bản đã ban hành.",
+      description: "Ban hành bản nháp kèm bản scan đã ký, tra cứu theo loại, năm, số và tải lại bản scan / .docx.",
       icon: "menu_book",
       tint: "amber",
-      badge: "Sắp có",
-      disabled: true,
       allowed: canTemplates,
     },
   ];

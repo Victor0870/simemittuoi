@@ -40,7 +40,7 @@ function mapRow(row: DocumentRow, names: Map<string, string>): DocumentDraft {
   };
 }
 
-async function loadNames(db: SupabaseClient, ids: (string | null)[]): Promise<Map<string, string>> {
+export async function loadNames(db: SupabaseClient, ids: (string | null)[]): Promise<Map<string, string>> {
   const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
   if (!unique.length) return new Map();
   const { data } = await db.from(CDILV_TABLE.profiles).select("id, full_name").in("id", unique);

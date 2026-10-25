@@ -10,16 +10,28 @@ import { createServiceClient } from "@/lib/supabase/service";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function DocumentComposePage() {
+export default async function DocumentComposePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ draft?: string | string[] }>;
+}) {
   const access = await getCurrentAccess();
   if (!access) redirect("/login?next=/admin/documents/compose");
   if (!hasPermission(access, PERMISSIONS.postsManage)) redirect("/");
 
+  const { draft } = await searchParams;
   const db = createServiceClient();
   const [templates, settings, drafts] = await Promise.all([
     loadDocumentTemplates(db),
     loadDocumentOrgSettings(db),
     loadDocumentDrafts(db),
   ]);
-  return <DocumentComposer initialDrafts={drafts} settings={settings} templates={templates} />;
+  return (
+    <DocumentComposer
+      initialDraftId={typeof draft === "string" ? draft : null}
+      initialDrafts={drafts}
+      settings={settings}
+      templates={templates}
+    />
+  );
 }

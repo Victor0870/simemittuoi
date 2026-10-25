@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { DocumentPreview } from "@/components/documents/DocumentPreview";
+import { IssueDocumentDialog } from "@/components/documents/IssueDocumentDialog";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   describeFieldErrors,
@@ -11,6 +12,7 @@ import {
   type DocumentDraft,
   type FieldValues,
 } from "@/lib/documents/compose";
+import { issueDefaults, type IssuedDocument } from "@/lib/documents/registry";
 import type { DocumentOrgSettings } from "@/lib/documents/settings";
 import {
   DOCUMENT_TYPES,
@@ -95,22 +97,31 @@ export function DocumentComposer({
   templates,
   settings,
   initialDrafts,
+  initialDraftId = null,
 }: {
   templates: DocumentTemplate[];
   settings: DocumentOrgSettings;
   initialDrafts: DocumentDraft[];
+  /** Mở sẵn bản nháp này (từ Sổ văn bản: /admin/documents/compose?draft=…). */
+  initialDraftId?: string | null;
 }) {
+  const opened = initialDrafts.find(
+    (d) => d.id === initialDraftId && templates.some((t) => t.id === d.templateId),
+  );
   const [tab, setTab] = useState<Tab>("compose");
   const [drafts, setDrafts] = useState<DocumentDraft[]>(initialDrafts);
   const [typeFilter, setTypeFilter] = useState<DocumentType | "">("");
-  const [templateId, setTemplateId] = useState("");
-  const [title, setTitle] = useState("");
-  const [values, setValues] = useState<FieldValues>({});
-  const [draftId, setDraftId] = useState<string | null>(null);
-  const [saved, setSaved] = useState(() => snapshot("", "", {}));
+  const [templateId, setTemplateId] = useState(opened?.templateId ?? "");
+  const [title, setTitle] = useState(opened?.title ?? "");
+  const [values, setValues] = useState<FieldValues>(() => ({ ...(opened?.fieldValues ?? {}) }));
+  const [draftId, setDraftId] = useState<string | null>(opened?.id ?? null);
+  const [saved, setSaved] = useState(() =>
+    opened ? snapshot(opened.templateId, opened.title, opened.fieldValues) : snapshot("", "", {}),
+  );
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState<"save" | "export" | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [issuing, setIssuing] = useState<DocumentDraft | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -287,7 +298,36 @@ export function DocumentComposer({
     }
   }
 
+  function startIssue(draft: DocumentDraft) {
+    if (
+      draft.id === draftId &&
+      dirty &&
+      !window.confirm("Nội dung đang soạn chưa được lưu. Bản ban hành sẽ dùng nội dung đã lưu nháp. Tiếp tục?")
+    ) {
+      return;
+    }
+    clearNotice();
+    setIssuing(draft);
+  }
+
+  function afterIssued(issued: IssuedDocument) {
+    setIssuing(null);
+    setDrafts((list) => list.filter((d) => d.id !== issued.id));
+    if (issued.id === draftId) {
+      setTemplateId("");
+      setTitle("");
+      setValues({});
+      setDraftId(null);
+      setShowErrors(false);
+      setSaved(snapshot("", "", {}));
+    }
+    setMessage(`Đã ban hành “${issued.title}” số ${issued.soVanBan}. Văn bản đã chuyển sang Sổ văn bản.`);
+  }
+
   const templateName = (id: string) => templates.find((t) => t.id === id)?.name ?? "";
+  const issuingDefaults = issuing
+    ? issueDefaults(templates.find((t) => t.id === issuing.templateId), issuing.fieldValues, settings)
+    : null;
 
   const columns: DataTableColumn<DocumentDraft>[] = [
     {
@@ -349,6 +389,16 @@ export function DocumentComposer({
           >
             <MaterialIcon className="text-[16px]" name="edit_document" />
             <span className="hidden sm:inline">Mở lại</span>
+          </button>
+          <button
+            aria-label={`Đánh dấu đã ban hành ${d.title}`}
+            className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-300 px-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+            title="Đánh dấu đã ban hành (nhập số, ngày, bản scan đã ký)"
+            type="button"
+            onClick={() => startIssue(d)}
+          >
+            <MaterialIcon className="text-[16px]" name="verified" />
+            <span className="hidden sm:inline">Ban hành</span>
           </button>
           <button
             aria-label={`Xóa bản nháp ${d.title}`}
@@ -554,6 +604,16 @@ export function DocumentComposer({
           </section>
         </div>
       )}
+
+      {issuing && issuingDefaults ? (
+        <IssueDocumentDialog
+          defaultDate={issuingDefaults.date}
+          defaultNumber={issuingDefaults.number}
+          document={issuing}
+          onClose={() => setIssuing(null)}
+          onIssued={afterIssued}
+        />
+      ) : null}
     </div>
   );
 }

@@ -99,6 +99,8 @@ export const CDILV_STORAGE = {
   lifeEvents: "cdilv-life-events",
   popups: "cdilv-popups",
   postImages: "cdilv-post-images",
+  /** Riêng tư – bản scan văn bản đã ban hành, chỉ mở qua signed URL. */
+  documents: "cdilv-documents",
 } as const;
 
 /** Gắn vào auth.signUp options.data để trigger BizMate bỏ qua user CDILV. */

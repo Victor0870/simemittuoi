@@ -532,6 +532,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.postsManage,
   },
   {
+    href: "/admin/documents/registry",
+    title: "Sổ văn bản",
+    description: "Văn bản đã ban hành: số, ngày ban hành, bản scan đã ký, tải lại .docx.",
+    icon: "menu_book",
+    permission: PERMISSIONS.postsManage,
+  },
+  {
     href: "/admin/polls",
     title: "Quản lý bình chọn",
     description: "Tạo, sửa, mở / đóng chương trình bình chọn và tổng kết trao điểm.",

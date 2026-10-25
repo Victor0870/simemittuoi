@@ -122,6 +122,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
   documents: [
     { href: "/admin/documents/templates", label: "Mẫu văn bản" },
     { href: "/admin/documents/compose", label: "Soạn văn bản" },
+    { href: "/admin/documents/registry", label: "Sổ văn bản" },
   ],
   system: [{ href: "/admin/roles", label: "Phân quyền theo cấp" }],
 };
