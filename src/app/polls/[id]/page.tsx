@@ -78,7 +78,7 @@ export default async function PollDetailPage({ params }: Props) {
             <PollPhaseBadge initialNow={now} poll={poll} />
 
             <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-primary">
-              {poll.pollType === "vote" ? "Bình chọn tác phẩm" : "Câu hỏi trắc nghiệm"}
+              {poll.pollType === "vote" ? "Bình chọn bài thi" : "Câu hỏi trắc nghiệm"}
             </span>
 
             <span className="rounded-full bg-surface-container-high px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-on-surface-variant">
@@ -119,7 +119,7 @@ export default async function PollDetailPage({ params }: Props) {
           ) : (
             <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
               <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="how_to_vote" />
-              Được chọn tối đa: <strong>{poll.maxVotesPerUser} tác phẩm</strong>
+              Được chọn tối đa: <strong>{poll.maxVotesPerUser} bài thi</strong>
             </span>
           )}
           {poll.submissionMode === "player" ? (

@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     let options = optionsData ?? [];
     if (options.length === 0) {
       return NextResponse.json(
-        { error: "Chương trình chưa có lựa chọn/tác phẩm nào." },
+        { error: "Chương trình chưa có lựa chọn/bài thi nào." },
         { status: 400 },
       );
     }

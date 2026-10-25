@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     const submissionMode = normalizeSubmissionMode(body.submissionMode);
     if (!Array.isArray(options) || (submissionMode !== "player" && options.length < 2)) {
       return NextResponse.json(
-        { error: "Chương trình bình chọn cần có ít nhất 2 lựa chọn/tác phẩm." },
+        { error: "Chương trình bình chọn cần có ít nhất 2 lựa chọn/bài thi." },
         { status: 400 },
       );
     }
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         submission_deadline: submissionDeadline.value,
         prediction_question:
           predictionQuestion?.trim() ||
-          "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+          "Theo bạn có bao nhiêu người bình chọn cho bài thi đạt giải nhất?",
         voter_reward_points: parseInt(String(voterRewardPoints), 10) || 0,
         entry_reward_points: parseInt(String(entryRewardPoints), 10) || 0,
         predictor_reward_points: parseInt(String(predictorRewardPoints), 10) || 0,

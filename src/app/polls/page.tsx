@@ -100,7 +100,7 @@ export default async function PollsPage() {
                 </h2>
               </div>
               <p className="text-xs sm:text-body-sm text-on-surface-variant -mt-2">
-                Xem trước các tác phẩm và bấm thử để làm quen cách bình chọn. Phiếu thử không được ghi nhận.
+                Xem trước các bài thi và bấm thử để làm quen cách bình chọn. Phiếu thử không được ghi nhận.
               </p>
               <PollGrid polls={upcomingPolls} />
             </section>

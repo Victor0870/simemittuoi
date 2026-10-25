@@ -129,7 +129,7 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     predictionQuestion:
       normalizeVoteMode(row.vote_mode) === "points"
         ? POINTS_PREDICTION_QUESTION
-        : row.prediction_question || "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+        : row.prediction_question || "Theo bạn có bao nhiêu người bình chọn cho bài thi đạt giải nhất?",
     voterRewardPoints: row.voter_reward_points ?? 0,
     entryRewardPoints: row.entry_reward_points ?? 0,
     predictorRewardPoints: row.predictor_reward_points ?? 0,
@@ -404,7 +404,7 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     predictionQuestion:
       voteMode === "points"
         ? POINTS_PREDICTION_QUESTION
-        : pollRow.prediction_question || "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+        : pollRow.prediction_question || "Theo bạn có bao nhiêu người bình chọn cho bài thi đạt giải nhất?",
     voterRewardPoints: pollRow.voter_reward_points ?? 0,
     entryRewardPoints: pollRow.entry_reward_points ?? 0,
     predictorRewardPoints: pollRow.predictor_reward_points ?? 0,

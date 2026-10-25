@@ -68,7 +68,7 @@ function ParticipationPointsFields({
       <label className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
         <span className="block text-sm font-extrabold text-[#173A67]">Điểm tham gia dự thi</span>
         <span className="mt-1 block text-xs leading-relaxed text-on-surface-variant">
-          Cộng khi tổng kết, theo mã nhân viên gắn trên từng tác phẩm. Mỗi mã được cộng một lần. Nhập 0 nếu không thưởng.
+          Cộng khi tổng kết, theo mã nhân viên gắn trên từng bài thi. Mỗi mã được cộng một lần. Nhập 0 nếu không thưởng.
         </span>
         <span className="mt-3 flex items-center gap-2">
           <input
@@ -113,7 +113,7 @@ export function PollEditorModal({
   const [maxGuestVotes, setMaxGuestVotes] = useState(250);
   const [hasPrediction, setHasPrediction] = useState(true);
   const [predictionQuestion, setPredictionQuestion] = useState(
-    "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+    "Theo bạn có bao nhiêu người bình chọn cho bài thi đạt giải nhất?",
   );
   const [voterRewardPoints, setVoterRewardPoints] = useState(10);
   const [entryRewardPoints, setEntryRewardPoints] = useState(0);
@@ -144,8 +144,8 @@ export function PollEditorModal({
 
   // Options State
   const [options, setOptions] = useState<OptionFormState[]>([
-    { title: "Tác phẩm 01", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
-    { title: "Tác phẩm 02", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
+    { title: "Bài thi 01", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
+    { title: "Bài thi 02", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -177,7 +177,7 @@ export function PollEditorModal({
       setHasPrediction(Boolean(initialPoll.hasPrediction));
       setPredictionQuestion(
         initialPoll.predictionQuestion ||
-          "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+          "Theo bạn có bao nhiêu người bình chọn cho bài thi đạt giải nhất?",
       );
       setVoterRewardPoints(initialPoll.voterRewardPoints ?? 10);
       setEntryRewardPoints(initialPoll.entryRewardPoints ?? 0);
@@ -240,9 +240,9 @@ export function PollEditorModal({
       setJudgeList([]);
       setRewardMoney(EMPTY_REWARD_MONEY);
       setOptions([
-        { title: "Tác phẩm 01", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
-        { title: "Tác phẩm 02", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
-        { title: "Tác phẩm 03", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
+        { title: "Bài thi 01", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
+        { title: "Bài thi 02", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
+        { title: "Bài thi 03", description: "", imageUrls: [], members: [{ fullName: "", employeeCode: "" }] },
       ]);
     }
   }, [isOpen, initialPoll, mode]);
@@ -254,7 +254,7 @@ export function PollEditorModal({
     setOptions((prev) => [
       ...prev,
       {
-        title: `Tác phẩm ${prev.length + 1 < 10 ? `0${prev.length + 1}` : prev.length + 1}`,
+        title: `Bài thi ${prev.length + 1 < 10 ? `0${prev.length + 1}` : prev.length + 1}`,
         description: "",
         imageUrls: [],
         members: [{ fullName: "", employeeCode: "" }],
@@ -264,7 +264,7 @@ export function PollEditorModal({
 
   function handleRemoveOption(index: number) {
     if (submissionMode !== "player" && options.length <= 2) {
-      alert("Chương trình cần có ít nhất 2 tác phẩm/lựa chọn.");
+      alert("Chương trình cần có ít nhất 2 bài thi/lựa chọn.");
       return;
     }
     setOptions((prev) => prev.filter((_, i) => i !== index));
@@ -284,7 +284,7 @@ export function PollEditorModal({
       (m, i) => i !== memIndex && m.employeeCode.trim().toUpperCase() === emp.employeeCode.toUpperCase(),
     );
     if (duplicate) {
-      window.alert(`${emp.fullName} (${emp.employeeCode}) đã có trong tác phẩm này.`);
+      window.alert(`${emp.fullName} (${emp.employeeCode}) đã có trong bài thi này.`);
       return;
     }
     setOptions((prev) => {
@@ -333,7 +333,7 @@ export function PollEditorModal({
     const url = prompt("Nhập đường link (URL) hình ảnh:");
     if (!url || !url.trim()) return;
     if (options[optIndex].imageUrls.length >= 3) {
-      alert("Tối đa 3 ảnh cho mỗi tác phẩm.");
+      alert("Tối đa 3 ảnh cho mỗi bài thi.");
       return;
     }
     setOptions((prev) => {
@@ -408,13 +408,13 @@ export function PollEditorModal({
     }
 
     if (submissionMode !== "player" && options.length < 2) {
-      setError("Cần có ít nhất 2 tác phẩm/lựa chọn.");
+      setError("Cần có ít nhất 2 bài thi/lựa chọn.");
       return;
     }
 
     for (let i = 0; i < options.length; i++) {
       if (!options[i].title.trim()) {
-        setError(`Vui lòng nhập tên cho Tác phẩm #${i + 1}`);
+        setError(`Vui lòng nhập tên cho Bài thi #${i + 1}`);
         return;
       }
     }
@@ -511,7 +511,7 @@ export function PollEditorModal({
                 {mode === "edit" ? "Cài Đặt & Chỉnh Sửa Bình Chọn" : "Tạo Chương Trình Mới"}
               </h2>
               <p className="text-[11px] sm:text-body-xs text-[#27496D] line-clamp-1 sm:line-clamp-none">
-                Tác phẩm, tải ảnh lên, danh sách đoàn viên và thể lệ vote
+                Bài thi, tải ảnh lên, danh sách đoàn viên và thể lệ vote
               </p>
             </div>
           </div>
@@ -537,7 +537,7 @@ export function PollEditorModal({
               onClick={() => setActiveTab("options")}
             >
               <MaterialIcon className={`text-[18px] ${activeTab === "options" ? "text-amber-300" : "text-[#173A67]"}`} name="collections" />
-              <span>1. Tác Phẩm & Đoàn Viên</span>
+              <span>1. Bài Thi & Đoàn Viên</span>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-black ${
                 activeTab === "options" ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700 border border-slate-200"
               }`}>
@@ -596,10 +596,10 @@ export function PollEditorModal({
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary/5 p-4 border border-primary/20">
                 <div>
                   <h3 className="font-extrabold text-[#173A67] text-base">
-                    Danh Sách Tác Phẩm / Phương Án Bình Chọn ({options.length})
+                    Danh Sách Bài Thi / Phương Án Bình Chọn ({options.length})
                   </h3>
                   <p className="text-body-xs text-on-surface-variant mt-0.5">
-                    Mỗi tác phẩm có thể tải lên tối đa 3 ảnh (tự động nén tối ưu web) và nhập danh sách đoàn viên tham gia.
+                    Mỗi bài thi có thể tải lên tối đa 3 ảnh (tự động nén tối ưu web) và nhập danh sách đoàn viên tham gia.
                   </p>
                 </div>
                 <button
@@ -608,7 +608,7 @@ export function PollEditorModal({
                   onClick={handleAddOption}
                 >
                   <MaterialIcon className="text-[18px]" name="add_circle" />
-                  <span>+ Thêm Tác Phẩm Mới</span>
+                  <span>+ Thêm Bài Thi Mới</span>
                 </button>
               </div>
 
@@ -632,7 +632,7 @@ export function PollEditorModal({
                           #{optIdx + 1}
                         </span>
                         <span className="font-bold text-[#173A67] text-sm">
-                          {opt.title || `Tác phẩm ${optIdx + 1}`}
+                          {opt.title || `Bài thi ${optIdx + 1}`}
                         </span>
                       </div>
                       <button
@@ -641,7 +641,7 @@ export function PollEditorModal({
                         onClick={() => handleRemoveOption(optIdx)}
                       >
                         <MaterialIcon className="text-[14px]" name="delete" />
-                        <span>Xóa tác phẩm này</span>
+                        <span>Xóa bài thi này</span>
                       </button>
                     </div>
 
@@ -649,7 +649,7 @@ export function PollEditorModal({
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="text-label-xs font-bold text-[#173A67]" htmlFor={`modal-opt-title-${optIdx}`}>
-                          Tên tác phẩm / phương án <span className="text-error">*</span>
+                          Tên bài thi / phương án <span className="text-error">*</span>
                         </label>
                         <input
                           id={`modal-opt-title-${optIdx}`}
@@ -690,7 +690,7 @@ export function PollEditorModal({
                         <div className="flex items-center justify-between">
                           <span className="text-label-xs font-bold text-[#173A67] flex items-center gap-1.5">
                             <MaterialIcon className="text-[16px] text-primary" name="photo_camera" />
-                            Hình ảnh tác phẩm ({opt.imageUrls.length}/3 ảnh)
+                            Hình ảnh bài thi ({opt.imageUrls.length}/3 ảnh)
                           </span>
                           <span className="text-[11px] text-on-surface-variant">
                             Tự động nén tối ưu web khi tải từ máy ảnh
@@ -755,7 +755,7 @@ export function PollEditorModal({
                         <div className="flex items-center justify-between">
                           <span className="text-label-xs font-bold text-[#173A67] flex items-center gap-1.5">
                             <MaterialIcon className="text-[16px] text-amber-600" name="groups" />
-                            Danh sách đoàn viên thực hiện tác phẩm này
+                            Danh sách đoàn viên thực hiện bài thi này
                           </span>
                           <button
                             className="flex items-center gap-1 text-primary text-xs font-bold hover:underline cursor-pointer"
@@ -823,7 +823,7 @@ export function PollEditorModal({
                   onClick={handleAddOption}
                 >
                   <MaterialIcon className="text-[20px]" name="add_circle" />
-                  <span>+ Thêm Tác Phẩm / Phương Án Tiếp Theo</span>
+                  <span>+ Thêm Bài Thi / Phương Án Tiếp Theo</span>
                 </button>
               </div>
             </div>
@@ -928,7 +928,7 @@ export function PollEditorModal({
                         value: "upcoming",
                         icon: "school",
                         title: "Sắp mở (bình chọn thử)",
-                        desc: "Mọi người xem trước tác phẩm và bấm thử để làm quen. Phiếu thử không được ghi nhận.",
+                        desc: "Mọi người xem trước bài thi và bấm thử để làm quen. Phiếu thử không được ghi nhận.",
                       },
                       {
                         value: "open",
@@ -1006,7 +1006,7 @@ export function PollEditorModal({
                     value={pollType}
                     onChange={(e) => setPollType(e.target.value as any)}
                   >
-                    <option value="vote">Bình chọn kết quả / Vote tác phẩm</option>
+                    <option value="vote">Bình chọn kết quả / Vote bài thi</option>
                     <option value="quiz">Trả lời câu hỏi trắc nghiệm</option>
                   </select>
                 </div>
@@ -1059,7 +1059,7 @@ export function PollEditorModal({
                       {SUBMISSION_MODE_LABEL[value]}
                       <span className="block text-xs font-medium text-on-surface-variant">
                         {value === "admin"
-                          ? "Ban tổ chức nhập bài thi và thành viên ở thẻ Tác phẩm."
+                          ? "Ban tổ chức nhập bài thi và thành viên ở thẻ Bài thi."
                           : "Đoàn viên đăng nhập tự nộp bài, Ban tổ chức duyệt hoặc từ chối."}
                       </span>
                     </button>
@@ -1075,7 +1075,7 @@ export function PollEditorModal({
                       onChange={(e) => setSubmissionDeadlineLocal(e.target.value)}
                     />
                     <span className="block text-xs text-on-surface-variant">
-                      Để trống thì nhận bài đến khi chương trình kết thúc. Ban tổ chức vẫn thêm bài được ở thẻ Tác phẩm.
+                      Để trống thì nhận bài đến khi chương trình kết thúc. Ban tổ chức vẫn thêm bài được ở thẻ Bài thi.
                     </span>
                   </label>
                 ) : null}
@@ -1104,7 +1104,7 @@ export function PollEditorModal({
                       {VOTE_MODE_LABEL[value]}
                       <span className="block text-xs font-medium text-on-surface-variant">
                         {value === "standard"
-                          ? "Mỗi người chọn tối đa N tác phẩm, mỗi lựa chọn là 1 phiếu."
+                          ? "Mỗi người chọn tối đa N bài thi, mỗi lựa chọn là 1 phiếu."
                           : "Mỗi người/đội có số điểm riêng, tự chia cho một hoặc nhiều bài thi."}
                       </span>
                     </button>
@@ -1155,10 +1155,10 @@ export function PollEditorModal({
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-[#173A67]">
-                        Số lượng tác phẩm mỗi người được vote tối đa
+                        Số lượng bài thi mỗi người được vote tối đa
                       </h4>
                       <p className="text-xs text-on-surface-variant">
-                        Ví dụ: 3 tác phẩm (mỗi phiếu bầu tương ứng 1 điểm)
+                        Ví dụ: 3 bài thi (mỗi phiếu bầu tương ứng 1 điểm)
                       </p>
                     </div>
                     <input
@@ -1338,10 +1338,10 @@ export function PollEditorModal({
                         ) : (
                           <>
                             <p>
-                              • <strong>Điểm BGK</strong> = (Số phiếu BGK bầu cho tác phẩm / <em>Tổng số BGK thực tế tham gia bình chọn</em>) × {(judgeWeightPercent / 10).toFixed(1)}
+                              • <strong>Điểm BGK</strong> = (Số phiếu BGK bầu cho bài thi / <em>Tổng số BGK thực tế tham gia bình chọn</em>) × {(judgeWeightPercent / 10).toFixed(1)}
                             </p>
                             <p>
-                              • <strong>Điểm Khác</strong> = (Số phiếu khác bầu cho tác phẩm / <em>Tổng số người khác thực tế tham gia bình chọn</em>) × {((100 - judgeWeightPercent) / 10).toFixed(1)}
+                              • <strong>Điểm Khác</strong> = (Số phiếu khác bầu cho bài thi / <em>Tổng số người khác thực tế tham gia bình chọn</em>) × {((100 - judgeWeightPercent) / 10).toFixed(1)}
                             </p>
                             <p className="text-amber-800 font-medium">
                               ✦ Tính theo số người thực tế tham gia bình chọn chứ không chia theo toàn bộ danh sách.
@@ -1542,7 +1542,7 @@ export function PollEditorModal({
                 {isUnionContest && (
                   <div className="space-y-4 pt-2">
                     <p className="text-xs text-on-surface-variant">
-                      Khi Admin bấm kết thúc chương trình, hệ thống sẽ tự động quét danh sách đoàn viên của các tác phẩm đạt giải để cộng điểm thi đua cá nhân.
+                      Khi Admin bấm kết thúc chương trình, hệ thống sẽ tự động quét danh sách đoàn viên của các bài thi đạt giải để cộng điểm thi đua cá nhân.
                     </p>
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
                       <div className="rounded-xl bg-white p-3 border border-outline-variant text-center">

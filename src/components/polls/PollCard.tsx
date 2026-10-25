@@ -72,7 +72,7 @@ export function PollCard({ poll }: Props) {
             <MaterialIcon className="text-[15px] text-sky-600 shrink-0" name="schedule" />
             <span>
               {poll.opensAt ? `Mở bình chọn lúc ${formatPollTime(poll.opensAt)}. ` : "Sắp mở bình chọn. "}
-              Có thể vào xem tác phẩm và bình chọn thử trước.
+              Có thể vào xem bài thi và bình chọn thử trước.
             </span>
           </p>
         ) : null}
@@ -81,7 +81,7 @@ export function PollCard({ poll }: Props) {
         <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-label-xs text-[#27496D]">
           <span className="flex items-center gap-1">
             <MaterialIcon className="text-[15px] sm:text-[16px] text-amber-600" name="how_to_vote" />
-            Vote tối đa {poll.maxVotesPerUser} tác phẩm
+            Vote tối đa {poll.maxVotesPerUser} bài thi
           </span>
           {poll.hasPrediction ? (
             <span className="flex items-center gap-1">

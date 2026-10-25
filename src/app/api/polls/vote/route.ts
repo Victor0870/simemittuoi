@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
     if (!pollId || !Array.isArray(optionIds) || optionIds.length === 0) {
       return NextResponse.json(
-        { error: "Vui lòng chọn ít nhất 1 tác phẩm/lựa chọn để bình chọn." },
+        { error: "Vui lòng chọn ít nhất 1 bài thi/lựa chọn để bình chọn." },
         { status: 400 },
       );
     }
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     if (validOptionsError) throw validOptionsError;
     if ((validOptions ?? []).length !== new Set(optionIds).size) {
       return NextResponse.json(
-        { error: "Có tác phẩm không thuộc chương trình hoặc chưa được duyệt. Vui lòng tải lại trang." },
+        { error: "Có bài thi không thuộc chương trình hoặc chưa được duyệt. Vui lòng tải lại trang." },
         { status: 400 },
       );
     }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     if (optionIds.length > (poll.max_votes_per_user || 3)) {
       return NextResponse.json(
         {
-          error: `Bạn chỉ được bình chọn tối đa ${poll.max_votes_per_user} tác phẩm.`,
+          error: `Bạn chỉ được bình chọn tối đa ${poll.max_votes_per_user} bài thi.`,
         },
         { status: 400 },
       );

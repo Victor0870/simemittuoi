@@ -136,7 +136,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
     }
 
     if (selectedOptionIds.length >= maxVotes) {
-      alert(`Bạn chỉ được chọn tối đa ${maxVotes} tác phẩm.`);
+      alert(`Bạn chỉ được chọn tối đa ${maxVotes} bài thi.`);
       return;
     }
 
@@ -161,7 +161,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
     }
 
     if (selectedOptionIds.length === 0) {
-      setErrorMessage("Vui lòng chọn ít nhất 1 tác phẩm để bình chọn.");
+      setErrorMessage("Vui lòng chọn ít nhất 1 bài thi để bình chọn.");
       return;
     }
 
@@ -181,7 +181,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
 
     if (poll.hasPrediction) {
       if (!predictedCount || isNaN(parseInt(predictedCount, 10))) {
-        setErrorMessage("Vui lòng nhập số người dự đoán cho tác phẩm đạt giải nhất.");
+        setErrorMessage("Vui lòng nhập số người dự đoán cho bài thi đạt giải nhất.");
         return;
       }
     }
@@ -265,7 +265,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-4">
         <div>
           <h3 className="text-headline-sm font-extrabold text-[#173A67]">
-            Danh Sách Tác Phẩm Bình Chọn
+            Danh Sách Bài Thi Bình Chọn
           </h3>
           <p className="text-body-sm text-on-surface-variant">
             {isInactive
@@ -275,15 +275,15 @@ export function PollVotingSection({ poll, initialNow }: Props) {
               : isBlockedForGuest
               ? "Chương trình hiện mở bình chọn cho Đoàn viên Công đoàn đã đăng nhập."
               : isPractice
-              ? `Bình chọn thử: chọn tối đa ${maxVotes} tác phẩm để làm quen (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`
-              : `Chọn tối đa ${maxVotes} tác phẩm bạn yêu thích nhất (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`}
+              ? `Bình chọn thử: chọn tối đa ${maxVotes} bài thi để làm quen (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`
+              : `Chọn tối đa ${maxVotes} bài thi bạn yêu thích nhất (Đã chọn: ${selectedOptionIds.length}/${maxVotes})`}
           </p>
         </div>
 
         {!isClosed && !isInactive ? (
           <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 px-3.5 py-1.5 text-label-md font-bold text-amber-900 border border-amber-300">
             <MaterialIcon className="text-[18px] text-amber-600" name="how_to_vote" />
-            <span>Được chọn tối đa {maxVotes} tác phẩm</span>
+            <span>Được chọn tối đa {maxVotes} bài thi</span>
           </div>
         ) : null}
       </div>
@@ -300,7 +300,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
                 Chương trình hiện yêu cầu đăng nhập tài khoản Đoàn viên
               </h4>
               <p className="text-xs sm:text-sm text-on-surface-variant mt-0.5 leading-relaxed">
-                Quý đoàn viên vui lòng đăng nhập tài khoản để tiếp tục bình chọn cho tác phẩm yêu thích và tích lũy điểm thi đua.
+                Quý đoàn viên vui lòng đăng nhập tài khoản để tiếp tục bình chọn cho bài thi yêu thích và tích lũy điểm thi đua.
               </p>
             </div>
           </div>
@@ -320,7 +320,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
           <div>
             <p className="text-sm sm:text-base font-extrabold">Chế độ bình chọn thử</p>
             <p className="text-xs sm:text-sm leading-relaxed mt-0.5">
-              Chương trình chưa mở nên phiếu gửi lúc này <strong>không được ghi nhận</strong>. Hãy thử chọn tác phẩm và gửi phiếu để quen thao tác
+              Chương trình chưa mở nên phiếu gửi lúc này <strong>không được ghi nhận</strong>. Hãy thử chọn bài thi và gửi phiếu để quen thao tác
               {poll.opensAt ? `, khi mở thật lúc ${formatPollTime(poll.opensAt)} bạn sẽ làm nhanh hơn.` : ", khi mở thật bạn sẽ làm nhanh hơn."}
             </p>
           </div>
@@ -526,7 +526,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
                     <MaterialIcon
                       name={isSelected ? "check_circle" : "radio_button_unchecked"}
                     />
-                    <span>{isSelected ? "Đã chọn tác phẩm này" : "Bình chọn tác phẩm này"}</span>
+                    <span>{isSelected ? "Đã chọn bài thi này" : "Bình chọn bài thi này"}</span>
                   </button>
                 ) : null}
               </div>
@@ -577,7 +577,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
           </div>
 
           <p className="text-sm sm:text-body-md text-amber-900">
-            Bạn đang chọn <strong>{selectedOptionIds.length}</strong> / {maxVotes} tác phẩm.
+            Bạn đang chọn <strong>{selectedOptionIds.length}</strong> / {maxVotes} bài thi.
           </p>
 
           {poll.hasJudges && (
@@ -658,7 +658,7 @@ export function PollVotingSection({ poll, initialNow }: Props) {
 
               <div>
                 <label className="text-label-md font-bold text-[#173A67]" htmlFor="pred-num">
-                  Số phiếu dự đoán cho tác phẩm đạt Giải Nhất:
+                  Số phiếu dự đoán cho bài thi đạt Giải Nhất:
                 </label>
                 <div className="mt-1 flex items-center gap-3">
                   <input

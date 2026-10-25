@@ -202,7 +202,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       key: "pollType",
       header: "Hình thức",
       type: "enum",
-      accessor: (p) => (p.pollType === "vote" ? "Vote tác phẩm" : "Trắc nghiệm"),
+      accessor: (p) => (p.pollType === "vote" ? "Vote bài thi" : "Trắc nghiệm"),
       className: "text-on-surface-variant",
     },
     {
@@ -377,7 +377,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
             Quản Lý Chương Trình Bình Chọn
           </h1>
           <p className="text-body-md text-[#27496D]">
-            Cài đặt thể lệ, quản lý số lượng tác phẩm, tải ảnh lên, cập nhật danh sách đoàn viên và đóng/mở trao giải.
+            Cài đặt thể lệ, quản lý số lượng bài thi, tải ảnh lên, cập nhật danh sách đoàn viên và đóng/mở trao giải.
           </p>
         </div>
 
@@ -418,13 +418,13 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
             <p className="font-bold text-base">Hướng dẫn quản lý & cài đặt bình chọn:</p>
             <ul className="list-disc pl-5 space-y-0.5 text-xs text-[#27496D]">
               <li>
-                Bấm nút <strong>⚙️ (Cài đặt / Sửa)</strong> ở cột Thao tác của mỗi chương trình để: Thêm/bớt tác phẩm, up ảnh chụp máy ảnh (hệ thống tự động nén tối ưu), nhập danh sách đoàn viên cho từng nhóm.
+                Bấm nút <strong>⚙️ (Cài đặt / Sửa)</strong> ở cột Thao tác của mỗi chương trình để: Thêm/bớt bài thi, up ảnh chụp máy ảnh (hệ thống tự động nén tối ưu), nhập danh sách đoàn viên cho từng nhóm.
               </li>
               <li>
                 Bấm <strong>&ldquo;+ Tạo chương trình mới&rdquo;</strong> để tạo cuộc thi vote hoặc câu hỏi trắc nghiệm mới.
               </li>
               <li>
-                Chọn giai đoạn <strong>&ldquo;Sắp mở&rdquo;</strong> trong Cài đặt để mọi người xem trước tác phẩm và <strong>bình chọn thử</strong> (không ghi nhận). Có thể hẹn giờ tự mở và giờ tự dừng nhận phiếu, hoặc bấm nút <strong>▶ (Mở ngay)</strong>.
+                Chọn giai đoạn <strong>&ldquo;Sắp mở&rdquo;</strong> trong Cài đặt để mọi người xem trước bài thi và <strong>bình chọn thử</strong> (không ghi nhận). Có thể hẹn giờ tự mở và giờ tự dừng nhận phiếu, hoặc bấm nút <strong>▶ (Mở ngay)</strong>.
               </li>
               <li>
                 Khi chương trình kết thúc, bấm nút <strong>🏆 (Đóng & Trao giải)</strong>: Hệ thống sẽ tự động tìm người dự đoán đúng nhất và cộng điểm thi đua vào tài khoản của đoàn viên đạt giải!
