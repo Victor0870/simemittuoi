@@ -20,6 +20,8 @@ type PostEditButtonProps = {
     tagTone?: string;
     isImportant?: boolean;
     isActive?: boolean;
+    isContest?: boolean;
+    contestPrompt?: string | null;
     publishedAt?: string;
     imageUrl?: string | null;
   };
@@ -66,6 +68,8 @@ export function PostEditButton({
   const [tag, setTag] = useState(post?.tag || defaultTag || "Thông báo");
   const [isImportant, setIsImportant] = useState(Boolean(post?.isImportant));
   const [isActive, setIsActive] = useState(post?.isActive !== false);
+  const [isContest, setIsContest] = useState(Boolean(post?.isContest));
+  const [contestPrompt, setContestPrompt] = useState(post?.contestPrompt ?? "");
   const [scheduleEnabled, setScheduleEnabled] = useState(wasScheduled);
   const [scheduleValue, setScheduleValue] = useState("");
   const [saving, setSaving] = useState(false);
@@ -98,6 +102,8 @@ export function PostEditButton({
     setTag(post?.tag || defaultTag || "Thông báo");
     setIsImportant(Boolean(post?.isImportant));
     setIsActive(post?.isActive !== false);
+    setIsContest(Boolean(post?.isContest));
+    setContestPrompt(post?.contestPrompt ?? "");
     setScheduleEnabled(wasScheduled);
     setScheduleValue(
       wasScheduled && post?.publishedAt
@@ -210,6 +216,8 @@ export function PostEditButton({
           tagTone: isImportant ? "error" : tag.trim() === "Khẩn cấp" ? "error" : "primary",
           isImportant,
           isActive,
+          isContest,
+          contestPrompt: isContest ? contestPrompt.trim() || null : null,
           scheduledAt,
           imageUrl: isCreate || coverUrl !== (post?.imageUrl ?? null) ? coverUrl : undefined,
         }),
@@ -510,6 +518,41 @@ export function PostEditButton({
                     </p>
                   </div>
                 </label>
+
+                {/* Checkbox: Bài viết cuộc thi (nhận bài thi qua bình luận) */}
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3">
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isContest}
+                      onChange={(e) => setIsContest(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-700 focus:ring-indigo-600 cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-indigo-950">
+                        <MaterialIcon className="text-[16px] text-indigo-700" name="emoji_events" />
+                        <span>Bài viết cuộc thi (nhận bài dự thi / thiết kế qua bình luận)</span>
+                      </div>
+                      <p className="text-[11px] text-indigo-900/80 leading-normal mt-0.5">
+                        Bật tùy chọn này nếu bài viết là cuộc thi thu nhận tác phẩm qua mục bình luận (hiển thị giao diện nộp tác phẩm và thanh công cụ tổng hợp cho Quản trị viên). Mặc định tắt cho bài viết thường.
+                      </p>
+                    </div>
+                  </label>
+                  {isContest && (
+                    <div className="mt-2.5 space-y-1 pl-7">
+                      <label className="block text-[11px] font-bold text-indigo-950">
+                        Gợi ý khung nhập bình luận / nộp bài dự thi (tùy chọn)
+                      </label>
+                      <input
+                        type="text"
+                        value={contestPrompt}
+                        onChange={(e) => setContestPrompt(e.target.value)}
+                        placeholder="Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
+                        className="w-full rounded-xl border border-indigo-300 bg-white p-2 text-xs text-slate-800 focus:border-indigo-600 focus:outline-hidden focus:ring-2 focus:ring-indigo-600/20"
+                      />
+                    </div>
+                  )}
+                </div>
 
                 {/* 3. Nội dung bài viết */}
                 <div className="flex-1">

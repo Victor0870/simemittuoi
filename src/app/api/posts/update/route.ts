@@ -9,6 +9,8 @@ import { isScheduledAt, parseScheduledAt } from "@/lib/post-schedule";
 import { isAllowedPostImageUrl } from "@/lib/post-images";
 import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 
+const MAX_CONTEST_PROMPT = 300;
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -34,7 +36,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, title, content, tag, tagTone, isImportant, isActive, scheduledAt, imageUrl } = body;
+    const {
+      id,
+      title,
+      content,
+      tag,
+      tagTone,
+      isImportant,
+      isActive,
+      isContest,
+      contestPrompt,
+      scheduledAt,
+      imageUrl,
+    } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -78,6 +92,21 @@ export async function POST(request: NextRequest) {
 
     if (isActive !== undefined) {
       updatePayload.is_active = Boolean(isActive);
+    }
+
+    if (isContest !== undefined) {
+      const nextIsContest = Boolean(isContest);
+      updatePayload.is_contest = nextIsContest;
+      if (!nextIsContest) {
+        updatePayload.contest_prompt = null;
+      }
+    }
+
+    if (contestPrompt !== undefined && updatePayload.is_contest !== false) {
+      updatePayload.contest_prompt =
+        typeof contestPrompt === "string" && contestPrompt.trim()
+          ? contestPrompt.trim().slice(0, MAX_CONTEST_PROMPT)
+          : null;
     }
 
     // imageUrl: undefined = giữ nguyên ảnh đại diện; null/"" = xóa ảnh; chuỗi = ảnh mới (chỉ Storage CDILV).

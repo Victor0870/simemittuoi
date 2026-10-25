@@ -11,6 +11,8 @@ import type { PostComment } from "@/lib/data/posts";
 type PostCommentsSectionProps = {
   postId: string;
   postTitle?: string;
+  isContest?: boolean;
+  contestPrompt?: string | null;
   initialCommentCount?: number;
   initialComments?: PostComment[];
 };
@@ -52,6 +54,8 @@ function parseCommentContent(text: string): { cleanText: string; imageUrls: stri
 export function PostCommentsSection({
   postId,
   postTitle,
+  isContest = false,
+  contestPrompt = null,
   initialCommentCount = 0,
   initialComments,
 }: PostCommentsSectionProps) {
@@ -336,7 +340,9 @@ export function PostCommentsSection({
     if (!user || !isApproved) {
       setNotice({
         type: "error",
-        text: "Chỉ thành viên đã được duyệt mới có quyền tải ảnh tác phẩm.",
+        text: isContest
+          ? "Chỉ thành viên đã được duyệt mới có quyền tải ảnh tác phẩm."
+          : "Chỉ thành viên đã được duyệt mới có quyền đính kèm hình ảnh.",
       });
       return;
     }
@@ -363,7 +369,8 @@ export function PostCommentsSection({
     try {
       const supabase = createClient();
       const ext = file.name.split(".").pop() || "png";
-      const cleanFileName = `logo_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const filePrefix = isContest ? "logo" : "comment";
+      const cleanFileName = `${filePrefix}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
       const filePath = `${user.id}/${cleanFileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -381,7 +388,9 @@ export function PostCommentsSection({
       setAttachedImageUrl(pub.publicUrl);
       setNotice({
         type: "success",
-        text: "Đã tải ảnh lên thành công! Hãy viết vài câu thuyết minh ý nghĩa Logo rồi gửi bình luận.",
+        text: isContest
+          ? "Đã tải ảnh lên thành công! Hãy viết vài câu thuyết minh ý nghĩa Logo rồi gửi bình luận."
+          : "Đã tải ảnh đính kèm lên thành công! Bạn có thể nhập thêm nội dung rồi gửi bình luận.",
       });
       clearNoticeAfterTimeout();
     } catch (err: any) {
@@ -411,16 +420,19 @@ export function PostCommentsSection({
     if (!trimmed && !attachedImageUrl) {
       setNotice({
         type: "error",
-        text: "Vui lòng nhập nội dung thuyết minh hoặc tải ảnh thiết kế logo.",
+        text: isContest
+          ? "Vui lòng nhập nội dung thuyết minh hoặc tải ảnh thiết kế logo."
+          : "Vui lòng nhập nội dung bình luận hoặc đính kèm hình ảnh.",
       });
       return;
     }
 
     // Ghép ảnh đính kèm vào nội dung
+    const attachmentLabel = isContest ? "Ảnh thiết kế Logo" : "Ảnh đính kèm";
     const fullContent = attachedImageUrl
       ? trimmed
-        ? `${trimmed}\n\n[Ảnh thiết kế Logo]: ${attachedImageUrl}`
-        : `[Ảnh thiết kế Logo]: ${attachedImageUrl}`
+        ? `${trimmed}\n\n[${attachmentLabel}]: ${attachedImageUrl}`
+        : `[${attachmentLabel}]: ${attachedImageUrl}`
       : trimmed;
 
     if (fullContent.length > 3500) {
@@ -816,9 +828,10 @@ export function PostCommentsSection({
 
           <p className="mx-auto mt-2 max-w-lg text-body-sm sm:text-body-md text-on-surface-variant leading-relaxed">
             Bài viết hiện có{" "}
-            <strong className="font-bold text-primary">{commentCount} bình luận</strong> trao đổi.
-            Vui lòng đăng ký hoặc đăng nhập tài khoản thành viên Đoàn cơ sở để được đọc toàn bộ bình
-            luận, xem các tác phẩm thiết kế và tham gia đóng góp ý kiến.
+            <strong className="font-bold text-primary">{commentCount} bình luận</strong> trao đổi.{" "}
+            {isContest
+              ? "Vui lòng đăng ký hoặc đăng nhập tài khoản thành viên Đoàn cơ sở để được đọc toàn bộ bình luận, xem các tác phẩm thiết kế và tham gia đóng góp ý kiến."
+              : "Vui lòng đăng ký hoặc đăng nhập tài khoản thành viên Đoàn cơ sở để được đọc toàn bộ bình luận và tham gia trao đổi, đóng góp ý kiến."}
           </p>
 
           <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1 text-xs font-semibold text-amber-900">
@@ -851,8 +864,10 @@ export function PostCommentsSection({
               </div>
               <p className="mt-1.5 text-xs text-amber-800 leading-relaxed">
                 Hồ sơ của bạn (<strong>{profile?.full_name || user.email}</strong>) đang được Ban
-                chấp hành xem xét phê duyệt. Sau khi được duyệt, bạn sẽ có thể xem toàn bộ bình luận,
-                gửi mẫu thiết kế Logo và nhận điểm thi đua.
+                chấp hành xem xét phê duyệt.{" "}
+                {isContest
+                  ? "Sau khi được duyệt, bạn sẽ có thể xem toàn bộ bình luận, gửi mẫu thiết kế Logo và nhận điểm thi đua."
+                  : "Sau khi được duyệt, bạn sẽ có thể xem toàn bộ bình luận, tham gia đóng góp ý kiến và nhận điểm thi đua."}
               </p>
             </div>
           ) : profile?.approval_status === "rejected" ? (
@@ -927,7 +942,10 @@ export function PostCommentsSection({
                   placeholder={
                     isLimitReached
                       ? "Bạn đã đăng đủ 3/3 bình luận. Bấm vào đây hoặc bấm Gửi để xem quy định..."
-                      : "Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
+                      : isContest
+                        ? contestPrompt?.trim() ||
+                          "Viết lời bình luận, ý kiến đóng góp hoặc thuyết minh ý nghĩa mẫu thiết kế Logo... (+1đ thi đua)"
+                        : "Viết bình luận, chia sẻ ý kiến của bạn về bài viết... (+1đ thi đua)"
                   }
                   rows={3}
                   maxLength={3000}
@@ -950,7 +968,9 @@ export function PostCommentsSection({
                     />
                   </div>
                   <div className="text-xs">
-                    <p className="font-bold text-on-surface">Đã đính kèm ảnh thiết kế Logo</p>
+                    <p className="font-bold text-on-surface">
+                      {isContest ? "Đã đính kèm ảnh thiết kế Logo" : "Đã đính kèm hình ảnh"}
+                    </p>
                     <p className="text-on-surface-variant">Ảnh sẽ được đăng cùng bình luận</p>
                   </div>
                   <button
@@ -975,7 +995,7 @@ export function PostCommentsSection({
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                 <div className="flex items-center gap-2">
-                  {/* Nút đính kèm ảnh Logo */}
+                  {/* Nút đính kèm ảnh */}
                   <button
                     type="button"
                     disabled={uploadingImage || submitting}
@@ -996,7 +1016,7 @@ export function PostCommentsSection({
                     ) : (
                       <>
                         <MaterialIcon className="text-[18px] text-primary" name="add_photo_alternate" />
-                        <span>Đính kèm ảnh Logo</span>
+                        <span>{isContest ? "Đính kèm ảnh Logo" : "Đính kèm ảnh"}</span>
                       </>
                     )}
                   </button>
@@ -1034,7 +1054,7 @@ export function PostCommentsSection({
           </div>
 
           {/* ADMIN TOOLBAR: TỔNG HỢP & TẢI TOÀN BỘ ẢNH THIẾT KẾ ĐỂ TẠO BÌNH CHỌN */}
-          {isAdmin && allContestSubmissions.length > 0 && (
+          {isContest && isAdmin && allContestSubmissions.length > 0 && (
             <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-r from-primary/10 via-primary/[0.04] to-white p-4 sm:p-5 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
@@ -1103,10 +1123,14 @@ export function PostCommentsSection({
                   name="chat_bubble_outline"
                 />
                 <p className="text-body-sm font-medium text-on-surface-variant">
-                  Chưa có bình luận hoặc tác phẩm nào cho bài viết này.
+                  {isContest
+                    ? "Chưa có bình luận hoặc tác phẩm nào cho bài viết này."
+                    : "Chưa có bình luận nào cho bài viết này."}
                 </p>
                 <p className="mt-0.5 text-xs text-on-surface-variant/70">
-                  Hãy là người đầu tiên gửi ý kiến đóng góp hoặc gửi tác phẩm thiết kế Logo dự thi!
+                  {isContest
+                    ? "Hãy là người đầu tiên gửi ý kiến đóng góp hoặc gửi tác phẩm thiết kế Logo dự thi!"
+                    : "Hãy là người đầu tiên viết bình luận và chia sẻ ý kiến của bạn!"}
                 </p>
               </div>
             ) : (
@@ -1205,7 +1229,7 @@ export function PostCommentsSection({
                           </p>
                         )}
 
-                        {/* Danh sách ảnh đính kèm (Logo tác phẩm) */}
+                        {/* Danh sách ảnh đính kèm */}
                         {parsed.imageUrls.length > 0 && (
                           <div className="flex flex-wrap gap-3.5 pt-1">
                             {parsed.imageUrls.map((imgUrl, idx) => {
@@ -1213,7 +1237,8 @@ export function PostCommentsSection({
                                 /[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]/g,
                                 "_",
                               );
-                              const downloadFilename = `Logo_CDILV_${authorClean}_${comment.id.slice(0, 6)}${idx > 0 ? `_${idx + 1}` : ""}.png`;
+                              const filePrefix = isContest ? "Logo_CDILV" : "Anh_binh_luan";
+                              const downloadFilename = `${filePrefix}_${authorClean}_${comment.id.slice(0, 6)}${idx > 0 ? `_${idx + 1}` : ""}.png`;
 
                               return (
                                 <div
@@ -1223,8 +1248,13 @@ export function PostCommentsSection({
                                   {/* Thanh công cụ ảnh: Tải về & Copy link & Xem ảnh gốc */}
                                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dusty-border/60 bg-white px-3 py-2 text-xs font-semibold text-on-surface-variant">
                                     <div className="flex items-center gap-1.5 text-primary">
-                                      <MaterialIcon className="text-[16px]" name="palette" />
-                                      <span className="font-bold">Mẫu thiết kế Logo</span>
+                                      <MaterialIcon
+                                        className="text-[16px]"
+                                        name={isContest ? "palette" : "image"}
+                                      />
+                                      <span className="font-bold">
+                                        {isContest ? "Mẫu thiết kế Logo" : "Ảnh đính kèm"}
+                                      </span>
                                     </div>
 
                                     <div className="flex items-center gap-1.5">
@@ -1234,7 +1264,11 @@ export function PostCommentsSection({
                                         onClick={() => handleDownloadImage(imgUrl, downloadFilename)}
                                         disabled={downloadingUrl === imgUrl}
                                         className="inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-[11px] font-bold text-white shadow-2xs transition hover:bg-dusty-dark disabled:opacity-50"
-                                        title="Tải ảnh về máy để tạo cuộc bình chọn"
+                                        title={
+                                          isContest
+                                            ? "Tải ảnh về máy để tạo cuộc bình chọn"
+                                            : "Tải ảnh về máy"
+                                        }
                                       >
                                         {downloadingUrl === imgUrl ? (
                                           <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -1245,7 +1279,7 @@ export function PostCommentsSection({
                                       </button>
 
                                       {/* Nút Copy link ảnh (rất tiện khi Admin dán vào Poll Option) */}
-                                      {isAdmin && (
+                                      {isContest && isAdmin && (
                                         <button
                                           type="button"
                                           onClick={() => handleCopyLink(imgUrl)}
@@ -1282,7 +1316,11 @@ export function PostCommentsSection({
                                   >
                                     <img
                                       src={imgUrl}
-                                      alt={`Mẫu thiết kế Logo từ ${comment.authorName}`}
+                                      alt={
+                                        isContest
+                                          ? `Mẫu thiết kế Logo từ ${comment.authorName}`
+                                          : `Ảnh đính kèm từ ${comment.authorName}`
+                                      }
                                       className="max-h-84 w-auto rounded-lg object-contain transition-transform duration-200 group-hover/img:scale-[1.01]"
                                       loading="lazy"
                                     />
@@ -1453,7 +1491,8 @@ export function PostCommentsSection({
               </p>
               <p>
                 Giới hạn{" "}
-                <strong className="font-bold text-on-surface">tối đa 3 bình luận</strong> cho mỗi đoàn viên trên một bài viết (cho phép gửi tối đa 3 mẫu thiết kế khác nhau). Quản trị viên không bị giới hạn.
+                <strong className="font-bold text-on-surface">tối đa 3 bình luận</strong> cho mỗi đoàn viên trên một bài viết
+                {isContest ? " (cho phép gửi tối đa 3 mẫu thiết kế khác nhau)" : ""}. Quản trị viên không bị giới hạn.
               </p>
               {isLimitReached && (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs text-emerald-900">

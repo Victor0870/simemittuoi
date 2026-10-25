@@ -10,6 +10,7 @@ import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 
 const MAX_TITLE = 300;
 const MAX_CONTENT = 50000;
+const MAX_CONTEST_PROMPT = 300;
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,6 +39,11 @@ export async function POST(request: NextRequest) {
 
     const tag = typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : "Thông báo";
     const isImportant = body.isImportant === true;
+    const isContest = body.isContest === true;
+    const contestPrompt =
+      isContest && typeof body.contestPrompt === "string" && body.contestPrompt.trim()
+        ? body.contestPrompt.trim().slice(0, MAX_CONTEST_PROMPT)
+        : null;
 
     let imageUrl: string | null = null;
     if (body.imageUrl !== undefined && body.imageUrl !== null && body.imageUrl !== "") {
@@ -65,6 +71,8 @@ export async function POST(request: NextRequest) {
         tag_tone: body.tagTone === "error" ? "error" : "primary",
         is_important: isImportant,
         is_active: body.isActive !== false,
+        is_contest: isContest,
+        contest_prompt: contestPrompt,
         image_url: imageUrl,
         author_id: access.userId,
         ...(scheduledAt ? { published_at: scheduledAt } : {}),

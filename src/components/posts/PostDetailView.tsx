@@ -118,6 +118,8 @@ export function PostDetailView({ post, related, commentCount }: PostDetailViewPr
       <PostCommentsSection
         postId={post.id}
         postTitle={post.title}
+        isContest={post.isContest}
+        contestPrompt={post.contestPrompt}
         initialCommentCount={commentCount}
       />
 

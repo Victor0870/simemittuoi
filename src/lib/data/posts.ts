@@ -13,6 +13,10 @@ export type PostSummary = {
   tagTone: "primary" | "error";
   isImportant: boolean;
   isActive: boolean;
+  /** Bài viết cuộc thi nhận tác phẩm dự thi qua bình luận (mặc định false). */
+  isContest: boolean;
+  /** Lời nhắc tùy chỉnh ở ô nhập bình luận của bài viết cuộc thi. */
+  contestPrompt: string | null;
   /** published_at ở tương lai: bài hẹn giờ, chưa hiện với đoàn viên. */
   isScheduled: boolean;
   imageUrl: string | null;
@@ -48,6 +52,8 @@ function mapRow(row: {
   tag_tone: string | null;
   is_important?: boolean | null;
   is_active?: boolean | null;
+  is_contest?: boolean | null;
+  contest_prompt?: string | null;
   image_url: string | null;
   published_at: string;
 }): PostDetail {
@@ -61,6 +67,11 @@ function mapRow(row: {
     tagTone: row.tag_tone === "error" ? "error" : "primary",
     isImportant: Boolean(row.is_important),
     isActive: row.is_active !== false,
+    isContest: Boolean(row.is_contest),
+    contestPrompt:
+      typeof row.contest_prompt === "string" && row.contest_prompt.trim()
+        ? row.contest_prompt.trim()
+        : null,
     isScheduled,
     imageUrl: row.image_url,
     publishedAt: row.published_at,
@@ -71,7 +82,7 @@ function mapRow(row: {
 }
 
 const POST_COLUMNS =
-  "id, title, content, tag, tag_tone, is_important, is_active, image_url, published_at";
+  "id, title, content, tag, tag_tone, is_important, is_active, is_contest, contest_prompt, image_url, published_at";
 
 export async function getPosts(
   limit = 50,
@@ -257,5 +268,3 @@ export async function getPostCommentsCount(postId: string): Promise<number> {
 
   return count ?? 0;
 }
-
-
