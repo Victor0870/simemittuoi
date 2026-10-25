@@ -11,14 +11,20 @@ async function loadPointsPoll(db: ReturnType<typeof createServiceClient>, pollId
   return data;
 }
 
-function voterPayload(poll: Record<string, any>, voter: PointVoter) {
+async function voterPayload(db: ReturnType<typeof createServiceClient>, pollId: string, voter: PointVoter) {
+  const budget = await loadVoterBudget(db, pollId, voter);
   return {
-    voterKind: voter.voterKind,
-    teamOptionId: voter.teamOptionId,
-    teamTitle: voter.teamTitle,
     isJudge: voter.isJudge,
     employeeCode: voter.employeeCode,
-    blockedOptionIds: poll.allow_self_vote ? [] : voter.memberOptionIds,
+    isParticipant: budget.isParticipant,
+    blockedOptionIds: budget.allowSelfVote ? [] : budget.memberOptionIds,
+    base: budget.base,
+    granted: budget.granted,
+    budget: budget.budget,
+    used: budget.used,
+    remaining: Math.max(budget.budget - budget.used, 0),
+    allocations: budget.allocations,
+    grants: budget.grants,
   };
 }
 
@@ -50,12 +56,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const budget = await loadVoterBudget(db, poll, resolved.voter);
-    return NextResponse.json({
-      ...voterPayload(poll, resolved.voter),
-      ...budget,
-      remaining: Math.max(budget.budget - budget.used, 0),
-    });
+    return NextResponse.json(await voterPayload(db, pollId, resolved.voter));
   } catch (err: any) {
     console.error("[api/polls/points] GET error:", err);
     return NextResponse.json({ error: err?.message || "Không tải được điểm bình chọn." }, { status: 500 });
@@ -122,13 +123,9 @@ export async function POST(request: NextRequest) {
       "unknown";
     const fingerprint = String(body?.deviceFingerprint || clientIp).slice(0, 200);
 
-    const { count: priorRows, error: priorError } = await db
-      .from(CDILV_TABLE.pollPointAllocations)
-      .select("id", { count: "exact", head: true })
-      .eq("poll_id", pollId)
-      .eq("voter_key", voter.voterKey);
-    if (priorError) throw priorError;
-    const isNewGuest = voter.needsEmployeeCode && !voter.isPrivateJudgeVote && (priorRows ?? 0) === 0;
+    const before = await loadVoterBudget(db, pollId, voter);
+    const isNewGuest =
+      voter.needsEmployeeCode && !voter.isPrivateJudgeVote && Object.keys(before.allocations).length === 0;
     const hasPoints = allocations.some((a: any) => Number(a?.points) > 0);
 
     if (isNewGuest && hasPoints) {
@@ -149,7 +146,7 @@ export async function POST(request: NextRequest) {
         .from(CDILV_TABLE.pollPointAllocations)
         .select("id")
         .eq("poll_id", pollId)
-        .neq("voter_key", voter.voterKey)
+        .neq("voter_key", before.voterKey)
         .or(`device_fingerprint.eq.${fingerprint},ip_address.eq.${clientIp}`)
         .gte("created_at", thirtyMinutesAgo)
         .limit(1);
@@ -164,17 +161,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { data: result, error: rpcError } = await db.rpc(CDILV_RPC.pollPointsSave, {
+    const { data: result, error: rpcError } = await db.rpc(CDILV_RPC.pollPointsAllocate, {
       p_poll_id: pollId,
-      p_voter_key: voter.voterKey,
-      p_voter_kind: voter.voterKind,
-      p_team_option_id: voter.teamOptionId,
-      p_is_judge: voter.isJudge,
       p_employee_code: voter.employeeCode,
       p_user_id: voter.userId,
+      p_is_judge: voter.isJudge,
       p_ip_address: clientIp,
       p_device_fingerprint: fingerprint,
-      p_blocked_option_ids: voter.memberOptionIds,
       p_allocations: allocations.map((a: any) => ({ optionId: a?.optionId, points: a?.points })),
     });
     if (rpcError) throw rpcError;
@@ -185,7 +178,7 @@ export async function POST(request: NextRequest) {
         saved.reason === "over_budget"
           ? `Tổng điểm (${saved.requested}) vượt quá số điểm được phân bổ (${saved.budget}).`
           : pointsReasonMessage(saved.reason);
-      return NextResponse.json({ error: message, reason: saved.reason, ...saved }, { status: 400 });
+      return NextResponse.json({ error: message, reason: saved.reason }, { status: 400 });
     }
 
     if (isNewGuest && Number(saved.used) > 0) {
@@ -203,16 +196,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const budget = await loadVoterBudget(db, poll, voter);
     return NextResponse.json({
       success: true,
       message:
         Number(saved.used) > 0
           ? `Đã lưu ${saved.used}/${saved.budget} điểm bình chọn.`
           : "Đã rút toàn bộ điểm bình chọn.",
-      ...voterPayload(poll, voter),
-      ...budget,
-      remaining: Math.max(budget.budget - budget.used, 0),
+      ...(await voterPayload(db, pollId, voter)),
     });
   } catch (err: any) {
     console.error("[api/polls/points] POST error:", err);

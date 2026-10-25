@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const db = createServiceClient();
     const { data, error } = await db
       .from(CDILV_TABLE.pollPointGrants)
-      .select("id, voter_key, voter_kind, team_option_id, employee_code, points, reason, granted_by_name, created_at")
+      .select("id, voter_key, employee_code, points, reason, granted_by_name, created_at")
       .eq("poll_id", pollId)
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -28,8 +28,6 @@ export async function GET(request: NextRequest) {
       grants: (data ?? []).map((g) => ({
         id: g.id,
         voterKey: g.voter_key,
-        voterKind: g.voter_kind,
-        teamOptionId: g.team_option_id,
         employeeCode: g.employee_code,
         points: g.points,
         reason: g.reason,
@@ -50,7 +48,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
     const pollId = String(body?.pollId ?? "").trim();
-    const targetType = body?.targetType === "team" ? "team" : "individual";
     const points = Number(body?.points);
     const reason = String(body?.reason ?? "").trim();
 
@@ -87,31 +84,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let voterKey: string;
-    let teamOptionId: string | null = null;
-    let employeeCode: string | null = null;
-    if (targetType === "team") {
-      const optionId = String(body?.optionId ?? "").trim();
-      const { data: option } = optionId
-        ? await db
-            .from(CDILV_TABLE.pollOptions)
-            .select("id")
-            .eq("id", optionId)
-            .eq("poll_id", pollId)
-            .maybeSingle()
-        : { data: null };
-      if (!option) {
-        return NextResponse.json({ error: "Vui lòng chọn đội chơi thuộc chương trình." }, { status: 400 });
-      }
-      teamOptionId = String(option.id);
-      voterKey = `team:${teamOptionId}`;
-    } else {
-      employeeCode = normalizeEmployeeCode(body?.employeeCode);
-      if (!employeeCode) {
-        return NextResponse.json({ error: "Vui lòng nhập mã nhân viên của người được cộng điểm." }, { status: 400 });
-      }
-      voterKey = `emp:${employeeCode}`;
+    const employeeCode = normalizeEmployeeCode(body?.employeeCode);
+    if (!employeeCode) {
+      return NextResponse.json({ error: "Vui lòng nhập mã nhân viên của người được cộng điểm." }, { status: 400 });
     }
+    const voterKey = `emp:${employeeCode}`;
 
     const { data: profile } = await db
       .from(CDILV_TABLE.profiles)
@@ -122,8 +99,7 @@ export async function POST(request: NextRequest) {
     const { error: insertError } = await db.from(CDILV_TABLE.pollPointGrants).insert({
       poll_id: pollId,
       voter_key: voterKey,
-      voter_kind: targetType,
-      team_option_id: teamOptionId,
+      voter_kind: "individual",
       employee_code: employeeCode,
       points,
       reason,

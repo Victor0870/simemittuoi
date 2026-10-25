@@ -7,7 +7,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { ensureJudgeToken } from "@/lib/polls/judge-access";
 import { parsePollSchedule } from "@/lib/polls/phase";
 import { normalizeRewardMoney } from "@/lib/polls/reward-money";
-import { normalizePointsBudget, normalizeVoteMode } from "@/lib/polls/vote-mode";
+import { parseSubmissionDeadline } from "@/lib/polls/entries-server";
+import { normalizePointsBudget, normalizeSubmissionMode, normalizeVoteMode } from "@/lib/polls/vote-mode";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -64,7 +65,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!Array.isArray(options) || options.length < 2) {
+    const submissionMode = normalizeSubmissionMode(body.submissionMode);
+    if (!Array.isArray(options) || (submissionMode !== "player" && options.length < 2)) {
       return NextResponse.json(
         { error: "Chương trình bình chọn cần có ít nhất 2 lựa chọn/tác phẩm." },
         { status: 400 },
@@ -77,6 +79,10 @@ export async function POST(request: NextRequest) {
     }
 
     const voteMode = normalizeVoteMode(body.voteMode);
+    const submissionDeadline = parseSubmissionDeadline(body.submissionDeadline);
+    if (!submissionDeadline.ok) {
+      return NextResponse.json({ error: submissionDeadline.error }, { status: 400 });
+    }
 
     // 1. Insert poll
     const { data: poll, error: pollError } = await publicDb
@@ -95,9 +101,11 @@ export async function POST(request: NextRequest) {
         max_guest_votes: parseInt(String(maxGuestVotes), 10) || 250,
         has_prediction: voteMode === "points" ? false : Boolean(hasPrediction),
         vote_mode: voteMode,
-        points_per_voter: normalizePointsBudget(body.pointsPerVoter),
-        points_per_team: normalizePointsBudget(body.pointsPerTeam),
+        points_per_participant: normalizePointsBudget(body.pointsPerParticipant),
+        points_per_non_participant: normalizePointsBudget(body.pointsPerNonParticipant),
         allow_self_vote: Boolean(body.allowSelfVote),
+        submission_mode: submissionMode,
+        submission_deadline: submissionDeadline.value,
         prediction_question:
           predictionQuestion?.trim() ||
           "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",

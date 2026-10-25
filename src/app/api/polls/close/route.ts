@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       .from(CDILV_TABLE.pollOptions)
       .select("*")
       .eq("poll_id", pollId)
+      .eq("approval_status", "approved")
       .order("vote_count", { ascending: false })
       .order("order_num", { ascending: true });
 

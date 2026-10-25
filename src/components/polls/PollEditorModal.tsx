@@ -10,8 +10,10 @@ import { EMPTY_REWARD_MONEY, REWARD_KINDS, type RewardMoney } from "@/lib/polls/
 import {
   POINTS_BUDGET_MAX,
   POINTS_DEFAULT,
+  SUBMISSION_MODE_LABEL,
   VOTE_MODE_LABEL,
   normalizePointsBudget,
+  type PollSubmissionMode,
   type PollVoteMode,
 } from "@/lib/polls/vote-mode";
 
@@ -116,9 +118,11 @@ export function PollEditorModal({
   const [entryRewardPoints, setEntryRewardPoints] = useState(0);
   const [predictorRewardPoints, setPredictorRewardPoints] = useState(50);
   const [voteMode, setVoteMode] = useState<PollVoteMode>("standard");
-  const [pointsPerVoter, setPointsPerVoter] = useState(POINTS_DEFAULT);
-  const [pointsPerTeam, setPointsPerTeam] = useState(POINTS_DEFAULT);
+  const [pointsPerParticipant, setPointsPerParticipant] = useState(POINTS_DEFAULT);
+  const [pointsPerNonParticipant, setPointsPerNonParticipant] = useState(POINTS_DEFAULT);
   const [allowSelfVote, setAllowSelfVote] = useState(false);
+  const [submissionMode, setSubmissionMode] = useState<PollSubmissionMode>("admin");
+  const [submissionDeadlineLocal, setSubmissionDeadlineLocal] = useState("");
 
   // Judge state
   const [hasJudges, setHasJudges] = useState(false);
@@ -178,9 +182,11 @@ export function PollEditorModal({
       setEntryRewardPoints(initialPoll.entryRewardPoints ?? 0);
       setPredictorRewardPoints(initialPoll.predictorRewardPoints ?? 50);
       setVoteMode(initialPoll.voteMode ?? "standard");
-      setPointsPerVoter(initialPoll.pointsPerVoter ?? POINTS_DEFAULT);
-      setPointsPerTeam(initialPoll.pointsPerTeam ?? POINTS_DEFAULT);
+      setPointsPerParticipant(initialPoll.pointsPerParticipant ?? POINTS_DEFAULT);
+      setPointsPerNonParticipant(initialPoll.pointsPerNonParticipant ?? POINTS_DEFAULT);
       setAllowSelfVote(Boolean(initialPoll.allowSelfVote));
+      setSubmissionMode(initialPoll.submissionMode ?? "admin");
+      setSubmissionDeadlineLocal(toLocalInput(initialPoll.submissionDeadline ?? null));
       setHasJudges(Boolean(initialPoll.hasJudges));
       setJudgeWeightPercent(initialPoll.judgeWeightPercent ?? 30);
       setJudgeList(initialPoll.judgeList || []);
@@ -223,9 +229,11 @@ export function PollEditorModal({
       setEntryRewardPoints(0);
       setHasPrediction(true);
       setVoteMode("standard");
-      setPointsPerVoter(POINTS_DEFAULT);
-      setPointsPerTeam(POINTS_DEFAULT);
+      setPointsPerParticipant(POINTS_DEFAULT);
+      setPointsPerNonParticipant(POINTS_DEFAULT);
       setAllowSelfVote(false);
+      setSubmissionMode("admin");
+      setSubmissionDeadlineLocal("");
       setHasJudges(false);
       setJudgeWeightPercent(30);
       setJudgeList([]);
@@ -254,7 +262,7 @@ export function PollEditorModal({
   }
 
   function handleRemoveOption(index: number) {
-    if (options.length <= 2) {
+    if (submissionMode !== "player" && options.length <= 2) {
       alert("Chương trình cần có ít nhất 2 tác phẩm/lựa chọn.");
       return;
     }
@@ -398,7 +406,7 @@ export function PollEditorModal({
       return;
     }
 
-    if (options.length < 2) {
+    if (submissionMode !== "player" && options.length < 2) {
       setError("Cần có ít nhất 2 tác phẩm/lựa chọn.");
       return;
     }
@@ -444,9 +452,11 @@ export function PollEditorModal({
         maxGuestVotes,
         hasPrediction: voteMode === "points" ? false : hasPrediction,
         voteMode,
-        pointsPerVoter,
-        pointsPerTeam,
+        pointsPerParticipant,
+        pointsPerNonParticipant,
         allowSelfVote,
+        submissionMode,
+        submissionDeadline: submissionMode === "player" ? fromLocalInput(submissionDeadlineLocal) : null,
         predictionQuestion,
         voterRewardPoints,
         entryRewardPoints,
@@ -1025,6 +1035,51 @@ export function PollEditorModal({
                 </div>
               </div>
 
+              {/* Chế độ nộp bài */}
+              <div className="rounded-2xl border border-outline-variant bg-white p-5 space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-[#173A67]">Chế độ nộp bài</h4>
+                  <p className="text-xs text-on-surface-variant">
+                    Bài người chơi nộp chỉ hiện trong danh sách bình chọn sau khi Ban tổ chức duyệt.
+                  </p>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(["admin", "player"] as PollSubmissionMode[]).map((value) => (
+                    <button
+                      key={value}
+                      className={`rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold transition cursor-pointer ${
+                        submissionMode === value
+                          ? "border-[#173A67] bg-[#173A67]/5 text-[#173A67]"
+                          : "border-outline-variant text-on-surface-variant hover:border-[#173A67]/50"
+                      }`}
+                      type="button"
+                      onClick={() => setSubmissionMode(value)}
+                    >
+                      {SUBMISSION_MODE_LABEL[value]}
+                      <span className="block text-xs font-medium text-on-surface-variant">
+                        {value === "admin"
+                          ? "Ban tổ chức nhập bài thi và thành viên ở thẻ Tác phẩm."
+                          : "Đoàn viên đăng nhập tự nộp bài, Ban tổ chức duyệt hoặc từ chối."}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {submissionMode === "player" ? (
+                  <label className="block space-y-1">
+                    <span className="text-label-xs font-bold text-[#173A67]">Hạn nộp bài (không bắt buộc)</span>
+                    <input
+                      className="w-full rounded-xl border border-outline-variant bg-surface-container-low px-3 py-2 text-sm"
+                      type="datetime-local"
+                      value={submissionDeadlineLocal}
+                      onChange={(e) => setSubmissionDeadlineLocal(e.target.value)}
+                    />
+                    <span className="block text-xs text-on-surface-variant">
+                      Để trống thì nhận bài đến khi chương trình kết thúc. Ban tổ chức vẫn thêm bài được ở thẻ Tác phẩm.
+                    </span>
+                  </label>
+                ) : null}
+              </div>
+
               {/* Hình thức bình chọn */}
               <div className="rounded-2xl border border-outline-variant bg-white p-5 space-y-4">
                 <div>
@@ -1059,31 +1114,31 @@ export function PollEditorModal({
                   <div className="space-y-3 rounded-xl bg-[#173A67]/5 p-4">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-[#173A67]">Điểm mỗi người bình chọn</span>
+                        <span className="text-xs font-bold text-[#173A67]">Điểm cho người dự thi</span>
                         <input
                           className="w-full rounded-xl border border-primary bg-white px-3 py-2 text-center text-title-md font-black text-primary"
                           max={POINTS_BUDGET_MAX}
                           min={0}
                           type="number"
-                          value={pointsPerVoter}
-                          onChange={(e) => setPointsPerVoter(normalizePointsBudget(e.target.value, 0))}
+                          value={pointsPerParticipant}
+                          onChange={(e) => setPointsPerParticipant(normalizePointsBudget(e.target.value, 0))}
                         />
                       </label>
                       <label className="block space-y-1">
-                        <span className="text-xs font-bold text-[#173A67]">Điểm mỗi đội chơi</span>
+                        <span className="text-xs font-bold text-[#173A67]">Điểm cho người không dự thi</span>
                         <input
                           className="w-full rounded-xl border border-primary bg-white px-3 py-2 text-center text-title-md font-black text-primary"
                           max={POINTS_BUDGET_MAX}
                           min={0}
                           type="number"
-                          value={pointsPerTeam}
-                          onChange={(e) => setPointsPerTeam(normalizePointsBudget(e.target.value, 0))}
+                          value={pointsPerNonParticipant}
+                          onChange={(e) => setPointsPerNonParticipant(normalizePointsBudget(e.target.value, 0))}
                         />
                       </label>
                     </div>
                     <p className="text-xs text-on-surface-variant">
-                      Thành viên của một đội chơi (có mã nhân viên trong danh sách thành viên bài thi) dùng chung số điểm của đội.
-                      Người khác và Ban giám khảo dùng điểm cá nhân. Quản trị viên cộng thêm điểm cho từng người/đội ở trang chương trình.
+                      Người dự thi là người có tên (theo mã nhân viên) trong danh sách thành viên của ít nhất một bài thi đã duyệt.
+                      Mỗi người chỉ có một số điểm cho cả chương trình, dù có tên trong nhiều bài. Quản trị viên cộng thêm điểm cho từng người ở trang chương trình.
                     </p>
                     <label className="flex cursor-pointer items-start gap-2 text-sm font-semibold text-[#173A67]">
                       <input
@@ -1092,7 +1147,7 @@ export function PollEditorModal({
                         type="checkbox"
                         onChange={(e) => setAllowSelfVote(e.target.checked)}
                       />
-                      <span>Cho phép đội/người chơi bình chọn điểm cho đội/bài thi của chính mình</span>
+                      <span>Cho phép người dự thi cho điểm bài thi có tên mình</span>
                     </label>
                   </div>
                 ) : (

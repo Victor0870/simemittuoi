@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { parsePollSchedule } from "@/lib/polls/phase";
 import { normalizeRewardMoney } from "@/lib/polls/reward-money";
-import { normalizePointsBudget, normalizeVoteMode } from "@/lib/polls/vote-mode";
+import { parseSubmissionDeadline } from "@/lib/polls/entries-server";
+import { normalizePointsBudget, normalizeSubmissionMode, normalizeVoteMode } from "@/lib/polls/vote-mode";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { invalidatePollResults } from "@/lib/data/ranking-refresh";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
@@ -67,7 +68,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Vui lòng nhập tên chương trình." }, { status: 400 });
     }
 
-    if (!Array.isArray(options) || options.length < 2) {
+    const submissionMode = normalizeSubmissionMode(body.submissionMode);
+    if (!Array.isArray(options) || (submissionMode !== "player" && options.length < 2)) {
       return NextResponse.json(
         { error: "Chương trình bình chọn cần có ít nhất 2 tác phẩm/lựa chọn." },
         { status: 400 },
@@ -146,11 +148,21 @@ export async function POST(request: NextRequest) {
     if (nextVoteMode === "points") {
       updateData.has_prediction = false;
     }
-    if (body.pointsPerVoter !== undefined) {
-      updateData.points_per_voter = normalizePointsBudget(body.pointsPerVoter);
+    if (body.pointsPerParticipant !== undefined) {
+      updateData.points_per_participant = normalizePointsBudget(body.pointsPerParticipant);
     }
-    if (body.pointsPerTeam !== undefined) {
-      updateData.points_per_team = normalizePointsBudget(body.pointsPerTeam);
+    if (body.pointsPerNonParticipant !== undefined) {
+      updateData.points_per_non_participant = normalizePointsBudget(body.pointsPerNonParticipant);
+    }
+    if (body.submissionMode !== undefined) {
+      updateData.submission_mode = submissionMode;
+    }
+    if (body.submissionDeadline !== undefined) {
+      const deadline = parseSubmissionDeadline(body.submissionDeadline);
+      if (!deadline.ok) {
+        return NextResponse.json({ error: deadline.error }, { status: 400 });
+      }
+      updateData.submission_deadline = deadline.value;
     }
     if (typeof body.allowSelfVote === "boolean") {
       updateData.allow_self_vote = body.allowSelfVote;
@@ -186,11 +198,12 @@ export async function POST(request: NextRequest) {
       throw pollUpdateErr;
     }
 
-    // 2. Fetch existing options
+    // 2. Fetch existing options (bài chờ duyệt / bị từ chối / đã rút không có trong form nên không được xóa)
     const { data: existingOptions } = await publicDb
       .from(CDILV_TABLE.pollOptions)
       .select("id")
-      .eq("poll_id", pollId);
+      .eq("poll_id", pollId)
+      .eq("approval_status", "approved");
 
     const existingOptionIds = (existingOptions ?? []).map((o) => o.id);
     const incomingOptionIds = options.map((o) => o.id).filter(Boolean);

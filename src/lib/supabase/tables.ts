@@ -96,7 +96,8 @@ export const CDILV_RPC = {
   documentNumberPreview: "cdilv_document_number_preview",
   documentNumberState: "cdilv_document_number_state",
   documentNumberConfigure: "cdilv_document_number_configure",
-  pollPointsSave: "cdilv_poll_points_save",
+  pollPointsAllocate: "cdilv_poll_points_allocate",
+  pollPointsBudget: "cdilv_poll_points_budget",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */

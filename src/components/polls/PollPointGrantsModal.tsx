@@ -7,8 +7,6 @@ import { POINTS_BUDGET_MAX } from "@/lib/polls/vote-mode";
 
 type Grant = {
   id: string;
-  voterKind: "individual" | "team";
-  teamOptionId: string | null;
   employeeCode: string | null;
   points: number;
   reason: string;
@@ -28,9 +26,7 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [targetType, setTargetType] = useState<"individual" | "team">("individual");
   const [employeeCode, setEmployeeCode] = useState("");
-  const [optionId, setOptionId] = useState("");
   const [points, setPoints] = useState(1);
   const [reason, setReason] = useState("");
 
@@ -55,17 +51,11 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
 
   if (!isOpen) return null;
 
-  const titleByOption = new Map(poll.options.map((o) => [o.id, o.title]));
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setMessage(null);
-    if (targetType === "team" && !optionId) {
-      setError("Vui lòng chọn đội chơi.");
-      return;
-    }
-    if (targetType === "individual" && !employeeCode.trim()) {
+    if (!employeeCode.trim()) {
       setError("Vui lòng nhập mã nhân viên.");
       return;
     }
@@ -80,9 +70,7 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pollId: poll.id,
-          targetType,
-          employeeCode: targetType === "individual" ? employeeCode.trim() : undefined,
-          optionId: targetType === "team" ? optionId : undefined,
+          employeeCode: employeeCode.trim(),
           points,
           reason: reason.trim(),
         }),
@@ -110,7 +98,8 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
           <div>
             <h3 className="text-base font-extrabold text-[#173A67]">Cộng điểm bình chọn</h3>
             <p className="text-xs text-on-surface-variant">
-              Ngân sách = điểm cơ bản ({poll.pointsPerVoter} điểm/người, {poll.pointsPerTeam} điểm/đội) + điểm cộng thêm.
+              Ngân sách = điểm cơ bản ({poll.pointsPerParticipant} điểm người dự thi, {poll.pointsPerNonParticipant} điểm
+              người không dự thi) + điểm cộng thêm.
             </p>
           </div>
           <button
@@ -125,24 +114,7 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
 
         <div className="space-y-5 overflow-y-auto p-5">
           <form className="space-y-3 rounded-xl border border-outline-variant p-4" onSubmit={handleSubmit}>
-            <div className="flex flex-wrap gap-2">
-              {(["individual", "team"] as const).map((value) => (
-                <button
-                  key={value}
-                  className={`rounded-xl border-2 px-3 py-1.5 text-sm font-bold cursor-pointer ${
-                    targetType === value
-                      ? "border-[#173A67] bg-[#173A67]/5 text-[#173A67]"
-                      : "border-outline-variant text-on-surface-variant"
-                  }`}
-                  type="button"
-                  onClick={() => setTargetType(value)}
-                >
-                  {value === "individual" ? "Người bình chọn" : "Đội chơi"}
-                </button>
-              ))}
-            </div>
-
-            {targetType === "individual" ? (
+            <div className="grid gap-3 sm:grid-cols-[160px_120px_1fr]">
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#173A67]">Mã nhân viên</span>
                 <input
@@ -152,29 +124,7 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
                   value={employeeCode}
                   onChange={(e) => setEmployeeCode(e.target.value)}
                 />
-                <span className="block text-[11px] text-on-surface-variant">
-                  Thành viên của đội chơi bình chọn bằng điểm chung của đội; muốn cộng cho họ hãy chọn Đội chơi.
-                </span>
               </label>
-            ) : (
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-[#173A67]">Đội chơi</span>
-                <select
-                  className="w-full rounded-xl border border-outline-variant px-3 py-2 text-sm"
-                  value={optionId}
-                  onChange={(e) => setOptionId(e.target.value)}
-                >
-                  <option value="">-- Chọn đội chơi --</option>
-                  {poll.options.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      #{o.orderNum} {o.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <div className="grid gap-3 sm:grid-cols-[120px_1fr]">
               <label className="block space-y-1">
                 <span className="text-xs font-bold text-[#173A67]">Số điểm</span>
                 <input
@@ -222,7 +172,7 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
                   <thead className="bg-surface-container-low text-[#173A67]">
                     <tr>
                       <th className="px-3 py-2">Thời gian</th>
-                      <th className="px-3 py-2">Người/đội nhận</th>
+                      <th className="px-3 py-2">Người nhận</th>
                       <th className="px-3 py-2 text-right">Điểm</th>
                       <th className="px-3 py-2">Lý do</th>
                       <th className="px-3 py-2">Người cộng</th>
@@ -231,14 +181,8 @@ export function PollPointGrantsModal({ poll, isOpen, onClose }: Props) {
                   <tbody>
                     {grants.map((g) => (
                       <tr key={g.id} className="border-t border-outline-variant/60">
-                        <td className="px-3 py-2 whitespace-nowrap">
-                          {new Date(g.createdAt).toLocaleString("vi-VN")}
-                        </td>
-                        <td className="px-3 py-2">
-                          {g.voterKind === "team"
-                            ? `Đội: ${titleByOption.get(g.teamOptionId ?? "") ?? "(đã xóa)"}`
-                            : `Mã NV ${g.employeeCode ?? ""}`}
-                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{new Date(g.createdAt).toLocaleString("vi-VN")}</td>
+                        <td className="px-3 py-2">{g.employeeCode ? `Mã NV ${g.employeeCode}` : "—"}</td>
                         <td className="px-3 py-2 text-right font-bold">+{g.points}</td>
                         <td className="px-3 py-2">{g.reason}</td>
                         <td className="px-3 py-2">{g.grantedByName || "—"}</td>

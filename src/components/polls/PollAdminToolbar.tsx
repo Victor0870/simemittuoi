@@ -9,6 +9,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import type { PollDetail } from "@/lib/data/polls";
 import { PollEditorModal } from "@/components/polls/PollEditorModal";
 import { PollPointGrantsModal } from "@/components/polls/PollPointGrantsModal";
+import { PollEntryReviewModal } from "@/components/polls/PollEntryReviewModal";
 import { PollQrButton } from "@/components/polls/PollQrButton";
 import { usePollPhase } from "@/components/polls/usePollPhase";
 
@@ -21,6 +22,7 @@ export function PollAdminToolbar({ poll }: Props) {
   const { can, loading } = useAuth();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isGrantsOpen, setIsGrantsOpen] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isActive, setIsActive] = useState(poll.isActive);
@@ -197,6 +199,17 @@ export function PollAdminToolbar({ poll }: Props) {
               />
             ) : null}
 
+            {poll.submissionMode === "player" ? (
+              <button
+                className="flex items-center justify-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#173A67] shadow-xs hover:bg-amber-100 transition cursor-pointer sm:px-3.5 sm:py-2 sm:text-xs"
+                type="button"
+                onClick={() => setIsReviewOpen(true)}
+              >
+                <MaterialIcon className="text-[15px] sm:text-[16px]" name="fact_check" />
+                <span>Duyệt bài dự thi</span>
+              </button>
+            ) : null}
+
             {poll.voteMode === "points" ? (
               <button
                 className="flex items-center justify-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#173A67] shadow-xs hover:bg-amber-100 transition cursor-pointer sm:px-3.5 sm:py-2 sm:text-xs"
@@ -323,6 +336,10 @@ export function PollAdminToolbar({ poll }: Props) {
 
       {poll.voteMode === "points" ? (
         <PollPointGrantsModal isOpen={isGrantsOpen} poll={poll} onClose={() => setIsGrantsOpen(false)} />
+      ) : null}
+
+      {poll.submissionMode === "player" ? (
+        <PollEntryReviewModal isOpen={isReviewOpen} pollId={poll.id} onClose={() => setIsReviewOpen(false)} />
       ) : null}
     </>
   );

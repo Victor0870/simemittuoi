@@ -5,6 +5,7 @@ import { getPollById } from "@/lib/data/polls";
 import { PollPodiumResults } from "@/components/polls/PollPodiumResults";
 import { PollVotingSection } from "@/components/polls/PollVotingSection";
 import { PollPointsVotingSection } from "@/components/polls/PollPointsVotingSection";
+import { PollEntrySubmissionSection } from "@/components/polls/PollEntrySubmissionSection";
 import { PollAdminToolbar } from "@/components/polls/PollAdminToolbar";
 import { PollQrButton } from "@/components/polls/PollQrButton";
 import { PollPhaseBadge } from "@/components/polls/PollPhaseBadge";
@@ -110,7 +111,10 @@ export default async function PollDetailPage({ params }: Props) {
           {poll.voteMode === "points" ? (
             <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
               <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="scoreboard" />
-              Vote theo point: <strong>{poll.pointsPerVoter} điểm/người · {poll.pointsPerTeam} điểm/đội</strong>
+              Vote theo point:{" "}
+              <strong>
+                {poll.pointsPerParticipant} điểm/người dự thi · {poll.pointsPerNonParticipant} điểm/người không dự thi
+              </strong>
             </span>
           ) : (
             <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
@@ -118,6 +122,17 @@ export default async function PollDetailPage({ params }: Props) {
               Được chọn tối đa: <strong>{poll.maxVotesPerUser} tác phẩm</strong>
             </span>
           )}
+          {poll.submissionMode === "player" ? (
+            <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-surface-container-low px-2.5 py-1 font-semibold">
+              <MaterialIcon className="text-[16px] sm:text-[18px] text-amber-600" name="upload_file" />
+              Người chơi nộp bài
+              {poll.submissionDeadline ? (
+                <>
+                  : hạn <strong>{formatPollTime(poll.submissionDeadline)}</strong>
+                </>
+              ) : null}
+            </span>
+          ) : null}
           {poll.hasPrediction ? (
             <span className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1 font-semibold text-emerald-900 border border-emerald-200">
               <MaterialIcon className="text-[16px] sm:text-[18px] text-emerald-600" name="stars" />
@@ -134,6 +149,8 @@ export default async function PollDetailPage({ params }: Props) {
       </div>
 
       <PollScheduleNotice initialNow={now} poll={poll} />
+
+      {poll.submissionMode === "player" ? <PollEntrySubmissionSection initialNow={now} poll={poll} /> : null}
 
       {/* 1. KẾT QUẢ HIỂN THỊ TRÊN ĐẦU (Theo yêu cầu) */}
       <PollPodiumResults initialNow={now} poll={poll} />

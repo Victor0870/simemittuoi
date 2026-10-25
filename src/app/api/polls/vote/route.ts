@@ -16,6 +16,8 @@ const PUBLIC_JUDGE_BLOCKED =
 const PRIVATE_JUDGE_ONLY =
   "Link này chỉ dành cho Ban giám khảo chưa có tài khoản. Mã nhân viên không có trong danh sách giám khảo.";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const PRIVATE_JUDGE_HAS_ACCOUNT =
   "Giám khảo đã có tài khoản đoàn viên. Vui lòng đăng nhập rồi bình chọn, không dùng link riêng này.";
 
@@ -103,6 +105,23 @@ export async function POST(request: NextRequest) {
     if (poll.is_active === false) {
       return NextResponse.json(
         { error: "Chương trình bình chọn đang ở trạng thái tạm ngưng (Inactive)." },
+        { status: 400 },
+      );
+    }
+
+    if (!optionIds.every((id: unknown) => typeof id === "string" && UUID_RE.test(id))) {
+      return NextResponse.json({ error: "Lựa chọn bình chọn không hợp lệ." }, { status: 400 });
+    }
+    const { data: validOptions, error: validOptionsError } = await publicDb
+      .from(CDILV_TABLE.pollOptions)
+      .select("id")
+      .eq("poll_id", pollId)
+      .eq("approval_status", "approved")
+      .in("id", optionIds);
+    if (validOptionsError) throw validOptionsError;
+    if ((validOptions ?? []).length !== new Set(optionIds).size) {
+      return NextResponse.json(
+        { error: "Có tác phẩm không thuộc chương trình hoặc chưa được duyệt. Vui lòng tải lại trang." },
         { status: 400 },
       );
     }

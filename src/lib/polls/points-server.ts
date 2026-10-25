@@ -1,13 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 import {
   approvedAccountOwnsCode,
   isValidJudgeToken,
   judgeCodesFromPoll,
   normalizeEmployeeCode,
 } from "@/lib/polls/judge-access";
-import type { PointsVoterKind } from "@/lib/polls/vote-mode";
 
 export type PointTally = {
   judgeByOption: Map<string, number>;
@@ -74,17 +73,12 @@ export async function loadPointTally(db: SupabaseClient, pollId: string): Promis
 }
 
 export type PointVoter = {
-  voterKey: string;
-  voterKind: PointsVoterKind;
-  teamOptionId: string | null;
-  teamTitle: string | null;
   isJudge: boolean;
   employeeCode: string | null;
+  /** Chỉ có khi là đoàn viên đã duyệt đang đăng nhập (khách nhập mã thì không gắn tài khoản). */
   userId: string | null;
   needsEmployeeCode: boolean;
   isPrivateJudgeVote: boolean;
-  /** Đội/bài thi mà người bầu là thành viên (bị chặn khi chương trình không cho tự vote). */
-  memberOptionIds: string[];
 };
 
 export type ResolveResult =
@@ -102,7 +96,7 @@ const PRIVATE_JUDGE_HAS_ACCOUNT =
  * Xác định người bầu theo đúng quy tắc của hình thức bình chọn theo phiếu:
  * đoàn viên đã duyệt dùng mã trên hồ sơ; chương trình tự do thì khách nhập mã nhân viên;
  * giám khảo chưa có tài khoản chỉ bầu qua link riêng (?gk=).
- * Thành viên của một đội chơi bầu bằng ngân sách chung của đội; giám khảo luôn bầu cá nhân.
+ * Ngân sách, người dự thi và tự vote do hàm cơ sở dữ liệu tính theo mã nhân viên / tài khoản.
  */
 export async function resolvePointVoter(
   db: SupabaseClient,
@@ -158,113 +152,75 @@ export async function resolvePointVoter(
   }
 
   const isPrivateJudgeVote = judgeLinkOk && needsEmployeeCode && codeIsJudge && !codeHasApprovedAccount;
-  const isJudge = codeIsJudge && (!needsEmployeeCode || isPrivateJudgeVote);
-  const userId = user?.id ?? null;
-
-  const { data: options, error: optionsError } = await db
-    .from(CDILV_TABLE.pollOptions)
-    .select("id, title, order_num")
-    .eq("poll_id", pollId)
-    .order("order_num", { ascending: true });
-  if (optionsError) throw optionsError;
-
-  const optionIds = (options ?? []).map((o) => String(o.id));
-  let memberOptionIds: string[] = [];
-  if (optionIds.length > 0 && (employeeCode || userId)) {
-    const { data: members, error: membersError } = await db
-      .from(CDILV_TABLE.pollOptionMembers)
-      .select("option_id, employee_code, user_id")
-      .in("option_id", optionIds);
-    if (membersError) throw membersError;
-    const matched = new Set<string>();
-    for (const m of members ?? []) {
-      const sameCode = employeeCode && normalizeEmployeeCode(m.employee_code) === employeeCode;
-      const sameUser = userId && !needsEmployeeCode && m.user_id === userId;
-      if (sameCode || sameUser) matched.add(String(m.option_id));
-    }
-    memberOptionIds = optionIds.filter((id) => matched.has(id));
-  }
-
-  const teamOption =
-    !isJudge && memberOptionIds.length > 0
-      ? (options ?? []).find((o) => String(o.id) === memberOptionIds[0]) ?? null
-      : null;
-
-  if (teamOption) {
-    return {
-      voter: {
-        voterKey: `team:${teamOption.id}`,
-        voterKind: "team",
-        teamOptionId: String(teamOption.id),
-        teamTitle: teamOption.title ?? null,
-        isJudge: false,
-        employeeCode,
-        userId,
-        needsEmployeeCode,
-        isPrivateJudgeVote,
-        memberOptionIds,
-      },
-    };
-  }
-
-  const voterKey = employeeCode ? `emp:${employeeCode}` : userId ? `user:${userId}` : null;
-  if (!voterKey) {
+  const userId = isApprovedMember && user ? user.id : null;
+  if (!employeeCode && !userId) {
     return { error: "Không xác định được người bình chọn.", status: 400 };
   }
 
   return {
     voter: {
-      voterKey,
-      voterKind: "individual",
-      teamOptionId: null,
-      teamTitle: null,
-      isJudge,
+      isJudge: codeIsJudge && (!needsEmployeeCode || isPrivateJudgeVote),
       employeeCode,
       userId,
       needsEmployeeCode,
       isPrivateJudgeVote,
-      memberOptionIds,
     },
   };
 }
 
+export type VoterBudget = {
+  voterKey: string;
+  isParticipant: boolean;
+  memberOptionIds: string[];
+  allowSelfVote: boolean;
+  base: number;
+  granted: number;
+  budget: number;
+  used: number;
+  allocations: Record<string, number>;
+};
+
 export async function loadVoterBudget(
   db: SupabaseClient,
-  poll: Record<string, any>,
-  voter: Pick<PointVoter, "voterKey" | "voterKind">,
+  pollId: string,
+  voter: Pick<PointVoter, "employeeCode" | "userId">,
 ) {
-  const [{ data: grants, error: grantsError }, { data: allocations, error: allocError }] = await Promise.all([
-    db
-      .from(CDILV_TABLE.pollPointGrants)
-      .select("points, reason, created_at")
-      .eq("poll_id", poll.id)
-      .eq("voter_key", voter.voterKey)
-      .order("created_at", { ascending: true }),
-    db
-      .from(CDILV_TABLE.pollPointAllocations)
-      .select("option_id, points")
-      .eq("poll_id", poll.id)
-      .eq("voter_key", voter.voterKey),
-  ]);
-  if (grantsError) throw grantsError;
-  if (allocError) throw allocError;
+  const { data, error } = await db.rpc(CDILV_RPC.pollPointsBudget, {
+    p_poll_id: pollId,
+    p_employee_code: voter.employeeCode,
+    p_user_id: voter.userId,
+  });
+  if (error) throw error;
+  const raw = (data ?? {}) as Record<string, any>;
+  if (!raw.ok) throw new Error("Không xác định được ngân sách điểm.");
 
-  const base = Number(voter.voterKind === "team" ? poll.points_per_team : poll.points_per_voter) || 0;
-  const granted = (grants ?? []).reduce((sum, g) => sum + (Number(g.points) || 0), 0);
-  const map: Record<string, number> = {};
-  let used = 0;
-  for (const row of allocations ?? []) {
-    const pts = Number(row.points) || 0;
-    map[String(row.option_id)] = pts;
-    used += pts;
+  const { data: grants, error: grantsError } = await db
+    .from(CDILV_TABLE.pollPointGrants)
+    .select("points, reason, created_at")
+    .eq("poll_id", pollId)
+    .eq("voter_key", raw.voterKey)
+    .order("created_at", { ascending: true });
+  if (grantsError) throw grantsError;
+
+  const allocations: Record<string, number> = {};
+  for (const [optionId, points] of Object.entries((raw.allocations ?? {}) as Record<string, unknown>)) {
+    allocations[optionId] = Number(points) || 0;
   }
 
+  const budget: VoterBudget = {
+    voterKey: String(raw.voterKey),
+    isParticipant: Boolean(raw.isParticipant),
+    memberOptionIds: Array.isArray(raw.memberOptionIds) ? raw.memberOptionIds.map(String) : [],
+    allowSelfVote: Boolean(raw.allowSelfVote),
+    base: Number(raw.base) || 0,
+    granted: Number(raw.granted) || 0,
+    budget: Number(raw.budget) || 0,
+    used: Number(raw.used) || 0,
+    allocations,
+  };
+
   return {
-    base,
-    granted,
-    budget: base + granted,
-    used,
-    allocations: map,
+    ...budget,
     grants: (grants ?? []).map((g) => ({
       points: Number(g.points) || 0,
       reason: String(g.reason ?? ""),

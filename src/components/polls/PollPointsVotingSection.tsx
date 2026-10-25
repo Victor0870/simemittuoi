@@ -17,8 +17,7 @@ type Props = {
 };
 
 type VoterState = {
-  voterKind: "individual" | "team";
-  teamTitle: string | null;
+  isParticipant: boolean;
   isJudge: boolean;
   employeeCode: string | null;
   blockedOptionIds: string[];
@@ -136,7 +135,7 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
   }, [authLoading, judgeLinkOk, judgeLinkPending, loadState, poll.accessType, user]);
 
   const blocked = useMemo(() => new Set(voter?.blockedOptionIds ?? []), [voter?.blockedOptionIds]);
-  const budget = voter?.budget ?? (poll.pointsPerVoter || 0);
+  const budget = voter?.budget ?? (poll.pointsPerNonParticipant || 0);
   const draftTotal = Object.values(draft).reduce((sum, v) => sum + (v || 0), 0);
   const remaining = budget - draftTotal;
   const savedAllocations = voter?.allocations ?? {};
@@ -316,16 +315,13 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm text-[#173A67]">
               <p className="font-extrabold">
-                {voter.isJudge
-                  ? `Bạn là Giám khảo${voter.employeeCode ? ` (${voter.employeeCode})` : ""}`
-                  : voter.voterKind === "team"
-                  ? `Điểm chung của đội: ${voter.teamTitle ?? ""}`
-                  : `Điểm cá nhân${voter.employeeCode ? ` (${voter.employeeCode})` : ""}`}
+                {voter.isJudge ? "Giám khảo · " : ""}
+                {voter.isParticipant ? "Người dự thi" : "Người không dự thi"}
+                {voter.employeeCode ? ` (${voter.employeeCode})` : ""}
               </p>
               <p className="text-xs text-on-surface-variant">
                 Được phân bổ {voter.budget} điểm ({voter.base} điểm cơ bản
                 {voter.granted > 0 ? ` + ${voter.granted} điểm cộng thêm` : ""}).
-                {voter.voterKind === "team" ? " Mọi thành viên của đội cùng dùng số điểm này." : ""}
               </p>
             </div>
             <div className="flex items-center gap-3 text-center">
@@ -352,13 +348,13 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
           ) : null}
           {!poll.allowSelfVote && voter.blockedOptionIds.length > 0 ? (
             <p className="text-xs font-semibold text-amber-800">
-              Chương trình không cho bình chọn điểm cho đội/bài thi của chính mình.
+              Chương trình không cho bình chọn điểm cho bài thi có tên bạn.
             </p>
           ) : null}
         </div>
       ) : isPractice && !isInactive ? (
         <p className="text-xs text-on-surface-variant">
-          Mỗi người bình chọn có {poll.pointsPerVoter} điểm, mỗi đội chơi có {poll.pointsPerTeam} điểm.
+          Người dự thi có {poll.pointsPerParticipant} điểm, người không dự thi có {poll.pointsPerNonParticipant} điểm.
         </p>
       ) : null}
 
@@ -409,7 +405,7 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
                   </p>
                 ) : null}
                 {isBlocked ? (
-                  <p className="mt-auto text-xs font-bold text-amber-800">Đội/bài thi của bạn</p>
+                  <p className="mt-auto text-xs font-bold text-amber-800">Bài thi có tên bạn</p>
                 ) : canEdit ? (
                   <div className="mt-auto flex items-center gap-2">
                     <button

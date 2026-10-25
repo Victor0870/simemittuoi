@@ -6,7 +6,12 @@ import { CDILV_TABLE } from "@/lib/supabase/tables";
 import type { PollStatus } from "@/lib/polls/phase";
 import { normalizeRewardMoney, type RewardMoney } from "@/lib/polls/reward-money";
 import { loadPointTally } from "@/lib/polls/points-server";
-import { normalizeVoteMode, type PollVoteMode } from "@/lib/polls/vote-mode";
+import {
+  normalizeSubmissionMode,
+  normalizeVoteMode,
+  type PollSubmissionMode,
+  type PollVoteMode,
+} from "@/lib/polls/vote-mode";
 
 export type JudgeMember = {
   employeeCode: string;
@@ -69,9 +74,11 @@ export type PollSummary = {
   consolationPrizeCount: number;
   rewardMoney: RewardMoney;
   voteMode: PollVoteMode;
-  pointsPerVoter: number;
-  pointsPerTeam: number;
+  pointsPerParticipant: number;
+  pointsPerNonParticipant: number;
   allowSelfVote: boolean;
+  submissionMode: PollSubmissionMode;
+  submissionDeadline: string | null;
   hasJudges?: boolean;
   judgeWeightPercent?: number;
   judgeList?: JudgeMember[];
@@ -129,9 +136,11 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     consolationPrizeCount: row.consolation_prize_count ?? 2,
     rewardMoney: normalizeRewardMoney(row.reward_money),
     voteMode: normalizeVoteMode(row.vote_mode),
-    pointsPerVoter: row.points_per_voter ?? 10,
-    pointsPerTeam: row.points_per_team ?? 10,
+    pointsPerParticipant: row.points_per_participant ?? 10,
+    pointsPerNonParticipant: row.points_per_non_participant ?? 10,
     allowSelfVote: Boolean(row.allow_self_vote),
+    submissionMode: normalizeSubmissionMode(row.submission_mode),
+    submissionDeadline: row.submission_deadline ?? null,
     hasJudges: Boolean(row.has_judges),
     judgeWeightPercent: row.judge_weight_percent ?? 30,
     judgeList: Array.isArray(row.judge_list)
@@ -185,6 +194,7 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     .from(CDILV_TABLE.pollOptions)
     .select("*")
     .eq("poll_id", id)
+    .eq("approval_status", "approved")
     .order("order_num", { ascending: true });
 
   if (optError && strict) throw new Error(optError.message);
@@ -384,9 +394,11 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     consolationPrizeCount: pollRow.consolation_prize_count ?? 2,
     rewardMoney: normalizeRewardMoney(pollRow.reward_money),
     voteMode,
-    pointsPerVoter: pollRow.points_per_voter ?? 10,
-    pointsPerTeam: pollRow.points_per_team ?? 10,
+    pointsPerParticipant: pollRow.points_per_participant ?? 10,
+    pointsPerNonParticipant: pollRow.points_per_non_participant ?? 10,
     allowSelfVote: Boolean(pollRow.allow_self_vote),
+    submissionMode: normalizeSubmissionMode(pollRow.submission_mode),
+    submissionDeadline: pollRow.submission_deadline ?? null,
     hasJudges,
     judgeWeightPercent,
     judgeList,
