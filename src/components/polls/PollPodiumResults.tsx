@@ -329,12 +329,62 @@ export function PollPodiumResults({ poll, initialNow }: Props) {
                   {poll.winningPredictorInfo.fullName || "Đoàn viên chiến thắng"}
                 </p>
                 <p className="text-body-sm text-emerald-900 mt-0.5">
-                  Dự đoán: <strong>{poll.winningPredictorInfo.predictedCount}</strong> người · Thực tế giải Nhất: <strong>{poll.winningPredictorInfo.actualCount}</strong> người (Lệch: {poll.winningPredictorInfo.diff})
+                  {isPoints ? (
+                    <>
+                      Dự đoán: <strong>{poll.winningPredictorInfo.predictedCount}</strong> điểm · Thực tế bài hạng Nhất:{" "}
+                      <strong>{poll.winningPredictorInfo.actualCount}</strong> điểm (Lệch: {poll.winningPredictorInfo.diff})
+                    </>
+                  ) : (
+                    <>
+                      Dự đoán: <strong>{poll.winningPredictorInfo.predictedCount}</strong> người · Thực tế giải Nhất: <strong>{poll.winningPredictorInfo.actualCount}</strong> người (Lệch: {poll.winningPredictorInfo.diff})
+                    </>
+                  )}
                 </p>
               </div>
               <span className="rounded-xl bg-emerald-600 px-4 py-2 font-black text-white text-sm shadow-xs">
                 +{poll.predictorRewardPoints} điểm thưởng
               </span>
+            </div>
+          </div>
+        ) : null}
+
+        {isClosed && isPoints && poll.predictionRanking && poll.predictionRanking.rows.length > 0 ? (
+          <div className="rounded-2xl border border-emerald-300 bg-white p-4 sm:p-5 shadow-2xs space-y-3">
+            <div>
+              <h4 className="text-title-sm font-extrabold text-emerald-950">Bảng xếp hạng dự đoán</h4>
+              <p className="text-xs text-on-surface-variant">
+                Tổng điểm thực tế của bài hạng Nhất: <strong>{poll.predictionRanking.actual}</strong> điểm. Xếp theo số lệch
+                tuyệt đối, bằng nhau thì người gửi sớm hơn đứng trước.
+                {poll.predictionRanking.total > poll.predictionRanking.rows.length
+                  ? ` Hiển thị ${poll.predictionRanking.rows.length}/${poll.predictionRanking.total} người.`
+                  : ` ${poll.predictionRanking.total} người dự đoán.`}
+              </p>
+            </div>
+            <div className="max-h-96 overflow-auto rounded-xl border border-outline-variant">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="sticky top-0 bg-emerald-50 text-emerald-950">
+                  <tr>
+                    <th className="px-3 py-2 font-bold">Hạng</th>
+                    <th className="px-3 py-2 font-bold">Người dự đoán</th>
+                    <th className="px-3 py-2 text-right font-bold">Dự đoán</th>
+                    <th className="px-3 py-2 text-right font-bold">Lệch</th>
+                    <th className="px-3 py-2 text-right font-bold">Gửi lúc</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {poll.predictionRanking.rows.map((row) => (
+                    <tr key={row.rank} className={`border-t border-outline-variant/60 ${row.rank === 1 ? "bg-emerald-50/60 font-bold" : ""}`}>
+                      <td className="px-3 py-1.5">{row.rank}</td>
+                      <td className="px-3 py-1.5">{row.name}</td>
+                      <td className="px-3 py-1.5 text-right">{row.predicted}</td>
+                      <td className="px-3 py-1.5 text-right">{row.diff}</td>
+                      <td className="px-3 py-1.5 text-right whitespace-nowrap text-on-surface-variant">
+                        {new Date(row.submittedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         ) : null}

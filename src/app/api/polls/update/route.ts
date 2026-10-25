@@ -145,9 +145,6 @@ export async function POST(request: NextRequest) {
       }
       updateData.vote_mode = nextVoteMode;
     }
-    if (nextVoteMode === "points") {
-      updateData.has_prediction = false;
-    }
     if (body.pointsPerParticipant !== undefined) {
       updateData.points_per_participant = normalizePointsBudget(body.pointsPerParticipant);
     }

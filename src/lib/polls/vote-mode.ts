@@ -18,6 +18,18 @@ export function normalizePointsBudget(raw: unknown, fallback = POINTS_DEFAULT): 
   return Math.min(POINTS_BUDGET_MAX, Math.max(0, Math.floor(n)));
 }
 
+export const POINTS_PREDICTION_QUESTION = "Bài thi đạt hạng Nhất sẽ được tổng cộng bao nhiêu điểm?";
+export const POINTS_PREDICTION_MAX = 1_000_000_000;
+
+/** Dự đoán tổng điểm: số nguyên từ 0 đến POINTS_PREDICTION_MAX, ngược lại trả null. */
+export function parsePointsPrediction(raw: unknown): number | null {
+  if (raw === null || raw === undefined || raw === "") return null;
+  const text = String(raw).trim();
+  if (!/^\d+$/.test(text)) return null;
+  const n = Number(text);
+  return Number.isSafeInteger(n) && n <= POINTS_PREDICTION_MAX ? n : null;
+}
+
 export type PollSubmissionMode = "admin" | "player";
 
 export const SUBMISSION_MODE_LABEL: Record<PollSubmissionMode, string> = {

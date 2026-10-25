@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
         is_active: isActive !== false,
         max_votes_per_user: parseInt(String(maxVotesPerUser), 10) || 3,
         max_guest_votes: parseInt(String(maxGuestVotes), 10) || 250,
-        has_prediction: voteMode === "points" ? false : Boolean(hasPrediction),
+        has_prediction: Boolean(hasPrediction),
         vote_mode: voteMode,
         points_per_participant: normalizePointsBudget(body.pointsPerParticipant),
         points_per_non_participant: normalizePointsBudget(body.pointsPerNonParticipant),

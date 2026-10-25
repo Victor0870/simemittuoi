@@ -10,6 +10,7 @@ import { EMPTY_REWARD_MONEY, REWARD_KINDS, type RewardMoney } from "@/lib/polls/
 import {
   POINTS_BUDGET_MAX,
   POINTS_DEFAULT,
+  POINTS_PREDICTION_QUESTION,
   SUBMISSION_MODE_LABEL,
   VOTE_MODE_LABEL,
   normalizePointsBudget,
@@ -450,7 +451,7 @@ export function PollEditorModal({
         votingEndsAt: fromLocalInput(votingEndsAtLocal),
         maxVotesPerUser,
         maxGuestVotes,
-        hasPrediction: voteMode === "points" ? false : hasPrediction,
+        hasPrediction,
         voteMode,
         pointsPerParticipant,
         pointsPerNonParticipant,
@@ -1475,34 +1476,41 @@ export function PollEditorModal({
               <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-5 space-y-4">
                 <label className="flex items-center gap-2.5 cursor-pointer font-bold text-amber-950 text-sm">
                   <input
-                    checked={voteMode !== "points" && hasPrediction}
+                    checked={hasPrediction}
                     className="h-5 w-5 rounded border-amber-400 text-amber-600"
-                    disabled={voteMode === "points"}
                     type="checkbox"
                     onChange={(e) => setHasPrediction(e.target.checked)}
                   />
                   <span>Kích hoạt câu hỏi: &ldquo;Tìm người dự đoán đúng nhất&rdquo;</span>
                 </label>
-                {voteMode === "points" ? (
-                  <p className="text-xs text-amber-900">
-                    Hình thức Vote theo point không dùng câu hỏi dự đoán (câu hỏi đếm số phiếu).
-                  </p>
-                ) : null}
 
-                {voteMode !== "points" && hasPrediction && (
+                {hasPrediction && (
                   <div className="space-y-3 pt-2">
-                    <div>
-                      <label className="text-label-xs font-bold text-amber-900" htmlFor="m-pred-q">
-                        Nội dung câu hỏi dự đoán:
-                      </label>
-                      <input
-                        id="m-pred-q"
-                        className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm text-on-surface"
-                        type="text"
-                        value={predictionQuestion}
-                        onChange={(e) => setPredictionQuestion(e.target.value)}
-                      />
-                    </div>
+                    {voteMode === "points" ? (
+                      <div className="space-y-1">
+                        <p className="text-label-xs font-bold text-amber-900">Câu hỏi dự đoán (cố định với Vote theo point):</p>
+                        <p className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-on-surface">
+                          {POINTS_PREDICTION_QUESTION}
+                        </p>
+                        <p className="text-xs text-amber-900">
+                          Người chơi nhập một số nguyên. Khi Đóng &amp; Trao giải, người có số lệch ít nhất so với tổng điểm
+                          của bài hạng Nhất thắng; lệch bằng nhau thì người gửi sớm hơn thắng.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="text-label-xs font-bold text-amber-900" htmlFor="m-pred-q">
+                          Nội dung câu hỏi dự đoán:
+                        </label>
+                        <input
+                          id="m-pred-q"
+                          className="mt-1 w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm text-on-surface"
+                          type="text"
+                          value={predictionQuestion}
+                          onChange={(e) => setPredictionQuestion(e.target.value)}
+                        />
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-amber-900">
                         Điểm thưởng cho người dự đoán đúng nhất (lệch ít nhất, sớm nhất):

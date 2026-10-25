@@ -3,7 +3,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 import { formatPollTime, getPollPhase } from "@/lib/polls/phase";
 import { loadVoterBudget, resolvePointVoter, type PointVoter } from "@/lib/polls/points-server";
-import { pointsReasonMessage } from "@/lib/polls/vote-mode";
+import { POINTS_PREDICTION_MAX, parsePointsPrediction, pointsReasonMessage } from "@/lib/polls/vote-mode";
+import {
+  deletePointsPrediction,
+  loadPointsPrediction,
+  savePointsPrediction,
+} from "@/lib/polls/prediction-server";
 
 async function loadPointsPoll(db: ReturnType<typeof createServiceClient>, pollId: string) {
   const { data, error } = await db.from(CDILV_TABLE.polls).select("*").eq("id", pollId).maybeSingle();
@@ -11,9 +16,14 @@ async function loadPointsPoll(db: ReturnType<typeof createServiceClient>, pollId
   return data;
 }
 
-async function voterPayload(db: ReturnType<typeof createServiceClient>, pollId: string, voter: PointVoter) {
-  const budget = await loadVoterBudget(db, pollId, voter);
+async function voterPayload(db: ReturnType<typeof createServiceClient>, poll: Record<string, any>, voter: PointVoter) {
+  const pollId = String(poll.id);
+  const [budget, prediction] = await Promise.all([
+    loadVoterBudget(db, pollId, voter),
+    poll.has_prediction ? loadPointsPrediction(db, pollId, voter) : Promise.resolve(null),
+  ]);
   return {
+    prediction,
     isJudge: voter.isJudge,
     employeeCode: voter.employeeCode,
     isParticipant: budget.isParticipant,
@@ -56,7 +66,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(await voterPayload(db, pollId, resolved.voter));
+    return NextResponse.json(await voterPayload(db, poll, resolved.voter));
   } catch (err: any) {
     console.error("[api/polls/points] GET error:", err);
     return NextResponse.json({ error: err?.message || "Không tải được điểm bình chọn." }, { status: 500 });
@@ -128,6 +138,25 @@ export async function POST(request: NextRequest) {
       voter.needsEmployeeCode && !voter.isPrivateJudgeVote && Object.keys(before.allocations).length === 0;
     const hasPoints = allocations.some((a: any) => Number(a?.points) > 0);
 
+    let predictedTotal: number | null = null;
+    if (poll.has_prediction && hasPoints) {
+      const rawPrediction = body?.predictedTotal;
+      const provided = rawPrediction !== undefined && rawPrediction !== null && rawPrediction !== "";
+      predictedTotal = parsePointsPrediction(rawPrediction);
+      if (provided && predictedTotal === null) {
+        return NextResponse.json(
+          { error: `Dự đoán phải là số nguyên từ 0 đến ${POINTS_PREDICTION_MAX.toLocaleString("vi-VN")}.` },
+          { status: 400 },
+        );
+      }
+      if (predictedTotal === null && !(await loadPointsPrediction(db, pollId, voter))) {
+        return NextResponse.json(
+          { error: "Vui lòng nhập dự đoán tổng điểm của bài thi đạt hạng Nhất." },
+          { status: 400 },
+        );
+      }
+    }
+
     if (isNewGuest && hasPoints) {
       const maxGuestVotes = poll.max_guest_votes ?? 250;
       if ((poll.guest_vote_count ?? 0) >= maxGuestVotes) {
@@ -188,6 +217,22 @@ export async function POST(request: NextRequest) {
         .eq("id", pollId);
     }
 
+    if (poll.has_prediction) {
+      if (Number(saved.used) > 0) {
+        if (predictedTotal !== null) {
+          await savePointsPrediction(db, {
+            pollId,
+            voter,
+            value: predictedTotal,
+            ipAddress: clientIp,
+            fingerprint,
+          });
+        }
+      } else {
+        await deletePointsPrediction(db, pollId, voter);
+      }
+    }
+
     if (voter.userId && poll.voter_reward_points > 0 && Number(saved.used) > 0) {
       try {
         await db.rpc("cdilv_award_poll_vote_score", { p_poll_id: pollId, p_user_id: voter.userId });
@@ -202,7 +247,7 @@ export async function POST(request: NextRequest) {
         Number(saved.used) > 0
           ? `Đã lưu ${saved.used}/${saved.budget} điểm bình chọn.`
           : "Đã rút toàn bộ điểm bình chọn.",
-      ...(await voterPayload(db, pollId, voter)),
+      ...(await voterPayload(db, poll, voter)),
     });
   } catch (err: any) {
     console.error("[api/polls/points] POST error:", err);

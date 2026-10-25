@@ -9,7 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { ImageLightboxModal } from "@/components/polls/ImageLightboxModal";
 import { usePollPhase } from "@/components/polls/usePollPhase";
 import { formatPollTime } from "@/lib/polls/phase";
-import { VOTE_MODE_LABEL } from "@/lib/polls/vote-mode";
+import { VOTE_MODE_LABEL, parsePointsPrediction } from "@/lib/polls/vote-mode";
 
 type Props = {
   poll: PollDetail;
@@ -28,6 +28,7 @@ type VoterState = {
   remaining: number;
   allocations: Record<string, number>;
   grants: Array<{ points: number; reason: string; createdAt: string }>;
+  prediction: { value: number; createdAt: string } | null;
 };
 
 function getOrCreateDeviceFingerprint(): string {
@@ -60,6 +61,7 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
   const [needsCode, setNeedsCode] = useState(false);
   const [voter, setVoter] = useState<VoterState | null>(null);
   const [draft, setDraft] = useState<Record<string, number>>({});
+  const [predictionText, setPredictionText] = useState("");
   const [loadingState, setLoadingState] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -92,6 +94,7 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
   const applyState = useCallback((data: VoterState) => {
     setVoter(data);
     setDraft({ ...data.allocations });
+    setPredictionText(data.prediction ? String(data.prediction.value) : "");
   }, []);
 
   const loadState = useCallback(
@@ -151,6 +154,10 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
     [draft, savedAllocations],
   );
   const overBudget = draftTotal > budget && !onlyReduces;
+  const askPrediction = poll.hasPrediction && !isClosed && !isInactive;
+  const predictedTotal = parsePointsPrediction(predictionText);
+  const predictionDirty =
+    askPrediction && Boolean(voter) && draftTotal > 0 && predictedTotal !== (voter?.prediction?.value ?? null);
 
   const canEdit = !isClosed && !isInactive && (isPractice || Boolean(voter));
   const membersOnlyBlocked = poll.accessType === "members_only" && !user && !judgeLinkOk && !judgeLinkPending;
@@ -169,6 +176,17 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
     if (confirmText && !window.confirm(confirmText)) return;
     setErrorMessage(null);
     setSuccessMessage(null);
+
+    const sendsPoints = Object.values(allocations).some((v) => (v || 0) > 0);
+    if (askPrediction && sendsPoints && predictedTotal === null) {
+      setErrorMessage(
+        predictionText.trim()
+          ? "Dự đoán phải là số nguyên không âm."
+          : "Vui lòng nhập dự đoán tổng điểm của bài thi đạt hạng Nhất.",
+      );
+      document.getElementById("points-prediction")?.focus();
+      return;
+    }
 
     if (isPractice) {
       setSuccessMessage(
@@ -195,6 +213,7 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
           employeeCode: needsCode ? employeeCode.trim() : undefined,
           judgeToken: judgeLinkOk || judgeLinkPending ? judgeToken : undefined,
           deviceFingerprint: getOrCreateDeviceFingerprint(),
+          predictedTotal: askPrediction && sendsPoints ? predictedTotal : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -454,6 +473,53 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
         })}
       </div>
 
+      {canEdit && askPrediction ? (
+        <div className="space-y-3 rounded-xl border border-amber-300 bg-white p-3.5 sm:p-5 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-amber-500/10 p-2 text-amber-700 shrink-0">
+              <MaterialIcon className="text-[22px]" name="help" />
+            </div>
+            <div>
+              <h4 className="text-title-sm font-bold text-[#173A67]">Câu hỏi dự đoán trúng thưởng</h4>
+              <p className="text-body-md text-amber-950 font-semibold mt-0.5">{poll.predictionQuestion}</p>
+              <p className="text-label-xs text-on-surface-variant mt-1">
+                Người dự đoán có số lệch ít nhất so với tổng điểm thực tế của bài hạng Nhất (bằng nhau thì người gửi sớm hơn)
+                được thưởng +{poll.predictorRewardPoints} điểm thi đua!
+              </p>
+            </div>
+          </div>
+          <div>
+            <label className="text-label-md font-bold text-[#173A67]" htmlFor="points-prediction">
+              Tổng điểm dự đoán cho bài thi đạt hạng Nhất:
+            </label>
+            <div className="mt-1 flex items-center gap-3">
+              <input
+                id="points-prediction"
+                className="w-full max-w-xs rounded-xl border border-outline-variant bg-surface-container-low px-4 py-2 text-headline-sm font-black text-[#173A67] focus:border-primary focus:ring-2 focus:ring-primary/20"
+                inputMode="numeric"
+                min={0}
+                placeholder="VD: 120"
+                step={1}
+                type="number"
+                value={predictionText}
+                onChange={(e) => {
+                  setSuccessMessage(null);
+                  setPredictionText(e.target.value);
+                }}
+              />
+              <span className="font-bold text-[#173A67]">điểm</span>
+            </div>
+          </div>
+          <p className="text-label-xs text-on-surface-variant">
+            Dự đoán được lưu cùng điểm bình chọn, theo mã nhân viên của bạn. Có thể sửa khi chương trình còn mở; nếu rút toàn
+            bộ điểm thì dự đoán cũng bị hủy.
+            {voter?.prediction
+              ? ` Dự đoán đang lưu: ${voter.prediction.value} điểm (gửi lúc ${formatPollTime(voter.prediction.createdAt)}).`
+              : ""}
+          </p>
+        </div>
+      ) : null}
+
       {canEdit ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-4 sm:p-5">
           <p className="text-sm font-semibold text-amber-950">
@@ -474,7 +540,7 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
             ) : null}
             <button
               className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-xs hover:bg-dusty-dark transition cursor-pointer disabled:opacity-50"
-              disabled={saving || overBudget || (!isPractice && !isDirty)}
+              disabled={saving || overBudget || (!isPractice && !isDirty && !predictionDirty)}
               type="button"
               onClick={() => submit(draft)}
             >

@@ -6,7 +6,9 @@ import { CDILV_TABLE } from "@/lib/supabase/tables";
 import type { PollStatus } from "@/lib/polls/phase";
 import { normalizeRewardMoney, type RewardMoney } from "@/lib/polls/reward-money";
 import { loadPointTally } from "@/lib/polls/points-server";
+import { loadPredictionRanking, type PredictionRanking } from "@/lib/polls/prediction-server";
 import {
+  POINTS_PREDICTION_QUESTION,
   normalizeSubmissionMode,
   normalizeVoteMode,
   type PollSubmissionMode,
@@ -93,6 +95,8 @@ export type PollSummary = {
 
 export type PollDetail = PollSummary & {
   options: PollOption[];
+  /** Vote theo point, sau khi đóng: bảng xếp hạng dự đoán tổng điểm bài hạng Nhất. */
+  predictionRanking?: PredictionRanking | null;
 };
 
 export async function getPolls(includeInactive = false): Promise<PollSummary[]> {
@@ -123,8 +127,9 @@ export async function getPolls(includeInactive = false): Promise<PollSummary[]> 
     guestVoteCount: row.guest_vote_count ?? 0,
     hasPrediction: Boolean(row.has_prediction),
     predictionQuestion:
-      row.prediction_question ||
-      "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+      normalizeVoteMode(row.vote_mode) === "points"
+        ? POINTS_PREDICTION_QUESTION
+        : row.prediction_question || "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
     voterRewardPoints: row.voter_reward_points ?? 0,
     entryRewardPoints: row.entry_reward_points ?? 0,
     predictorRewardPoints: row.predictor_reward_points ?? 0,
@@ -365,6 +370,22 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
 
   const totalVotes = options.reduce((sum, o) => sum + (o.voteCount || 0), 0);
 
+  let predictionRanking: PredictionRanking | null = null;
+  const actualWinningPoints = Number(pollRow.winning_predictor_info?.actualCount);
+  if (
+    voteMode === "points" &&
+    pollRow.has_prediction &&
+    pollRow.status === "closed" &&
+    Number.isFinite(actualWinningPoints)
+  ) {
+    try {
+      predictionRanking = await loadPredictionRanking(createServiceClient(), id, actualWinningPoints);
+    } catch (rankingError: any) {
+      if (strict) throw rankingError;
+      console.error("[polls] getPredictionRanking error:", rankingError?.message);
+    }
+  }
+
   return {
     id: pollRow.id,
     title: pollRow.title,
@@ -381,8 +402,9 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     guestVoteCount: pollRow.guest_vote_count ?? 0,
     hasPrediction: Boolean(pollRow.has_prediction),
     predictionQuestion:
-      pollRow.prediction_question ||
-      "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
+      voteMode === "points"
+        ? POINTS_PREDICTION_QUESTION
+        : pollRow.prediction_question || "Theo bạn có bao nhiêu người bình chọn cho tác phẩm đạt giải nhất?",
     voterRewardPoints: pollRow.voter_reward_points ?? 0,
     entryRewardPoints: pollRow.entry_reward_points ?? 0,
     predictorRewardPoints: pollRow.predictor_reward_points ?? 0,
@@ -410,5 +432,6 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
     closedAt: pollRow.closed_at,
     totalVotes,
     options,
+    predictionRanking,
   };
 }
