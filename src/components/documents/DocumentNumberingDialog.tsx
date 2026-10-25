@@ -8,30 +8,62 @@ import {
   NUMBERING_TOKENS,
   formatDocumentNumber,
   numberingError,
+  numberingPeriodLabel,
   type NumberingReset,
   type NumberingSeries,
+  type NumberingStatus,
 } from "@/lib/documents/numbering";
 import { todayInVietnam } from "@/lib/documents/registry";
-import { DOCUMENT_TYPE_LABEL } from "@/lib/documents/templates";
+import { DOCUMENT_TYPE_LABEL, type DocumentType } from "@/lib/documents/templates";
 
 const inputClass =
   "block h-8 w-full rounded-lg border border-outline-variant bg-white px-2 text-sm text-on-surface outline-none focus:border-[#173A67]";
 
-/** Cấu hình số văn bản tự động theo loại: mẫu số, số chữ số, chu kỳ đếm lại. Không đổi số đã ban hành. */
+type NumberingConfig = { series: NumberingSeries[]; status: Record<DocumentType, NumberingStatus> };
+
+/**
+ * Cấu hình số văn bản tự động theo loại: mẫu số, số chữ số, chu kỳ đếm lại, bắt đầu từ số (cho kỳ hiện tại).
+ * Không đổi số đã ban hành; không cho đặt số bắt đầu nhỏ hơn hoặc bằng số đã cấp gần nhất trong kỳ.
+ */
 export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
   const [series, setSeries] = useState<NumberingSeries[] | null>(null);
+  const [baseline, setBaseline] = useState<NumberingConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const today = todayInVietnam();
 
+  function applyConfig(config: NumberingConfig) {
+    setBaseline(config);
+    setSeries(config.series);
+  }
+
+  /** Cảnh báo lùi số: số bắt đầu đã đổi nhưng không lớn hơn số đã cấp gần nhất của kỳ hiện tại. */
+  function startWarning(s: NumberingSeries): string | null {
+    const before = baseline?.series.find((b) => b.type === s.type);
+    const status = baseline?.status[s.type];
+    if (!before || !status || before.reset !== s.reset || s.start === before.start) return null;
+    if (s.start > status.lastIssued) return null;
+    return (
+      `Số bắt đầu phải lớn hơn ${status.lastIssued} – số đã cấp gần nhất trong ${numberingPeriodLabel(status.period)}. ` +
+      "Không thể lùi số."
+    );
+  }
+
+  /** Số tiếp theo theo cấu hình đang sửa: max(số bắt đầu, số đã cấp gần nhất + 1). */
+  function nextNumber(s: NumberingSeries): string {
+    const before = baseline?.series.find((b) => b.type === s.type);
+    const last = before && before.reset === s.reset ? (baseline?.status[s.type].lastIssued ?? 0) : 0;
+    return formatDocumentNumber(s.format.trim(), s.pad, Math.max(s.start, last + 1), today);
+  }
+
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/documents/numbering", { signal: controller.signal })
       .then(async (res) => {
-        const data = (await res.json().catch(() => ({}))) as { series?: NumberingSeries[]; error?: string };
-        if (!res.ok || !data.series) throw new Error(data.error || "Không tải được cấu hình số văn bản.");
-        setSeries(data.series);
+        const data = (await res.json().catch(() => ({}))) as Partial<NumberingConfig> & { error?: string };
+        if (!res.ok || !data.series || !data.status) throw new Error(data.error || "Không tải được cấu hình số văn bản.");
+        applyConfig({ series: data.series, status: data.status });
       })
       .catch((err: unknown) => {
         if (!controller.signal.aborted) setError(err instanceof Error ? err.message : "Không tải được cấu hình số văn bản.");
@@ -47,8 +79,10 @@ export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
   async function save() {
     if (!series) return;
     setError(null);
-    const invalid = series.find((s) => numberingError(s));
-    if (invalid) return setError(`${DOCUMENT_TYPE_LABEL[invalid.type]}: ${numberingError(invalid)}`);
+    const invalid = series.find((s) => numberingError(s) || startWarning(s));
+    if (invalid) {
+      return setError(`${DOCUMENT_TYPE_LABEL[invalid.type]}: ${numberingError(invalid) ?? startWarning(invalid)}`);
+    }
     setSaving(true);
     try {
       const res = await fetch("/api/documents/numbering", {
@@ -56,9 +90,9 @@ export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ series }),
       });
-      const data = (await res.json().catch(() => ({}))) as { series?: NumberingSeries[]; error?: string };
-      if (!res.ok || !data.series) throw new Error(data.error || "Không lưu được cấu hình số văn bản.");
-      setSeries(data.series);
+      const data = (await res.json().catch(() => ({}))) as Partial<NumberingConfig> & { error?: string };
+      if (!res.ok || !data.series || !data.status) throw new Error(data.error || "Không lưu được cấu hình số văn bản.");
+      applyConfig({ series: data.series, status: data.status });
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không lưu được cấu hình số văn bản.");
@@ -102,16 +136,23 @@ export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
             ))}
             . Đổi cấu hình không làm thay đổi số của văn bản đã ban hành.
           </p>
+          <p className="rounded-lg bg-[#ecf4ff] px-2.5 py-1.5 text-[11px] text-[#173A67]">
+            <strong>Bắt đầu từ số</strong> dùng khi chuyển từ sổ văn bản giấy sang web, áp dụng cho kỳ đếm hiện tại: VD số
+            giấy cuối cùng là 37 thì nhập 38. Số tiếp theo luôn lớn hơn số đã cấp gần nhất trong kỳ, không lùi số được.
+          </p>
 
           {series === null && !error ? <p className="py-6 text-center text-xs text-on-surface-variant">Đang tải…</p> : null}
 
           {series?.map((s, index) => {
             const rowError = numberingError(s);
+            const warning = rowError ? null : startWarning(s);
+            const status = baseline?.status[s.type];
+            const resetChanged = baseline?.series.find((b) => b.type === s.type)?.reset !== s.reset;
             return (
               <fieldset key={s.type} className="rounded-xl border border-[#d2dfe9] bg-white px-3 py-2">
                 <legend className="px-1 text-xs font-bold text-[#173A67]">{DOCUMENT_TYPE_LABEL[s.type]}</legend>
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_90px_190px]">
-                  <label className="block">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-[minmax(0,1fr)_76px_96px_172px]">
+                  <label className="col-span-2 block sm:col-span-1">
                     <span className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant">Mẫu số</span>
                     <input
                       className={inputClass}
@@ -137,6 +178,21 @@ export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
                     </select>
                   </label>
                   <label className="block">
+                    <span className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant">Bắt đầu từ số</span>
+                    <input
+                      className={`${inputClass} tabular-nums ${warning ? "border-error focus:border-error" : ""}`}
+                      disabled={saving}
+                      inputMode="numeric"
+                      max={NUMBERING_LIMITS.startMax}
+                      min={1}
+                      step={1}
+                      title="Áp dụng cho kỳ đếm hiện tại, VD số giấy cuối cùng là 37 thì nhập 38"
+                      type="number"
+                      value={Number.isFinite(s.start) && s.start > 0 ? s.start : ""}
+                      onChange={(e) => update(index, { start: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="col-span-2 block sm:col-span-1">
                     <span className="mb-0.5 block text-[11px] font-semibold text-on-surface-variant">Chu kỳ đếm</span>
                     <select
                       className={inputClass}
@@ -152,15 +208,31 @@ export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
                     </select>
                   </label>
                 </div>
-                <p className={`mt-1 text-[11px] ${rowError ? "font-semibold text-error" : "text-on-surface-variant"}`}>
-                  {rowError ?? (
-                    <>
-                      Ví dụ: <strong className="tabular-nums text-[#173A67]">{formatDocumentNumber(s.format.trim(), s.pad, 1, today)}</strong>
-                      {", "}
-                      <strong className="tabular-nums text-[#173A67]">{formatDocumentNumber(s.format.trim(), s.pad, 2, today)}</strong>…
-                    </>
-                  )}
-                </p>
+                {rowError || warning ? (
+                  <p className="mt-1 flex items-start gap-1 text-[11px] font-semibold text-error" role="alert">
+                    <MaterialIcon className="text-[14px]" name="warning" />
+                    {rowError ?? warning}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-on-surface-variant">
+                    {status && !resetChanged ? (
+                      <>
+                        Kỳ hiện tại ({numberingPeriodLabel(status.period)}):{" "}
+                        {status.lastIssued > 0 ? (
+                          <>
+                            đã cấp gần nhất số <strong className="tabular-nums text-[#173A67]">{status.lastIssued}</strong>
+                          </>
+                        ) : (
+                          "chưa cấp số nào"
+                        )}
+                        {" · "}
+                      </>
+                    ) : resetChanged ? (
+                      "Chu kỳ mới áp dụng từ kỳ hiện tại · "
+                    ) : null}
+                    Số tiếp theo: <strong className="tabular-nums text-[#173A67]">{nextNumber(s)}</strong>
+                  </p>
+                )}
               </fieldset>
             );
           })}
@@ -184,7 +256,7 @@ export function DocumentNumberingDialog({ onClose }: { onClose: () => void }) {
           </button>
           <button
             className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
-            disabled={saving || !series}
+            disabled={saving || !series || series.some((s) => numberingError(s) || startWarning(s))}
             type="button"
             onClick={() => void save()}
           >

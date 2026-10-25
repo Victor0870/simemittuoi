@@ -1,6 +1,7 @@
 /**
- * Số văn bản tự động – xem supabase/migration_document_numbering.sql.
+ * Số văn bản tự động – xem supabase/migration_document_numbering.sql và migration_document_number_start.sql.
  * Mỗi loại văn bản có một mẫu số và chu kỳ đếm; số được cấp ở máy chủ (hàm cdilv_document_issue) đúng lúc ban hành.
+ * Số bắt đầu (start) áp dụng cho kỳ đếm hiện tại: số tiếp theo = max(số bắt đầu, số đã cấp gần nhất trong kỳ + 1).
  */
 
 import { DOCUMENT_TYPES, type DocumentType } from "./templates";
@@ -12,9 +13,26 @@ export type NumberingSeries = {
   format: string;
   pad: number;
   reset: NumberingReset;
+  /** Bắt đầu từ số – cho kỳ đếm hiện tại. */
+  start: number;
 };
 
-export const NUMBERING_LIMITS = { formatMin: 4, formatMax: 40, padMin: 1, padMax: 5 } as const;
+/** Trạng thái kỳ đếm hiện tại theo cấu hình đã lưu. */
+export type NumberingStatus = {
+  /** "2026" hoặc "2026-10" */
+  period: string;
+  /** Số thứ tự đã cấp gần nhất trong kỳ (gồm số nhập tay khớp mẫu số), 0 nếu chưa cấp. */
+  lastIssued: number;
+  /** Số sẽ cấp tiếp theo. */
+  next: string;
+};
+
+export const NUMBERING_LIMITS = { formatMin: 4, formatMax: 40, padMin: 1, padMax: 5, startMax: 999999 } as const;
+
+export function numberingPeriodLabel(period: string): string {
+  const [year, month] = period.split("-");
+  return month ? `tháng ${month}/${year}` : `năm ${year}`;
+}
 
 export const NUMBERING_TOKENS: { token: string; label: string }[] = [
   { token: "{so}", label: "Số thứ tự (bắt buộc)" },
@@ -29,10 +47,10 @@ export const NUMBERING_RESET_LABEL: Record<NumberingReset, string> = {
 };
 
 export const DEFAULT_NUMBERING: Record<DocumentType, Omit<NumberingSeries, "type">> = {
-  quyet_dinh: { format: "{so}-{yy}/QĐ-CĐCS", pad: 2, reset: "yearly" },
-  quy_dinh: { format: "{so}-{yy}/QyĐ-CĐCS", pad: 2, reset: "yearly" },
-  bien_ban_lam_viec: { format: "{so}-{yy}/BBLV-CĐCS", pad: 2, reset: "yearly" },
-  bien_ban_cuoc_hop: { format: "{so}-{yy}/BB-CĐCS", pad: 2, reset: "yearly" },
+  quyet_dinh: { format: "{so}-{yy}/QĐ-CĐCS", pad: 2, reset: "yearly", start: 1 },
+  quy_dinh: { format: "{so}-{yy}/QyĐ-CĐCS", pad: 2, reset: "yearly", start: 1 },
+  bien_ban_lam_viec: { format: "{so}-{yy}/BBLV-CĐCS", pad: 2, reset: "yearly", start: 1 },
+  bien_ban_cuoc_hop: { format: "{so}-{yy}/BB-CĐCS", pad: 2, reset: "yearly", start: 1 },
 };
 
 export function defaultNumberingSeries(): NumberingSeries[] {
@@ -50,7 +68,10 @@ export function formatDocumentNumber(format: string, pad: number, seq: number, d
 }
 
 /** Lỗi của một dòng cấu hình (khớp ràng buộc trong bảng cdilv_document_number_series), null nếu hợp lệ. */
-export function numberingError(series: Pick<NumberingSeries, "format" | "pad" | "reset">): string | null {
+export function numberingError(series: Pick<NumberingSeries, "format" | "pad" | "reset" | "start">): string | null {
+  if (!Number.isInteger(series.start) || series.start < 1 || series.start > NUMBERING_LIMITS.startMax) {
+    return `Bắt đầu từ số phải là số nguyên từ 1 đến ${NUMBERING_LIMITS.startMax}.`;
+  }
   const format = series.format.trim();
   if (!format.includes("{so}")) return "Mẫu số phải có {so}.";
   if (format.length < NUMBERING_LIMITS.formatMin || format.length > NUMBERING_LIMITS.formatMax) {

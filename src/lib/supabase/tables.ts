@@ -92,6 +92,8 @@ export const CDILV_RPC = {
   fundEntryVoid: "cdilv_fund_entry_void",
   documentIssue: "cdilv_document_issue",
   documentNumberPreview: "cdilv_document_number_preview",
+  documentNumberState: "cdilv_document_number_state",
+  documentNumberConfigure: "cdilv_document_number_configure",
 } as const;
 
 /** Bucket avatar riêng — không dùng chung bucket avatars (nếu BizMate có). */
