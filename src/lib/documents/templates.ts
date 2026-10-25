@@ -318,7 +318,7 @@ export function parseStructuredDocument(body: string, docType: DocumentType): St
       continue;
     }
 
-    if (/^Căn cứ\b/i.test(line)) {
+    if (/^Căn cứ(\s|$)/i.test(line)) {
       bases.push(line);
     }
   }
