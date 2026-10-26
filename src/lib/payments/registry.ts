@@ -16,6 +16,18 @@ export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "Tiền mặt",
 };
 
+export type PaymentReceiverKind = "organization" | "individual" | "member";
+
+export const PAYMENT_RECEIVER_KIND_LABEL: Record<PaymentReceiverKind, string> = {
+  organization: "Công ty",
+  individual: "Cá nhân",
+  member: "Đoàn viên",
+};
+
+export function isPaymentReceiverKind(value: unknown): value is PaymentReceiverKind {
+  return value === "organization" || value === "individual" || value === "member";
+}
+
 export const PAYMENT_LOG_LABEL: Record<string, string> = {
   created: "Lập đề nghị",
   edited: "Sửa đề nghị",
@@ -54,10 +66,13 @@ export type PaymentInput = {
   requesterName: string;
   requesterDepartment: string | null;
   paymentMethod: PaymentMethod;
+  receiverKind: PaymentReceiverKind;
+  /** Đoàn viên nhận tiền (khi receiverKind = member). */
+  receiverMemberId: string | null;
   receiverName: string | null;
   receiverAccount: string | null;
   receiverBank: string | null;
-  /** Đối tượng trong danh mục (nếu chọn) – để lập danh sách chuyển khoản. */
+  /** Đối tượng trong danh mục (nếu chọn, chỉ với Công ty / Cá nhân) – để lập danh sách chuyển khoản. */
   counterpartyId: string | null;
   note: string | null;
   items: PaymentItemInput[];
@@ -100,8 +115,16 @@ export function parsePaymentInput(
   const receiverName = oneLine(raw.receiverName) || null;
   const receiverAccount = oneLine(raw.receiverAccount).replace(/\s/g, "") || null;
   const receiverBank = oneLine(raw.receiverBank) || null;
+  const receiverKind: PaymentReceiverKind = isPaymentReceiverKind(raw.receiverKind) ? raw.receiverKind : "organization";
+  const receiverMemberId =
+    receiverKind === "member" && typeof raw.receiverMemberId === "string" && UUID_RE.test(raw.receiverMemberId)
+      ? raw.receiverMemberId
+      : null;
+  if (receiverKind === "member" && !receiverMemberId) errors.push("Vui lòng chọn đoàn viên nhận tiền (theo tên hoặc mã NV).");
   const counterpartyId =
-    typeof raw.counterpartyId === "string" && UUID_RE.test(raw.counterpartyId) ? raw.counterpartyId : null;
+    receiverKind !== "member" && typeof raw.counterpartyId === "string" && UUID_RE.test(raw.counterpartyId)
+      ? raw.counterpartyId
+      : null;
   if ((receiverName?.length ?? 0) > PAYMENT_LIMITS.name || (receiverBank?.length ?? 0) > PAYMENT_LIMITS.name) {
     errors.push("Tên người nhận / ngân hàng quá dài.");
   }
@@ -147,6 +170,8 @@ export function parsePaymentInput(
       requesterName,
       requesterDepartment,
       paymentMethod,
+      receiverKind,
+      receiverMemberId,
       receiverName,
       receiverAccount,
       receiverBank,
@@ -166,6 +191,8 @@ export function paymentRpcPayload(input: PaymentInput) {
       requester_name: input.requesterName,
       requester_department: input.requesterDepartment,
       payment_method: input.paymentMethod,
+      receiver_kind: input.receiverKind,
+      receiver_member_id: input.receiverMemberId,
       receiver_name: input.receiverName,
       receiver_account: input.receiverAccount,
       receiver_bank: input.receiverBank,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PaymentRequestForm } from "@/components/payments/PaymentRequestForm";
 import { newPaymentItem } from "@/lib/payments/form-items";
 import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
@@ -10,8 +10,14 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { Counterparty } from "@/lib/catalogs/registry";
 import { formatDateTimeVi } from "@/lib/data/albums";
 import { formatDateVi } from "@/lib/members/profile-shared";
-import { PAYMENT_LIMITS, PAYMENT_LOG_LABEL, PAYMENT_METHOD_LABEL, toTransferText } from "@/lib/payments/registry";
-import type { PaymentAbilities, PaymentRequestDetail } from "@/lib/payments/server";
+import {
+  PAYMENT_LIMITS,
+  PAYMENT_LOG_LABEL,
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_RECEIVER_KIND_LABEL,
+  toTransferText,
+} from "@/lib/payments/registry";
+import type { PaymentAbilities, PaymentMember, PaymentRequestDetail } from "@/lib/payments/server";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -21,13 +27,25 @@ type Props = {
   isCreator: boolean;
   canViewVisits: boolean;
   counterparties: Counterparty[];
+  members: PaymentMember[];
+  /** Vừa bấm “Lập & tải giấy đề nghị” – tự tải file in một lần. */
+  autoPrint?: boolean;
 };
 
 const textareaClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 
-export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits, counterparties }: Props) {
+export function PaymentRequestDetailView({
+  detail,
+  can,
+  isCreator,
+  canViewVisits,
+  counterparties,
+  members,
+  autoPrint,
+}: Props) {
   const router = useRouter();
+  const printedRef = useRef(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
@@ -43,6 +61,14 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
   const printable = detail.status !== "rejected" && detail.status !== "cancelled";
   const linkedVisits = detail.items.filter((i) => i.visit_request_id).length;
   const remaining = detail.total_amount - detail.advanced_amount;
+  const receiverKind = detail.receiver_kind ?? detail.counterparty?.kind ?? null;
+
+  useEffect(() => {
+    if (!autoPrint || !printable || printedRef.current) return;
+    printedRef.current = true;
+    window.location.assign(`/api/payments/${detail.id}/print`);
+    window.history.replaceState(null, "", `/admin/administration/payments/${detail.id}?created=1`);
+  }, [autoPrint, printable, detail.id]);
 
   async function transition(to: "approved" | "rejected" | "paid" | "cancelled") {
     setBusy(to);
@@ -77,6 +103,8 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
           requesterName: detail.requester_name,
           requesterDepartment: detail.requester_department ?? "",
           paymentMethod: detail.payment_method,
+          receiverKind: receiverKind ?? "organization",
+          receiverMemberId: detail.receiver_member_id ?? "",
           receiverName: detail.receiver_name ?? "",
           receiverAccount: detail.receiver_account ?? "",
           receiverBank: detail.receiver_bank ?? "",
@@ -94,6 +122,7 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
           ),
         }}
         counterparties={counterparties}
+        members={members}
         mode="edit"
         requestId={detail.id}
         onCancel={() => setEditing(false)}
@@ -146,7 +175,9 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
             <dd className="font-semibold">{formatDateVi(detail.request_date)}</dd>
           </div>
           <div className="sm:col-span-2">
-            <dt className="text-xs text-on-surface-variant">Người nhận</dt>
+            <dt className="text-xs text-on-surface-variant">
+              Người nhận{receiverKind ? ` (${PAYMENT_RECEIVER_KIND_LABEL[receiverKind]})` : ""}
+            </dt>
             <dd className="font-semibold">
               {detail.receiver_name ?? "—"}
               {detail.receiver_account ? (
@@ -161,6 +192,12 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
                   Đối tượng {detail.counterparty.code} – {detail.counterparty.name}
                   {detail.counterparty.tax_code ? ` · MST ${detail.counterparty.tax_code}` : ""}
                   {detail.counterparty.address ? ` · ${detail.counterparty.address}` : ""}
+                </span>
+              ) : null}
+              {detail.receiver_member ? (
+                <span className="mt-0.5 block text-xs font-normal text-on-surface-variant">
+                  Đoàn viên {[detail.receiver_member.employee_code, detail.receiver_member.full_name].filter(Boolean).join(" – ")}
+                  {detail.receiver_member.department ? ` · ${detail.receiver_member.department}` : ""}
                 </span>
               ) : null}
             </dd>

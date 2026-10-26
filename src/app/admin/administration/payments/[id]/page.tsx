@@ -6,19 +6,19 @@ import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
-import { loadPaymentRequestDetail, paymentAbilities } from "@/lib/payments/server";
+import { loadPaymentMembers, loadPaymentRequestDetail, paymentAbilities } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; print?: string }>;
 };
 
 export default async function PaymentRequestPage({ params, searchParams }: PageProps) {
   const { id } = await params;
-  const { created } = await searchParams;
+  const { created, print } = await searchParams;
   const access = await getCurrentAccess();
   if (!access) redirect(`/login?next=/admin/administration/payments/${id}`);
   const can = paymentAbilities(access);
@@ -27,10 +27,13 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
   const db = createServiceClient();
   const [detail, settings] = await Promise.all([loadPaymentRequestDetail(db, id), loadFormSettings(db)]);
   if (!detail) notFound();
-  const counterparties =
-    can.create && detail.status === "proposed"
-      ? await loadCounterparties(db, { activeOnly: true, includeIds: [detail.counterparty_id] })
-      : [];
+  const editable = can.create && detail.status === "proposed";
+  const [counterparties, members] = editable
+    ? await Promise.all([
+        loadCounterparties(db, { activeOnly: true, includeIds: [detail.counterparty_id] }),
+        loadPaymentMembers(db, detail.receiver_member_id),
+      ])
+    : [[], []];
 
   const missingSigners = [
     !settings.accountantName ? "Kế toán Công đoàn" : null,
@@ -47,9 +50,19 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
         Đề nghị thanh toán
       </Link>
       {created ? (
-        <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           <MaterialIcon className="text-[20px]" name="check_circle" />
-          Đã lập đề nghị {detail.code}. Người có quyền duyệt đã nhận được thông báo.
+          <span className="flex-1">
+            Đã lập đề nghị {detail.code}. Người có quyền duyệt đã nhận được thông báo.
+            {print ? " Giấy đề nghị đang được tải về." : ""}
+          </span>
+          <a
+            className="inline-flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800"
+            href={`/api/payments/${detail.id}/print`}
+          >
+            <MaterialIcon className="text-[16px]" name="print" />
+            {print ? "Tải lại" : "Tải giấy đề nghị để in"}
+          </a>
         </div>
       ) : null}
       {missingSigners.length ? (
@@ -59,7 +72,9 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
         </div>
       ) : null}
       <PaymentRequestDetailView
+        autoPrint={Boolean(created && print)}
         can={can}
+        members={members}
         canViewVisits={hasPermission(access, PERMISSIONS.visitsView)}
         counterparties={counterparties}
         detail={detail}

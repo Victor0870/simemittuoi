@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PaymentMemberPicker } from "@/components/payments/PaymentMemberPicker";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { counterpartyMatches, type Counterparty } from "@/lib/catalogs/registry";
 import { formatDateVi } from "@/lib/members/profile-shared";
@@ -9,11 +10,13 @@ import { newPaymentItem, type PaymentFormItem } from "@/lib/payments/form-items"
 import {
   PAYMENT_LIMITS,
   PAYMENT_METHOD_LABEL,
+  PAYMENT_RECEIVER_KIND_LABEL,
   parsePaymentInput,
   toTransferText,
   type PaymentMethod,
+  type PaymentReceiverKind,
 } from "@/lib/payments/registry";
-import type { VisitCandidate } from "@/lib/payments/server";
+import type { PaymentMember, PaymentMemberBank, VisitCandidate } from "@/lib/payments/server";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -23,6 +26,8 @@ export type PaymentFormValues = {
   requesterName: string;
   requesterDepartment: string;
   paymentMethod: PaymentMethod;
+  receiverKind: PaymentReceiverKind;
+  receiverMemberId: string;
   receiverName: string;
   receiverAccount: string;
   receiverBank: string;
@@ -39,8 +44,12 @@ type Props = {
   canGatherVisits: boolean;
   /** Danh mục đối tượng để chọn người nhận (đang dùng + đối tượng đã gắn). */
   counterparties?: Counterparty[];
+  /** Đoàn viên để chọn người nhận theo tên / mã NV (số TK lấy từ hồ sơ khi chọn). */
+  members?: PaymentMember[];
   onCancel?: () => void;
 };
+
+const RECEIVER_KINDS: PaymentReceiverKind[] = ["organization", "individual", "member"];
 
 const inputClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
@@ -55,11 +64,16 @@ function visitLine(v: VisitCandidate): string {
   return `Thăm hỏi ${who} – ${v.reason}`.slice(0, PAYMENT_LIMITS.content);
 }
 
-export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, counterparties, onCancel }: Props) {
+export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, counterparties, members, onCancel }: Props) {
   const router = useRouter();
   const [values, setValues] = useState<PaymentFormValues>(initial);
   const [partySearch, setPartySearch] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [memberBank, setMemberBank] = useState<{ loading: boolean; missing: boolean; error: string | null }>({
+    loading: false,
+    missing: false,
+    error: null,
+  });
+  const [busy, setBusy] = useState<"save" | "print" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<VisitCandidate[] | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -81,8 +95,50 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
   const total = values.items.reduce((sum, i) => sum + toNumber(i.amount), 0);
   const advanced = values.items.reduce((sum, i) => sum + toNumber(i.advanced), 0);
   const linkedIds = new Set(values.items.map((i) => i.visitRequestId).filter(Boolean));
+  const isMember = values.receiverKind === "member";
   const party = counterparties?.find((c) => c.id === values.counterpartyId) ?? null;
-  const partyOptions = (counterparties ?? []).filter((c) => c.id === values.counterpartyId || counterpartyMatches(c, partySearch));
+  const kindParties = (counterparties ?? []).filter((c) => c.kind === values.receiverKind || c.id === values.counterpartyId);
+  const partyOptions = kindParties.filter((c) => c.id === values.counterpartyId || counterpartyMatches(c, partySearch));
+
+  function changeKind(kind: PaymentReceiverKind) {
+    if (kind === values.receiverKind) return;
+    setPartySearch("");
+    setMemberBank({ loading: false, missing: false, error: null });
+    set({ receiverKind: kind, counterpartyId: "", receiverMemberId: "", receiverName: "", receiverAccount: "", receiverBank: "" });
+  }
+
+  async function pickMember(member: PaymentMember | null) {
+    if (!member) {
+      setMemberBank({ loading: false, missing: false, error: null });
+      set({ receiverMemberId: "" });
+      return;
+    }
+    set({ receiverMemberId: member.id, receiverName: member.full_name.slice(0, PAYMENT_LIMITS.name) });
+    setMemberBank({ loading: true, missing: false, error: null });
+    try {
+      const res = await fetch(`/api/payments/members/${member.id}`);
+      const data = (await res.json().catch(() => ({}))) as { bank?: PaymentMemberBank; error?: string };
+      if (!res.ok || !data.bank) {
+        setMemberBank({ loading: false, missing: false, error: data.error ?? "Không tải được số tài khoản của đoàn viên." });
+        return;
+      }
+      const b = data.bank;
+      const bankText = [b.bank_name, b.bank_branch].filter(Boolean).join(" – ");
+      setValues((v) =>
+        v.receiverMemberId === member.id
+          ? {
+              ...v,
+              receiverName: (b.bank_account_holder || member.full_name).slice(0, PAYMENT_LIMITS.name),
+              receiverAccount: (b.bank_account_no ?? "").slice(0, PAYMENT_LIMITS.account),
+              receiverBank: bankText.slice(0, PAYMENT_LIMITS.name),
+            }
+          : v,
+      );
+      setMemberBank({ loading: false, missing: !b.bank_account_no || !b.bank_name, error: null });
+    } catch {
+      setMemberBank({ loading: false, missing: false, error: "Mất kết nối, không tải được số tài khoản." });
+    }
+  }
 
   function pickCounterparty(id: string) {
     const c = counterparties?.find((x) => x.id === id);
@@ -139,7 +195,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
     setPicked(new Set());
   }
 
-  async function submit() {
+  async function submit(print = false) {
     const payload = {
       ...values,
       items: values.items.map((i) => ({
@@ -155,7 +211,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
       setError(parsed.errors.join(" "));
       return;
     }
-    setBusy(true);
+    setBusy(print ? "print" : "save");
     setError(null);
     try {
       const res = await fetch(mode === "create" ? "/api/payments" : `/api/payments/${requestId}`, {
@@ -168,7 +224,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         setError(data.error ?? "Không lưu được đề nghị.");
         return;
       }
-      if (mode === "create") router.push(`/admin/administration/payments/${data.id}?created=1`);
+      if (mode === "create") router.push(`/admin/administration/payments/${data.id}?created=1${print ? "&print=1" : ""}`);
       else {
         router.refresh();
         onCancel?.();
@@ -176,7 +232,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
     } catch {
       setError("Mất kết nối, vui lòng thử lại.");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
@@ -449,12 +505,56 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
             </label>
           ))}
         </div>
-        {counterparties ? (
-          <div className="space-y-1.5 rounded-lg bg-surface-container-low p-2.5">
-            <label className={labelClass}>Chọn đối tượng nhận tiền từ danh mục (tự điền người nhận, số TK, ngân hàng)</label>
-            {counterparties.length ? (
+        <div className="space-y-2 rounded-lg bg-surface-container-low p-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs font-bold text-on-surface-variant" htmlFor="payment-receiver-kind">
+              Đối tượng nhận tiền:
+            </label>
+            <select
+              className={`${inputClass} w-auto min-w-[160px]`}
+              id="payment-receiver-kind"
+              value={values.receiverKind}
+              onChange={(e) => changeKind(e.target.value as PaymentReceiverKind)}
+            >
+              {RECEIVER_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {PAYMENT_RECEIVER_KIND_LABEL[k]}
+                </option>
+              ))}
+            </select>
+          </div>
+          {isMember ? (
+            members ? (
+              <div className="space-y-1.5">
+                <p className="text-[11px] text-on-surface-variant">
+                  Nhập họ tên hoặc mã NV rồi chọn đoàn viên – số tài khoản và ngân hàng lấy từ hồ sơ đoàn viên.
+                </p>
+                <PaymentMemberPicker
+                  inputClass={inputClass}
+                  labelClass={labelClass}
+                  memberId={values.receiverMemberId}
+                  members={members}
+                  onPick={(m) => void pickMember(m)}
+                />
+                {memberBank.loading ? (
+                  <p className="text-xs text-on-surface-variant">Đang lấy số tài khoản từ hồ sơ đoàn viên…</p>
+                ) : memberBank.error ? (
+                  <p className="text-xs text-error">{memberBank.error}</p>
+                ) : memberBank.missing ? (
+                  <p className="text-xs text-amber-700">
+                    Đoàn viên chưa khai đủ số tài khoản / ngân hàng trong hồ sơ – hãy nhập tay bên dưới.
+                  </p>
+                ) : null}
+              </div>
+            ) : null
+          ) : counterparties ? (
+          <div className="space-y-1.5">
+            <label className={labelClass}>
+              Chọn {PAYMENT_RECEIVER_KIND_LABEL[values.receiverKind].toLowerCase()} từ danh mục (tự điền người nhận, số TK, ngân hàng)
+            </label>
+            {kindParties.length ? (
               <div className="flex flex-wrap gap-2">
-                {counterparties.length > 10 ? (
+                {kindParties.length > 10 ? (
                   <input
                     className={`${inputClass} sm:max-w-[220px]`}
                     placeholder="Tìm mã, tên, MST..."
@@ -479,7 +579,8 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
               </div>
             ) : (
               <p className="text-xs text-on-surface-variant">
-                Danh mục đối tượng đang trống – thêm công ty / cá nhân tại mục Quản lý danh mục để lần sau chọn nhanh.
+                Danh mục chưa có {PAYMENT_RECEIVER_KIND_LABEL[values.receiverKind].toLowerCase()} nào – nhập tay bên dưới, hoặc
+                thêm tại mục Quản lý danh mục để lần sau chọn nhanh.
               </p>
             )}
             {party ? (
@@ -491,7 +592,8 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
               </p>
             ) : null}
           </div>
-        ) : null}
+          ) : null}
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className={labelClass}>Người nhận / Chủ TK{values.paymentMethod === "transfer" ? " *" : ""}</label>
@@ -545,17 +647,28 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
       <div className="flex flex-wrap gap-2">
         <button
           className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-4 py-2 text-sm font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-60"
-          disabled={busy}
+          disabled={busy !== null || memberBank.loading}
           type="button"
           onClick={() => void submit()}
         >
-          <MaterialIcon className="text-[18px]" name={busy ? "progress_activity" : "save"} />
+          <MaterialIcon className="text-[18px]" name={busy === "save" ? "progress_activity" : "save"} />
           {mode === "create" ? "Lập đề nghị" : "Lưu thay đổi"}
         </button>
+        {mode === "create" ? (
+          <button
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#173A67] px-4 py-2 text-sm font-bold text-[#173A67] hover:bg-[#173A67]/5 disabled:opacity-60"
+            disabled={busy !== null || memberBank.loading}
+            type="button"
+            onClick={() => void submit(true)}
+          >
+            <MaterialIcon className="text-[18px]" name={busy === "print" ? "progress_activity" : "print"} />
+            Lập &amp; tải giấy đề nghị (Excel)
+          </button>
+        ) : null}
         {onCancel ? (
           <button
             className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:border-[#173A67]"
-            disabled={busy}
+            disabled={busy !== null}
             type="button"
             onClick={onCancel}
           >
@@ -563,6 +676,12 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
           </button>
         ) : null}
       </div>
+      {mode === "create" ? (
+        <p className="text-[11px] text-on-surface-variant">
+          Giấy đề nghị được cấp mã số khi lập, nên chỉ in được sau khi lập. Bấm “Lập &amp; tải giấy đề nghị” để lập và tải file
+          in ngay; nút “Tải giấy đề nghị” cũng có ở trang chi tiết đề nghị.
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { todayInVietnam } from "@/lib/life-events/registry";
 import { newPaymentItem } from "@/lib/payments/form-items";
-import { loadLastReceiver } from "@/lib/payments/server";
+import { loadLastReceiver, loadPaymentMembers } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -20,13 +20,17 @@ export default async function NewPaymentRequestPage() {
   if (!hasPermission(access, PERMISSIONS.paymentsCreate)) redirect("/admin/administration/payments");
 
   const db = createServiceClient();
-  const [settings, last, { data: me }, counterparties] = await Promise.all([
+  const [settings, last, { data: me }, counterparties, members] = await Promise.all([
     loadFormSettings(db),
     loadLastReceiver(db, access.userId),
     db.from(CDILV_TABLE.profiles).select("full_name").eq("id", access.userId).maybeSingle(),
     loadCounterparties(db, { activeOnly: true }),
+    loadPaymentMembers(db),
   ]);
-  const lastParty = counterparties.some((c) => c.id === last?.counterparty_id) ? last?.counterparty_id : null;
+  const lastPartyRow = counterparties.find((c) => c.id === last?.counterparty_id) ?? null;
+  const lastMember = last?.receiver_kind === "member" && members.some((m) => m.id === last.receiver_member_id);
+  const receiverKind = lastMember ? "member" : (lastPartyRow?.kind ?? last?.receiver_kind ?? "organization");
+  const keepLast = receiverKind !== "member" || lastMember;
 
   return (
     <div className="max-w-3xl space-y-4 pb-10">
@@ -53,14 +57,17 @@ export default async function NewPaymentRequestPage() {
           requesterName: settings.preparerName || (me?.full_name as string | undefined) || "",
           requesterDepartment: last?.requester_department ?? settings.preparerDepartment,
           paymentMethod: "transfer",
-          receiverName: last?.receiver_name ?? "",
-          receiverAccount: last?.receiver_account ?? "",
-          receiverBank: last?.receiver_bank ?? "",
-          counterpartyId: lastParty ?? "",
+          receiverKind,
+          receiverMemberId: lastMember ? (last?.receiver_member_id ?? "") : "",
+          receiverName: keepLast ? (last?.receiver_name ?? "") : "",
+          receiverAccount: keepLast ? (last?.receiver_account ?? "") : "",
+          receiverBank: keepLast ? (last?.receiver_bank ?? "") : "",
+          counterpartyId: lastPartyRow?.id ?? "",
           note: "",
           items: [newPaymentItem()],
         }}
         counterparties={counterparties}
+        members={members}
         mode="create"
       />
     </div>

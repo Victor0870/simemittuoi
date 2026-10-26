@@ -5,10 +5,10 @@ import type { Counterparty } from "@/lib/catalogs/registry";
 import { loadCounterparty } from "@/lib/catalogs/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { loadNames } from "@/lib/visits/server";
-import type { PaymentMethod, PaymentStatus } from "./registry";
+import type { PaymentMethod, PaymentReceiverKind, PaymentStatus } from "./registry";
 
 const REQUEST_COLUMNS =
-  "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_name, receiver_account, receiver_bank, counterparty_id, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
+  "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_kind, receiver_member_id, receiver_name, receiver_account, receiver_bank, counterparty_id, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
 
 const ITEM_COLUMNS = "id, order_num, content, paid_to, amount, advanced, visit_request_id";
 
@@ -23,6 +23,8 @@ export type PaymentRequestRow = {
   requester_name: string;
   requester_department: string | null;
   payment_method: PaymentMethod;
+  receiver_kind: PaymentReceiverKind | null;
+  receiver_member_id: string | null;
   receiver_name: string | null;
   receiver_account: string | null;
   receiver_bank: string | null;
@@ -65,8 +67,25 @@ export type PaymentRequestLog = {
   actor_name: string | null;
 };
 
+/** Đoàn viên chọn làm người nhận tiền (không kèm số tài khoản). */
+export type PaymentMember = {
+  id: string;
+  full_name: string;
+  employee_code: string | null;
+  department: string | null;
+};
+
+/** Tài khoản ngân hàng đoàn viên đã khai trong hồ sơ. */
+export type PaymentMemberBank = {
+  bank_account_no: string | null;
+  bank_name: string | null;
+  bank_branch: string | null;
+  bank_account_holder: string | null;
+};
+
 export type PaymentRequestDetail = PaymentRequestRow & {
   counterparty: Counterparty | null;
+  receiver_member: PaymentMember | null;
   creator_name: string | null;
   decider_name: string | null;
   payer_name: string | null;
@@ -163,7 +182,7 @@ export async function loadPaymentItems(db: SupabaseClient, requestId: string): P
 export async function loadPaymentRequestDetail(db: SupabaseClient, id: string): Promise<PaymentRequestDetail | null> {
   const row = await loadPaymentRequestRow(db, id);
   if (!row) return null;
-  const [items, { data: logs }, counterparty] = await Promise.all([
+  const [items, { data: logs }, counterparty, receiverMember] = await Promise.all([
     loadPaymentItems(db, id),
     db
       .from(CDILV_TABLE.paymentRequestLogs)
@@ -171,6 +190,7 @@ export async function loadPaymentRequestDetail(db: SupabaseClient, id: string): 
       .eq("request_id", id)
       .order("created_at", { ascending: true }),
     row.counterparty_id ? loadCounterparty(db, row.counterparty_id) : Promise.resolve(null),
+    row.receiver_member_id ? loadPaymentMember(db, row.receiver_member_id) : Promise.resolve(null),
   ]);
   const names = await loadNames(db, [
     row.created_by,
@@ -182,6 +202,7 @@ export async function loadPaymentRequestDetail(db: SupabaseClient, id: string): 
   return {
     ...row,
     counterparty,
+    receiver_member: receiverMember,
     creator_name: name(row.created_by),
     decider_name: name(row.decided_by),
     payer_name: name(row.paid_by),
@@ -280,7 +301,7 @@ export async function loadLastReceiver(
 ): Promise<LastReceiver | null> {
   const { data } = await db
     .from(CDILV_TABLE.paymentRequests)
-    .select("receiver_name, receiver_account, receiver_bank, counterparty_id, requester_department")
+    .select("receiver_kind, receiver_member_id, receiver_name, receiver_account, receiver_bank, counterparty_id, requester_department")
     .eq("created_by", userId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -290,5 +311,88 @@ export async function loadLastReceiver(
 
 type LastReceiver = Pick<
   PaymentRequestRow,
-  "receiver_name" | "receiver_account" | "receiver_bank" | "counterparty_id" | "requester_department"
+  | "receiver_kind"
+  | "receiver_member_id"
+  | "receiver_name"
+  | "receiver_account"
+  | "receiver_bank"
+  | "counterparty_id"
+  | "requester_department"
 >;
+
+/** Đoàn viên đã duyệt – để chọn người nhận tiền theo tên hoặc mã NV. */
+export async function loadPaymentMembers(db: SupabaseClient, includeId?: string | null): Promise<PaymentMember[]> {
+  const { data, error } = await db
+    .from(CDILV_TABLE.profiles)
+    .select("id, full_name, employee_code, department, approval_status")
+    .order("full_name", { ascending: true })
+    .limit(5000);
+  if (error) throw new Error(`Không tải được danh sách đoàn viên: ${error.message}`);
+  return (data ?? [])
+    .filter((p) => p.approval_status === "approved" || p.id === includeId)
+    .map((p) => ({
+      id: p.id as string,
+      full_name: (p.full_name as string | null) || "Đoàn viên",
+      employee_code: (p.employee_code as string | null) ?? null,
+      department: (p.department as string | null) ?? null,
+    }));
+}
+
+export async function loadPaymentMember(db: SupabaseClient, id: string): Promise<PaymentMember | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const { data } = await db
+    .from(CDILV_TABLE.profiles)
+    .select("id, full_name, employee_code, department")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    id: data.id as string,
+    full_name: (data.full_name as string | null) || "Đoàn viên",
+    employee_code: (data.employee_code as string | null) ?? null,
+    department: (data.department as string | null) ?? null,
+  };
+}
+
+/** Kiểm tra đoàn viên nhận tiền: phải còn tài khoản đã duyệt (trừ khi giữ nguyên người cũ). */
+export async function validateReceiverMember(
+  db: SupabaseClient,
+  id: string | null,
+  keepId?: string | null,
+): Promise<string | null> {
+  if (!id || id === keepId) return null;
+  const { data } = await db.from(CDILV_TABLE.profiles).select("approval_status").eq("id", id).maybeSingle();
+  if (!data) return "Đoàn viên đã chọn không còn tồn tại.";
+  if (data.approval_status !== "approved") return "Đoàn viên đã chọn chưa được duyệt tài khoản.";
+  return null;
+}
+
+/** Số tài khoản đoàn viên khai trong hồ sơ – ghi nhật ký truy cập dữ liệu nhạy cảm. */
+export async function loadPaymentMemberBank(
+  db: SupabaseClient,
+  actorId: string,
+  member: PaymentMember,
+): Promise<PaymentMemberBank> {
+  const { data, error } = await db
+    .from(CDILV_TABLE.memberDetails)
+    .select("bank_account_no, bank_name, bank_branch, bank_account_holder")
+    .eq("user_id", member.id)
+    .maybeSingle();
+  if (error) throw new Error(`Không tải được tài khoản ngân hàng: ${error.message}`);
+  const { error: logError } = await db.from(CDILV_TABLE.sensitiveAccessLogs).insert({
+    actor_id: actorId,
+    action: "payment_member_bank",
+    target_count: 1,
+    target_ids: [member.id],
+    reason: `Điền tài khoản nhận tiền cho đề nghị thanh toán: ${member.full_name}`,
+    detail: { employeeCode: member.employee_code },
+  });
+  if (logError) throw logError;
+  const clean = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  return {
+    bank_account_no: clean(data?.bank_account_no),
+    bank_name: clean(data?.bank_name),
+    bank_branch: clean(data?.bank_branch),
+    bank_account_holder: clean(data?.bank_account_holder),
+  };
+}

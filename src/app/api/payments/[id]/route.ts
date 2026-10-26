@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { loadCounterparty, validateCounterpartyLink } from "@/lib/catalogs/server";
-import { PAYMENT_METHOD_LABEL, parsePaymentInput, paymentRpcPayload } from "@/lib/payments/registry";
-import { loadPaymentItems, loadPaymentRequestRow, validateVisitLinks } from "@/lib/payments/server";
+import {
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_RECEIVER_KIND_LABEL,
+  parsePaymentInput,
+  paymentRpcPayload,
+} from "@/lib/payments/registry";
+import {
+  loadPaymentItems,
+  loadPaymentMember,
+  loadPaymentRequestRow,
+  validateReceiverMember,
+  validateVisitLinks,
+} from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC } from "@/lib/supabase/tables";
 import { formatVnd } from "@/lib/visits/registry";
@@ -36,6 +47,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (linkErrors.length) return NextResponse.json({ error: linkErrors.join(" ") }, { status: 409 });
     const counterpartyError = await validateCounterpartyLink(db, v.counterpartyId, current.counterparty_id);
     if (counterpartyError) return NextResponse.json({ error: counterpartyError }, { status: 409 });
+    const memberError = await validateReceiverMember(db, v.receiverMemberId, current.receiver_member_id);
+    if (memberError) return NextResponse.json({ error: memberError }, { status: 409 });
 
     const total = v.items.reduce((sum, i) => sum + i.amount, 0);
     const changes: string[] = [];
@@ -53,6 +66,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (v.counterpartyId !== (current.counterparty_id ?? null)) {
       const linked = v.counterpartyId ? await loadCounterparty(db, v.counterpartyId) : null;
       changes.push(linked ? `Đối tượng: ${linked.code} – ${linked.name}` : "Bỏ gắn đối tượng");
+    }
+    if (current.receiver_kind && v.receiverKind !== current.receiver_kind) changes.push(`Loại đối tượng: ${PAYMENT_RECEIVER_KIND_LABEL[v.receiverKind]}`);
+    if (v.receiverMemberId !== (current.receiver_member_id ?? null)) {
+      const member = v.receiverMemberId ? await loadPaymentMember(db, v.receiverMemberId) : null;
+      changes.push(
+        member ? `Đoàn viên nhận: ${[member.employee_code, member.full_name].filter(Boolean).join(" – ")}` : "Bỏ chọn đoàn viên",
+      );
     }
     if (total !== current.total_amount) changes.push(`Tổng tiền: ${formatVnd(current.total_amount)} → ${formatVnd(total)}`);
     const sameItems =

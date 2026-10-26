@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { validateCounterpartyLink } from "@/lib/catalogs/server";
 import { parsePaymentInput, paymentRpcPayload } from "@/lib/payments/registry";
-import { validateVisitLinks } from "@/lib/payments/server";
+import { validateReceiverMember, validateVisitLinks } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC } from "@/lib/supabase/tables";
 
@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
     if (linkErrors.length) return NextResponse.json({ error: linkErrors.join(" ") }, { status: 409 });
     const counterpartyError = await validateCounterpartyLink(db, parsed.value.counterpartyId);
     if (counterpartyError) return NextResponse.json({ error: counterpartyError }, { status: 409 });
+    const memberError = await validateReceiverMember(db, parsed.value.receiverMemberId);
+    if (memberError) return NextResponse.json({ error: memberError }, { status: 409 });
 
     const { data, error } = await db
       .rpc(CDILV_RPC.paymentRequestSave, {
