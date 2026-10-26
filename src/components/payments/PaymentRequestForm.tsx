@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PaymentMemberPicker } from "@/components/payments/PaymentMemberPicker";
 import { PaymentSlipPreview } from "@/components/payments/PaymentSlipPreview";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -17,7 +17,7 @@ import {
   type PaymentMethod,
   type PaymentReceiverKind,
 } from "@/lib/payments/registry";
-import type { PaymentMember, PaymentMemberBank, VisitCandidate } from "@/lib/payments/server";
+import type { PaymentMember, PaymentMemberBank, RewardCandidate, VisitCandidate } from "@/lib/payments/server";
 import { SLIP_CODE_PENDING, mapPaymentSlip, type PaymentSlipData, type SlipSigners } from "@/lib/payments/slip-data";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
@@ -43,6 +43,8 @@ type Props = {
   requestId?: string;
   /** Có quyền xem phiếu thăm hỏi → hiện nút gom phiếu đã duyệt. */
   canGatherVisits: boolean;
+  /** Có quyền Thanh toán thưởng → hiện nút lấy tổng tiền từ danh sách thưởng. */
+  canGatherRewards: boolean;
   /** Danh mục đối tượng để chọn người nhận (đang dùng + đối tượng đã gắn). */
   counterparties?: Counterparty[];
   /** Đoàn viên để chọn người nhận theo tên / mã NV (số TK lấy từ hồ sơ khi chọn). */
@@ -66,6 +68,15 @@ const invalidInputClass = inputClass.replace("border-outline-variant", "border-e
 const toNumber = (value: string) => Number(value.replace(/\D/g, "")) || 0;
 const formatInput = (value: string) => (value ? new Intl.NumberFormat("vi-VN").format(toNumber(value)) : "");
 
+type RewardSummary = { pollId: string; title: string; people: number; total: number; missingBank: number };
+
+function rewardLine(s: RewardSummary): string {
+  const tail = ` (${s.people} người – theo danh sách thưởng đính kèm)`;
+  const room = PAYMENT_LIMITS.content - "Chi thưởng ".length - tail.length;
+  const title = s.title.length > room ? `${s.title.slice(0, room - 1).trimEnd()}…` : s.title;
+  return `Chi thưởng ${title}${tail}`;
+}
+
 function visitLine(v: VisitCandidate): string {
   const who = v.member_department ? `${v.member_name} (${v.member_department})` : v.member_name;
   return `Thăm hỏi ${who} – ${v.reason}`.slice(0, PAYMENT_LIMITS.content);
@@ -76,6 +87,7 @@ export function PaymentRequestForm({
   initial,
   requestId,
   canGatherVisits,
+  canGatherRewards,
   counterparties,
   members,
   slipSigners,
@@ -99,6 +111,11 @@ export function PaymentRequestForm({
   const [candidates, setCandidates] = useState<VisitCandidate[] | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [rewardPolls, setRewardPolls] = useState<RewardCandidate[] | null>(null);
+  const [rewardPick, setRewardPick] = useState("");
+  const rewardPickRef = useRef("");
+  const [rewardSummary, setRewardSummary] = useState<RewardSummary | null>(null);
+  const [rewardLoading, setRewardLoading] = useState<"list" | "summary" | null>(null);
 
   const clearInvalid = (fields: string[]) =>
     setInvalid((prev) => {
@@ -143,6 +160,9 @@ export function PaymentRequestForm({
   const total = values.items.reduce((sum, i) => sum + toNumber(i.amount), 0);
   const advanced = values.items.reduce((sum, i) => sum + toNumber(i.advanced), 0);
   const linkedIds = new Set(values.items.map((i) => i.visitRequestId).filter(Boolean));
+  const linkedPolls = new Set(values.items.map((i) => i.rewardPollId).filter(Boolean));
+  const hasRewardList = linkedPolls.size > 0;
+  const receiverRequired = values.paymentMethod === "transfer" && !hasRewardList;
   const isMember = values.receiverKind === "member";
   const party = counterparties?.find((c) => c.id === values.counterpartyId) ?? null;
   const kindParties = (counterparties ?? []).filter((c) => c.kind === values.receiverKind || c.id === values.counterpartyId);
@@ -221,6 +241,67 @@ export function PaymentRequestForm({
     }
   }
 
+  async function openRewardPolls() {
+    setRewardLoading("list");
+    setError(null);
+    try {
+      const res = await fetch(`/api/payments/reward-candidates${requestId ? `?except=${requestId}` : ""}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Không tải được danh sách thưởng.");
+        return;
+      }
+      setRewardPolls(data.candidates ?? []);
+      setRewardPick("");
+      setRewardSummary(null);
+    } catch {
+      setError("Mất kết nối, vui lòng thử lại.");
+    } finally {
+      setRewardLoading(null);
+    }
+  }
+
+  async function pickRewardPoll(pollId: string) {
+    rewardPickRef.current = pollId;
+    setRewardPick(pollId);
+    setRewardSummary(null);
+    if (!pollId) return;
+    setRewardLoading("summary");
+    setError(null);
+    try {
+      const res = await fetch(`/api/payments/reward-candidates?poll=${pollId}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.summary) {
+        setError(data.error ?? "Không tải được danh sách thưởng.");
+        return;
+      }
+      if (rewardPickRef.current === pollId) setRewardSummary(data.summary as RewardSummary);
+    } catch {
+      setError("Mất kết nối, vui lòng thử lại.");
+    } finally {
+      setRewardLoading(null);
+    }
+  }
+
+  function addRewardLine() {
+    const s = rewardSummary;
+    if (!s || s.total <= 0 || linkedPolls.has(s.pollId)) return;
+    setValues((v) => {
+      const kept = v.items.filter((i) => i.content.trim() || i.amount || i.visitRequestId || i.rewardPollId);
+      const added = newPaymentItem({
+        content: rewardLine(s),
+        amount: String(s.total),
+        rewardPollId: s.pollId,
+        rewardTitle: s.title,
+      });
+      return { ...v, items: [...kept, added] };
+    });
+    clearInvalid(["items"]);
+    setRewardPolls(null);
+    setRewardPick("");
+    setRewardSummary(null);
+  }
+
   function addPicked() {
     const chosen = (candidates ?? []).filter((c) => picked.has(c.id) && !linkedIds.has(c.id));
     if (!chosen.length) return;
@@ -249,6 +330,7 @@ export function PaymentRequestForm({
         amount: toNumber(i.amount),
         advanced: toNumber(i.advanced),
         visitRequestId: i.visitRequestId,
+        rewardPollId: i.rewardPollId,
       })),
     };
   }
@@ -290,7 +372,7 @@ export function PaymentRequestForm({
           total_amount: input.items.reduce((sum, i) => sum + i.amount, 0),
           advanced_amount: input.items.reduce((sum, i) => sum + i.advanced, 0),
         },
-        input.items.map((i) => ({ content: i.content, amount: i.amount, advanced: i.advanced })),
+        input.items.map((i) => ({ content: i.content, amount: i.amount, advanced: i.advanced, rewardList: Boolean(i.rewardPollId) })),
         slipSigners,
       ),
     );
@@ -342,11 +424,14 @@ export function PaymentRequestForm({
         <div>
           <label className={labelClass}>Người đề nghị (Requestor) *</label>
           <input
-            className={field("requesterName")}
-            maxLength={PAYMENT_LIMITS.name}
+            readOnly
+            className={`${field("requesterName").replace("bg-white", "bg-surface-container-low")} cursor-default`}
+            title={mode === "create" ? "Lấy theo tài khoản đang đăng nhập" : "Giữ theo người đã lập đề nghị"}
             value={values.requesterName}
-            onChange={(e) => set({ requesterName: e.target.value })}
           />
+          <p className="mt-0.5 text-[11px] text-on-surface-variant">
+            {mode === "create" ? "Theo tài khoản đang đăng nhập" : "Theo người đã lập đề nghị"}
+          </p>
         </div>
         <div>
           <label className={labelClass}>Bộ phận (Department)</label>
@@ -362,18 +447,102 @@ export function PaymentRequestForm({
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-[#173A67]">Chi tiết chi phí *</h2>
-          {canGatherVisits ? (
-            <button
-              className="inline-flex items-center gap-1 rounded-xl border border-[#173A67]/40 px-3 py-1.5 text-xs font-bold text-[#173A67] hover:bg-[#173A67]/5 disabled:opacity-60"
-              disabled={loadingCandidates}
-              type="button"
-              onClick={() => void openCandidates()}
-            >
-              <MaterialIcon className="text-[16px]" name={loadingCandidates ? "progress_activity" : "playlist_add"} />
-              Thêm từ phiếu thăm hỏi đã duyệt
-            </button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {canGatherRewards ? (
+              <button
+                className="inline-flex items-center gap-1 rounded-xl border border-amber-500/50 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-50 disabled:opacity-60"
+                disabled={rewardLoading === "list"}
+                type="button"
+                onClick={() => void openRewardPolls()}
+              >
+                <MaterialIcon className="text-[16px]" name={rewardLoading === "list" ? "progress_activity" : "emoji_events"} />
+                Thêm từ danh sách thưởng
+              </button>
+            ) : null}
+            {canGatherVisits ? (
+              <button
+                className="inline-flex items-center gap-1 rounded-xl border border-[#173A67]/40 px-3 py-1.5 text-xs font-bold text-[#173A67] hover:bg-[#173A67]/5 disabled:opacity-60"
+                disabled={loadingCandidates}
+                type="button"
+                onClick={() => void openCandidates()}
+              >
+                <MaterialIcon className="text-[16px]" name={loadingCandidates ? "progress_activity" : "playlist_add"} />
+                Thêm từ phiếu thăm hỏi đã duyệt
+              </button>
+            ) : null}
+          </div>
         </div>
+
+        {rewardPolls ? (
+          <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+            {rewardPolls.length === 0 ? (
+              <p className="text-sm text-amber-900">Chưa có chương trình bình chọn nào kết thúc.</p>
+            ) : (
+              <>
+                <label className="block text-xs font-bold text-amber-900" htmlFor="payment-reward-poll">
+                  Chương trình bình chọn đã kết thúc – tổng tiền thưởng thành một dòng chi, danh sách thưởng là chi tiết đi kèm
+                </label>
+                <select
+                  className={inputClass}
+                  id="payment-reward-poll"
+                  value={rewardPick}
+                  onChange={(e) => void pickRewardPoll(e.target.value)}
+                >
+                  <option value="">— Chọn chương trình —</option>
+                  {rewardPolls.map((p) => {
+                    const inForm = linkedPolls.has(p.id);
+                    return (
+                      <option key={p.id} disabled={inForm || Boolean(p.linkedCode)} value={p.id}>
+                        {p.title}
+                        {p.closedAt ? ` (kết thúc ${formatDateVi(p.closedAt.slice(0, 10))})` : ""}
+                        {inForm ? " – đã có trong đề nghị này" : p.linkedCode ? ` – đã nằm trong ${p.linkedCode}` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                {rewardLoading === "summary" ? (
+                  <p className="text-xs text-amber-900">Đang tính tổng tiền thưởng…</p>
+                ) : rewardSummary ? (
+                  rewardSummary.total > 0 ? (
+                    <p className="text-sm text-amber-950">
+                      {rewardSummary.people} người nhận · tổng <b>{formatVnd(rewardSummary.total)}</b>
+                      {rewardSummary.missingBank ? (
+                        <span className="text-amber-800"> · {rewardSummary.missingBank} người chưa khai số tài khoản</span>
+                      ) : null}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-amber-800">
+                      Chương trình này chưa cài số tiền thưởng (Cài đặt cuộc thi → Giải thưởng → Tiền thưởng).
+                    </p>
+                  )
+                ) : null}
+              </>
+            )}
+            <div className="flex gap-2">
+              {rewardPolls.length ? (
+                <button
+                  className="rounded-xl bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+                  disabled={!rewardSummary || rewardSummary.total <= 0}
+                  type="button"
+                  onClick={addRewardLine}
+                >
+                  Thêm vào đề nghị
+                </button>
+              ) : null}
+              <button
+                className="rounded-xl border border-outline-variant px-3 py-1.5 text-xs font-semibold text-on-surface-variant"
+                type="button"
+                onClick={() => {
+                  rewardPickRef.current = "";
+                  setRewardPolls(null);
+                  setRewardSummary(null);
+                }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {candidates ? (
           <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50/60 p-3">
@@ -458,6 +627,11 @@ export function PaymentRequestForm({
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#173A67] text-white">{index + 1}</span>
                 {item.visitCode ? (
                   <span className="rounded-full bg-sky-100 px-2 py-0.5 text-sky-800">Phiếu thăm hỏi {item.visitCode}</span>
+                ) : null}
+                {item.rewardPollId ? (
+                  <span className="truncate rounded-full bg-amber-100 px-2 py-0.5 text-amber-900">
+                    Danh sách thưởng{item.rewardTitle ? `: ${item.rewardTitle}` : ""}
+                  </span>
                 ) : null}
                 <span className="ml-auto flex gap-1">
                   <button
@@ -652,9 +826,15 @@ export function PaymentRequestForm({
           </div>
           ) : null}
         </div>
+        {hasRewardList && values.paymentMethod === "transfer" ? (
+          <p className="text-[11px] text-amber-800">
+            Đề nghị có danh sách thưởng: chuyển khoản cho từng người theo danh sách đi kèm (nội dung chuyển khoản bắt đầu bằng số
+            đề nghị), nên có thể để trống người nhận bên dưới.
+          </p>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
-            <label className={labelClass}>Người nhận / Chủ TK{values.paymentMethod === "transfer" ? " *" : ""}</label>
+            <label className={labelClass}>Người nhận / Chủ TK{receiverRequired ? " *" : ""}</label>
             <input
               className={field("receiverName")}
               maxLength={PAYMENT_LIMITS.name}
@@ -663,7 +843,7 @@ export function PaymentRequestForm({
             />
           </div>
           <div>
-            <label className={labelClass}>Số tài khoản{values.paymentMethod === "transfer" ? " *" : ""}</label>
+            <label className={labelClass}>Số tài khoản{receiverRequired ? " *" : ""}</label>
             <input
               className={field("receiverAccount")}
               inputMode="numeric"
@@ -673,7 +853,7 @@ export function PaymentRequestForm({
             />
           </div>
           <div>
-            <label className={labelClass}>Ngân hàng{values.paymentMethod === "transfer" ? " *" : ""}</label>
+            <label className={labelClass}>Ngân hàng{receiverRequired ? " *" : ""}</label>
             <input
               className={field("receiverBank")}
               maxLength={PAYMENT_LIMITS.name}

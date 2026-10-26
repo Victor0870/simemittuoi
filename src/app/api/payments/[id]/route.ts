@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/guard";
-import { PERMISSIONS } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadCounterparty, validateCounterpartyLink } from "@/lib/catalogs/server";
 import {
   PAYMENT_METHOD_LABEL,
@@ -14,6 +14,7 @@ import {
   loadPaymentMember,
   loadPaymentRequestRow,
   validateReceiverMember,
+  validateRewardLinks,
   validateVisitLinks,
 } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -37,6 +38,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     }
 
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    body.requesterName = current.requester_name;
     const parsed = parsePaymentInput(body);
     if (!parsed.ok) return NextResponse.json({ error: parsed.errors.join(" ") }, { status: 400 });
 
@@ -49,6 +51,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const visitIds = v.items.map((i) => i.visitRequestId).filter((x): x is string => Boolean(x));
     const linkErrors = await validateVisitLinks(db, visitIds, { exceptId: id, keepIds });
     if (linkErrors.length) return NextResponse.json({ error: linkErrors.join(" ") }, { status: 409 });
+    const keepPolls = currentItems.map((i) => i.reward_poll_id).filter((x): x is string => Boolean(x));
+    const pollIds = v.items.map((i) => i.rewardPollId).filter((x): x is string => Boolean(x));
+    if (pollIds.some((p) => !keepPolls.includes(p)) && !hasPermission(guard.access, PERMISSIONS.rewardsPayout)) {
+      return NextResponse.json({ error: "Bạn không có quyền lấy danh sách thưởng vào đề nghị." }, { status: 403 });
+    }
+    const rewardErrors = await validateRewardLinks(db, pollIds, { exceptId: id, keepIds: keepPolls });
+    if (rewardErrors.length) return NextResponse.json({ error: rewardErrors.join(" ") }, { status: 409 });
     const counterpartyError = await validateCounterpartyLink(db, v.counterpartyId, current.counterparty_id);
     if (counterpartyError) return NextResponse.json({ error: counterpartyError }, { status: 409 });
     const memberError = await validateReceiverMember(db, v.receiverMemberId, current.receiver_member_id);
@@ -87,7 +96,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
           (old.paid_to ?? null) === next.paidTo &&
           old.amount === next.amount &&
           old.advanced === next.advanced &&
-          (old.visit_request_id ?? null) === next.visitRequestId
+          (old.visit_request_id ?? null) === next.visitRequestId &&
+          (old.reward_poll_id ?? null) === next.rewardPollId
         );
       });
     if (!sameItems) changes.push(`Dòng chi phí (${v.items.length} dòng)`);

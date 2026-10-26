@@ -33,13 +33,20 @@ export function buildPaymentTransferRows(items: PaymentRequestListItem[]): {
   rows: PaymentTransferRow[];
   skippedCash: number;
   skippedZero: number;
+  /** Đề nghị chi theo danh sách thưởng, không có người nhận cụ thể – xuất ở trang Thanh toán thưởng. */
+  skippedReward: number;
 } {
   const rows: PaymentTransferRow[] = [];
   let skippedCash = 0;
   let skippedZero = 0;
+  let skippedReward = 0;
   for (const item of items) {
     if (item.payment_method !== "transfer") {
       skippedCash++;
+      continue;
+    }
+    if (item.has_reward_list && !item.receiver_account) {
+      skippedReward++;
       continue;
     }
     const amount = paymentTransferAmount(item);
@@ -56,5 +63,5 @@ export function buildPaymentTransferRows(items: PaymentRequestListItem[]): {
       amount,
     });
   }
-  return { rows, skippedCash, skippedZero };
+  return { rows, skippedCash, skippedZero, skippedReward };
 }

@@ -7,6 +7,9 @@ export type PaymentFormItem = {
   advanced: string;
   visitRequestId: string | null;
   visitCode: string | null;
+  /** Dòng lấy từ danh sách thưởng (chi tiết đi kèm) của chương trình bình chọn này. */
+  rewardPollId: string | null;
+  rewardTitle: string | null;
 };
 
 let keySeed = 0;
@@ -20,6 +23,8 @@ export function newPaymentItem(patch: Partial<PaymentFormItem> = {}): PaymentFor
     advanced: "",
     visitRequestId: null,
     visitCode: null,
+    rewardPollId: null,
+    rewardTitle: null,
     ...patch,
   };
 }

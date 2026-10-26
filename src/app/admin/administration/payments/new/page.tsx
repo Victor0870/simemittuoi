@@ -8,11 +8,11 @@ import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { todayInVietnam } from "@/lib/life-events/registry";
 import { newPaymentItem } from "@/lib/payments/form-items";
-import { loadLastReceiver, loadPaymentMembers } from "@/lib/payments/server";
+import { PAYMENT_LIMITS } from "@/lib/payments/registry";
+import { loadLastReceiver, loadPaymentMembers, loadRequesterProfile } from "@/lib/payments/server";
 import { printLogoUrl } from "@/lib/print/logo";
 import { loadPrintLogoPath } from "@/lib/print/logo-server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +22,10 @@ export default async function NewPaymentRequestPage() {
   if (!hasPermission(access, PERMISSIONS.paymentsCreate)) redirect("/admin/administration/payments");
 
   const db = createServiceClient();
-  const [settings, last, { data: me }, counterparties, members, logoPath] = await Promise.all([
+  const [settings, last, me, counterparties, members, logoPath] = await Promise.all([
     loadFormSettings(db),
     loadLastReceiver(db, access.userId),
-    db.from(CDILV_TABLE.profiles).select("full_name").eq("id", access.userId).maybeSingle(),
+    loadRequesterProfile(db, access.userId),
     loadCounterparties(db, { activeOnly: true }),
     loadPaymentMembers(db),
     loadPrintLogoPath(db),
@@ -53,11 +53,12 @@ export default async function NewPaymentRequestPage() {
       </div>
 
       <PaymentRequestForm
+        canGatherRewards={hasPermission(access, PERMISSIONS.rewardsPayout)}
         canGatherVisits={hasPermission(access, PERMISSIONS.visitsView)}
         initial={{
           requestDate: todayInVietnam(),
-          requesterName: settings.preparerName || (me?.full_name as string | undefined) || "",
-          requesterDepartment: last?.requester_department ?? settings.preparerDepartment,
+          requesterName: me.name.slice(0, PAYMENT_LIMITS.name),
+          requesterDepartment: me.department ?? last?.requester_department ?? settings.preparerDepartment,
           paymentMethod: "transfer",
           receiverKind,
           receiverMemberId: lastMember ? (last?.receiver_member_id ?? "") : "",

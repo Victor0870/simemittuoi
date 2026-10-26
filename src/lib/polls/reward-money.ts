@@ -73,8 +73,14 @@ const TRANSFER_KIND_LABEL: Record<RewardKind, string> = {
 /**
  * Nội dung chuyển khoản của một người: "CDILV thuong Giai Nhat, Tham gia - <tên chương trình>",
  * không dấu, tối đa TRANSFER_TEXT_MAX ký tự (tên chương trình bị rút gọn trước).
+ * Có requestCode (đề nghị thanh toán đi kèm danh sách) thì số đề nghị đứng đầu: "TT-2026-0003 CDILV thuong ...".
  */
-export function rewardTransferText(items: RewardItem[], money: RewardMoney, pollTitle: string): string {
+export function rewardTransferText(
+  items: RewardItem[],
+  money: RewardMoney,
+  pollTitle: string,
+  requestCode?: string | null,
+): string {
   const counts = new Map<RewardKind, number>();
   for (const i of payableItems(items, money)) {
     if (money[i.kind] > 0) counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
@@ -82,7 +88,8 @@ export function rewardTransferText(items: RewardItem[], money: RewardMoney, poll
   const kinds = REWARD_KINDS.filter(({ kind }) => counts.has(kind))
     .map(({ kind }) => `${TRANSFER_KIND_LABEL[kind]}${(counts.get(kind) ?? 0) > 1 ? ` x${counts.get(kind)}` : ""}`)
     .join(", ");
-  const head = `CDILV thuong ${kinds || "giai thuong"}`;
+  const prefix = requestCode ? `${toTransferText(requestCode).trim()} ` : "";
+  const head = `${prefix}CDILV thuong ${kinds || "giai thuong"}`;
   const title = toTransferText(pollTitle)
     .trim()
     .replace(/^((binh chon|tac pham|bai du thi)\s+)+/i, "");

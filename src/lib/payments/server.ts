@@ -10,7 +10,7 @@ import type { PaymentMethod, PaymentReceiverKind, PaymentStatus } from "./regist
 const REQUEST_COLUMNS =
   "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_kind, receiver_member_id, receiver_name, receiver_account, receiver_bank, counterparty_id, fund_category_id, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
 
-const ITEM_COLUMNS = "id, order_num, content, paid_to, amount, advanced, visit_request_id";
+const ITEM_COLUMNS = "id, order_num, content, paid_to, amount, advanced, visit_request_id, reward_poll_id";
 
 /** Đề nghị còn hiệu lực – phiếu thăm hỏi đã nằm trong các đề nghị này thì không gom lại được. */
 const ACTIVE_STATUSES: PaymentStatus[] = ["proposed", "approved", "paid"];
@@ -54,11 +54,15 @@ export type PaymentItemRow = {
   advanced: number;
   visit_request_id: string | null;
   visit_code: string | null;
+  reward_poll_id: string | null;
+  reward_poll_title: string | null;
 };
 
 export type PaymentRequestListItem = PaymentRequestRow & {
   creator_name: string | null;
   item_count: number;
+  /** Có dòng chi theo danh sách thưởng – chuyển khoản theo từng người ở trang Thanh toán thưởng. */
+  has_reward_list: boolean;
   /** Mã NV (người nhận là đoàn viên) hoặc mã đối tượng trong danh mục – cho bảng chuyển khoản. */
   receiver_code: string | null;
 };
@@ -113,7 +117,16 @@ export type VisitCandidate = {
   reason: string;
   amount: number;
   visitor_name: string;
-  decided_at: string | null;
+    decided_at: string | null;
+};
+
+/** Chương trình bình chọn đã kết thúc – lấy tổng tiền thưởng thành một dòng chi. */
+export type RewardCandidate = {
+  id: string;
+  title: string;
+  closedAt: string | null;
+  /** Mã đề nghị còn hiệu lực đã chứa danh sách này (không thêm lại được). */
+  linkedCode: string | null;
 };
 
 export function paymentAbilities(access: CurrentAccess): PaymentAbilities {
@@ -144,8 +157,8 @@ export async function loadPaymentRequestList(db: SupabaseClient, limit = 1000): 
   const [names, items, members, parties] = await Promise.all([
     loadNames(db, rows.map((r) => r.created_by)),
     ids.length
-      ? db.from(CDILV_TABLE.paymentRequestItems).select("request_id").in("request_id", ids)
-      : Promise.resolve({ data: [] as { request_id: string }[] }),
+      ? db.from(CDILV_TABLE.paymentRequestItems).select("request_id, reward_poll_id").in("request_id", ids)
+      : Promise.resolve({ data: [] as { request_id: string; reward_poll_id: string | null }[] }),
     memberIds.length
       ? db.from(CDILV_TABLE.profiles).select("id, employee_code").in("id", memberIds)
       : Promise.resolve({ data: [] as { id: string; employee_code: string | null }[] }),
@@ -154,8 +167,10 @@ export async function loadPaymentRequestList(db: SupabaseClient, limit = 1000): 
       : Promise.resolve({ data: [] as { id: string; code: string | null }[] }),
   ]);
   const counts = new Map<string, number>();
-  for (const item of (items.data ?? []) as { request_id: string }[]) {
+  const withRewards = new Set<string>();
+  for (const item of (items.data ?? []) as { request_id: string; reward_poll_id: string | null }[]) {
     counts.set(item.request_id, (counts.get(item.request_id) ?? 0) + 1);
+    if (item.reward_poll_id) withRewards.add(item.request_id);
   }
   const memberCodes = new Map(
     ((members.data ?? []) as { id: string; employee_code: string | null }[]).map((m) => [m.id, m.employee_code]),
@@ -165,6 +180,7 @@ export async function loadPaymentRequestList(db: SupabaseClient, limit = 1000): 
     ...r,
     creator_name: r.created_by ? (names.get(r.created_by) ?? null) : null,
     item_count: counts.get(r.id) ?? 0,
+    has_reward_list: withRewards.has(r.id),
     receiver_code:
       (r.receiver_member_id ? memberCodes.get(r.receiver_member_id) : null) ??
       (r.counterparty_id ? partyCodes.get(r.counterparty_id) : null) ??
@@ -184,18 +200,37 @@ export async function loadPaymentItems(db: SupabaseClient, requestId: string): P
     .select(ITEM_COLUMNS)
     .eq("request_id", requestId)
     .order("order_num", { ascending: true });
-  const items = (data ?? []) as Omit<PaymentItemRow, "visit_code">[];
+  const items = (data ?? []) as Omit<PaymentItemRow, "visit_code" | "reward_poll_title">[];
   const visitIds = items.map((i) => i.visit_request_id).filter((v): v is string => Boolean(v));
+  const pollIds = items.map((i) => i.reward_poll_id).filter((v): v is string => Boolean(v));
   const codes = new Map<string, string>();
-  if (visitIds.length) {
-    const { data: visits } = await db.from(CDILV_TABLE.visitRequests).select("id, code").in("id", visitIds);
-    for (const v of visits ?? []) codes.set(v.id as string, v.code as string);
-  }
+  const pollTitles = new Map<string, string>();
+  await Promise.all([
+    visitIds.length
+      ? db
+          .from(CDILV_TABLE.visitRequests)
+          .select("id, code")
+          .in("id", visitIds)
+          .then(({ data: visits }) => {
+            for (const v of visits ?? []) codes.set(v.id as string, v.code as string);
+          })
+      : null,
+    pollIds.length
+      ? db
+          .from(CDILV_TABLE.polls)
+          .select("id, title")
+          .in("id", pollIds)
+          .then(({ data: polls }) => {
+            for (const p of polls ?? []) pollTitles.set(p.id as string, p.title as string);
+          })
+      : null,
+  ]);
   return items.map((i) => ({
     ...i,
     amount: Number(i.amount),
     advanced: Number(i.advanced),
     visit_code: i.visit_request_id ? (codes.get(i.visit_request_id) ?? null) : null,
+    reward_poll_title: i.reward_poll_id ? (pollTitles.get(i.reward_poll_id) ?? null) : null,
   }));
 }
 
@@ -312,6 +347,98 @@ export async function loadPaymentForVisit(
 ): Promise<{ id: string; code: string; status: PaymentStatus } | null> {
   const links = await loadActiveVisitLinks(db, [visitId]);
   return links.get(visitId) ?? null;
+}
+
+/** poll id → đề nghị còn hiệu lực đang chứa danh sách thưởng của chương trình đó (bỏ qua đề nghị exceptId). */
+async function loadActiveRewardLinks(
+  db: SupabaseClient,
+  pollIds: string[] | null,
+  exceptId?: string,
+): Promise<Map<string, { id: string; code: string; status: PaymentStatus }>> {
+  let query = db
+    .from(CDILV_TABLE.paymentRequestItems)
+    .select("reward_poll_id, request:cdilv_payment_requests!inner(id, code, status)")
+    .not("reward_poll_id", "is", null)
+    .in("request.status", ACTIVE_STATUSES);
+  if (pollIds) query = query.in("reward_poll_id", pollIds);
+  const { data, error } = await query;
+  if (error) throw new Error(`Không kiểm tra được danh sách thưởng đã lập đề nghị: ${error.message}`);
+  const links = new Map<string, { id: string; code: string; status: PaymentStatus }>();
+  for (const row of (data ?? []) as unknown as {
+    reward_poll_id: string;
+    request: { id: string; code: string; status: PaymentStatus };
+  }[]) {
+    if (row.request.id === exceptId) continue;
+    links.set(row.reward_poll_id, row.request);
+  }
+  return links;
+}
+
+/** Chương trình bình chọn đã kết thúc kèm đề nghị đang chứa danh sách thưởng (exceptId: đề nghị đang sửa). */
+export async function loadRewardCandidates(db: SupabaseClient, exceptId?: string): Promise<RewardCandidate[]> {
+  const { data, error } = await db
+    .from(CDILV_TABLE.polls)
+    .select("id, title, closed_at")
+    .eq("status", "closed")
+    .order("closed_at", { ascending: false, nullsFirst: false })
+    .limit(200);
+  if (error) throw new Error(`Không tải được chương trình bình chọn: ${error.message}`);
+  const polls = data ?? [];
+  if (!polls.length) return [];
+  const links = await loadActiveRewardLinks(db, polls.map((p) => p.id as string), exceptId);
+  return polls.map((p) => ({
+    id: p.id as string,
+    title: p.title as string,
+    closedAt: (p.closed_at as string | null) ?? null,
+    linkedCode: links.get(p.id as string)?.code ?? null,
+  }));
+}
+
+/**
+ * Kiểm tra danh sách thưởng được thêm: chương trình phải đã kết thúc và chưa nằm trong đề nghị khác.
+ * keepIds: danh sách đã có sẵn trong đề nghị đang sửa.
+ */
+export async function validateRewardLinks(
+  db: SupabaseClient,
+  pollIds: string[],
+  options: { exceptId?: string; keepIds?: string[] } = {},
+): Promise<string[]> {
+  const keep = new Set(options.keepIds ?? []);
+  const ids = pollIds.filter((id) => !keep.has(id));
+  if (!ids.length) return [];
+  const { data } = await db.from(CDILV_TABLE.polls).select("id, title, status").in("id", ids);
+  const found = new Map((data ?? []).map((p) => [p.id as string, p as { id: string; title: string; status: string }]));
+  const errors: string[] = [];
+  for (const id of ids) {
+    const poll = found.get(id);
+    if (!poll) errors.push("Có chương trình bình chọn không còn tồn tại.");
+    else if (poll.status !== "closed") errors.push(`Chương trình “${poll.title}” chưa kết thúc.`);
+  }
+  const links = await loadActiveRewardLinks(db, ids, options.exceptId);
+  for (const id of ids) {
+    const link = links.get(id);
+    if (link) errors.push(`Danh sách thưởng “${found.get(id)?.title ?? ""}” đã nằm trong đề nghị ${link.code}.`);
+  }
+  return errors;
+}
+
+/** Đề nghị thanh toán (còn hiệu lực) đi kèm danh sách thưởng – số đề nghị đứng đầu nội dung chuyển khoản. */
+export async function loadPaymentForRewardPoll(
+  db: SupabaseClient,
+  pollId: string,
+): Promise<{ id: string; code: string; status: PaymentStatus } | null> {
+  const links = await loadActiveRewardLinks(db, [pollId]);
+  return links.get(pollId) ?? null;
+}
+
+/** Người đề nghị = tài khoản đang đăng nhập (họ tên + bộ phận trong hồ sơ). */
+export async function loadRequesterProfile(
+  db: SupabaseClient,
+  userId: string,
+): Promise<{ name: string; department: string | null }> {
+  const { data } = await db.from(CDILV_TABLE.profiles).select("full_name, department").eq("id", userId).maybeSingle();
+  const clean = (v: unknown) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ") : "");
+  return { name: clean(data?.full_name), department: clean(data?.department) || null };
 }
 
 /** Thông tin người nhận lần trước của người lập – điền sẵn cho đề nghị mới. */

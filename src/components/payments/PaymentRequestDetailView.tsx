@@ -18,7 +18,7 @@ import {
   PAYMENT_RECEIVER_KIND_LABEL,
 } from "@/lib/payments/registry";
 import type { PaymentAbilities, PaymentMember, PaymentRequestDetail } from "@/lib/payments/server";
-import type { SlipSigners } from "@/lib/payments/slip-data";
+import { SLIP_REWARD_RECEIVER, type SlipSigners } from "@/lib/payments/slip-data";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -27,6 +27,8 @@ type Props = {
   can: PaymentAbilities;
   isCreator: boolean;
   canViewVisits: boolean;
+  /** Có quyền Thanh toán thưởng – mở được danh sách thưởng đi kèm, thêm danh sách khi sửa. */
+  canViewRewards: boolean;
   counterparties: Counterparty[];
   members: PaymentMember[];
   slipSigners: SlipSigners;
@@ -45,6 +47,7 @@ export function PaymentRequestDetailView({
   can,
   isCreator,
   canViewVisits,
+  canViewRewards,
   counterparties,
   members,
   slipSigners,
@@ -118,6 +121,7 @@ export function PaymentRequestDetailView({
   if (editing) {
     return (
       <PaymentRequestForm
+        canGatherRewards={canViewRewards}
         canGatherVisits={canViewVisits}
         initial={{
           requestDate: detail.request_date,
@@ -139,6 +143,8 @@ export function PaymentRequestDetailView({
               advanced: i.advanced ? String(i.advanced) : "",
               visitRequestId: i.visit_request_id,
               visitCode: i.visit_code,
+              rewardPollId: i.reward_poll_id,
+              rewardTitle: i.reward_poll_title,
             }),
           ),
         }}
@@ -185,7 +191,7 @@ export function PaymentRequestDetailView({
               Người nhận{receiverKind ? ` (${PAYMENT_RECEIVER_KIND_LABEL[receiverKind]})` : ""}
             </dt>
             <dd className="font-semibold">
-              {detail.receiver_name ?? "—"}
+              {detail.receiver_name ?? (detail.items.some((i) => i.reward_poll_id) ? SLIP_REWARD_RECEIVER : "—")}
               {detail.receiver_account ? (
                 <span className="font-normal text-on-surface-variant">
                   {" "}
@@ -261,6 +267,20 @@ export function PaymentRequestDetailView({
                       ) : (
                         <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800">
                           {i.visit_code ?? "Phiếu thăm hỏi"}
+                        </span>
+                      )
+                    ) : null}
+                    {i.reward_poll_id ? (
+                      canViewRewards ? (
+                        <Link
+                          className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900 hover:underline"
+                          href={`/admin/administration/rewards?poll=${i.reward_poll_id}`}
+                        >
+                          Xem danh sách thưởng
+                        </Link>
+                      ) : (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                          Danh sách thưởng
                         </span>
                       )
                     ) : null}

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { RewardPayoutList } from "@/components/rewards/RewardPayoutList";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { loadPaymentForRewardPoll } from "@/lib/payments/server";
 import { listClosedPolls, loadPollRewardList } from "@/lib/polls/rewards-server";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -21,7 +22,10 @@ export default async function RewardPayoutPage({ searchParams }: PageProps) {
   const polls = await listClosedPolls(db);
   const requested = (await searchParams).poll;
   const pollId = (Array.isArray(requested) ? requested[0] : requested) || polls[0]?.id || null;
-  const list = pollId && polls.some((p) => p.id === pollId) ? await loadPollRewardList(db, pollId, access.userId) : null;
+  const valid = pollId && polls.some((p) => p.id === pollId) ? pollId : null;
+  const [list, payment] = valid
+    ? await Promise.all([loadPollRewardList(db, valid, access.userId), loadPaymentForRewardPoll(db, valid)])
+    : [null, null];
 
   return (
     <div className="space-y-5 pb-10 print:space-y-0 print:pb-0">
@@ -34,7 +38,12 @@ export default async function RewardPayoutPage({ searchParams }: PageProps) {
           </p>
         </div>
       </div>
-      <RewardPayoutList list={list} polls={polls} />
+      <RewardPayoutList
+        list={list}
+        payment={payment ? { id: payment.id, code: payment.code } : null}
+        paymentLinkable={hasPermission(access, PERMISSIONS.paymentsView)}
+        polls={polls}
+      />
     </div>
   );
 }

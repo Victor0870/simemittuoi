@@ -26,7 +26,12 @@ export type SlipItem = {
   content: string;
   amount: number;
   advanced: number;
+  /** Dòng chi theo danh sách thưởng – chuyển khoản theo từng người trong danh sách đi kèm. */
+  rewardList?: boolean;
 };
+
+/** Ô người nhận khi đề nghị chi theo danh sách thưởng mà không ghi người nhận cụ thể. */
+export const SLIP_REWARD_RECEIVER = "Theo danh sách thưởng đính kèm";
 
 export type SlipSigners = Pick<FormSettings, "preparerDepartment" | "accountantName" | "chairmanName">;
 
@@ -94,7 +99,7 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
     totals: { paid, advanced, underPaid: paid - advanced, overPaid: advanced > paid ? advanced - paid : null },
     cash: req.payment_method === "cash",
     bank: req.payment_method === "transfer",
-    receiverName: req.receiver_name ?? "",
+    receiverName: req.receiver_name ?? (items.some((i) => i.rewardList) ? SLIP_REWARD_RECEIVER : ""),
     receiverAccount: req.receiver_account ?? "",
     receiverBank: req.receiver_bank ?? "",
     signatures: [

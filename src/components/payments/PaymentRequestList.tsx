@@ -100,6 +100,9 @@ export function PaymentRequestList({ items }: Props) {
   const skippedNote = [
     transfer.skippedCash ? `${transfer.skippedCash} đề nghị tiền mặt` : null,
     transfer.skippedZero ? `${transfer.skippedZero} đề nghị không còn tiền phải chi` : null,
+    transfer.skippedReward
+      ? `${transfer.skippedReward} đề nghị chi theo danh sách thưởng (xuất ở trang Thanh toán thưởng)`
+      : null,
   ]
     .filter(Boolean)
     .join(", ");

@@ -58,6 +58,8 @@ export type PaymentItemInput = {
   amount: number;
   advanced: number;
   visitRequestId: string | null;
+  /** Chương trình bình chọn đã kết thúc – danh sách thưởng là chi tiết đi kèm của dòng chi. */
+  rewardPollId: string | null;
 };
 
 export type PaymentInput = {
@@ -143,6 +145,11 @@ export function parsePaymentInput(
   const receiverName = oneLine(raw.receiverName) || null;
   const receiverAccount = oneLine(raw.receiverAccount).replace(/\s/g, "") || null;
   const receiverBank = oneLine(raw.receiverBank) || null;
+  const rawItems = Array.isArray(raw.items) ? raw.items : [];
+  const hasRewardList = rawItems.some((value) => {
+    const id = (value as Record<string, unknown> | null)?.rewardPollId;
+    return typeof id === "string" && UUID_RE.test(id);
+  });
   const receiverKind: PaymentReceiverKind = isPaymentReceiverKind(raw.receiverKind) ? raw.receiverKind : "organization";
   const receiverMemberId =
     receiverKind === "member" && typeof raw.receiverMemberId === "string" && UUID_RE.test(raw.receiverMemberId)
@@ -163,7 +170,7 @@ export function parsePaymentInput(
     );
   }
   if ((receiverAccount?.length ?? 0) > PAYMENT_LIMITS.account) fail("Số tài khoản quá dài.", "receiverAccount");
-  if (paymentMethod === "transfer" && (!receiverName || !receiverAccount || !receiverBank)) {
+  if (paymentMethod === "transfer" && !hasRewardList && (!receiverName || !receiverAccount || !receiverBank)) {
     fail(
       "Chuyển khoản cần đủ chủ tài khoản, số tài khoản và ngân hàng.",
       ...(receiverName ? [] : (["receiverName"] as const)),
@@ -175,9 +182,9 @@ export function parsePaymentInput(
   const note = typeof raw.note === "string" ? raw.note.trim() || null : null;
   if (note && note.length > PAYMENT_LIMITS.note) fail(`Ghi chú tối đa ${PAYMENT_LIMITS.note} ký tự.`, "note");
 
-  const rawItems = Array.isArray(raw.items) ? raw.items : [];
   const items: PaymentItemInput[] = [];
   const seenVisits = new Set<string>();
+  const seenPolls = new Set<string>();
   rawItems.forEach((value, index) => {
     const item = (value ?? {}) as Record<string, unknown>;
     const line = `Dòng ${index + 1}`;
@@ -186,6 +193,7 @@ export function parsePaymentInput(
     const amount = money(item.amount);
     const advanced = money(item.advanced);
     const visitRequestId = typeof item.visitRequestId === "string" && UUID_RE.test(item.visitRequestId) ? item.visitRequestId : null;
+    const rewardPollId = typeof item.rewardPollId === "string" && UUID_RE.test(item.rewardPollId) ? item.rewardPollId : null;
     if (!content) fail(`${line}: chưa nhập chi tiết chi phí.`, `items.${index}.content`);
     if (content.length > PAYMENT_LIMITS.content) {
       fail(`${line}: chi tiết tối đa ${PAYMENT_LIMITS.content} ký tự.`, `items.${index}.content`);
@@ -201,7 +209,11 @@ export function parsePaymentInput(
       if (seenVisits.has(visitRequestId)) fail(`${line}: phiếu thăm hỏi bị gom hai lần.`, `items.${index}.content`);
       seenVisits.add(visitRequestId);
     }
-    items.push({ content, paidTo, amount, advanced, visitRequestId });
+    if (rewardPollId) {
+      if (seenPolls.has(rewardPollId)) fail(`${line}: danh sách thưởng bị thêm hai lần.`, `items.${index}.content`);
+      seenPolls.add(rewardPollId);
+    }
+    items.push({ content, paidTo, amount, advanced, visitRequestId, rewardPollId });
   });
   if (!items.length) fail("Đề nghị phải có ít nhất một dòng chi phí.", "items");
   if (items.length > PAYMENT_LIMITS.items) fail(`Tối đa ${PAYMENT_LIMITS.items} dòng chi phí.`, "items");
@@ -250,6 +262,7 @@ export function paymentRpcPayload(input: PaymentInput) {
       amount: item.amount,
       advanced: item.advanced,
       visit_request_id: item.visitRequestId,
+      reward_poll_id: item.rewardPollId,
     })),
   };
 }

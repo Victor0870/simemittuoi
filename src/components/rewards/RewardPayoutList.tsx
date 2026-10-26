@@ -11,6 +11,10 @@ import type { ClosedPollOption, PollRewardList } from "@/lib/polls/rewards-serve
 type Props = {
   polls: ClosedPollOption[];
   list: PollRewardList | null;
+  /** Đề nghị thanh toán (còn hiệu lực) đi kèm danh sách này – số đề nghị đứng đầu nội dung chuyển khoản. */
+  payment: { id: string; code: string } | null;
+  /** Có quyền xem đề nghị thanh toán – hiện liên kết tới đề nghị. */
+  paymentLinkable: boolean;
 };
 
 const UNION_NAME = "CÔNG ĐOÀN CƠ SỞ CDILV";
@@ -18,7 +22,7 @@ const UNION_NAME = "CÔNG ĐOÀN CƠ SỞ CDILV";
 const inputClass =
   "rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 
-export function RewardPayoutList({ polls, list }: Props) {
+export function RewardPayoutList({ polls, list, payment, paymentLinkable }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
@@ -31,12 +35,12 @@ export function RewardPayoutList({ polls, list }: Props) {
       return {
         ...r,
         holder: toAccountHolderName(r.fullName),
-        transfer: rewardTransferText(r.items, list.money, list.pollTitle),
+        transfer: rewardTransferText(r.items, list.money, list.pollTitle, payment?.code),
         detail: items.map((i) => `${i.label} (${formatVnd(list.money[i.kind])}đ)`).join("; "),
         total: rowTotal(r.items, list.money),
       };
     });
-  }, [list]);
+  }, [list, payment?.code]);
   const total = rows.reduce((sum, r) => sum + r.total, 0);
   const missingBank = rows.filter((r) => !r.bankAccountNo).length;
   const noMoney = list !== null && total === 0;
@@ -131,7 +135,11 @@ export function RewardPayoutList({ polls, list }: Props) {
       const sheet = XLSX.utils.aoa_to_sheet([
         [UNION_NAME],
         ["DANH SÁCH NHẬN THƯỞNG"],
-        [`${list.pollTitle} – ${rows.length} người${missingBank ? ` (${missingBank} người chưa có số tài khoản)` : ""}`],
+        [
+          `${list.pollTitle} – ${rows.length} người${missingBank ? ` (${missingBank} người chưa có số tài khoản)` : ""}${
+            payment ? ` – kèm đề nghị thanh toán ${payment.code}` : ""
+          }`,
+        ],
         [],
         header,
         ...data,
@@ -216,6 +224,23 @@ export function RewardPayoutList({ polls, list }: Props) {
               <p className="text-headline-sm font-bold text-[#173A67]">{s.value}</p>
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {payment ? (
+        <div className="flex items-start gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 print:hidden">
+          <MaterialIcon className="text-[20px]" name="link" />
+          <p>
+            Danh sách này là chi tiết đi kèm đề nghị thanh toán{" "}
+            {paymentLinkable ? (
+              <a className="font-bold underline" href={`/admin/administration/payments/${payment.id}`}>
+                {payment.code}
+              </a>
+            ) : (
+              <b>{payment.code}</b>
+            )}
+            {" "}– nội dung chuyển khoản bắt đầu bằng số đề nghị.
+          </p>
         </div>
       ) : null}
 

@@ -90,6 +90,7 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
           accountantName: settings.accountantName,
           chairmanName: settings.chairmanName,
         }}
+        canViewRewards={hasPermission(access, PERMISSIONS.rewardsPayout)}
         canViewVisits={hasPermission(access, PERMISSIONS.visitsView)}
         counterparties={counterparties}
         detail={detail}

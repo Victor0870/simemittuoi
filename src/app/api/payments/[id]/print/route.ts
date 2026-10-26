@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { requirePermission } from "@/lib/auth/guard";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { loadFormSettings } from "@/lib/forms/settings-server";
-import { buildPaymentSlip } from "@/lib/payments/print";
+import { buildPaymentSlip, rewardAttachment, type RewardAttachment } from "@/lib/payments/print";
 import { loadPaymentItems, loadPaymentRequestRow } from "@/lib/payments/server";
+import { loadPollRewardList } from "@/lib/polls/rewards-server";
 import { loadPrintLogoImage } from "@/lib/print/logo-server";
 import { XLSX_MIME, renderTemplate } from "@/lib/print/xlsx-template";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Tải Giấy đề nghị thanh toán (mẫu công ty) đã điền sẵn, kèm trang Bảng kê nếu nhiều dòng. */
+/** Tải Giấy đề nghị thanh toán (mẫu công ty) đã điền sẵn, kèm trang Bảng kê nếu nhiều dòng và trang Danh sách thưởng đi kèm. */
 export async function GET(_request: Request, { params }: Params) {
   try {
     const { id } = await params;
@@ -33,7 +34,13 @@ export async function GET(_request: Request, { params }: Params) {
       loadFormSettings(db),
       loadPrintLogoImage(db),
     ]);
-    const slip = buildPaymentSlip(req, items, settings, logo);
+    const rewards: RewardAttachment[] = [];
+    for (const item of items) {
+      if (!item.reward_poll_id) continue;
+      const list = await loadPollRewardList(db, item.reward_poll_id, guard.access.userId);
+      if (list) rewards.push(rewardAttachment(list, req.code, item.amount));
+    }
+    const slip = buildPaymentSlip(req, items, settings, logo, rewards);
     const buffer = await renderTemplate("paymentSlip", slip.values, slip.customize);
 
     await db.rpc(CDILV_RPC.paymentRequestLog, {
