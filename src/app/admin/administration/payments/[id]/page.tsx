@@ -75,6 +75,11 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
         autoPrint={Boolean(created && print)}
         can={can}
         members={members}
+        slipSigners={{
+          preparerDepartment: settings.preparerDepartment,
+          accountantName: settings.accountantName,
+          chairmanName: settings.chairmanName,
+        }}
         canViewVisits={hasPermission(access, PERMISSIONS.visitsView)}
         counterparties={counterparties}
         detail={detail}

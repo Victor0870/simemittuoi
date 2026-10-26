@@ -1,8 +1,8 @@
 import type ExcelJS from "exceljs";
-import { CHAIRMAN_TITLE } from "@/lib/chairman-title";
 import type { FormSettings } from "@/lib/forms/settings";
 import { PAYMENT_LIMITS } from "./registry";
 import type { PaymentItemRow, PaymentRequestRow } from "./server";
+import { mapPaymentSlip, type PaymentSlipData } from "./slip-data";
 
 /** Ô trên mẫu de_nghi_thanh_toan.xlsx (sheet “Thanh toan Cong Doan”, vùng in A1:I36). */
 const FIRST_ITEM_ROW = 12;
@@ -18,22 +18,19 @@ function dateCell(iso: string): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
-function money(value: number): number | null {
-  return value > 0 ? value : null;
-}
-
 /** Khối chữ ký A29:I33 thay cho ảnh liên kết của mẫu gốc (tiêu đề giữ đúng chữ trong vùng O47:Q52 của mẫu). */
-function writeSignatures(ws: ExcelJS.Worksheet, names: [string, string, string], fontName?: string) {
-  const blocks: [string, string, string][] = [
-    ["A", "D", "Người Lập"],
-    ["E", "G", "Kế toán Công Đoàn"],
-    ["H", "I", CHAIRMAN_TITLE],
+function writeSignatures(ws: ExcelJS.Worksheet, signatures: PaymentSlipData["signatures"], fontName?: string) {
+  const columns: [string, string][] = [
+    ["A", "D"],
+    ["E", "G"],
+    ["H", "I"],
   ];
   const center: Partial<ExcelJS.Alignment> = { horizontal: "center", vertical: "middle", wrapText: true };
-  blocks.forEach(([from, to, title], index) => {
+  columns.forEach(([from, to], index) => {
+    const sign = signatures[index];
     for (const [row, value, font] of [
-      [29, title, { bold: true, size: 11 }],
-      [33, names[index] || null, { bold: true, size: 11 }],
+      [29, sign.title, { bold: true, size: 11 }],
+      [33, sign.name || null, { bold: true, size: 11 }],
     ] as const) {
       ws.mergeCells(`${from}${row}:${to}${row}`);
       const cell = ws.getCell(`${from}${row}`);
@@ -45,7 +42,7 @@ function writeSignatures(ws: ExcelJS.Worksheet, names: [string, string, string],
 }
 
 /** Trang “Bảng kê” khi đề nghị có nhiều dòng hơn mẫu chứa được. */
-function addItemSheet(workbook: ExcelJS.Workbook, req: PaymentRequestRow, items: PaymentItemRow[], fontName?: string) {
+function addItemSheet(workbook: ExcelJS.Workbook, sheetData: NonNullable<PaymentSlipData["itemSheet"]>, fontName?: string) {
   const sheet = workbook.addWorksheet("Bảng kê", {
     pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
@@ -59,11 +56,11 @@ function addItemSheet(workbook: ExcelJS.Workbook, req: PaymentRequestRow, items:
   };
 
   sheet.mergeCells("A1:E1");
-  sheet.getCell("A1").value = `BẢNG KÊ KÈM GIẤY ĐỀ NGHỊ THANH TOÁN ${req.code}`;
+  sheet.getCell("A1").value = sheetData.heading;
   sheet.getCell("A1").font = { ...font, bold: true, size: 13 };
   sheet.getCell("A1").alignment = { horizontal: "center" };
   sheet.mergeCells("A2:E2");
-  sheet.getCell("A2").value = req.title;
+  sheet.getCell("A2").value = sheetData.title;
   sheet.getCell("A2").font = { ...font, italic: true };
   sheet.getCell("A2").alignment = { horizontal: "center", wrapText: true };
 
@@ -76,9 +73,9 @@ function addItemSheet(workbook: ExcelJS.Workbook, req: PaymentRequestRow, items:
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEFF3F8" } };
   });
 
-  items.forEach((item, index) => {
+  sheetData.rows.forEach((item, index) => {
     const row = sheet.getRow(5 + index);
-    row.values = [index + 1, item.content, item.paid_to ?? "", item.amount, money(item.advanced)];
+    row.values = [item.no, item.content, item.paidTo, item.amount, item.advanced];
     row.eachCell({ includeEmpty: true }, (cell, col) => {
       cell.font = font;
       cell.border = border;
@@ -87,12 +84,12 @@ function addItemSheet(workbook: ExcelJS.Workbook, req: PaymentRequestRow, items:
     });
   });
 
-  const last = 4 + items.length;
+  const last = 4 + sheetData.rows.length;
   const total = sheet.getRow(last + 1);
   sheet.mergeCells(`A${last + 1}:C${last + 1}`);
   total.getCell(1).value = "Tổng cộng";
-  total.getCell(4).value = { formula: `SUM(D5:D${last})`, result: req.total_amount };
-  total.getCell(5).value = { formula: `SUM(E5:E${last})`, result: req.advanced_amount };
+  total.getCell(4).value = { formula: `SUM(D5:D${last})`, result: sheetData.totalPaid };
+  total.getCell(5).value = { formula: `SUM(E5:E${last})`, result: sheetData.totalAdvanced };
   for (let col = 1; col <= 5; col++) {
     const cell = total.getCell(col);
     cell.font = { ...font, bold: true };
@@ -104,41 +101,29 @@ function addItemSheet(workbook: ExcelJS.Workbook, req: PaymentRequestRow, items:
 
 /** Giá trị + bước chỉnh sửa để render Giấy đề nghị thanh toán từ mẫu. */
 export function buildPaymentSlip(req: PaymentRequestRow, items: PaymentItemRow[], settings: FormSettings): PaymentSlip {
+  const data = mapPaymentSlip(req, items, settings);
   const values: Record<string, ExcelJS.CellValue> = {
-    D4: dateCell(req.request_date),
-    D5: req.requester_name,
-    D6: req.requester_department ?? settings.preparerDepartment,
-    E21: `${req.payment_method === "cash" ? "☑" : "☐"} Cash`,
-    E22: `${req.payment_method === "transfer" ? "☑" : "☐"} Bank`,
-    H24: req.receiver_name ?? "",
-    H25: req.receiver_account ?? "",
-    H26: req.receiver_bank ?? "",
-    E27: req.payment_method === "transfer" ? "Nội dung CK/ Description" : "Nội dung/ Description",
+    D4: dateCell(data.date),
+    D5: data.requester,
+    D6: data.department,
+    E21: `${data.cash ? "☑" : "☐"} Cash`,
+    E22: `${data.bank ? "☑" : "☐"} Bank`,
+    H24: data.receiverName,
+    H25: data.receiverAccount,
+    H26: data.receiverBank,
+    E27: data.descriptionLabel,
     G27: ":",
-    H27: req.title,
+    H27: data.description,
   };
 
-  const useItemSheet = items.length > PAYMENT_LIMITS.slipRows;
-  const slipLines = useItemSheet
-    ? [
-        {
-          content: `${req.title} – chi theo bảng kê đính kèm (${items.length} khoản)`,
-          paidTo: req.receiver_name ?? "",
-          amount: req.total_amount,
-          advanced: req.advanced_amount,
-        },
-      ]
-    : items.map((item) => ({ content: item.content, paidTo: item.paid_to ?? "", amount: item.amount, advanced: item.advanced }));
-
-  for (let i = 0; i < PAYMENT_LIMITS.slipRows; i++) {
+  data.lines.forEach((line, i) => {
     const row = FIRST_ITEM_ROW + i;
-    const line = slipLines[i];
-    values[`A${row}`] = line ? i + 1 : null;
+    values[`A${row}`] = line ? line.no : null;
     values[`B${row}`] = line?.content ?? null;
     values[`F${row}`] = line?.paidTo || null;
     values[`H${row}`] = line ? line.amount : null;
-    values[`I${row}`] = line ? money(line.advanced) : null;
-  }
+    values[`I${row}`] = line ? line.advanced : null;
+  });
 
   const customize = (ws: ExcelJS.Worksheet, workbook: ExcelJS.Workbook) => {
     const fontName = ws.getCell("A21").font?.name;
@@ -158,8 +143,8 @@ export function buildPaymentSlip(req: PaymentRequestRow, items: PaymentItemRow[]
     ws.getCell("G27").alignment = { vertical: "middle" };
     ws.getCell("H27").alignment = { horizontal: "left", vertical: "middle", wrapText: true };
     ws.getCell("H27").font = { name: fontName, size: 11, bold: true };
-    writeSignatures(ws, [req.requester_name, settings.accountantName, settings.chairmanName], fontName);
-    if (useItemSheet) addItemSheet(workbook, req, items, fontName);
+    writeSignatures(ws, data.signatures, fontName);
+    if (data.itemSheet) addItemSheet(workbook, data.itemSheet, fontName);
   };
 
   return { values, customize };

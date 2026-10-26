@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PaymentMemberPicker } from "@/components/payments/PaymentMemberPicker";
+import { PaymentSlipPreview } from "@/components/payments/PaymentSlipPreview";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { counterpartyMatches, type Counterparty } from "@/lib/catalogs/registry";
 import { formatDateVi } from "@/lib/members/profile-shared";
@@ -13,10 +14,12 @@ import {
   PAYMENT_RECEIVER_KIND_LABEL,
   parsePaymentInput,
   toTransferText,
+  type PaymentInput,
   type PaymentMethod,
   type PaymentReceiverKind,
 } from "@/lib/payments/registry";
 import type { PaymentMember, PaymentMemberBank, VisitCandidate } from "@/lib/payments/server";
+import { SLIP_CODE_PENDING, mapPaymentSlip, type PaymentSlipData, type SlipSigners } from "@/lib/payments/slip-data";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -46,6 +49,10 @@ type Props = {
   counterparties?: Counterparty[];
   /** Đoàn viên để chọn người nhận theo tên / mã NV (số TK lấy từ hồ sơ khi chọn). */
   members?: PaymentMember[];
+  /** Bộ phận mặc định và người ký theo Cài đặt biểu mẫu in – để xem trước giấy đề nghị. */
+  slipSigners: SlipSigners;
+  /** Mã đề nghị đã cấp (khi sửa); lập mới thì chưa có. */
+  requestCode?: string;
   onCancel?: () => void;
 };
 
@@ -54,6 +61,7 @@ const RECEIVER_KINDS: PaymentReceiverKind[] = ["organization", "individual", "me
 const inputClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
+const invalidInputClass = inputClass.replace("border-outline-variant", "border-error bg-error-container/20");
 
 const transferTitle = (value: string) => toTransferText(value).slice(0, PAYMENT_LIMITS.title);
 const toNumber = (value: string) => Number(value.replace(/\D/g, "")) || 0;
@@ -64,9 +72,22 @@ function visitLine(v: VisitCandidate): string {
   return `Thăm hỏi ${who} – ${v.reason}`.slice(0, PAYMENT_LIMITS.content);
 }
 
-export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, counterparties, members, onCancel }: Props) {
+export function PaymentRequestForm({
+  mode,
+  initial,
+  requestId,
+  canGatherVisits,
+  counterparties,
+  members,
+  slipSigners,
+  requestCode,
+  onCancel,
+}: Props) {
   const router = useRouter();
   const [values, setValues] = useState<PaymentFormValues>(initial);
+  /** Ô lỗi sau lần kiểm tra gần nhất; dòng chi phí ghi theo item.key: `items.<key>.<trường>`. */
+  const [invalid, setInvalid] = useState<Set<string>>(new Set());
+  const [preview, setPreview] = useState<PaymentSlipData | null>(null);
   const [partySearch, setPartySearch] = useState("");
   const [memberBank, setMemberBank] = useState<{ loading: boolean; missing: boolean; error: string | null }>({
     loading: false,
@@ -79,9 +100,36 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [loadingCandidates, setLoadingCandidates] = useState(false);
 
-  const set = (patch: Partial<PaymentFormValues>) => setValues((v) => ({ ...v, ...patch }));
-  const setItem = (key: string, patch: Partial<PaymentFormItem>) =>
+  const clearInvalid = (fields: string[]) =>
+    setInvalid((prev) => {
+      if (!fields.some((f) => prev.has(f))) return prev;
+      const next = new Set(prev);
+      for (const f of fields) next.delete(f);
+      return next;
+    });
+  const set = (patch: Partial<PaymentFormValues>) => {
+    clearInvalid(Object.keys(patch));
+    setValues((v) => ({ ...v, ...patch }));
+  };
+  const setItem = (key: string, patch: Partial<PaymentFormItem>) => {
+    clearInvalid(Object.keys(patch).map((f) => `items.${key}.${f}`));
     setValues((v) => ({ ...v, items: v.items.map((i) => (i.key === key ? { ...i, ...patch } : i)) }));
+  };
+  const field = (name: string) => (invalid.has(name) ? invalidInputClass : inputClass);
+
+  useEffect(() => {
+    if (!preview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreview(null);
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [preview]);
   const removeItem = (key: string) => setValues((v) => ({ ...v, items: v.items.filter((i) => i.key !== key) }));
   const moveItem = (index: number, delta: number) =>
     setValues((v) => {
@@ -195,8 +243,8 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
     setPicked(new Set());
   }
 
-  async function submit(print = false) {
-    const payload = {
+  function buildPayload() {
+    return {
       ...values,
       items: values.items.map((i) => ({
         content: i.content,
@@ -206,9 +254,56 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         visitRequestId: i.visitRequestId,
       })),
     };
+  }
+
+  /** Cùng bước kiểm tra như khi lập; lỗi thì báo và tô đỏ các ô liên quan. */
+  function validate(payload: ReturnType<typeof buildPayload>): PaymentInput | null {
     const parsed = parsePaymentInput(payload);
-    if (!parsed.ok) {
-      setError(parsed.errors.join(" "));
+    if (parsed.ok) {
+      setInvalid(new Set());
+      return parsed.value;
+    }
+    setError(parsed.errors.join(" "));
+    setInvalid(
+      new Set(
+        parsed.fields.map((f) => {
+          const m = /^items\.(\d+)\.(\w+)$/.exec(f);
+          return m ? `items.${values.items[Number(m[1])]?.key}.${m[2]}` : f;
+        }),
+      ),
+    );
+    return null;
+  }
+
+  function openPreview() {
+    const input = validate(buildPayload());
+    if (!input) return;
+    setError(null);
+    setPreview(
+      mapPaymentSlip(
+        {
+          code: requestCode ?? null,
+          request_date: input.requestDate,
+          title: input.title,
+          requester_name: input.requesterName,
+          requester_department: input.requesterDepartment,
+          payment_method: input.paymentMethod,
+          receiver_name: input.receiverName,
+          receiver_account: input.receiverAccount,
+          receiver_bank: input.receiverBank,
+          total_amount: input.items.reduce((sum, i) => sum + i.amount, 0),
+          advanced_amount: input.items.reduce((sum, i) => sum + i.advanced, 0),
+        },
+        input.items.map((i) => ({ content: i.content, paid_to: i.paidTo, amount: i.amount, advanced: i.advanced })),
+        slipSigners,
+      ),
+    );
+  }
+
+  async function submit(print = false) {
+    const payload = buildPayload();
+    if (!validate(payload)) {
+      setPreview(null);
       return;
     }
     setBusy(print ? "print" : "save");
@@ -242,11 +337,11 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         <div>
           <label className={labelClass}>Nội dung chuyển khoản * (tự bỏ dấu)</label>
           <input
-            className={inputClass}
+            className={field("title")}
             maxLength={PAYMENT_LIMITS.title}
             placeholder="Ví dụ: CDILV chi tham hoi doan vien T10 2026"
             value={values.title}
-            onBlur={() => set({ title: transferTitle(values.title).trim() })}
+            onBlur={() => setValues((v) => ({ ...v, title: transferTitle(v.title).trim() }))}
             onChange={(e) => {
               const composing = (e.nativeEvent as InputEvent).isComposing;
               set({ title: composing ? e.target.value : transferTitle(e.target.value) });
@@ -263,7 +358,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         <div>
           <label className={labelClass}>Ngày đề nghị *</label>
           <input
-            className={inputClass}
+            className={field("requestDate")}
             type="date"
             value={values.requestDate}
             onChange={(e) => set({ requestDate: e.target.value })}
@@ -275,7 +370,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         <div>
           <label className={labelClass}>Người đề nghị (Requestor) *</label>
           <input
-            className={inputClass}
+            className={field("requesterName")}
             maxLength={PAYMENT_LIMITS.name}
             value={values.requesterName}
             onChange={(e) => set({ requesterName: e.target.value })}
@@ -284,7 +379,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         <div>
           <label className={labelClass}>Bộ phận (Department)</label>
           <input
-            className={inputClass}
+            className={field("requesterDepartment")}
             maxLength={PAYMENT_LIMITS.name}
             value={values.requesterDepartment}
             onChange={(e) => set({ requesterDepartment: e.target.value })}
@@ -424,14 +519,14 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
               </div>
               <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
                 <input
-                  className={inputClass}
+                  className={field(`items.${item.key}.content`)}
                   maxLength={PAYMENT_LIMITS.content}
                   placeholder="Chi tiết chi phí"
                   value={item.content}
                   onChange={(e) => setItem(item.key, { content: e.target.value })}
                 />
                 <input
-                  className={inputClass}
+                  className={field(`items.${item.key}.paidTo`)}
                   maxLength={PAYMENT_LIMITS.name}
                   placeholder="Đối tượng nhận"
                   value={item.paidTo}
@@ -442,7 +537,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
                 <label className="text-xs text-on-surface-variant">
                   Thực trả (VNĐ) *
                   <input
-                    className={`${inputClass} mt-0.5`}
+                    className={`${field(`items.${item.key}.amount`)} mt-0.5`}
                     inputMode="numeric"
                     placeholder="0"
                     value={formatInput(item.amount)}
@@ -452,7 +547,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
                 <label className="text-xs text-on-surface-variant">
                   Đã tạm ứng (VNĐ)
                   <input
-                    className={`${inputClass} mt-0.5`}
+                    className={`${field(`items.${item.key}.advanced`)} mt-0.5`}
                     inputMode="numeric"
                     placeholder="0"
                     value={formatInput(item.advanced)}
@@ -530,7 +625,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
                   Nhập họ tên hoặc mã NV rồi chọn đoàn viên – số tài khoản và ngân hàng lấy từ hồ sơ đoàn viên.
                 </p>
                 <PaymentMemberPicker
-                  inputClass={inputClass}
+                  inputClass={field("receiverMemberId")}
                   labelClass={labelClass}
                   memberId={values.receiverMemberId}
                   members={members}
@@ -598,7 +693,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
           <div>
             <label className={labelClass}>Người nhận / Chủ TK{values.paymentMethod === "transfer" ? " *" : ""}</label>
             <input
-              className={inputClass}
+              className={field("receiverName")}
               maxLength={PAYMENT_LIMITS.name}
               value={values.receiverName}
               onChange={(e) => set({ receiverName: e.target.value })}
@@ -607,7 +702,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
           <div>
             <label className={labelClass}>Số tài khoản{values.paymentMethod === "transfer" ? " *" : ""}</label>
             <input
-              className={inputClass}
+              className={field("receiverAccount")}
               inputMode="numeric"
               maxLength={PAYMENT_LIMITS.account}
               value={values.receiverAccount}
@@ -617,7 +712,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
           <div>
             <label className={labelClass}>Ngân hàng{values.paymentMethod === "transfer" ? " *" : ""}</label>
             <input
-              className={inputClass}
+              className={field("receiverBank")}
               maxLength={PAYMENT_LIMITS.name}
               placeholder="Ví dụ: Vietcombank – CN Hải Phòng"
               value={values.receiverBank}
@@ -630,7 +725,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
       <div>
         <label className={labelClass}>Ghi chú nội bộ</label>
         <input
-          className={inputClass}
+          className={field("note")}
           maxLength={PAYMENT_LIMITS.note}
           placeholder="Không in lên giấy đề nghị"
           value={values.note}
@@ -665,6 +760,15 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
             Lập &amp; tải giấy đề nghị (Excel)
           </button>
         ) : null}
+        <button
+          className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant px-4 py-2 text-sm font-bold text-[#173A67] hover:border-[#173A67] disabled:opacity-60"
+          disabled={busy !== null || memberBank.loading}
+          type="button"
+          onClick={openPreview}
+        >
+          <MaterialIcon className="text-[18px]" name="preview" />
+          Xem trước
+        </button>
         {onCancel ? (
           <button
             className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:border-[#173A67]"
@@ -678,9 +782,84 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
       </div>
       {mode === "create" ? (
         <p className="text-[11px] text-on-surface-variant">
-          Giấy đề nghị được cấp mã số khi lập, nên chỉ in được sau khi lập. Bấm “Lập &amp; tải giấy đề nghị” để lập và tải file
-          in ngay; nút “Tải giấy đề nghị” cũng có ở trang chi tiết đề nghị.
+          Bấm “Xem trước” để xem giấy đề nghị sẽ in ra sao mà chưa lưu, chưa cấp mã số. Giấy đề nghị được cấp mã số khi lập;
+          “Lập &amp; tải giấy đề nghị” lập và tải file in ngay, nút “Tải giấy đề nghị” cũng có ở trang chi tiết.
         </p>
+      ) : null}
+
+      {preview ? (
+        <div
+          aria-labelledby="payment-preview-title"
+          aria-modal="true"
+          className="fixed inset-0 z-[120] flex items-stretch justify-center bg-black/50 sm:items-center sm:p-6"
+          role="dialog"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPreview(null);
+          }}
+        >
+          <div className="flex max-h-full w-full max-w-4xl flex-col overflow-hidden bg-surface-container-lowest shadow-xl sm:rounded-2xl">
+            <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant px-4 py-3">
+              <h2 className="text-title-md font-bold text-[#173A67]" id="payment-preview-title">
+                Xem trước giấy đề nghị
+              </h2>
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900">
+                {requestCode ? `Số: ${requestCode}` : SLIP_CODE_PENDING}
+              </span>
+              <button
+                aria-label="Đóng"
+                className="ml-auto rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high"
+                type="button"
+                onClick={() => setPreview(null)}
+              >
+                <MaterialIcon className="text-[22px]" name="close" />
+              </button>
+            </div>
+            <div className="flex-1 space-y-3 overflow-y-auto bg-surface-container-low p-2 sm:p-4">
+              <div className="space-y-1 px-1 text-xs text-on-surface-variant">
+                <p>
+                  Bản xem trước chưa lưu vào hệ thống. Tổng thực trả <b className="text-[#173A67]">{formatVnd(preview.totals.paid)}</b>
+                  {" – "}
+                  {vndInWords(preview.totals.paid)}
+                </p>
+                <p>
+                  Mã số đề nghị {requestCode ? "" : "cấp khi lập, "}không in trên trang chính của mẫu
+                  {preview.itemSheet ? "; có ở tiêu đề trang Bảng kê" : ""}.
+                </p>
+                {!slipSigners.accountantName || !slipSigners.chairmanName ? (
+                  <p className="text-amber-800">
+                    Chưa cài họ tên{" "}
+                    {[!slipSigners.accountantName && "Kế toán Công đoàn", !slipSigners.chairmanName && "Chủ tịch BCH Công đoàn"]
+                      .filter(Boolean)
+                      .join(", ")}{" "}
+                    nên ô chữ ký để trống – nhập ở Cài đặt biểu mẫu in.
+                  </p>
+                ) : null}
+              </div>
+              <PaymentSlipPreview data={preview} />
+            </div>
+            {error ? (
+              <div className="border-t border-error/30 bg-error-container/40 px-4 py-2 text-sm text-on-error-container">{error}</div>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-2 border-t border-outline-variant px-4 py-3">
+              <button
+                className="rounded-xl border border-outline-variant px-4 py-2 text-sm font-semibold text-on-surface-variant hover:border-[#173A67]"
+                type="button"
+                onClick={() => setPreview(null)}
+              >
+                Đóng
+              </button>
+              <button
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#173A67] px-4 py-2 text-sm font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-60"
+                disabled={busy !== null}
+                type="button"
+                onClick={() => void submit()}
+              >
+                <MaterialIcon className="text-[18px]" name={busy === "save" ? "progress_activity" : "save"} />
+                {mode === "create" ? "Lập đề nghị" : "Lưu thay đổi"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

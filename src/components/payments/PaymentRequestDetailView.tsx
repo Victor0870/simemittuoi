@@ -18,6 +18,7 @@ import {
   toTransferText,
 } from "@/lib/payments/registry";
 import type { PaymentAbilities, PaymentMember, PaymentRequestDetail } from "@/lib/payments/server";
+import type { SlipSigners } from "@/lib/payments/slip-data";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -28,6 +29,7 @@ type Props = {
   canViewVisits: boolean;
   counterparties: Counterparty[];
   members: PaymentMember[];
+  slipSigners: SlipSigners;
   /** Vừa bấm “Lập & tải giấy đề nghị” – tự tải file in một lần. */
   autoPrint?: boolean;
 };
@@ -42,6 +44,7 @@ export function PaymentRequestDetailView({
   canViewVisits,
   counterparties,
   members,
+  slipSigners,
   autoPrint,
 }: Props) {
   const router = useRouter();
@@ -124,7 +127,9 @@ export function PaymentRequestDetailView({
         counterparties={counterparties}
         members={members}
         mode="edit"
+        requestCode={detail.code}
         requestId={detail.id}
+        slipSigners={slipSigners}
         onCancel={() => setEditing(false)}
       />
     );

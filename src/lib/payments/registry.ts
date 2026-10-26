@@ -90,25 +90,48 @@ function money(value: unknown): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** Ô trên form bị lỗi: tên trường, hoặc `items.<thứ tự dòng>.<trường>` cho dòng chi phí. */
+export type PaymentField =
+  | "requestDate"
+  | "title"
+  | "requesterName"
+  | "requesterDepartment"
+  | "receiverMemberId"
+  | "receiverName"
+  | "receiverAccount"
+  | "receiverBank"
+  | "note"
+  | "items"
+  | `items.${number}.${"content" | "paidTo" | "amount" | "advanced"}`;
+
 export function parsePaymentInput(
   raw: Record<string, unknown>,
-): { ok: true; value: PaymentInput } | { ok: false; errors: string[] } {
+): { ok: true; value: PaymentInput } | { ok: false; errors: string[]; fields: PaymentField[] } {
   const errors: string[] = [];
+  const fields = new Set<PaymentField>();
+  const fail = (message: string, ...at: PaymentField[]) => {
+    errors.push(message);
+    for (const f of at) fields.add(f);
+  };
 
   const requestDate = oneLine(raw.requestDate);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(requestDate) || Number.isNaN(Date.parse(requestDate))) {
-    errors.push("Ngày đề nghị không hợp lệ.");
+    fail("Ngày đề nghị không hợp lệ.", "requestDate");
   }
 
   const title = toTransferText(oneLine(raw.title)).trim();
-  if (!/[A-Za-z0-9]/.test(title)) errors.push("Vui lòng nhập nội dung chuyển khoản.");
-  if (title.length > PAYMENT_LIMITS.title) errors.push(`Nội dung chuyển khoản tối đa ${PAYMENT_LIMITS.title} ký tự.`);
+  if (!/[A-Za-z0-9]/.test(title)) fail("Vui lòng nhập nội dung chuyển khoản.", "title");
+  if (title.length > PAYMENT_LIMITS.title) fail(`Nội dung chuyển khoản tối đa ${PAYMENT_LIMITS.title} ký tự.`, "title");
 
   const requesterName = oneLine(raw.requesterName);
-  if (!requesterName) errors.push("Vui lòng nhập người đề nghị.");
+  if (!requesterName) fail("Vui lòng nhập người đề nghị.", "requesterName");
   const requesterDepartment = oneLine(raw.requesterDepartment) || null;
   if (requesterName.length > PAYMENT_LIMITS.name || (requesterDepartment?.length ?? 0) > PAYMENT_LIMITS.name) {
-    errors.push("Tên / bộ phận người đề nghị quá dài.");
+    fail(
+      "Tên / bộ phận người đề nghị quá dài.",
+      ...(requesterName.length > PAYMENT_LIMITS.name ? (["requesterName"] as const) : []),
+      ...((requesterDepartment?.length ?? 0) > PAYMENT_LIMITS.name ? (["requesterDepartment"] as const) : []),
+    );
   }
 
   const paymentMethod: PaymentMethod = raw.paymentMethod === "cash" ? "cash" : "transfer";
@@ -120,21 +143,32 @@ export function parsePaymentInput(
     receiverKind === "member" && typeof raw.receiverMemberId === "string" && UUID_RE.test(raw.receiverMemberId)
       ? raw.receiverMemberId
       : null;
-  if (receiverKind === "member" && !receiverMemberId) errors.push("Vui lòng chọn đoàn viên nhận tiền (theo tên hoặc mã NV).");
+  if (receiverKind === "member" && !receiverMemberId) {
+    fail("Vui lòng chọn đoàn viên nhận tiền (theo tên hoặc mã NV).", "receiverMemberId");
+  }
   const counterpartyId =
     receiverKind !== "member" && typeof raw.counterpartyId === "string" && UUID_RE.test(raw.counterpartyId)
       ? raw.counterpartyId
       : null;
   if ((receiverName?.length ?? 0) > PAYMENT_LIMITS.name || (receiverBank?.length ?? 0) > PAYMENT_LIMITS.name) {
-    errors.push("Tên người nhận / ngân hàng quá dài.");
+    fail(
+      "Tên người nhận / ngân hàng quá dài.",
+      ...((receiverName?.length ?? 0) > PAYMENT_LIMITS.name ? (["receiverName"] as const) : []),
+      ...((receiverBank?.length ?? 0) > PAYMENT_LIMITS.name ? (["receiverBank"] as const) : []),
+    );
   }
-  if ((receiverAccount?.length ?? 0) > PAYMENT_LIMITS.account) errors.push("Số tài khoản quá dài.");
+  if ((receiverAccount?.length ?? 0) > PAYMENT_LIMITS.account) fail("Số tài khoản quá dài.", "receiverAccount");
   if (paymentMethod === "transfer" && (!receiverName || !receiverAccount || !receiverBank)) {
-    errors.push("Chuyển khoản cần đủ chủ tài khoản, số tài khoản và ngân hàng.");
+    fail(
+      "Chuyển khoản cần đủ chủ tài khoản, số tài khoản và ngân hàng.",
+      ...(receiverName ? [] : (["receiverName"] as const)),
+      ...(receiverAccount ? [] : (["receiverAccount"] as const)),
+      ...(receiverBank ? [] : (["receiverBank"] as const)),
+    );
   }
 
   const note = typeof raw.note === "string" ? raw.note.trim() || null : null;
-  if (note && note.length > PAYMENT_LIMITS.note) errors.push(`Ghi chú tối đa ${PAYMENT_LIMITS.note} ký tự.`);
+  if (note && note.length > PAYMENT_LIMITS.note) fail(`Ghi chú tối đa ${PAYMENT_LIMITS.note} ký tự.`, "note");
 
   const rawItems = Array.isArray(raw.items) ? raw.items : [];
   const items: PaymentItemInput[] = [];
@@ -147,21 +181,27 @@ export function parsePaymentInput(
     const amount = money(item.amount);
     const advanced = money(item.advanced);
     const visitRequestId = typeof item.visitRequestId === "string" && UUID_RE.test(item.visitRequestId) ? item.visitRequestId : null;
-    if (!content) errors.push(`${line}: chưa nhập chi tiết chi phí.`);
-    if (content.length > PAYMENT_LIMITS.content) errors.push(`${line}: chi tiết tối đa ${PAYMENT_LIMITS.content} ký tự.`);
-    if ((paidTo?.length ?? 0) > PAYMENT_LIMITS.name) errors.push(`${line}: tên người nhận quá dài.`);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) errors.push(`${line}: số tiền không hợp lệ.`);
-    if (!Number.isFinite(advanced) || advanced < 0 || advanced > MAX_AMOUNT) errors.push(`${line}: số đã tạm ứng không hợp lệ.`);
+    if (!content) fail(`${line}: chưa nhập chi tiết chi phí.`, `items.${index}.content`);
+    if (content.length > PAYMENT_LIMITS.content) {
+      fail(`${line}: chi tiết tối đa ${PAYMENT_LIMITS.content} ký tự.`, `items.${index}.content`);
+    }
+    if ((paidTo?.length ?? 0) > PAYMENT_LIMITS.name) fail(`${line}: tên người nhận quá dài.`, `items.${index}.paidTo`);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
+      fail(`${line}: số tiền không hợp lệ.`, `items.${index}.amount`);
+    }
+    if (!Number.isFinite(advanced) || advanced < 0 || advanced > MAX_AMOUNT) {
+      fail(`${line}: số đã tạm ứng không hợp lệ.`, `items.${index}.advanced`);
+    }
     if (visitRequestId) {
-      if (seenVisits.has(visitRequestId)) errors.push(`${line}: phiếu thăm hỏi bị gom hai lần.`);
+      if (seenVisits.has(visitRequestId)) fail(`${line}: phiếu thăm hỏi bị gom hai lần.`, `items.${index}.content`);
       seenVisits.add(visitRequestId);
     }
     items.push({ content, paidTo, amount, advanced, visitRequestId });
   });
-  if (!items.length) errors.push("Đề nghị phải có ít nhất một dòng chi phí.");
-  if (items.length > PAYMENT_LIMITS.items) errors.push(`Tối đa ${PAYMENT_LIMITS.items} dòng chi phí.`);
+  if (!items.length) fail("Đề nghị phải có ít nhất một dòng chi phí.", "items");
+  if (items.length > PAYMENT_LIMITS.items) fail(`Tối đa ${PAYMENT_LIMITS.items} dòng chi phí.`, "items");
 
-  if (errors.length) return { ok: false, errors };
+  if (errors.length) return { ok: false, errors, fields: [...fields] };
   return {
     ok: true,
     value: {

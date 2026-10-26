@@ -68,6 +68,11 @@ export default async function NewPaymentRequestPage() {
         }}
         counterparties={counterparties}
         members={members}
+        slipSigners={{
+          preparerDepartment: settings.preparerDepartment,
+          accountantName: settings.accountantName,
+          chairmanName: settings.chairmanName,
+        }}
         mode="create"
       />
     </div>
