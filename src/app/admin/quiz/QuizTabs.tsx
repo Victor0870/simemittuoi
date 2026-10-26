@@ -55,6 +55,7 @@ export function QuizTabs({
             const isActive = tab.key === active;
             return (
               <Link
+                prefetch={false}
                 key={tab.key}
                 aria-current={isActive ? "page" : undefined}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-semibold transition ${
@@ -71,6 +72,7 @@ export function QuizTabs({
           })}
         </nav>
         <Link
+          prefetch={false}
           className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#173A67] px-2 py-0.5 text-xs font-bold text-[#173A67] transition hover:bg-[#173A67] hover:text-white"
           href={`/quiz/${program.id}`}
         >

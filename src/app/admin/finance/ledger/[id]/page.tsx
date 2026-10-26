@@ -34,6 +34,7 @@ export default async function FundEntryPage({ params, searchParams }: PageProps)
   return (
     <div className="max-w-3xl space-y-4 pb-10">
       <Link
+        prefetch={false}
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
         href="/admin/finance/ledger"
       >
@@ -44,7 +45,7 @@ export default async function FundEntryPage({ params, searchParams }: PageProps)
         <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           <MaterialIcon className="text-[20px]" name="check_circle" />
           Đã ghi sổ {detail.code}.
-          <Link className="underline" href={`/admin/finance/ledger/new?kind=${detail.kind}`}>
+          <Link prefetch={false} className="underline" href={`/admin/finance/ledger/new?kind=${detail.kind}`}>
             Ghi tiếp phiếu khác
           </Link>
         </div>

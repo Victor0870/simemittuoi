@@ -618,6 +618,7 @@ export function DocumentComposer({
         ) : null}
         {canManageUnionSettings ? (
           <Link
+            prefetch={false}
             className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
             href="/admin/union-settings"
             title="Quản lý danh sách cán bộ và chức danh công đoàn dùng để gợi ý thành phần tham gia"

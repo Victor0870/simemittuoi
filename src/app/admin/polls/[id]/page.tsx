@@ -62,6 +62,7 @@ export default async function AdminPollDetailPage({ params }: Props) {
         </dl>
         <div className="flex flex-wrap gap-2 pt-1">
           <Link
+            prefetch={false}
             className="inline-flex items-center gap-1.5 rounded-xl border border-primary px-3 py-2 text-sm font-bold text-primary transition hover:bg-primary hover:text-white"
             href={`/polls/${poll.id}`}
           >
@@ -69,6 +70,7 @@ export default async function AdminPollDetailPage({ params }: Props) {
             Xem trang bình chọn
           </Link>
           <Link
+            prefetch={false}
             className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container-high"
             href="/admin/polls"
           >

@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { AdminTrailContext, type AdminTrail } from "@/components/admin/AdminBreadcrumbTrail";
 import { AdminSidebar, resolveAdminLocation } from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 
 /** Khung chung cho /admin/*: sidebar cố định (drawer trên mobile), thanh tiêu đề, vùng nội dung. */
 export function AdminLayout({ children }: { children: ReactNode }) {
@@ -32,6 +33,30 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     if (restoreFocus) menuButtonRef.current?.focus();
   }, []);
 
+  // Link không prefetch nên loading.tsx chỉ hiện khi máy chủ đã phản hồi; hiện khung chờ ngay khi bấm
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+  useEffect(() => {
+    setPendingPath(null);
+  }, [pathname]);
+  useEffect(() => {
+    if (!pendingPath) return;
+    const timer = window.setTimeout(() => setPendingPath(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [pendingPath]);
+
+  const onClickCapture = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const anchor = (event.target as HTMLElement).closest("a");
+      if (!anchor || (anchor.target && anchor.target !== "_self") || anchor.hasAttribute("download")) return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === pathname) return;
+      if (url.pathname !== "/admin" && !url.pathname.startsWith("/admin/")) return;
+      setPendingPath(url.pathname);
+    },
+    [pathname],
+  );
+
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -42,7 +67,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   }, [open, closeDrawer]);
 
   return (
-    <div className="min-h-screen bg-surface-bg" data-admin-shell="">
+    <div className="min-h-screen bg-surface-bg" data-admin-shell="" onClickCapture={onClickCapture}>
       <aside className="fixed inset-y-0 left-0 z-40 hidden md:block print:hidden">
         <AdminSidebar />
       </aside>
@@ -184,13 +209,16 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               href="/settings"
               title="Cài đặt / Avatar"
             >
-              <Avatar alt="Ảnh đại diện" fallback={initial} size={32} src={profile?.avatar_url} />
+              <Avatar alt="Ảnh đại diện" fallback={initial} loading="eager" size={32} src={profile?.avatar_url} />
             </Link>
           </div>
         </header>
 
         <main className="mx-auto w-full min-w-0 max-w-container-max flex-1 p-6 md:p-7 print:max-w-none print:p-0">
-          <AdminTrailContext.Provider value={setTrail}>{children}</AdminTrailContext.Provider>
+          {pendingPath ? <PageSkeleton variant="table" /> : null}
+          <div className={pendingPath ? "hidden" : "contents"}>
+            <AdminTrailContext.Provider value={setTrail}>{children}</AdminTrailContext.Provider>
+          </div>
         </main>
       </div>
     </div>

@@ -188,7 +188,7 @@ export function FinanceSummaryView({
         accessor: (r) => r.code,
         className: "whitespace-nowrap",
         render: (r) => (
-          <Link className="font-bold text-[#173A67] hover:underline" href={`/admin/finance/ledger/${r.id}`}>
+          <Link prefetch={false} className="font-bold text-[#173A67] hover:underline" href={`/admin/finance/ledger/${r.id}`}>
             {r.code}
           </Link>
         ),
@@ -242,7 +242,7 @@ export function FinanceSummaryView({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-            <Link className="hover:text-[#173A67] hover:underline" href="/admin/finance">
+            <Link prefetch={false} className="hover:text-[#173A67] hover:underline" href="/admin/finance">
               Tài chính công đoàn
             </Link>
             <span>/</span>
@@ -259,6 +259,7 @@ export function FinanceSummaryView({
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex rounded-xl border border-outline-variant bg-surface-container-lowest p-1">
             <Link
+              prefetch={false}
               className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold transition ${
                 isIncome
                   ? "bg-emerald-700 text-white shadow-xs"
@@ -270,6 +271,7 @@ export function FinanceSummaryView({
               Tổng hợp thu
             </Link>
             <Link
+              prefetch={false}
               className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-bold transition ${
                 !isIncome
                   ? "bg-rose-700 text-white shadow-xs"
@@ -282,11 +284,11 @@ export function FinanceSummaryView({
             </Link>
           </div>
 
-          <Link className={navButtonClass} href="/admin/finance">
+          <Link prefetch={false} className={navButtonClass} href="/admin/finance">
             <MaterialIcon className="text-[18px]" name="arrow_back" />
             Về Tài chính
           </Link>
-          <Link className={navButtonClass} href="/admin/finance/ledger">
+          <Link prefetch={false} className={navButtonClass} href="/admin/finance/ledger">
             <MaterialIcon className="text-[18px]" name="account_balance_wallet" />
             Mở Sổ quỹ
           </Link>

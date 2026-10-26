@@ -21,16 +21,26 @@ type AvatarProps = {
   className?: string;
   /** Hiển thị khi không có ảnh. */
   fallback?: ReactNode;
+  /** "eager" cho ảnh luôn thấy ngay (thanh trên cùng); mặc định tải lười. */
+  loading?: "eager" | "lazy";
 };
 
 /** Ảnh đại diện nhỏ qua next/image; không có url thì hiện fallback. */
-export function Avatar({ src, alt, size, className = "h-full w-full object-cover", fallback = null }: AvatarProps) {
+export function Avatar({
+  src,
+  alt,
+  size,
+  className = "h-full w-full object-cover",
+  fallback = null,
+  loading,
+}: AvatarProps) {
   if (!src) return <>{fallback}</>;
   return (
     <Image
       alt={alt}
       className={className}
       height={size}
+      loading={loading}
       src={src}
       unoptimized={!canOptimize(src)}
       width={size}

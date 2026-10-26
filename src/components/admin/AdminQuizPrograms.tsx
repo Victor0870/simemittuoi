@@ -161,6 +161,7 @@ export function AdminQuizPrograms({ programs }: { programs: QuizProgramCard[] })
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {programs.map((p) => (
             <Link
+              prefetch={false}
               key={p.id}
               className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
               href={`/admin/quiz/${p.id}`}

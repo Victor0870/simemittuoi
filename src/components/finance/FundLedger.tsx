@@ -148,7 +148,7 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
       className: "whitespace-nowrap",
       render: ({ entry: e }) => (
         <>
-          <Link className="font-bold text-[#173A67] hover:underline" href={`/admin/finance/ledger/${e.id}`}>
+          <Link prefetch={false} className="font-bold text-[#173A67] hover:underline" href={`/admin/finance/ledger/${e.id}`}>
             {e.code}
           </Link>
           {e.status === "void" ? <span className="ml-1 text-[11px] font-bold text-rose-700 no-underline">Đã hủy</span> : null}

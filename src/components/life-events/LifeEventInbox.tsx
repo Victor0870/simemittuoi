@@ -74,7 +74,7 @@ export function LifeEventInbox({ items }: Props) {
       className: "whitespace-nowrap",
       render: (i) => (
         <>
-          <Link className="font-bold text-[#173A67] hover:underline" href={`/admin/administration/life-events/${i.id}`}>
+          <Link prefetch={false} className="font-bold text-[#173A67] hover:underline" href={`/admin/administration/life-events/${i.id}`}>
             {i.code}
           </Link>
           <p className="text-[11px] text-on-surface-variant">{formatDateTimeVi(i.created_at)}</p>

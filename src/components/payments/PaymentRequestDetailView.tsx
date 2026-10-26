@@ -259,6 +259,7 @@ export function PaymentRequestDetailView({
                     {i.visit_request_id ? (
                       canViewVisits ? (
                         <Link
+                          prefetch={false}
                           className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 hover:underline"
                           href={`/admin/administration/visits/${i.visit_request_id}`}
                         >
@@ -273,6 +274,7 @@ export function PaymentRequestDetailView({
                     {i.reward_poll_id ? (
                       canViewRewards ? (
                         <Link
+                          prefetch={false}
                           className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900 hover:underline"
                           href={`/admin/administration/rewards?poll=${i.reward_poll_id}`}
                         >

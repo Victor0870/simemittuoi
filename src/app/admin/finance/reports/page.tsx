@@ -33,6 +33,7 @@ export default async function OfficeReportsPage({ searchParams }: PageProps) {
         <div className="flex flex-wrap gap-2">
           {hasPermission(access, PERMISSIONS.financeView) ? (
             <Link
+              prefetch={false}
               className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]"
               href="/admin/finance/ledger"
             >

@@ -57,6 +57,7 @@ export function AdminPostsManager({
       render: (p) => (
         <div className="space-y-0.5">
           <Link
+            prefetch={false}
             className="line-clamp-2 break-words hover:underline"
             href={`/posts/${p.id}/preview`}
             title={p.title}
@@ -128,6 +129,7 @@ export function AdminPostsManager({
       render: (p) => (
         <div className="inline-flex items-center justify-end gap-1">
           <Link
+            prefetch={false}
             aria-label="Xem trước"
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant bg-white text-[#173A67] shadow-2xs transition hover:bg-surface-container-high"
             href={`/posts/${p.id}/preview`}
@@ -137,6 +139,7 @@ export function AdminPostsManager({
           </Link>
           {p.isContest && canOpenAdmin(`/admin/content/posts/submissions/${p.id}`) ? (
             <Link
+              prefetch={false}
               aria-label="Tác phẩm dự thi"
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant bg-white text-[#173A67] shadow-2xs transition hover:bg-surface-container-high"
               href={`/admin/content/posts/submissions/${p.id}`}
@@ -203,7 +206,7 @@ export function AdminGuidePostsManager({
       intro={
         <>
           Bài viết thuộc chuyên mục Hướng dẫn sử dụng (gồm cả bài Inactive). Bài Active hiện trên trang{" "}
-          <Link className="font-semibold text-primary hover:underline" href={GUIDE_POST_CATEGORY.href}>
+          <Link prefetch={false} className="font-semibold text-primary hover:underline" href={GUIDE_POST_CATEGORY.href}>
             {GUIDE_POST_CATEGORY.href}
           </Link>
           .

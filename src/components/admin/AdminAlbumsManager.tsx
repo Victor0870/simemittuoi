@@ -55,7 +55,7 @@ export function AdminAlbumsManager({ albums }: { albums: AlbumSummary[] }) {
       className: "min-w-[14rem] max-w-[24rem] font-bold text-[#173A67]",
       render: (a) => (
         <div className="space-y-0.5">
-          <Link className="line-clamp-2 break-words hover:underline" href={`/albums/${a.id}`} title={a.title}>
+          <Link prefetch={false} className="line-clamp-2 break-words hover:underline" href={`/albums/${a.id}`} title={a.title}>
             {a.title}
           </Link>
           {a.description ? (
@@ -125,6 +125,7 @@ export function AdminAlbumsManager({ albums }: { albums: AlbumSummary[] }) {
       render: (a) => (
         <div className="inline-flex items-center justify-end gap-1">
           <Link
+            prefetch={false}
             aria-label="Xem album"
             className={`${iconButton} border-outline-variant bg-white text-[#173A67] hover:bg-surface-container-high`}
             href={`/albums/${a.id}`}

@@ -108,7 +108,7 @@ export function ContestSubmissionsManager({ postId, postTitle }: { postId: strin
           <h1 className="text-headline-md font-extrabold text-[#173A67]">Tác phẩm dự thi</h1>
           <p className="text-body-md text-[#27496D]">
             Ảnh dự thi gửi qua bình luận của bài{" "}
-            <Link className="font-semibold text-primary hover:underline" href={`/posts/${postId}`}>
+            <Link prefetch={false} className="font-semibold text-primary hover:underline" href={`/posts/${postId}`}>
               {postTitle}
             </Link>
             . Tải về hoặc chép link ảnh để tạo danh sách bình chọn.
@@ -125,6 +125,7 @@ export function ContestSubmissionsManager({ postId, postTitle }: { postId: strin
             <span>{downloadingAll ? "Đang tải..." : `Tải toàn bộ (${submissions.length} ảnh)`}</span>
           </button>
           <Link
+            prefetch={false}
             className="inline-flex items-center gap-1.5 rounded-xl border border-primary bg-white px-3.5 py-2 text-sm font-bold text-primary transition hover:bg-primary/5"
             href="/admin/polls"
           >

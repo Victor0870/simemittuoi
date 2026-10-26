@@ -64,7 +64,7 @@ export function TopNavAuth() {
         href={isAdmin ? "/admin" : "/settings"}
         title={isAdmin ? "Trang quản trị" : "Cài đặt / Avatar"}
       >
-        <Avatar alt="Ảnh đại diện" fallback={initial} size={32} src={profile?.avatar_url} />
+        <Avatar alt="Ảnh đại diện" fallback={initial} loading="eager" size={32} src={profile?.avatar_url} />
       </Link>
     </>
   );

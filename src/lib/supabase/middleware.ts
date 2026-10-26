@@ -32,12 +32,6 @@ function isAuthExemptPath(pathname: string) {
   );
 }
 
-/** Yêu cầu prefetch của router Next.js (trang vẫn tự kiểm tra quyền khi render). */
-function isRouterPrefetch(request: NextRequest) {
-  const purpose = (request.headers.get("purpose") ?? request.headers.get("sec-purpose") ?? "").toLowerCase();
-  return request.headers.has("next-router-prefetch") || purpose.startsWith("prefetch");
-}
-
 type GateInfo = {
   status: string;
   isAdminRole: boolean;
@@ -211,7 +205,8 @@ export async function updateSession(request: NextRequest) {
       pathname === "/login" ||
       pathname === "/register";
 
-    if (!requiresProfileCheck || isRouterPrefetch(request)) {
+    // Prefetch của router cũng phải qua đủ cổng duyệt/quyền: header prefetch do client tự đặt được
+    if (!requiresProfileCheck) {
       return supabaseResponse;
     }
 

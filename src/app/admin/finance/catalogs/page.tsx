@@ -51,6 +51,7 @@ export default async function CatalogsPage({ searchParams }: PageProps) {
       <nav className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link
+            prefetch={false}
             key={t.key}
             className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-sm font-bold ${
               t.key === tab

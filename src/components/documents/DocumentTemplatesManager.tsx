@@ -330,6 +330,7 @@ export function DocumentTemplatesManager({
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {canManageUnionSettings ? (
             <Link
+              prefetch={false}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2dfe9] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
               href="/admin/union-settings"
             >

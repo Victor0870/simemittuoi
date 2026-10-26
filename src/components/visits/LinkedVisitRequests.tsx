@@ -19,6 +19,7 @@ export function LinkedVisitRequests({ lifeEventId, items, canCreate }: Props) {
         <h2 className="text-title-md font-bold text-[#173A67]">Đề nghị thăm hỏi ({items.length})</h2>
         {canCreate ? (
           <Link
+            prefetch={false}
             className="inline-flex items-center gap-1 rounded-xl bg-[#173A67] px-3 py-1.5 text-sm font-bold text-white hover:bg-[#1E4A7D]"
             href={`/admin/administration/visits/new?event=${lifeEventId}`}
           >
@@ -33,7 +34,7 @@ export function LinkedVisitRequests({ lifeEventId, items, canCreate }: Props) {
         <ul className="divide-y divide-outline-variant rounded-xl border border-outline-variant bg-white">
           {items.map((v) => (
             <li key={v.id}>
-              <Link className="flex flex-wrap items-center gap-2 px-3 py-2 hover:bg-surface-container-low" href={`/admin/administration/visits/${v.id}`}>
+              <Link prefetch={false} className="flex flex-wrap items-center gap-2 px-3 py-2 hover:bg-surface-container-low" href={`/admin/administration/visits/${v.id}`}>
                 <span className="font-bold text-[#173A67]">{v.code}</span>
                 <span className="font-semibold">{formatVnd(v.amount)}</span>
                 <VisitStatusBadge status={v.status} />

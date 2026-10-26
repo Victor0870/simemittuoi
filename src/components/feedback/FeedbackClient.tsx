@@ -265,12 +265,14 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
             </p>
             <div className="mt-4 flex justify-center gap-3">
               <Link
+                prefetch={false}
                 className="rounded-xl bg-[#173A67] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#1E4A7D]"
                 href="/login"
               >
                 Đăng nhập ngay
               </Link>
               <Link
+                prefetch={false}
                 className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
                 href="/register"
               >

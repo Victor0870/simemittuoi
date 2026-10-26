@@ -45,7 +45,7 @@ export default async function AdminPostsPage({
       intro={
         <>
           Tất cả bài viết (gồm cả bài Inactive và bài hẹn giờ). Bài Active hiện trên trang{" "}
-          <Link className="font-semibold text-primary hover:underline" href="/posts">
+          <Link prefetch={false} className="font-semibold text-primary hover:underline" href="/posts">
             /posts
           </Link>
           .

@@ -498,6 +498,7 @@ export function AdminScoresManager({
       headerClassName: "text-right",
       render: (p) => (
         <Link
+          prefetch={false}
           className="inline-flex items-center gap-1 rounded-xl bg-amber-500/15 border border-amber-400 px-3 py-1 text-xs font-bold text-amber-900 hover:bg-amber-500 hover:text-white transition shadow-2xs"
           href={`/admin/scores?user=${encodeURIComponent(p.id)}`}
         >
@@ -561,6 +562,7 @@ export function AdminScoresManager({
             <nav aria-label="Các trang điểm thi đua" className="flex flex-wrap items-center gap-1.5">
               {VIEW_PAGES.filter((p) => p.view !== view).map((p) => (
                 <Link
+                  prefetch={false}
                   key={p.view}
                   className="inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2 py-0.5 text-xs font-semibold text-[#4a6b82] transition hover:bg-[#ecf4ff] hover:text-[#173A67]"
                   href={p.href}
@@ -605,6 +607,7 @@ export function AdminScoresManager({
           <nav aria-label="Các trang điểm thi đua" className="mt-2 flex flex-wrap items-center gap-2">
             {VIEW_PAGES.filter((p) => p.view !== view).map((p) => (
               <Link
+                prefetch={false}
                 key={p.view}
                 className="inline-flex items-center gap-1 rounded-lg bg-surface-container-low px-2.5 py-1 text-label-sm font-semibold text-primary transition hover:text-[#173A67]"
                 href={p.href}

@@ -276,6 +276,7 @@ export function DocumentRegistry({
       render: (d) => (
         <span className="inline-flex items-center gap-1">
           <Link
+            prefetch={false}
             aria-label={`Mở soạn thảo ${d.title}`}
             className={actionClass}
             href={`/admin/documents/compose?draft=${d.id}`}
@@ -335,6 +336,7 @@ export function DocumentRegistry({
           Cấu hình số
         </button>
         <Link
+          prefetch={false}
           className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
           href="/admin/documents/compose"
         >

@@ -21,6 +21,7 @@ export default async function FinanceSettingsPage() {
   return (
     <div className="max-w-3xl space-y-4 pb-10">
       <Link
+        prefetch={false}
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
         href="/admin/finance/ledger"
       >

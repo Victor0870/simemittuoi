@@ -69,6 +69,7 @@ export function QuizLeaderboard({
   }
   const resultLink = resultPostId ? (
     <Link
+      prefetch={false}
       className={`inline-flex items-center gap-1 font-bold text-primary hover:underline ${compact ? "text-xs" : "mt-4 text-sm"}`}
       href={`/posts/${resultPostId}`}
     >

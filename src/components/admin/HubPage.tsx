@@ -55,6 +55,7 @@ export function HubTileGrid({ tiles, hubKey }: { tiles: HubTile[]; hubKey?: HubK
           </div>
         ) : (
           <Link
+            prefetch={false}
             key={t.href + t.title}
             className="group flex items-start gap-3.5 rounded-2xl border border-border-subtle bg-white p-5 transition hover:border-primary hover:shadow-md"
             href={withHubFrom(t.href, hubKey)}

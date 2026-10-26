@@ -41,6 +41,7 @@ export default async function OfficeFinancePage() {
           {can.record ? (
             <>
               <Link
+                prefetch={false}
                 className="flex items-center gap-1 rounded-xl bg-emerald-700 px-3 py-1.5 text-sm font-bold text-white hover:bg-emerald-800"
                 href="/admin/finance/ledger/new?kind=income"
               >
@@ -48,20 +49,21 @@ export default async function OfficeFinancePage() {
                 Ghi thu
               </Link>
               <Link
+                prefetch={false}
                 className="flex items-center gap-1 rounded-xl bg-rose-700 px-3 py-1.5 text-sm font-bold text-white hover:bg-rose-800"
                 href="/admin/finance/ledger/new?kind=expense"
               >
                 <MaterialIcon className="text-[18px]" name="north_east" />
                 Ghi chi
               </Link>
-              <Link className={buttonClass} href="/admin/finance/ledger/new?kind=transfer">
+              <Link prefetch={false} className={buttonClass} href="/admin/finance/ledger/new?kind=transfer">
                 <MaterialIcon className="text-[18px]" name="swap_horiz" />
                 Chuyển quỹ
               </Link>
             </>
           ) : null}
           {can.manage ? (
-            <Link className={buttonClass} href="/admin/finance/settings">
+            <Link prefetch={false} className={buttonClass} href="/admin/finance/settings">
               <MaterialIcon className="text-[18px]" name="settings" />
               Quỹ, danh mục & khóa sổ
             </Link>

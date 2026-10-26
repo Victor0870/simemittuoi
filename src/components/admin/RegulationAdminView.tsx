@@ -180,6 +180,7 @@ export function RegulationAdminView({ initialData }: Props) {
               {notice.postId ? (
                 <div className="mt-1.5">
                   <Link
+                    prefetch={false}
                     className="inline-flex items-center gap-1 font-bold text-emerald-800 underline hover:text-emerald-950"
                     href={`/admin/content/posts?edit=${notice.postId}`}
                     target="_blank"

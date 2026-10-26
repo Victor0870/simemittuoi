@@ -162,6 +162,7 @@ export function AdminQuizControl({
               <>
                 {s.result_post_id ? (
                   <Link
+                    prefetch={false}
                     className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-0.5"
                     href={`/posts/${s.result_post_id}`}
                   >

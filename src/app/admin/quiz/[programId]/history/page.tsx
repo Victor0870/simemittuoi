@@ -53,6 +53,7 @@ export default async function AdminQuizHistoryPage({
               return (
                 <li key={s.id} className="w-64 shrink-0">
                   <Link
+                    prefetch={false}
                     aria-current={isSelected ? "true" : undefined}
                     className={`block rounded-xl border px-2.5 py-1.5 text-xs transition ${
                       isSelected

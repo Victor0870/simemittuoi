@@ -34,6 +34,7 @@ export default async function AdminLifeEventDetailPage({ params }: PageProps) {
         items={[{ label: detail.code, href: `/admin/administration/life-events/${detail.id}` }]}
       />
       <Link
+        prefetch={false}
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
         href="/admin/administration/life-events"
       >

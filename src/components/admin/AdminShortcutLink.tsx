@@ -19,6 +19,7 @@ export function AdminShortcutLink({ href, label, icon = "admin_panel_settings", 
 
   return (
     <Link
+      prefetch={false}
       className={`inline-flex items-center gap-1.5 rounded-full border border-[#173A67]/30 bg-[#D9F2EC] px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#c6eae1] ${className}`}
       href={href}
       title="Mở trong Trang quản trị"

@@ -74,7 +74,7 @@ export function AdminOverview({
                       <span className={`min-w-0 flex-1 text-sm ${empty ? "text-on-surface-variant" : "font-semibold text-on-surface"}`}>
                         {empty ? t.emptyText : t.text}
                       </span>
-                      <Link className="shrink-0 whitespace-nowrap text-sm font-bold text-primary hover:underline" href={t.href}>
+                      <Link prefetch={false} className="shrink-0 whitespace-nowrap text-sm font-bold text-primary hover:underline" href={t.href}>
                         Mở →
                       </Link>
                     </li>
@@ -89,6 +89,7 @@ export function AdminOverview({
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {actions.map((a) => (
                   <Link
+                    prefetch={false}
                     key={a.href + a.label}
                     className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border-subtle bg-surface-container-low px-2 py-4 text-center text-sm font-semibold text-[#173A67] transition hover:border-primary hover:bg-surface-container-high"
                     href={a.href}

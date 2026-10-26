@@ -126,6 +126,7 @@ export function ReportView({ report }: { report: ReportBundle }) {
         <span className="text-xs font-bold text-on-surface-variant">Năm:</span>
         {report.years.map((y) => (
           <Link
+            prefetch={false}
             key={y}
             className={`rounded-full px-3 py-1 text-sm font-bold ${
               y === year ? "bg-[#173A67] text-white" : "border border-outline-variant bg-white text-on-surface-variant hover:border-[#173A67]"
@@ -138,6 +139,7 @@ export function ReportView({ report }: { report: ReportBundle }) {
         <span className="ml-3 text-xs font-bold text-on-surface-variant">Xem theo:</span>
         {(["quarter", "month"] as const).map((k) => (
           <Link
+            prefetch={false}
             key={k}
             className={`rounded-full px-3 py-1 text-sm font-bold ${
               k === g ? "bg-[#173A67] text-white" : "border border-outline-variant bg-white text-on-surface-variant hover:border-[#173A67]"

@@ -11,10 +11,10 @@ import { getSessionUserId } from "@/lib/auth/session";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { fundBalance } from "@/lib/finance/registry";
 import { financeAbilities, loadEntries, loadFunds } from "@/lib/finance/server";
-import { canViewAllLifeEvents, loadLifeEventList } from "@/lib/life-events/server";
-import { loadPaymentRequestList, paymentAbilities } from "@/lib/payments/server";
+import { canViewAllLifeEvents } from "@/lib/life-events/server";
+import { paymentAbilities } from "@/lib/payments/server";
 import { formatVnd } from "@/lib/visits/registry";
-import { loadVisitRequestList, visitAbilities } from "@/lib/visits/server";
+import { visitAbilities } from "@/lib/visits/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -23,104 +23,64 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function AdminDashboardPage() {
-  const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
+  const [supabase, userId, viewer] = await Promise.all([createClient(), getSessionUserId(), getCurrentAccess()]);
 
   if (!userId) {
     redirect("/login?next=/admin");
   }
 
-  const viewer = await getCurrentAccess();
   if (!viewer) redirect("/login?next=/admin");
   if (!viewer.isAdmin) {
     if (!viewer.isApproved) redirect("/");
     return <ManagerOverview access={viewer} />;
   }
 
-  // Hồ sơ, số liệu nhanh và quyền chạy song song; chỉ dùng số liệu sau khi đã kiểm tra quyền admin
-  const metricsPromise = Promise.all([
-    supabase
-      .from(CDILV_TABLE.profiles)
-      .select("id", { count: "exact", head: true })
-      .eq("approval_status", "pending"),
-    supabase
-      .from(CDILV_TABLE.profiles)
-      .select("id", { count: "exact", head: true }),
-    supabase
-      .from(CDILV_TABLE.polls)
-      .select("id", { count: "exact", head: true }),
-    supabase
-      .from(CDILV_TABLE.polls)
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true)
-      .eq("status", "open"),
-    supabase
-      .from(CDILV_TABLE.activities)
-      .select("id", { count: "exact", head: true }),
-    supabase
-      .from(CDILV_TABLE.activities)
-      .select("id", { count: "exact", head: true })
-      .eq("is_registration_open", true),
-    supabase
-      .from(CDILV_TABLE.feedbacks)
-      .select("id", { count: "exact", head: true })
-      .is("admin_reply", null),
-    supabase
-      .from(CDILV_TABLE.employeeWhitelist)
-      .select("employee_code", { count: "exact", head: true })
-      .eq("is_active", true),
-    supabase
-      .from(CDILV_TABLE.quizQuestions)
-      .select("id", { count: "exact", head: true }),
-    createServiceClient()
-      .from(CDILV_TABLE.popups)
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true)
-      .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`),
-  ]);
+  const access = viewer;
+  const db = createServiceClient();
+  const canFinance = hasPermission(access, PERMISSIONS.financeView);
+  const canPayments = paymentAbilities(access).view;
+  const canVisits = visitAbilities(access).view;
+  const canLifeEvents = canViewAllLifeEvents(access);
+  // Số liệu chỉ để hiển thị trên bảng điều khiển nên dùng count estimated (vẫn chính xác khi số nhỏ)
+  const countOnly = { count: "estimated", head: true } as const;
+  const noCount = Promise.resolve({ count: 0 });
 
-  const [{ data: me }, metrics, access] = await Promise.all([
+  // Mọi truy vấn độc lập chạy song song, sau khi đã kiểm tra quyền admin
+  const [
+    { data: me },
+    { count: pendingUsersCount },
+    { count: activePollsCount },
+    { count: openActivitiesCount },
+    { count: pendingFeedbackCount },
+    { count: pendingPaymentsCount },
+    { count: pendingVisitsCount },
+    { count: pendingLifeEventsCount },
+    funds,
+    entries,
+  ] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
       .select("id, role, approval_status, full_name, employee_code, department, avatar_url")
       .eq("id", userId)
       .maybeSingle(),
-    metricsPromise,
-    getCurrentAccess(),
+    supabase.from(CDILV_TABLE.profiles).select("id", countOnly).eq("approval_status", "pending"),
+    supabase.from(CDILV_TABLE.polls).select("id", countOnly).eq("is_active", true).eq("status", "open"),
+    supabase.from(CDILV_TABLE.activities).select("id", countOnly).eq("is_registration_open", true),
+    supabase.from(CDILV_TABLE.feedbacks).select("id", countOnly).is("admin_reply", null),
+    canPayments ? db.from(CDILV_TABLE.paymentRequests).select("id", countOnly).eq("status", "proposed") : noCount,
+    canVisits ? db.from(CDILV_TABLE.visitRequests).select("id", countOnly).eq("status", "proposed") : noCount,
+    canLifeEvents ? db.from(CDILV_TABLE.lifeEvents).select("id", countOnly).eq("status", "submitted") : noCount,
+    canFinance ? loadFunds(db) : Promise.resolve([]),
+    canFinance ? loadEntries(db) : Promise.resolve([]),
   ]);
 
   if (me?.role !== "admin" || me?.approval_status !== "approved") {
     redirect("/");
   }
 
-  const [
-    { count: pendingUsersCount },
-    { count: totalUsersCount },
-    { count: totalPollsCount },
-    { count: activePollsCount },
-    { count: totalActivitiesCount },
-    { count: openActivitiesCount },
-    { count: pendingFeedbackCount },
-    { count: activeWhitelistCount },
-    { count: quizQuestionsCount },
-    { count: activePopupsCount },
-  ] = metrics;
-
-  const db = createServiceClient();
-  const canFinance = access ? hasPermission(access, PERMISSIONS.financeView) : false;
-  const canPayments = access ? paymentAbilities(access).view : false;
-  const canVisits = access ? visitAbilities(access).view : false;
-  const canLifeEvents = access ? canViewAllLifeEvents(access) : false;
-  const [funds, entries, payments, visits, lifeEvents] = await Promise.all([
-    canFinance ? loadFunds(db) : Promise.resolve([]),
-    canFinance ? loadEntries(db) : Promise.resolve([]),
-    canPayments ? loadPaymentRequestList(db) : Promise.resolve([]),
-    canVisits ? loadVisitRequestList(db) : Promise.resolve([]),
-    canLifeEvents ? loadLifeEventList(db, null) : Promise.resolve([]),
-  ]);
-
-  const pendingPayments = payments.filter((p) => p.status === "proposed").length;
-  const pendingVisits = visits.filter((v) => v.status === "proposed").length;
-  const pendingLifeEvents = lifeEvents.filter((e) => e.status === "submitted").length;
+  const pendingPayments = pendingPaymentsCount ?? 0;
+  const pendingVisits = pendingVisitsCount ?? 0;
+  const pendingLifeEvents = pendingLifeEventsCount ?? 0;
   const activeFunds = funds.filter((f) => f.is_active);
   const balanceOf = (kinds: string[]) =>
     activeFunds.filter((f) => kinds.includes(f.kind)).reduce((sum, f) => sum + fundBalance(f, entries), 0);
@@ -212,11 +172,11 @@ export default async function AdminDashboardPage() {
 
   const actions: OverviewAction[] = [
     { href: "/admin/scores", label: "Cộng điểm", icon: "military_tech", allowed: true },
-    { href: "/admin/content/posts?new=1", label: "Đăng bài", icon: "edit_note", allowed: access ? hasPermission(access, PERMISSIONS.postsManage) : false },
-    { href: "/admin/finance/ledger", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: access ? financeAbilities(access).record : false },
-    { href: "/admin/administration/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: access ? paymentAbilities(access).create : false },
+    { href: "/admin/content/posts?new=1", label: "Đăng bài", icon: "edit_note", allowed: hasPermission(access, PERMISSIONS.postsManage) },
+    { href: "/admin/finance/ledger", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: financeAbilities(access).record },
+    { href: "/admin/administration/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: paymentAbilities(access).create },
     { href: "/admin/quiz", label: "Bật trắc nghiệm", icon: "quiz", allowed: true },
-    { href: "/admin/popups", label: "Popup mới", icon: "notification_important", allowed: access ? hasPermission(access, PERMISSIONS.popupsManage) : false },
+    { href: "/admin/popups", label: "Popup mới", icon: "notification_important", allowed: hasPermission(access, PERMISSIONS.popupsManage) },
   ].filter((a) => a.allowed);
 
   return <AdminOverview actions={actions} kpis={kpis} name={me.full_name || "Quản trị viên"} tasks={tasks} />;

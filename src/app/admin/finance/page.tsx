@@ -4,8 +4,8 @@ import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { fundBalance } from "@/lib/finance/registry";
 import { loadEntries, loadFunds } from "@/lib/finance/server";
-import { loadPaymentRequestList } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { formatVnd } from "@/lib/visits/registry";
 
 export const dynamic = "force-dynamic";
@@ -18,10 +18,15 @@ export default async function FinanceHubPage() {
   const canFinance = hasPermission(access, PERMISSIONS.financeView);
   const canPayments = hasPermission(access, PERMISSIONS.paymentsView);
   const db = createServiceClient();
-  const [funds, entries, payments] = await Promise.all([
+  // Số đề nghị chỉ để hiển thị nên dùng count estimated (vẫn chính xác khi số nhỏ)
+  const countPayments = (status: string) =>
+    db.from(CDILV_TABLE.paymentRequests).select("id", { count: "estimated", head: true }).eq("status", status);
+  const noCount = Promise.resolve({ count: 0 });
+  const [funds, entries, { count: proposedCount }, { count: approvedCount }] = await Promise.all([
     canFinance ? loadFunds(db) : Promise.resolve([]),
     canFinance ? loadEntries(db) : Promise.resolve([]),
-    canPayments ? loadPaymentRequestList(db) : Promise.resolve([]),
+    canPayments ? countPayments("proposed") : noCount,
+    canPayments ? countPayments("approved") : noCount,
   ]);
 
   const balanceOf = (kind: "cash" | "bank") =>
@@ -36,8 +41,8 @@ export default async function FinanceHubPage() {
       : []),
     ...(canPayments
       ? [
-          { label: "Đề nghị chờ duyệt", value: payments.filter((p) => p.status === "proposed").length, icon: "pending_actions" },
-          { label: "Đã duyệt chờ chi", value: payments.filter((p) => p.status === "approved").length, icon: "task_alt" },
+          { label: "Đề nghị chờ duyệt", value: proposedCount ?? 0, icon: "pending_actions" },
+          { label: "Đã duyệt chờ chi", value: approvedCount ?? 0, icon: "task_alt" },
         ]
       : []),
   ];

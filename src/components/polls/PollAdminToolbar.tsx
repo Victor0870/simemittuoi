@@ -276,6 +276,7 @@ export function PollAdminToolbar({ poll }: Props) {
 
             {phase === "closed" && can(PERMISSIONS.rewardsPayout) ? (
               <Link
+                prefetch={false}
                 className="flex items-center justify-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#173A67] shadow-xs hover:bg-amber-100 transition sm:px-3.5 sm:py-2 sm:text-xs"
                 href={`/admin/administration/rewards?poll=${encodeURIComponent(poll.id)}`}
               >
@@ -308,6 +309,7 @@ export function PollAdminToolbar({ poll }: Props) {
             )}
 
             <Link
+              prefetch={false}
               className="flex items-center gap-0.5 rounded-xl bg-white/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold text-white hover:bg-white/20 transition"
               href="/admin/polls"
             >

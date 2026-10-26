@@ -318,6 +318,7 @@ export function FinanceSettings({ funds, lockedThrough, today, canManageCatalogs
         </div>
         {canManageCatalogs ? (
           <Link
+            prefetch={false}
             className="inline-flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]"
             href="/admin/finance/catalogs"
           >

@@ -178,7 +178,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       render: (p) => (
         <>
           <div className="flex items-start gap-2">
-            <Link className="line-clamp-2 break-words hover:underline" href={`/admin/polls/${p.id}`} title={p.title}>
+            <Link prefetch={false} className="line-clamp-2 break-words hover:underline" href={`/admin/polls/${p.id}`} title={p.title}>
               {p.title}
             </Link>
             {!p.isActive ? (
@@ -320,6 +320,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
             </button>
 
             <Link
+              prefetch={false}
               aria-label="Xem trang"
               className={`${iconButton} border border-outline-variant bg-white text-[#173A67] hover:bg-surface-container-high`}
               href={`/polls/${p.id}`}

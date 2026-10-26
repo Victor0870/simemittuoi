@@ -29,6 +29,7 @@ export default async function OfficeVisitsPage() {
         <div className="flex flex-wrap gap-2">
           {hasPermission(access, PERMISSIONS.formsSettings) ? (
             <Link
+              prefetch={false}
               className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]"
               href="/admin/administration/print-settings"
             >
@@ -38,6 +39,7 @@ export default async function OfficeVisitsPage() {
           ) : null}
           {hasPermission(access, PERMISSIONS.paymentsView) ? (
             <Link
+              prefetch={false}
               className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]"
               href="/admin/administration/payments"
             >
@@ -47,6 +49,7 @@ export default async function OfficeVisitsPage() {
           ) : null}
           {can.create ? (
             <Link
+              prefetch={false}
               className="flex items-center gap-1 rounded-xl bg-[#173A67] px-3 py-1.5 text-sm font-bold text-white hover:bg-[#1E4A7D]"
               href="/admin/administration/visits/new"
             >

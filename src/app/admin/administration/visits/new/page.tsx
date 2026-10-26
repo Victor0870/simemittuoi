@@ -46,6 +46,7 @@ export default async function NewVisitRequestPage({ searchParams }: PageProps) {
   return (
     <div className="max-w-3xl space-y-4 pb-10">
       <Link
+        prefetch={false}
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
         href={event ? `/admin/administration/life-events/${event.id}` : "/admin/administration/visits"}
       >
