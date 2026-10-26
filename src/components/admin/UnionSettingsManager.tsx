@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   UNION_SETTINGS_LIMITS,
@@ -12,6 +12,7 @@ import {
   type UnionPosition,
 } from "@/lib/union-settings/types";
 
+export type UnionSettingsTab = "nhan-su" | "chuc-danh";
 type ActiveFilter = "all" | "active" | "inactive";
 
 type OfficerFormState = {
@@ -29,12 +30,16 @@ const baseInputClass =
 const inputClass = `w-full ${baseInputClass}`;
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
 const controlClass =
-  "h-8 rounded-lg border border-outline-variant bg-white px-2 text-xs text-on-surface outline-none focus:border-[#173A67]";
+  "h-8 rounded-lg border border-outline-variant bg-white px-2.5 text-xs text-on-surface outline-none focus:border-[#173A67]";
 const iconButtonClass =
   "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] disabled:opacity-30";
 
-function formatMemberLabel(member: Pick<AssignableUnionMember, "fullName" | "employeeCode" | "department">): string {
-  const head = member.employeeCode ? `${member.fullName} (${member.employeeCode})` : member.fullName;
+function formatMemberLabel(
+  member: Pick<AssignableUnionMember, "fullName" | "employeeCode" | "department">,
+): string {
+  const head = member.employeeCode
+    ? `${member.fullName} (${member.employeeCode})`
+    : member.fullName;
   return member.department ? `${head} — ${member.department}` : head;
 }
 
@@ -42,15 +47,18 @@ export function UnionSettingsManager({
   initialPositions,
   initialOfficers,
   members,
+  initialTab = "nhan-su",
 }: {
   initialPositions: UnionPosition[];
   initialOfficers: UnionOfficer[];
   members: AssignableUnionMember[];
+  initialTab?: UnionSettingsTab;
 }) {
+  const [activeTab, setActiveTab] = useState<UnionSettingsTab>(initialTab);
   const [positions, setPositions] = useState<UnionPosition[]>(initialPositions);
   const [officers, setOfficers] = useState<UnionOfficer[]>(initialOfficers);
 
-  // Bộ lọc danh sách cán bộ
+  // Bộ lọc danh sách cán bộ (tab Nhân sự công đoàn)
   const [query, setQuery] = useState("");
   const [positionFilter, setPositionFilter] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
@@ -64,7 +72,7 @@ export function UnionSettingsManager({
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [busyOfficerId, setBusyOfficerId] = useState<string | null>(null);
 
-  // Quản lý chức danh (Thêm mới / Đổi tên / Ngừng dùng)
+  // Quản lý chức danh (tab Chức danh: Thêm mới / Đổi tên / Thứ tự / Ngừng dùng)
   const [newPosName, setNewPosName] = useState("");
   const [newPosOrder, setNewPosOrder] = useState<number>(
     () => (initialPositions.reduce((max, p) => Math.max(max, p.displayOrder), 0) || 0) + 1,
@@ -77,6 +85,30 @@ export function UnionSettingsManager({
 
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Đồng bộ tab với URL (?tab=chuc-danh) khi bấm nút Back/Forward trình duyệt
+  useEffect(() => {
+    function handlePopState() {
+      const params = new URLSearchParams(window.location.search);
+      setActiveTab(params.get("tab") === "chuc-danh" ? "chuc-danh" : "nhan-su");
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  function switchTab(nextTab: UnionSettingsTab) {
+    clearNotice();
+    setActiveTab(nextTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (nextTab === "chuc-danh") {
+        url.searchParams.set("tab", "chuc-danh");
+      } else {
+        url.searchParams.delete("tab");
+      }
+      window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+    }
+  }
 
   const sortedPositions = useMemo(
     () =>
@@ -119,7 +151,6 @@ export function UnionSettingsManager({
 
   const filteredMembers = useMemo(() => {
     const q = normalizeViSearch(memberSearch);
-    // Nếu đang hiển thị đúng nhãn của đoàn viên đã chọn thì gợi ý danh sách đầu để đổi nhanh nếu muốn
     if (!q || (linkedMember && normalizeViSearch(formatMemberLabel(linkedMember)) === q)) {
       return members.slice(0, 30);
     }
@@ -145,6 +176,11 @@ export function UnionSettingsManager({
     filteredMembers.length > 0
       ? Math.max(0, Math.min(memberHighlightIndex, filteredMembers.length - 1))
       : 0;
+
+  const selectablePositionsForModal = useMemo(() => {
+    if (!editingOfficer) return activePositions;
+    return sortedPositions.filter((p) => p.isActive || p.id === editingOfficer.positionId);
+  }, [sortedPositions, activePositions, editingOfficer]);
 
   const activeOfficersCount = officers.filter((o) => o.isActive && o.positionIsActive).length;
 
@@ -232,7 +268,6 @@ export function UnionSettingsManager({
     setMemberDropdownOpen(true);
     setMemberHighlightIndex(0);
     if (editingOfficer && editingOfficer.userId) {
-      // Khi người dùng gõ lại để tìm người khác hoặc xóa trắng, tạm ngắt userId cũ nhưng giữ nguyên Họ tên
       setEditingOfficer({
         ...editingOfficer,
         userId: "",
@@ -531,6 +566,50 @@ export function UnionSettingsManager({
     }
   }
 
+  async function movePositionOrder(pos: UnionPosition, delta: -1 | 1) {
+    const idx = sortedPositions.findIndex((p) => p.id === pos.id);
+    const target = sortedPositions[idx + delta];
+    if (!target) return;
+
+    clearNotice();
+    setBusyPosId(pos.id);
+    try {
+      const newOrderA = target.displayOrder;
+      const newOrderB =
+        pos.displayOrder === target.displayOrder
+          ? target.displayOrder + (delta < 0 ? 1 : -1)
+          : pos.displayOrder;
+
+      const [resA, resB] = await Promise.all([
+        fetch(`/api/union-settings/positions/${pos.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ displayOrder: newOrderA }),
+        }),
+        fetch(`/api/union-settings/positions/${target.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ displayOrder: newOrderB }),
+        }),
+      ]);
+      const dataA = (await resA.json().catch(() => ({}))) as { position?: UnionPosition };
+      const dataB = (await resB.json().catch(() => ({}))) as { position?: UnionPosition };
+      if (dataA.position && dataB.position) {
+        setPositions((prev) =>
+          prev.map((p) => {
+            if (p.id === dataA.position!.id) return dataA.position!;
+            if (p.id === dataB.position!.id) return dataB.position!;
+            return p;
+          }),
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không đổi được thứ tự chức danh.");
+    } finally {
+      setBusyPosId(null);
+    }
+  }
+
   async function togglePositionActive(pos: UnionPosition) {
     setBusyPosId(pos.id);
     clearNotice();
@@ -567,13 +646,13 @@ export function UnionSettingsManager({
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-4 pb-10">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-headline-md font-extrabold text-[#173A67]">Cài đặt công đoàn</h1>
           <p className="mt-1 text-sm text-on-surface-variant">
-            Quản lý danh sách cán bộ công đoàn và danh mục chức danh dùng để gợi ý tự động{" "}
+            Quản lý danh sách nhân sự công đoàn và danh mục chức danh dùng để gợi ý tự động{" "}
             <strong className="text-[#173A67]">“Họ tên - Chức danh”</strong> khi soạn thảo văn bản, biên bản họp.
           </p>
         </div>
@@ -585,41 +664,85 @@ export function UnionSettingsManager({
             <MaterialIcon className="text-[17px]" name="edit_document" />
             Soạn văn bản
           </Link>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
-            type="button"
-            onClick={openNewOfficer}
-          >
-            <MaterialIcon className="text-[18px]" name="person_add" />
-            Thêm cán bộ công đoàn
-          </button>
+          {activeTab === "nhan-su" ? (
+            <button
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
+              type="button"
+              onClick={openNewOfficer}
+            >
+              <MaterialIcon className="text-[18px]" name="person_add" />
+              Thêm cán bộ công đoàn
+            </button>
+          ) : null}
         </div>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-border-subtle bg-white p-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-            <MaterialIcon className="text-[16px] text-primary" name="verified_user" />
-            <span>Cán bộ đang hoạt động</span>
-          </div>
-          <p className="mt-1.5 text-xl font-extrabold text-[#173A67]">{activeOfficersCount}</p>
+      {/* Thanh chuyển tab tách biệt: Nhân sự công đoàn & Chức danh */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-2 shadow-2xs">
+        <div
+          aria-label="Phân mục Cài đặt công đoàn"
+          className="grid w-full grid-cols-2 gap-1.5 sm:inline-flex sm:w-auto"
+          role="tablist"
+        >
+          <button
+            aria-selected={activeTab === "nhan-su"}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition sm:text-sm ${
+              activeTab === "nhan-su"
+                ? "bg-[#173A67] text-white shadow-xs"
+                : "bg-surface-container-low/60 text-on-surface-variant hover:bg-[#ecf4ff] hover:text-[#173A67]"
+            }`}
+            role="tab"
+            type="button"
+            onClick={() => switchTab("nhan-su")}
+          >
+            <MaterialIcon className="text-[18px]" name="groups" />
+            <span>Nhân sự công đoàn</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                activeTab === "nhan-su"
+                  ? "bg-white/20 text-white"
+                  : "bg-white text-[#173A67]"
+              }`}
+            >
+              {officers.length}
+            </span>
+          </button>
+
+          <button
+            aria-selected={activeTab === "chuc-danh"}
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition sm:text-sm ${
+              activeTab === "chuc-danh"
+                ? "bg-[#173A67] text-white shadow-xs"
+                : "bg-surface-container-low/60 text-on-surface-variant hover:bg-[#ecf4ff] hover:text-[#173A67]"
+            }`}
+            role="tab"
+            type="button"
+            onClick={() => switchTab("chuc-danh")}
+          >
+            <MaterialIcon className="text-[18px]" name="badge" />
+            <span>Chức danh</span>
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${
+                activeTab === "chuc-danh"
+                  ? "bg-white/20 text-white"
+                  : "bg-white text-[#173A67]"
+              }`}
+            >
+              {activePositions.length}/{positions.length}
+            </span>
+          </button>
         </div>
-        <div className="rounded-xl border border-border-subtle bg-white p-4">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-            <MaterialIcon className="text-[16px] text-primary" name="groups" />
-            <span>Tổng số cán bộ</span>
-          </div>
-          <p className="mt-1.5 text-xl font-extrabold text-[#173A67]">{officers.length}</p>
-        </div>
-        <div className="col-span-2 rounded-xl border border-border-subtle bg-white p-4 sm:col-span-1">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
-            <MaterialIcon className="text-[16px] text-primary" name="badge" />
-            <span>Chức danh đang dùng</span>
-          </div>
-          <p className="mt-1.5 text-xl font-extrabold text-[#173A67]">
-            {activePositions.length}/{positions.length}
-          </p>
+
+        {/* Chỉ số tóm tắt gọn bên phải thanh tab */}
+        <div className="hidden items-center gap-3 pr-2 text-xs text-on-surface-variant md:flex">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            Đang hoạt động: <strong className="text-[#173A67]">{activeOfficersCount}</strong>/{officers.length} cán bộ
+          </span>
+          <span className="text-outline-variant">•</span>
+          <span>
+            Chức danh đang dùng: <strong className="text-[#173A67]">{activePositions.length}</strong>/{positions.length}
+          </span>
         </div>
       </div>
 
@@ -634,13 +757,13 @@ export function UnionSettingsManager({
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_390px]">
-        {/* CỘT TRÁI: DANH SÁCH CÁN BỘ CÔNG ĐOÀN */}
-        <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-4 shadow-2xs">
+      {/* TAB 1: NHÂN SỰ CÔNG ĐOÀN */}
+      {activeTab === "nhan-su" ? (
+        <section className="flex flex-col gap-3.5 rounded-2xl border border-[#d2dfe9] bg-white p-3.5 shadow-2xs sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e3ecf3] pb-3">
             <div>
               <h2 className="text-base font-extrabold text-[#173A67]">
-                Danh sách cán bộ công đoàn ({filteredOfficers.length})
+                Danh sách nhân sự công đoàn ({filteredOfficers.length})
               </h2>
               <p className="text-xs text-on-surface-variant">
                 Cán bộ đang hoạt động sẽ hiện trong gợi ý tự động ở ô <strong>Thành phần tham gia</strong> khi soạn biên bản.
@@ -657,8 +780,8 @@ export function UnionSettingsManager({
           </div>
 
           {/* Thanh tìm kiếm & lọc */}
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="relative min-w-[180px] flex-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px_160px]">
+            <label className="relative min-w-0">
               <MaterialIcon
                 className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant"
                 name="search"
@@ -674,7 +797,7 @@ export function UnionSettingsManager({
             </label>
             <select
               aria-label="Lọc theo chức danh"
-              className={controlClass}
+              className={`${controlClass} w-full`}
               value={positionFilter}
               onChange={(e) => setPositionFilter(e.target.value)}
             >
@@ -688,7 +811,7 @@ export function UnionSettingsManager({
             </select>
             <select
               aria-label="Lọc theo trạng thái"
-              className={controlClass}
+              className={`${controlClass} w-full`}
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
             >
@@ -698,172 +821,301 @@ export function UnionSettingsManager({
             </select>
           </div>
 
-          {/* Bảng danh sách cán bộ */}
           {filteredOfficers.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-outline-variant py-10 text-center text-xs text-on-surface-variant">
+            <div className="rounded-xl border border-dashed border-outline-variant px-4 py-8 text-center text-xs text-on-surface-variant">
               {officers.length === 0
                 ? "Chưa có cán bộ công đoàn nào. Bấm “+ Thêm cán bộ” để khởi tạo danh sách."
                 : "Không có cán bộ nào khớp điều kiện lọc."}
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[#e3ecf3]">
-              <table className="w-full border-collapse text-left text-xs">
-                <thead>
-                  <tr className="border-b border-[#d2dfe9] bg-[#ecf4ff] text-[11px] font-bold text-[#173A67]">
-                    <th className="w-16 px-2.5 py-2 text-center">Thứ tự</th>
-                    <th className="px-3 py-2">Họ và tên</th>
-                    <th className="px-3 py-2">Chức danh</th>
-                    <th className="px-3 py-2">Nhiệm kỳ</th>
-                    <th className="px-3 py-2">Mẫu chèn văn bản</th>
-                    <th className="px-3 py-2 text-center">Trạng thái</th>
-                    <th className="px-3 py-2 text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#eef3f8]">
-                  {filteredOfficers.map((o) => {
-                    const effectiveActive = o.isActive && o.positionIsActive;
-                    return (
-                      <tr
-                        key={o.id}
-                        className={
-                          effectiveActive ? "bg-white hover:bg-[#f8fbff]" : "bg-surface-container-low/60 opacity-75"
-                        }
-                      >
-                        <td className="px-2.5 py-2 text-center tabular-nums">
-                          <div className="inline-flex items-center gap-0.5">
-                            <span className="min-w-[1.5rem] font-bold text-[#173A67]">{o.displayOrder}</span>
-                            <button
-                              aria-label="Đưa lên"
-                              className={iconButtonClass}
-                              disabled={busyOfficerId === o.id || sortedOfficers[0]?.id === o.id}
-                              title="Đưa lên"
-                              type="button"
-                              onClick={() => void moveOfficerOrder(o, -1)}
-                            >
-                              <MaterialIcon className="text-[15px]" name="arrow_upward" />
-                            </button>
-                            <button
-                              aria-label="Đưa xuống"
-                              className={iconButtonClass}
-                              disabled={
-                                busyOfficerId === o.id ||
-                                sortedOfficers[sortedOfficers.length - 1]?.id === o.id
-                              }
-                              title="Đưa xuống"
-                              type="button"
-                              onClick={() => void moveOfficerOrder(o, 1)}
-                            >
-                              <MaterialIcon className="text-[15px]" name="arrow_downward" />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="font-bold text-[#173A67]">{o.fullName}</div>
-                          {o.userId ? (
-                            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-on-surface-variant">
-                              <MaterialIcon className="text-[13px] text-emerald-700" name="link" />
-                              <span>
-                                TK: {o.userFullName || o.fullName}
-                                {o.userEmployeeCode ? ` (${o.userEmployeeCode})` : ""}
-                                {o.userDepartment ? ` • ${o.userDepartment}` : ""}
+            <>
+              {/* Giao diện Bảng trên Desktop (md trở lên) */}
+              <div className="hidden overflow-x-auto rounded-xl border border-[#e3ecf3] md:block">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-[#d2dfe9] bg-[#ecf4ff] text-[11px] font-bold text-[#173A67]">
+                      <th className="w-20 px-2.5 py-2.5 text-center">Thứ tự</th>
+                      <th className="px-3 py-2.5">Họ và tên</th>
+                      <th className="px-3 py-2.5">Chức danh</th>
+                      <th className="px-3 py-2.5">Nhiệm kỳ</th>
+                      <th className="px-3 py-2.5">Mẫu chèn văn bản</th>
+                      <th className="px-3 py-2.5 text-center">Trạng thái</th>
+                      <th className="px-3 py-2.5 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eef3f8]">
+                    {filteredOfficers.map((o) => {
+                      const effectiveActive = o.isActive && o.positionIsActive;
+                      return (
+                        <tr
+                          key={o.id}
+                          className={
+                            effectiveActive
+                              ? "bg-white hover:bg-[#f8fbff]"
+                              : "bg-surface-container-low/60 opacity-75"
+                          }
+                        >
+                          <td className="px-2.5 py-2.5 text-center tabular-nums">
+                            <div className="inline-flex items-center gap-0.5">
+                              <span className="min-w-[1.5rem] font-bold text-[#173A67]">
+                                {o.displayOrder}
                               </span>
+                              <button
+                                aria-label="Đưa lên"
+                                className={iconButtonClass}
+                                disabled={busyOfficerId === o.id || sortedOfficers[0]?.id === o.id}
+                                title="Đưa lên"
+                                type="button"
+                                onClick={() => void moveOfficerOrder(o, -1)}
+                              >
+                                <MaterialIcon className="text-[15px]" name="arrow_upward" />
+                              </button>
+                              <button
+                                aria-label="Đưa xuống"
+                                className={iconButtonClass}
+                                disabled={
+                                  busyOfficerId === o.id ||
+                                  sortedOfficers[sortedOfficers.length - 1]?.id === o.id
+                                }
+                                title="Đưa xuống"
+                                type="button"
+                                onClick={() => void moveOfficerOrder(o, 1)}
+                              >
+                                <MaterialIcon className="text-[15px]" name="arrow_downward" />
+                              </button>
                             </div>
-                          ) : (
-                            <span className="text-[11px] text-on-surface-variant">Nhập trực tiếp</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          <span className="inline-flex items-center gap-1 rounded-md border border-[#d2dfe9] bg-[#f5f9ff] px-2 py-0.5 font-bold text-[#173A67]">
-                            {o.positionName}
-                          </span>
-                          {!o.positionIsActive ? (
-                            <span className="ml-1 text-[10px] font-semibold text-amber-700">
-                              (chức danh đã ẩn)
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="font-bold text-[#173A67]">{o.fullName}</div>
+                            {o.userId ? (
+                              <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-on-surface-variant">
+                                <MaterialIcon className="text-[13px] text-emerald-700" name="link" />
+                                <span>
+                                  TK: {o.userFullName || o.fullName}
+                                  {o.userEmployeeCode ? ` (${o.userEmployeeCode})` : ""}
+                                  {o.userDepartment ? ` • ${o.userDepartment}` : ""}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-on-surface-variant">Nhập trực tiếp</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="inline-flex items-center gap-1 rounded-md border border-[#d2dfe9] bg-[#f5f9ff] px-2 py-0.5 font-bold text-[#173A67]">
+                              {o.positionName}
                             </span>
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2 text-on-surface-variant">{o.term || "—"}</td>
-                        <td className="px-3 py-2">
-                          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-slate-800">
-                            {formatOfficerAttendee(o)}
-                          </code>
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <span
-                            className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                              effectiveActive
-                                ? "bg-emerald-50 text-emerald-800"
-                                : "bg-surface-container text-on-surface-variant"
-                            }`}
-                          >
-                            {o.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right">
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-                              type="button"
-                              onClick={() => openEditOfficer(o)}
-                            >
-                              <MaterialIcon className="text-[15px]" name="edit" />
-                              Sửa
-                            </button>
-                            <button
-                              className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
-                                o.isActive
-                                  ? "border-outline-variant text-on-surface-variant hover:border-amber-600 hover:text-amber-800"
-                                  : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                            {!o.positionIsActive ? (
+                              <span className="ml-1 text-[10px] font-semibold text-amber-700">
+                                (chức danh đã ẩn)
+                              </span>
+                            ) : null}
+                          </td>
+                          <td className="px-3 py-2.5 text-on-surface-variant">{o.term || "—"}</td>
+                          <td className="px-3 py-2.5">
+                            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-slate-800">
+                              {formatOfficerAttendee(o)}
+                            </code>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <span
+                              className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                effectiveActive
+                                  ? "bg-emerald-50 text-emerald-800"
+                                  : "bg-surface-container text-on-surface-variant"
                               }`}
-                              disabled={busyOfficerId === o.id}
-                              type="button"
-                              onClick={() => void toggleOfficerActive(o)}
                             >
-                              <MaterialIcon
-                                className="text-[15px]"
-                                name={o.isActive ? "visibility_off" : "visibility"}
-                              />
-                              {o.isActive ? "Ngừng" : "Bật"}
-                            </button>
-                            <button
-                              aria-label={`Xóa ${o.fullName}`}
-                              className="inline-flex h-7 items-center rounded-lg border border-outline-variant px-1.5 text-on-surface-variant hover:border-error hover:text-error disabled:opacity-50"
-                              disabled={busyOfficerId === o.id}
-                              title="Xóa cán bộ"
-                              type="button"
-                              onClick={() => void removeOfficer(o)}
-                            >
-                              <MaterialIcon className="text-[15px]" name="delete" />
-                            </button>
+                              {o.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-right">
+                            <div className="inline-flex items-center gap-1">
+                              <button
+                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+                                type="button"
+                                onClick={() => openEditOfficer(o)}
+                              >
+                                <MaterialIcon className="text-[15px]" name="edit" />
+                                Sửa
+                              </button>
+                              <button
+                                className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
+                                  o.isActive
+                                    ? "border-outline-variant text-on-surface-variant hover:border-amber-600 hover:text-amber-800"
+                                    : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                                }`}
+                                disabled={busyOfficerId === o.id}
+                                type="button"
+                                onClick={() => void toggleOfficerActive(o)}
+                              >
+                                <MaterialIcon
+                                  className="text-[15px]"
+                                  name={o.isActive ? "visibility_off" : "visibility"}
+                                />
+                                {o.isActive ? "Ngừng" : "Bật"}
+                              </button>
+                              <button
+                                aria-label={`Xóa ${o.fullName}`}
+                                className="inline-flex h-7 items-center rounded-lg border border-outline-variant px-1.5 text-on-surface-variant hover:border-error hover:text-error disabled:opacity-50"
+                                disabled={busyOfficerId === o.id}
+                                title="Xóa cán bộ"
+                                type="button"
+                                onClick={() => void removeOfficer(o)}
+                              >
+                                <MaterialIcon className="text-[15px]" name="delete" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Giao diện Thẻ gọn (Compact Cards) trên màn hình điện thoại 390px (< md) */}
+              <div className="space-y-2.5 md:hidden">
+                {filteredOfficers.map((o) => {
+                  const effectiveActive = o.isActive && o.positionIsActive;
+                  return (
+                    <div
+                      key={o.id}
+                      className={`rounded-xl border p-3 transition ${
+                        effectiveActive
+                          ? "border-[#d2dfe9] bg-white"
+                          : "border-dashed border-outline-variant bg-surface-container-low/50 opacity-80"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-md bg-[#ecf4ff] px-1 text-[11px] font-bold text-[#173A67] tabular-nums">
+                              #{o.displayOrder}
+                            </span>
+                            <span className="text-sm font-extrabold text-[#173A67]">
+                              {o.fullName}
+                            </span>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                            <span className="inline-flex items-center rounded-md border border-[#d2dfe9] bg-[#f5f9ff] px-2 py-0.5 text-[11px] font-bold text-[#173A67]">
+                              {o.positionName}
+                            </span>
+                            {o.term ? (
+                              <span className="text-[11px] text-on-surface-variant">
+                                • Nhiệm kỳ: {o.term}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            effectiveActive
+                              ? "bg-emerald-50 text-emerald-800"
+                              : "bg-surface-container text-on-surface-variant"
+                          }`}
+                        >
+                          {o.isActive ? "Đang hoạt động" : "Ngừng"}
+                        </span>
+                      </div>
+
+                      {o.userId ? (
+                        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-on-surface-variant">
+                          <MaterialIcon className="text-[13px] text-emerald-700" name="link" />
+                          <span className="truncate">
+                            TK: {o.userFullName || o.fullName}
+                            {o.userEmployeeCode ? ` (${o.userEmployeeCode})` : ""}
+                            {o.userDepartment ? ` • ${o.userDepartment}` : ""}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-[#eef3f8] pt-2">
+                        <div className="inline-flex items-center gap-0.5">
+                          <button
+                            aria-label="Đưa lên"
+                            className={iconButtonClass}
+                            disabled={busyOfficerId === o.id || sortedOfficers[0]?.id === o.id}
+                            title="Đưa lên"
+                            type="button"
+                            onClick={() => void moveOfficerOrder(o, -1)}
+                          >
+                            <MaterialIcon className="text-[16px]" name="arrow_upward" />
+                          </button>
+                          <button
+                            aria-label="Đưa xuống"
+                            className={iconButtonClass}
+                            disabled={
+                              busyOfficerId === o.id ||
+                              sortedOfficers[sortedOfficers.length - 1]?.id === o.id
+                            }
+                            title="Đưa xuống"
+                            type="button"
+                            onClick={() => void moveOfficerOrder(o, 1)}
+                          >
+                            <MaterialIcon className="text-[16px]" name="arrow_downward" />
+                          </button>
+                        </div>
+
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2.5 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+                            type="button"
+                            onClick={() => openEditOfficer(o)}
+                          >
+                            <MaterialIcon className="text-[14px]" name="edit" />
+                            Sửa
+                          </button>
+                          <button
+                            className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2.5 text-xs font-semibold disabled:opacity-50 ${
+                              o.isActive
+                                ? "border-outline-variant text-on-surface-variant"
+                                : "border-emerald-300 text-emerald-800"
+                            }`}
+                            disabled={busyOfficerId === o.id}
+                            type="button"
+                            onClick={() => void toggleOfficerActive(o)}
+                          >
+                            {o.isActive ? "Ngừng" : "Bật"}
+                          </button>
+                          <button
+                            aria-label={`Xóa ${o.fullName}`}
+                            className="inline-flex h-7 items-center rounded-lg border border-outline-variant px-1.5 text-on-surface-variant hover:border-error hover:text-error disabled:opacity-50"
+                            disabled={busyOfficerId === o.id}
+                            title="Xóa cán bộ"
+                            type="button"
+                            onClick={() => void removeOfficer(o)}
+                          >
+                            <MaterialIcon className="text-[15px]" name="delete" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </section>
+      ) : null}
 
-        {/* CỘT PHẢI: DANH MỤC CHỨC DANH CÔNG ĐOÀN */}
-        <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-3.5 sm:p-4 shadow-2xs">
-          <div className="border-b border-[#e3ecf3] pb-2.5">
+      {/* TAB 2: CHỨC DANH CÔNG ĐOÀN */}
+      {activeTab === "chuc-danh" ? (
+        <section className="flex flex-col gap-4 rounded-2xl border border-[#d2dfe9] bg-white p-3.5 shadow-2xs sm:p-5">
+          <div className="border-b border-[#e3ecf3] pb-3">
             <h2 className="text-base font-extrabold text-[#173A67]">
-              Chức danh công đoàn ({positions.length})
+              Danh mục chức danh công đoàn ({positions.length})
             </h2>
             <p className="text-xs text-on-surface-variant">
-              Mặc định: Chủ tịch, Phó chủ tịch, Ủy viên, Kế toán. Có thể thêm chức danh mới, đổi tên hoặc ngừng dùng.
+              Mặc định gồm Chủ tịch, Phó chủ tịch, Ủy viên, Kế toán. Bạn có thể thêm chức danh mới, đổi tên, sắp xếp thứ tự hoặc ngừng dùng.
             </p>
           </div>
 
-          {/* Form thêm chức danh mới */}
+          {/* Form thêm chức danh mới (giữ bố cục gọn từ c84f1e2) */}
           <form
-            className="flex flex-col gap-2 rounded-xl border border-[#d2dfe9] bg-[#f8fbff] p-3"
+            className="flex flex-col gap-2 rounded-xl border border-[#d2dfe9] bg-[#f8fbff] p-3 sm:p-4"
             onSubmit={handleAddPosition}
           >
             <span className="text-xs font-bold text-[#173A67]">Thêm chức danh mới</span>
-            <div className="grid grid-cols-[minmax(0,1fr)_84px_auto] items-end gap-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_88px_auto] items-end gap-2">
               <div className="min-w-0">
                 <label
                   className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
@@ -899,7 +1151,7 @@ export function UnionSettingsManager({
                 />
               </div>
               <button
-                className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-lg bg-[#173A67] px-3 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-lg bg-[#173A67] px-3.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
                 disabled={addingPos || !newPosName.trim()}
                 type="submit"
               >
@@ -918,15 +1170,15 @@ export function UnionSettingsManager({
               return (
                 <div
                   key={pos.id}
-                  className={`rounded-xl border p-2.5 transition ${
+                  className={`rounded-xl border p-3 transition ${
                     pos.isActive
-                      ? "border-[#d2dfe9] bg-white"
+                      ? "border-[#d2dfe9] bg-white hover:bg-[#f8fbff]"
                       : "border-dashed border-outline-variant bg-surface-container-low/50 opacity-75"
                   }`}
                 >
                   {isEditing ? (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-[minmax(0,1fr)_84px] items-end gap-2">
+                    <div className="space-y-2.5">
+                      <div className="grid grid-cols-[minmax(0,1fr)_88px] items-end gap-2">
                         <div className="min-w-0">
                           <label
                             className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
@@ -964,14 +1216,14 @@ export function UnionSettingsManager({
                       </div>
                       <div className="flex justify-end gap-1.5">
                         <button
-                          className="rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
+                          className="rounded-lg border border-outline-variant px-3 py-1 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
                           type="button"
                           onClick={() => setEditingPosId(null)}
                         >
                           Hủy
                         </button>
                         <button
-                          className="rounded-lg bg-[#173A67] px-3 py-1 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                          className="rounded-lg bg-[#173A67] px-3.5 py-1 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
                           disabled={busyPosId === pos.id || !editingPosName.trim()}
                           type="button"
                           onClick={() => void saveEditPosition(pos.id)}
@@ -981,28 +1233,62 @@ export function UnionSettingsManager({
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#ecf4ff] text-[11px] font-bold text-[#173A67] tabular-nums">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-[#ecf4ff] px-1.5 text-xs font-bold text-[#173A67] tabular-nums">
                             {pos.displayOrder}
                           </span>
                           <span
                             className={`truncate text-sm font-bold ${
-                              pos.isActive ? "text-[#173A67]" : "text-on-surface-variant line-through"
+                              pos.isActive
+                                ? "text-[#173A67]"
+                                : "text-on-surface-variant line-through"
                             }`}
                           >
                             {pos.name}
                           </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              pos.isActive
+                                ? "bg-emerald-50 text-emerald-800"
+                                : "bg-surface-container text-on-surface-variant"
+                            }`}
+                          >
+                            {pos.isActive ? "Đang dùng" : "Đã ngừng dùng"}
+                          </span>
                         </div>
-                        <p className="mt-0.5 pl-6 text-[11px] text-on-surface-variant">
-                          {usedCount > 0 ? `${usedCount} cán bộ` : "Chưa gán cán bộ"} •{" "}
-                          {pos.isActive ? "Đang dùng" : "Đã ngừng dùng"}
+                        <p className="mt-0.5 pl-8 text-[11px] text-on-surface-variant">
+                          {usedCount > 0 ? `Đang gán cho ${usedCount} cán bộ` : "Chưa gán cán bộ nào"}
                         </p>
                       </div>
+
                       <div className="flex shrink-0 items-center gap-1">
                         <button
-                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+                          aria-label="Đưa chức danh lên"
+                          className={iconButtonClass}
+                          disabled={busyPosId === pos.id || sortedPositions[0]?.id === pos.id}
+                          title="Đưa lên"
+                          type="button"
+                          onClick={() => void movePositionOrder(pos, -1)}
+                        >
+                          <MaterialIcon className="text-[15px]" name="arrow_upward" />
+                        </button>
+                        <button
+                          aria-label="Đưa chức danh xuống"
+                          className={iconButtonClass}
+                          disabled={
+                            busyPosId === pos.id ||
+                            sortedPositions[sortedPositions.length - 1]?.id === pos.id
+                          }
+                          title="Đưa xuống"
+                          type="button"
+                          onClick={() => void movePositionOrder(pos, 1)}
+                        >
+                          <MaterialIcon className="text-[15px]" name="arrow_downward" />
+                        </button>
+                        <button
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2.5 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
                           title="Đổi tên hoặc sửa thứ tự chức danh"
                           type="button"
                           onClick={() => startEditPosition(pos)}
@@ -1011,13 +1297,17 @@ export function UnionSettingsManager({
                           Đổi tên
                         </button>
                         <button
-                          className={`inline-flex h-7 items-center rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
+                          className={`inline-flex h-7 items-center rounded-lg border px-2.5 text-xs font-semibold disabled:opacity-50 ${
                             pos.isActive
                               ? "border-outline-variant text-on-surface-variant hover:border-amber-600 hover:text-amber-800"
                               : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
                           }`}
                           disabled={busyPosId === pos.id}
-                          title={pos.isActive ? "Ngừng dùng chức danh này" : "Kích hoạt lại chức danh này"}
+                          title={
+                            pos.isActive
+                              ? "Ngừng dùng chức danh này"
+                              : "Kích hoạt lại chức danh này"
+                          }
                           type="button"
                           onClick={() => void togglePositionActive(pos)}
                         >
@@ -1031,7 +1321,7 @@ export function UnionSettingsManager({
             })}
           </div>
         </section>
-      </div>
+      ) : null}
 
       {/* MODAL THÊM / SỬA CÁN BỘ CÔNG ĐOÀN */}
       {editingOfficer ? (
@@ -1208,7 +1498,7 @@ export function UnionSettingsManager({
                 </div>
 
                 {/* 3. Chức danh & Thứ tự */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_110px]">
                   <div>
                     <label className={labelClass} htmlFor="officer-position">
                       Chức danh công đoàn <span className="text-error">*</span>
@@ -1223,23 +1513,37 @@ export function UnionSettingsManager({
                       }
                     >
                       <option value="">— Chọn chức danh —</option>
-                      {sortedPositions
-                        .filter((p) => p.isActive || p.id === editingOfficer.positionId)
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                            {p.isActive ? "" : " (đã ngừng dùng)"}
-                          </option>
-                        ))}
+                      {selectablePositionsForModal.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                          {p.isActive ? "" : " (đã ngừng dùng)"}
+                        </option>
+                      ))}
                     </select>
+                    {selectablePositionsForModal.length === 0 ? (
+                      <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900">
+                        Chưa có chức danh nào đang dùng.{" "}
+                        <button
+                          className="font-bold text-[#173A67] underline hover:no-underline"
+                          type="button"
+                          onClick={() => {
+                            setEditingOfficer(null);
+                            switchTab("chuc-danh");
+                          }}
+                        >
+                          Mở mục Chức danh để thêm/bật →
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                   <div>
                     <label className={labelClass} htmlFor="officer-order">
-                      Thứ tự hiển thị
+                      Thứ tự
                     </label>
                     <input
-                      className={`${inputClass} tabular-nums`}
+                      className={`${baseInputClass} w-full text-center tabular-nums`}
                       id="officer-order"
+                      min={1}
                       type="number"
                       value={editingOfficer.displayOrder}
                       onChange={(e) =>
