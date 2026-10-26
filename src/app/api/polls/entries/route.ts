@@ -8,6 +8,7 @@ import {
   submissionWindowError,
   validateEntryInput,
 } from "@/lib/polls/entries-server";
+import { PRIVATE_NO_STORE } from "@/lib/polls/entry-view";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,10 @@ export async function GET(request: NextRequest) {
       .order("submitted_at", { ascending: false });
     if (error) throw error;
 
-    return NextResponse.json({ entries: await loadEntries(db, data ?? []), submitter: auth.submitter });
+    return NextResponse.json(
+      { entries: await loadEntries(db, data ?? []), submitter: auth.submitter },
+      { headers: { "Cache-Control": PRIVATE_NO_STORE } },
+    );
   } catch (err: any) {
     console.error("[api/polls/entries] GET error:", err);
     return NextResponse.json({ error: err?.message || "Không tải được bài dự thi." }, { status: 500 });

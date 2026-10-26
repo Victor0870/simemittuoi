@@ -21,6 +21,8 @@ export function PollAdminToolbar({ poll }: Props) {
   const router = useRouter();
   const { can, loading } = useAuth();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editorPoll, setEditorPoll] = useState<PollDetail | null>(null);
+  const [isEditorLoading, setIsEditorLoading] = useState(false);
   const [isGrantsOpen, setIsGrantsOpen] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
@@ -36,6 +38,22 @@ export function PollAdminToolbar({ poll }: Props) {
 
   if (loading || !can(PERMISSIONS.pollsManage)) {
     return null;
+  }
+
+  // Trang công khai chỉ có dữ liệu rút gọn (không mô tả, ảnh qua route cache), nên form sửa phải lấy bản đầy đủ.
+  async function handleOpenEditor() {
+    setIsEditorLoading(true);
+    try {
+      const res = await fetch(`/api/polls/${encodeURIComponent(poll.id)}`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Không tải được dữ liệu chương trình.");
+      setEditorPoll(data as PollDetail);
+      setIsEditorOpen(true);
+    } catch (err: any) {
+      alert(err?.message || "Không tải được dữ liệu chương trình.");
+    } finally {
+      setIsEditorLoading(false);
+    }
   }
 
   async function handleSetStatus(status: "open" | "upcoming") {
@@ -223,12 +241,13 @@ export function PollAdminToolbar({ poll }: Props) {
 
             {/* BUTTON CÀI ĐẶT & CHỈNH SỬA CUỘC THI */}
             <button
-              className="flex flex-1 sm:flex-none items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-black text-slate-900 shadow-xs hover:bg-amber-300 transition cursor-pointer"
+              className="flex flex-1 sm:flex-none items-center justify-center gap-1 rounded-xl bg-amber-400 px-3 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-black text-slate-900 shadow-xs hover:bg-amber-300 transition cursor-pointer disabled:opacity-60"
+              disabled={isEditorLoading}
               type="button"
-              onClick={() => setIsEditorOpen(true)}
+              onClick={handleOpenEditor}
             >
               <MaterialIcon className="text-[16px] sm:text-[18px]" name="tune" />
-              <span>⚙️ Cài đặt cuộc thi</span>
+              <span>{isEditorLoading ? "Đang tải..." : "⚙️ Cài đặt cuộc thi"}</span>
               <span className="hidden md:inline">(Up ảnh, thành viên)</span>
             </button>
 
@@ -325,8 +344,8 @@ export function PollAdminToolbar({ poll }: Props) {
 
       {/* Editor Modal */}
       <PollEditorModal
-        initialPoll={poll}
-        isOpen={isEditorOpen}
+        initialPoll={editorPoll}
+        isOpen={isEditorOpen && editorPoll !== null}
         mode="edit"
         onClose={() => setIsEditorOpen(false)}
         onSaved={() => {

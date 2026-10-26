@@ -7,6 +7,7 @@ import type { PollStatus } from "@/lib/polls/phase";
 import { normalizeRewardMoney, type RewardMoney } from "@/lib/polls/reward-money";
 import { loadPointTally } from "@/lib/polls/points-server";
 import { loadPredictionRanking, type PredictionRanking } from "@/lib/polls/prediction-server";
+import { toPublicEntryImageUrls } from "@/lib/polls/entry-images";
 import {
   POINTS_PREDICTION_QUESTION,
   normalizeSubmissionMode,
@@ -178,8 +179,15 @@ export async function getPollById(id: string): Promise<PollDetail | null> {
   }
 }
 
-/** Đọc trực tiếp DB (không cache). `strict`: ném lỗi thay vì trả dữ liệu thiếu, để không lưu cache kết quả lỗi. */
-export async function getPollByIdUncached(id: string, strict = false): Promise<PollDetail | null> {
+/**
+ * Đọc trực tiếp DB (không cache). `strict`: ném lỗi thay vì trả dữ liệu thiếu, để không lưu cache kết quả lỗi.
+ * `rawImages`: trả nguyên ảnh base64 (chỉ cho form sửa của quản trị); mặc định ảnh base64 đổi thành đường dẫn route ảnh.
+ */
+export async function getPollByIdUncached(
+  id: string,
+  strict = false,
+  rawImages = false,
+): Promise<PollDetail | null> {
   const db = createPublicClient();
 
   const { data: pollRow, error: pollError } = await db
@@ -349,11 +357,13 @@ export async function getPollByIdUncached(id: string, strict = false): Promise<P
       orderNum: row.order_num,
       title: row.title,
       description: row.description,
-      imageUrls: Array.isArray(row.image_urls)
-        ? row.image_urls
-        : typeof row.image_urls === "string"
-        ? JSON.parse(row.image_urls || "[]")
-        : [],
+      imageUrls: rawImages
+        ? Array.isArray(row.image_urls)
+          ? row.image_urls
+          : typeof row.image_urls === "string"
+          ? JSON.parse(row.image_urls || "[]")
+          : []
+        : toPublicEntryImageUrls(id, row.id, row.image_urls),
       voteCount: (voteMode === "points" ? pointTotalsByOpt.get(row.id) : undefined) ?? row.vote_count ?? 0,
       finalRank: row.final_rank,
       isActive: row.is_active !== false,

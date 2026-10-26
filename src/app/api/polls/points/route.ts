@@ -9,6 +9,7 @@ import {
   loadPointsPrediction,
   savePointsPrediction,
 } from "@/lib/polls/prediction-server";
+import { PRIVATE_NO_STORE } from "@/lib/polls/entry-view";
 
 async function loadPointsPoll(db: ReturnType<typeof createServiceClient>, pollId: string) {
   const { data, error } = await db.from(CDILV_TABLE.polls).select("*").eq("id", pollId).maybeSingle();
@@ -39,6 +40,18 @@ async function voterPayload(db: ReturnType<typeof createServiceClient>, poll: Re
 }
 
 export async function GET(request: NextRequest) {
+  const res = await getVoterState(request);
+  res.headers.set("Cache-Control", PRIVATE_NO_STORE);
+  return res;
+}
+
+export async function POST(request: NextRequest) {
+  const res = await saveAllocations(request);
+  res.headers.set("Cache-Control", PRIVATE_NO_STORE);
+  return res;
+}
+
+async function getVoterState(request: NextRequest) {
   try {
     const params = request.nextUrl.searchParams;
     const pollId = params.get("pollId")?.trim();
@@ -73,7 +86,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function saveAllocations(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const pollId = String(body?.pollId ?? "").trim();

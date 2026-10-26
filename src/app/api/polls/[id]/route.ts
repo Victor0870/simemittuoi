@@ -12,11 +12,11 @@ export async function GET(
     // Người quản lý bình chọn (form sửa chương trình) luôn đọc dữ liệu mới nhất, không qua cache 15 phút
     const access = await getCurrentAccess();
     const canManage = Boolean(access && hasPermission(access, PERMISSIONS.pollsManage));
-    const poll = canManage ? await getPollByIdUncached(id) : await getPollById(id);
+    const poll = canManage ? await getPollByIdUncached(id, false, true) : await getPollById(id);
     if (!poll) {
       return NextResponse.json({ error: "Không tìm thấy chương trình bình chọn." }, { status: 404 });
     }
-    return NextResponse.json(poll);
+    return NextResponse.json(poll, { headers: { "Cache-Control": "private, no-store" } });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Lỗi tải dữ liệu" }, { status: 500 });
   }

@@ -44,7 +44,7 @@ export function PollScheduleNotice({ poll, initialNow }: Props) {
         <ol className="grid gap-2 sm:grid-cols-3 text-xs sm:text-sm text-sky-950">
           <li className="flex items-start gap-2 rounded-xl bg-white/80 border border-sky-200 p-2.5">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-600 text-[11px] font-black text-white">1</span>
-            <span>Xem các bài thi, bấm vào ảnh để phóng to.</span>
+            <span>Chọn từng bài thi trong danh sách (hoặc nút trước/sau) để xem, bấm vào ảnh để phóng to.</span>
           </li>
           <li className="flex items-start gap-2 rounded-xl bg-white/80 border border-sky-200 p-2.5">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-600 text-[11px] font-black text-white">2</span>

@@ -11,6 +11,7 @@ import { PollQrButton } from "@/components/polls/PollQrButton";
 import { PollPhaseBadge } from "@/components/polls/PollPhaseBadge";
 import { formatPollTime } from "@/lib/polls/phase";
 import { PollScheduleNotice } from "@/components/polls/PollScheduleNotice";
+import { toPublicPollView } from "@/lib/polls/entry-view";
 
 export const revalidate = 15;
 
@@ -25,9 +26,11 @@ type Props = {
 
 export default async function PollDetailPage({ params }: Props) {
   const { id } = await params;
-  const poll = await getPollById(id);
+  const fullPoll = await getPollById(id);
 
-  if (!poll) notFound();
+  if (!fullPoll) notFound();
+
+  const poll = toPublicPollView(fullPoll);
 
   const now = Date.now();
 

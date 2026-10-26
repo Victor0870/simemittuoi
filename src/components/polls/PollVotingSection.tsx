@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollOption } from "@/lib/data/polls";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ImageLightboxModal } from "@/components/polls/ImageLightboxModal";
+import { PollEntryBrowser } from "@/components/polls/PollEntryBrowser";
 import { usePollPhase } from "@/components/polls/usePollPhase";
 import { formatPollTime } from "@/lib/polls/phase";
 
@@ -103,8 +103,10 @@ export function PollVotingSection({ poll, initialNow }: Props) {
     }, 50);
   }
 
-  // Lightbox zoom image state
-  const [zoomedImage, setZoomedImage] = useState<{ url: string; title: string } | null>(null);
+  const selectedOptions = useMemo(
+    () => poll.options.filter((opt) => selectedOptionIds.includes(opt.id)),
+    [poll.options, selectedOptionIds],
+  );
 
   const maxVotes = poll.maxVotesPerUser || 3;
   const isClosed = phase === "closed" || phase === "ended";
@@ -237,15 +239,51 @@ export function PollVotingSection({ poll, initialNow }: Props) {
     }
   }
 
+  function renderVoteAction(opt: PollOption) {
+    if (isInactive) {
+      return (
+        <div className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-semibold text-slate-500 border border-slate-200">
+          <MaterialIcon className="text-[16px]" name="pause_circle" />
+          <span>Tạm ngưng bình chọn</span>
+        </div>
+      );
+    }
+    if (isClosed) {
+      return (
+        <div className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-semibold text-slate-600 border border-slate-200">
+          <MaterialIcon className="text-[16px]" name="lock" />
+          <span>Chương trình đã kết thúc, chỉ xem bài thi</span>
+        </div>
+      );
+    }
+    if (isBlockedForGuest) {
+      return (
+        <Link
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary/10 py-2.5 text-xs font-bold text-primary hover:bg-primary/20 transition shadow-2xs border border-primary/20"
+          href={`/login?returnUrl=/polls/${poll.id}`}
+        >
+          <MaterialIcon className="text-[16px]" name="login" />
+          <span>Đăng nhập để bình chọn</span>
+        </Link>
+      );
+    }
+    const isSelected = selectedOptionIds.includes(opt.id);
+    return (
+      <button
+        className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold transition shadow-xs cursor-pointer ${
+          isSelected ? "bg-primary text-white" : "border-2 border-primary text-primary hover:bg-primary/10"
+        }`}
+        type="button"
+        onClick={() => handleToggleOption(opt.id)}
+      >
+        <MaterialIcon name={isSelected ? "check_circle" : "radio_button_unchecked"} />
+        <span>{isSelected ? "Đã chọn bài thi này (bấm để bỏ)" : "Bình chọn bài thi này"}</span>
+      </button>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Lightbox Modal */}
-      <ImageLightboxModal
-        imageUrl={zoomedImage?.url || null}
-        title={zoomedImage?.title}
-        onClose={() => setZoomedImage(null)}
-      />
-
       {judgeLinkOk ? (
         <div className="rounded-2xl border border-[#173A67]/20 bg-[#173A67]/5 p-4 text-[#173A67]">
           <p className="text-sm font-extrabold">Link riêng của Ban giám khảo</p>
@@ -394,146 +432,52 @@ export function PollVotingSection({ poll, initialNow }: Props) {
         </div>
       )}
 
-      {/* Options List / Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {poll.options.map((opt) => {
-          const isSelected = selectedOptionIds.includes(opt.id);
+      {/* Từng bài thi một: danh sách chữ + chi tiết */}
+      <PollEntryBrowser
+        options={poll.options}
+        pollId={poll.id}
+        renderActions={renderVoteAction}
+        showImages={poll.contentType === "image"}
+        statusFor={(id) => (selectedOptionIds.includes(id) ? { label: "Đã chọn", tone: "selected" } : null)}
+      />
 
-          return (
-            <div
-              key={opt.id}
-              className={`relative flex flex-col overflow-hidden rounded-2xl border-2 transition-all ${
-                isSelected
-                  ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
-                  : "border-outline-variant bg-surface-container-lowest hover:border-outline hover:shadow-xs"
-              }`}
-            >
-              {/* Photo Gallery (up to 3 photos) */}
-              {poll.contentType === "image" && opt.imageUrls.length > 0 ? (
-                <div className="space-y-1.5 p-2.5 sm:p-3 pb-0">
-                  {/* Main large image */}
-                  <div
-                    className="group relative h-44 sm:h-56 w-full overflow-hidden rounded-xl bg-surface-container cursor-pointer"
-                    onClick={() =>
-                      setZoomedImage({ url: opt.imageUrls[0], title: opt.title })
-                    }
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={opt.title}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      src={opt.imageUrls[0]}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs sm:text-label-sm font-bold text-white backdrop-blur-xs">
-                        <MaterialIcon className="text-[16px] sm:text-[18px]" name="zoom_in" />
-                        Xem phóng to
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 2 extra thumbnail images if available */}
-                  {opt.imageUrls.length > 1 ? (
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {opt.imageUrls.slice(1, 3).map((img, i) => (
-                        <div
-                          key={i}
-                          className="group relative h-20 sm:h-24 overflow-hidden rounded-lg bg-surface-container cursor-pointer"
-                          onClick={() =>
-                            setZoomedImage({
-                              url: img,
-                              title: `${opt.title} (Ảnh ${i + 2})`,
-                            })
-                          }
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            alt=""
-                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                            src={img}
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MaterialIcon className="text-white text-[18px] sm:text-[20px]" name="zoom_in" />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ) : null}
-
-              {/* Card Body */}
-              <div className="flex flex-1 flex-col p-3.5 sm:p-5">
-                <div className="mb-2 flex items-start justify-between gap-2.5">
-                  <h4 className="text-base sm:text-title-md font-extrabold text-[#173A67] leading-snug">
-                    {opt.title}
-                  </h4>
-                  <span className="flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-[11px] sm:text-xs font-bold text-on-surface-variant">
-                    #{opt.orderNum}
-                  </span>
-                </div>
-
-                {opt.description ? (
-                  <p className="text-body-sm text-on-surface-variant line-clamp-3 mb-3">
-                    {opt.description}
-                  </p>
-                ) : null}
-
-                {/* Team members */}
-                {poll.isUnionContest && opt.members.length > 0 ? (
-                  <div className="mt-auto mb-4 rounded-xl bg-surface-container-low p-2.5">
-                    <p className="text-label-xs font-bold text-[#173A67] mb-1">
-                      Thành viên tác giả:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {opt.members.map((m) => (
-                        <span
-                          key={m.id}
-                          className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 text-label-xs font-semibold text-[#173A67] border border-outline-variant/60 shadow-2xs"
-                        >
-                          <MaterialIcon className="text-[12px] text-primary" name="person" />
-                          {m.fullName} {m.employeeCode ? `(${m.employeeCode})` : ""}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                {/* Vote Selection Button */}
-                {isInactive ? (
-                  <div className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-100 py-2.5 text-xs font-semibold text-slate-500 border border-slate-200">
-                    <MaterialIcon className="text-[16px]" name="pause_circle" />
-                    <span>Tạm ngưng bình chọn</span>
-                  </div>
-                ) : isBlockedForGuest ? (
-                  <Link
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary/10 py-2.5 text-xs font-bold text-primary hover:bg-primary/20 transition shadow-2xs border border-primary/20"
-                    href={`/login?returnUrl=/polls/${poll.id}`}
-                  >
-                    <MaterialIcon className="text-[16px]" name="login" />
-                    <span>Đăng nhập để bình chọn</span>
-                  </Link>
-                ) : !isClosed ? (
+      {!isClosed && !isInactive && !isBlockedForGuest ? (
+        <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-2 rounded-2xl border-2 border-amber-400 bg-amber-50/95 px-3 py-2.5 shadow-md backdrop-blur-xs">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-extrabold text-amber-950">
+              Đã chọn {selectedOptionIds.length}/{maxVotes} bài thi
+            </p>
+            {selectedOptions.length > 0 ? (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {selectedOptions.map((opt) => (
                   <button
-                    className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold transition shadow-xs cursor-pointer ${
-                      isSelected
-                        ? "bg-primary text-white"
-                        : "border-2 border-primary text-primary hover:bg-primary/10"
-                    }`}
+                    key={opt.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-[#173A67] border border-amber-300 cursor-pointer hover:bg-rose-50"
+                    title="Bỏ chọn"
                     type="button"
                     onClick={() => handleToggleOption(opt.id)}
                   >
-                    <MaterialIcon
-                      name={isSelected ? "check_circle" : "radio_button_unchecked"}
-                    />
-                    <span>{isSelected ? "Đã chọn bài thi này" : "Bình chọn bài thi này"}</span>
+                    #{opt.orderNum} {opt.title}
+                    <MaterialIcon className="text-[13px] text-rose-600" name="close" />
                   </button>
-                ) : null}
+                ))}
               </div>
-            </div>
-          );
-        })}
-      </div>
+            ) : (
+              <p className="text-[11px] text-amber-900">Mở từng bài thi và bấm “Bình chọn bài thi này”.</p>
+            )}
+          </div>
+          <button
+            className="shrink-0 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-dusty-dark transition cursor-pointer disabled:opacity-50"
+            disabled={selectedOptionIds.length === 0}
+            type="button"
+            onClick={() =>
+              document.getElementById("poll-vote-form")?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            Gửi phiếu
+          </button>
+        </div>
+      ) : null}
 
       {/* Submission Form (Prediction & Final Action) */}
       {isInactive ? (
@@ -563,7 +507,8 @@ export function PollVotingSection({ poll, initialNow }: Props) {
         </div>
       ) : !isClosed ? (
         <form
-          className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-4 sm:p-8 shadow-xs"
+          className="mt-6 sm:mt-8 space-y-4 sm:space-y-6 rounded-2xl border-2 border-amber-400 bg-amber-50/40 p-4 sm:p-8 shadow-xs scroll-mt-20"
+          id="poll-vote-form"
           onSubmit={handleSubmitVote}
         >
           <div className="flex items-center gap-2 text-amber-950">
@@ -579,6 +524,18 @@ export function PollVotingSection({ poll, initialNow }: Props) {
           <p className="text-sm sm:text-body-md text-amber-900">
             Bạn đang chọn <strong>{selectedOptionIds.length}</strong> / {maxVotes} bài thi.
           </p>
+          {selectedOptions.length > 0 ? (
+            <ul className="space-y-1 text-sm font-semibold text-[#173A67]">
+              {selectedOptions.map((opt) => (
+                <li key={opt.id} className="flex items-center gap-2">
+                  <MaterialIcon className="text-[16px] text-primary" name="check_circle" />
+                  <span>
+                    #{opt.orderNum} · {opt.title}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           {poll.hasJudges && (
             <div className="rounded-xl bg-white/90 border border-amber-300/80 p-3 text-xs text-amber-950 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
