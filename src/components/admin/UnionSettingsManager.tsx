@@ -1025,9 +1025,7 @@ export function UnionSettingsManager({
                           </td>
                           <td className="px-3 py-2.5 text-on-surface-variant">{o.term || "—"}</td>
                           <td className="px-3 py-2.5">
-                            <code className="rounded bg-slate-100 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-slate-800">
-                              {formatOfficerAttendee(o)}
-                            </code>
+                            <OfficerAttendeePreview officer={o} />
                           </td>
                           <td className="px-3 py-2.5 text-center">
                             <span
@@ -1771,6 +1769,29 @@ export function UnionSettingsManager({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Mẫu chèn văn bản hiển thị 2 dòng ("Họ tên -" / "Chức danh") cho dễ đọc; giá trị chèn và sao chép
+ * vẫn là một dòng "Họ tên - Chức danh".
+ */
+function OfficerAttendeePreview({ officer }: { officer: UnionOfficer }) {
+  const value = formatOfficerAttendee(officer);
+  const name = officer.fullName.trim();
+  const title = officer.positionName.trim();
+  return (
+    <code
+      className="inline-flex max-w-full flex-col items-start gap-0.5 rounded bg-slate-100 px-1.5 py-1 text-left font-sans text-[11px] font-semibold leading-snug text-slate-800"
+      title={value}
+      onCopy={(e) => {
+        e.preventDefault();
+        e.clipboardData.setData("text/plain", value);
+      }}
+    >
+      <span className="max-w-full break-words">{title ? `${name} -` : name}</span>
+      {title ? <span className="max-w-full break-words">{title}</span> : null}
+    </code>
   );
 }
 
