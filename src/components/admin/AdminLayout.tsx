@@ -13,10 +13,10 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/admin";
   const { group, page, subpage, isHub } = resolveAdminLocation(pathname);
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, canOpenAdmin } = useAuth();
   const [trail, setTrail] = useState<AdminTrail | null>(null);
   const extra = page && trail?.pathname === pathname ? trail.items : [];
-  const hubHref = group && isAdmin ? group.href : "/admin";
+  const hubHref = group && canOpenAdmin(group.href) ? group.href : "/admin";
   const parent = extra.length > 1 ? extra[extra.length - 2] : extra.length === 1 || subpage ? page : null;
   const backHref = parent?.href ?? hubHref;
   const [open, setOpen] = useState(false);

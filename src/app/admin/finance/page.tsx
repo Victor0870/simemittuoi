@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HubPage, type HubKpi, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { fundBalance } from "@/lib/finance/registry";
 import { loadEntries, loadFunds } from "@/lib/finance/server";
 import { loadPaymentRequestList } from "@/lib/payments/server";
@@ -98,7 +98,7 @@ export default async function FinanceHubPage() {
       hubKey="finance"
       kpis={kpis}
       subtitle="Sổ quỹ, báo cáo và danh mục thu chi"
-      tiles={tiles.filter((t) => t.allowed)}
+      tiles={visibleAdminLinks(access, tiles)}
       title="Tài chính công đoàn"
     />
   );

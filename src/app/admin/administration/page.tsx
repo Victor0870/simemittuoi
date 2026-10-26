@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HubPage, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { canManageUnionSettings } from "@/lib/union-settings/types";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +74,7 @@ export default async function AdministrationHubPage() {
     <HubPage
       hubKey="administration"
       subtitle="Tin báo, thăm hỏi, đề nghị thanh toán, thưởng và biểu mẫu"
-      tiles={tiles.filter((t) => t.allowed)}
+      tiles={visibleAdminLinks(access, tiles)}
       title="Quản lý hành chính"
     />
   );

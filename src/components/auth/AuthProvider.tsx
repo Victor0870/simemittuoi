@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 import {
   EMPTY_ACCESS,
+  canAccessAdminPath,
   hasPermission,
   parseAccess,
   type AccessInfo,
@@ -45,6 +46,8 @@ type AuthContextType = {
   /** Có ít nhất một quyền quản lý (admin luôn true). */
   hasAnyPermission: boolean;
   can: (code: PermissionCode) => boolean;
+  /** Mở được trang /admin này không (cùng quy tắc với middleware). */
+  canOpenAdmin: (pathname: string) => boolean;
   refreshProfile: () => Promise<void>;
 };
 
@@ -58,6 +61,7 @@ const AuthContext = createContext<AuthContextType>({
   roles: [],
   hasAnyPermission: false,
   can: () => false,
+  canOpenAdmin: () => false,
   refreshProfile: async () => {},
 });
 
@@ -140,6 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       roles: isApproved ? access.roles : [],
       hasAnyPermission: isApproved && (isAdmin || access.permissions.length > 0),
       can: (code) => hasPermission(effectiveAccess, code),
+      canOpenAdmin: (pathname) => canAccessAdminPath(effectiveAccess, pathname),
       refreshProfile: async () => {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();

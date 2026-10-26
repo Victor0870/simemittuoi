@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HubPage, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -86,7 +86,7 @@ export default async function CompetitionHubPage() {
     <HubPage
       hubKey="competition"
       subtitle="Điểm thi đua, bình chọn và trắc nghiệm"
-      tiles={tiles.filter((t) => t.allowed)}
+      tiles={visibleAdminLinks(access, tiles)}
       title="Hoạt động thi đua"
     />
   );

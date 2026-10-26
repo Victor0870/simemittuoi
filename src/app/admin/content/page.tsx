@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HubPage, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -57,7 +57,7 @@ export default async function ContentHubPage() {
     <HubPage
       hubKey="content"
       subtitle="Bài viết, hoạt động, album ảnh và thông báo"
-      tiles={tiles.filter((t) => t.allowed)}
+      tiles={visibleAdminLinks(access, tiles)}
       title="Quản lý nội dung"
     />
   );

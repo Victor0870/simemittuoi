@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HubPage, type HubKpi, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { countDocumentDrafts } from "@/lib/documents/drafts-server";
 import { countIssuedDocuments } from "@/lib/documents/registry-server";
 import { countDocumentTemplates } from "@/lib/documents/templates-server";
@@ -69,7 +69,7 @@ export default async function DocumentsHubPage() {
     <HubPage
       kpis={kpis}
       subtitle="Mẫu văn bản, soạn văn bản và sổ văn bản đã ban hành"
-      tiles={tiles.filter((t) => t.allowed)}
+      tiles={visibleAdminLinks(access, tiles)}
       title="Văn bản công đoàn"
     />
   );

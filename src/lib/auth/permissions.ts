@@ -569,11 +569,46 @@ export type AdminRoutePermission = {
   exact?: boolean;
 };
 
-const OFFICE_TOOL_PERMISSIONS = [...new Set(OFFICE_TOOLS.map((tool) => tool.permission))];
+const ALL_PERMISSIONS = Object.values(PERMISSIONS) as PermissionCode[];
 
 /** Các trang trong /admin mở cho người có quyền (trang /admin khác vẫn chỉ dành cho admin). Khớp đường dẫn dài nhất. */
 export const ADMIN_ROUTE_PERMISSIONS: AdminRoutePermission[] = [
-  { prefix: "/admin", permissions: OFFICE_TOOL_PERMISSIONS, exact: true },
+  // Trang tổng quan và trang hub: chỉ là lối vào, mỗi ô bên trong vẫn lọc theo quyền riêng
+  { prefix: "/admin", permissions: ALL_PERMISSIONS, exact: true },
+  {
+    prefix: "/admin/members-hub",
+    permissions: [PERMISSIONS.membersView, PERMISSIONS.employeesView],
+    exact: true,
+  },
+  { prefix: "/admin/competition", permissions: [PERMISSIONS.pollsManage], exact: true },
+  {
+    prefix: "/admin/content",
+    permissions: [PERMISSIONS.postsManage, PERMISSIONS.albumsManage, PERMISSIONS.popupsManage],
+    exact: true,
+  },
+  {
+    prefix: "/admin/administration",
+    permissions: [
+      PERMISSIONS.lifeEventsView,
+      PERMISSIONS.visitsView,
+      PERMISSIONS.paymentsView,
+      PERMISSIONS.rewardsPayout,
+      PERMISSIONS.giftsChildren,
+      PERMISSIONS.formsSettings,
+    ],
+    exact: true,
+  },
+  {
+    prefix: "/admin/finance",
+    permissions: [
+      PERMISSIONS.financeView,
+      PERMISSIONS.reportsView,
+      PERMISSIONS.catalogsManage,
+      PERMISSIONS.financeManage,
+    ],
+    exact: true,
+  },
+  { prefix: "/admin/system", permissions: [PERMISSIONS.formsSettings], exact: true },
   { prefix: "/admin/employees", permissions: [PERMISSIONS.employeesView] },
   { prefix: "/admin/members", permissions: [PERMISSIONS.membersView] },
   { prefix: "/admin/polls", permissions: [PERMISSIONS.pollsManage] },
@@ -609,4 +644,13 @@ export function canAccessAdminPath(access: AccessInfo, pathname: string): boolea
   const path = pathname.split(/[?#]/)[0];
   const permissions = findAdminRoutePermissions(path);
   return permissions !== null && permissions.some((code) => hasPermission(access, code));
+}
+
+/** Ô trên trang hub / tổng quan: còn quyền riêng của ô và (nếu là trang /admin) mở được trang đó. */
+export function visibleAdminLinks<T extends { href: string; allowed: boolean }>(access: AccessInfo, items: T[]): T[] {
+  return items.filter(
+    (item) =>
+      item.allowed &&
+      (!/^\/admin(\/|$|\?|#)/.test(item.href) || canAccessAdminPath(access, item.href)),
+  );
 }

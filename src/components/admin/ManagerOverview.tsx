@@ -5,7 +5,7 @@ import {
   type OverviewTask,
 } from "@/components/admin/AdminOverview";
 import type { CurrentAccess } from "@/lib/auth/guard";
-import { OFFICE_TOOLS, PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { OFFICE_TOOLS, PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { fundBalance } from "@/lib/finance/registry";
 import { financeAbilities, loadEntries, loadFunds } from "@/lib/finance/server";
 import { canViewAllLifeEvents, loadLifeEventList } from "@/lib/life-events/server";
@@ -16,7 +16,10 @@ import { loadVisitRequestList, visitAbilities } from "@/lib/visits/server";
 
 /** Trang tổng quan /admin cho cấp quản lý (không phải admin): chỉ công cụ, số liệu và việc cần làm theo quyền. */
 export async function ManagerOverview({ access }: { access: CurrentAccess }) {
-  const tools = OFFICE_TOOLS.filter((tool) => hasPermission(access, tool.permission));
+  const tools = visibleAdminLinks(
+    access,
+    OFFICE_TOOLS.map((tool) => ({ ...tool, allowed: hasPermission(access, tool.permission) })),
+  );
   const canFinance = hasPermission(access, PERMISSIONS.financeView);
   const canPayments = paymentAbilities(access).view;
   const canVisits = visitAbilities(access).view;
@@ -82,12 +85,12 @@ export async function ManagerOverview({ access }: { access: CurrentAccess }) {
     });
   }
 
-  const actions: OverviewAction[] = [
+  const actions: OverviewAction[] = visibleAdminLinks(access, [
     { href: "/posts", label: "Đăng bài", icon: "edit_note", allowed: hasPermission(access, PERMISSIONS.postsManage) },
     { href: "/admin/finance/ledger", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: financeAbilities(access).record },
     { href: "/admin/administration/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: paymentAbilities(access).create },
     { href: "/admin/popups", label: "Popup mới", icon: "notification_important", allowed: hasPermission(access, PERMISSIONS.popupsManage) },
-  ].filter((a) => a.allowed);
+  ]);
 
   if (tools.length === 0) {
     return (

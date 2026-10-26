@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { HubPage, type HubKpi, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
@@ -75,7 +75,7 @@ export default async function MembersHubPage() {
       hubKey="members-hub"
       kpis={kpis}
       subtitle="Tài khoản, hồ sơ, danh sách nhân viên và mật khẩu"
-      tiles={tiles.filter((t) => t.allowed)}
+      tiles={visibleAdminLinks(access, tiles)}
       title="Quản lý đoàn viên"
     />
   );

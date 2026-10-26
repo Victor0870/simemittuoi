@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { BRAND } from "@/lib/brand";
 
@@ -166,6 +167,8 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() || "/admin";
   const active = findAdminNavGroup(pathname);
   const overviewHref = "/admin";
+  const { canOpenAdmin } = useAuth();
+  const groups = ADMIN_NAV_GROUPS.filter((g) => g.key === "overview" || canOpenAdmin(g.href));
 
   return (
     <div className="flex h-full w-[270px] flex-col border-r border-dusty-border bg-surface-container-low text-on-surface-variant">
@@ -180,7 +183,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </Link>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {ADMIN_NAV_GROUPS.map((g) => {
+        {groups.map((g) => {
           const isActive = active?.key === g.key;
           return (
             <Link
