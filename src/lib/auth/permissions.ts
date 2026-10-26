@@ -628,7 +628,8 @@ export const ADMIN_ROUTE_PERMISSIONS: AdminRoutePermission[] = [
   { prefix: "/admin/finance/settings", permissions: [PERMISSIONS.financeManage] },
   { prefix: "/admin/finance/reports", permissions: [PERMISSIONS.reportsView] },
   { prefix: "/admin/finance/catalogs", permissions: [PERMISSIONS.catalogsManage] },
-  { prefix: "/admin/finance/regulations", permissions: [PERMISSIONS.financeManage] },
+  { prefix: "/admin/finance/regulations", permissions: [] },
+  { prefix: "/admin/regulations", permissions: [] },
   { prefix: "/admin/documents", permissions: [PERMISSIONS.postsManage] },
   { prefix: "/admin/union-settings", permissions: [PERMISSIONS.formsSettings] },
 ];

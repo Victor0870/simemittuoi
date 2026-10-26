@@ -69,6 +69,8 @@ export const CDILV_TABLE = {
   documentNumberSeries: "cdilv_document_number_series",
   unionPositions: "cdilv_union_positions",
   unionOfficers: "cdilv_union_officers",
+  regulationDocuments: "cdilv_regulation_documents",
+  regulationSections: "cdilv_regulation_sections",
 } as const;
 
 export const CDILV_RPC = {

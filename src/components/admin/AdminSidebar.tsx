@@ -53,7 +53,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Tài chính công đoàn",
     icon: "account_balance_wallet",
     href: "/admin/finance",
-    prefixes: ["/admin/finance"],
+    prefixes: ["/admin/finance", "/admin/regulations"],
   },
   {
     key: "documents",
@@ -119,7 +119,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/finance/settings", label: "Quỹ & khóa sổ" },
     { href: "/admin/finance/reports", label: "Báo cáo tổng hợp" },
     { href: "/admin/finance/catalogs", label: "Danh mục thu chi" },
-    { href: "/admin/finance/regulations", label: "Quy chế chi tiêu" },
+    { href: "/admin/regulations", label: "Quy chế chi tiêu" },
   ],
   documents: [
     { href: "/admin/documents/templates", label: "Mẫu văn bản" },
