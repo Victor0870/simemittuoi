@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { HubPage, type HubTile } from "@/components/admin/HubPage";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
+import { canManageUnionSettings } from "@/lib/union-settings/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -65,10 +66,7 @@ export default async function AdministrationHubPage() {
       description: "Danh sách cán bộ công đoàn, chức danh và nhiệm kỳ dùng trong văn bản, biên bản họp.",
       icon: "badge",
       tint: "dusty",
-      allowed:
-        access.isAdmin ||
-        hasPermission(access, PERMISSIONS.formsSettings) ||
-        hasPermission(access, PERMISSIONS.postsManage),
+      allowed: canManageUnionSettings(access),
     },
   ];
 

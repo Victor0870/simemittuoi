@@ -46,17 +46,33 @@ export const UNION_SETTINGS_LIMITS = {
   term: 120,
 } as const;
 
-/**
- * Kiểm tra quyền quản lý Cài đặt công đoàn:
- * Quản trị viên hoặc người có quyền cài đặt biểu mẫu (forms.settings) / quản lý văn bản (posts.manage).
- */
+/** Phải trùng với quyền của /admin/union-settings trong ADMIN_ROUTE_PERMISSIONS và ô "Cài đặt công đoàn". */
+export const UNION_SETTINGS_PERMISSION = PERMISSIONS.formsSettings;
+
+/** Xem trang Cài đặt công đoàn và thêm / sửa / xóa cán bộ, chức danh: quản trị viên hoặc forms.settings. */
 export function canManageUnionSettings(access: AccessInfo | null | undefined): boolean {
   if (!access || !access.isApproved) return false;
-  return (
-    access.isAdmin ||
-    hasPermission(access, PERMISSIONS.formsSettings) ||
-    hasPermission(access, PERMISSIONS.postsManage)
-  );
+  return hasPermission(access, UNION_SETTINGS_PERMISSION);
+}
+
+/**
+ * Chỉ đọc họ tên – chức danh cán bộ đang hoạt động để gợi ý khi soạn văn bản:
+ * người quản lý Cài đặt công đoàn hoặc người mở được Soạn văn bản (posts.manage).
+ */
+export function canReadUnionOfficers(access: AccessInfo | null | undefined): boolean {
+  if (!access || !access.isApproved) return false;
+  return canManageUnionSettings(access) || hasPermission(access, PERMISSIONS.postsManage);
+}
+
+/** Bỏ thông tin tài khoản liên kết (mã NV, bộ phận...) khi gửi cho người chỉ có quyền đọc gợi ý. */
+export function toOfficerSuggestion(officer: UnionOfficer): UnionOfficer {
+  return {
+    ...officer,
+    userId: null,
+    userFullName: null,
+    userEmployeeCode: null,
+    userDepartment: null,
+  };
 }
 
 /** Chuẩn hóa chuỗi tiếng Việt để tìm kiếm không phân biệt hoa thường & dấu. */

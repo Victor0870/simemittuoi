@@ -266,6 +266,7 @@ export function DocumentComposer({
   initialDrafts,
   initialDraftId = null,
   isAdmin = false,
+  canManageUnionSettings = false,
   officers = [],
 }: {
   templates: DocumentTemplate[];
@@ -275,6 +276,8 @@ export function DocumentComposer({
   initialDraftId?: string | null;
   /** Quản trị viên được nhập số văn bản thủ công khi ban hành. */
   isAdmin?: boolean;
+  /** Có quyền mở trang Cài đặt công đoàn (forms.settings) thì mới hiện liên kết tới trang đó. */
+  canManageUnionSettings?: boolean;
   /** Danh sách cán bộ công đoàn đang hoạt động để gợi ý tự động ở trường thành phần tham gia. */
   officers?: UnionOfficer[];
 }) {
@@ -613,14 +616,24 @@ export function DocumentComposer({
             Đang sửa bản nháp{dirty ? <strong className="text-amber-700"> • chưa lưu</strong> : null}
           </span>
         ) : null}
-        <Link
-          className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
-          href="/admin/union-settings"
-          title="Quản lý danh sách cán bộ và chức danh công đoàn dùng để gợi ý thành phần tham gia"
-        >
-          <MaterialIcon className="text-[15px]" name="badge" />
-          Cài đặt công đoàn ({officers.length})
-        </Link>
+        {canManageUnionSettings ? (
+          <Link
+            className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
+            href="/admin/union-settings"
+            title="Quản lý danh sách cán bộ và chức danh công đoàn dùng để gợi ý thành phần tham gia"
+          >
+            <MaterialIcon className="text-[15px]" name="badge" />
+            Cài đặt công đoàn ({officers.length})
+          </Link>
+        ) : (
+          <span
+            className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2.5 py-1 text-xs font-bold text-[#173A67]"
+            title="Cán bộ công đoàn đang hoạt động dùng để gợi ý thành phần tham gia"
+          >
+            <MaterialIcon className="text-[15px]" name="badge" />
+            Cán bộ công đoàn ({officers.length})
+          </span>
+        )}
       </div>
 
       {error ? (

@@ -6,6 +6,7 @@ import { countDocumentDrafts } from "@/lib/documents/drafts-server";
 import { countIssuedDocuments } from "@/lib/documents/registry-server";
 import { countDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { canManageUnionSettings } from "@/lib/union-settings/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -60,7 +61,7 @@ export default async function DocumentsHubPage() {
       description: "Danh sách cán bộ công đoàn, chức danh và nhiệm kỳ dùng để gợi ý thành phần tham gia khi soạn văn bản, biên bản họp.",
       icon: "badge",
       tint: "surface",
-      allowed: canTemplates || hasPermission(access, PERMISSIONS.formsSettings),
+      allowed: canManageUnionSettings(access),
     },
   ];
 

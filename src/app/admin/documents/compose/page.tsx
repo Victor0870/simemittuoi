@@ -7,6 +7,7 @@ import { loadDocumentOrgSettings } from "@/lib/documents/settings-server";
 import { loadDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { loadUnionOfficers } from "@/lib/union-settings/server";
+import { canManageUnionSettings, toOfficerSuggestion } from "@/lib/union-settings/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,8 +33,9 @@ export default async function DocumentComposePage({
     <DocumentComposer
       initialDraftId={typeof draft === "string" ? draft : null}
       initialDrafts={drafts}
+      canManageUnionSettings={canManageUnionSettings(access)}
       isAdmin={access.isAdmin}
-      officers={officers}
+      officers={officers.map(toOfficerSuggestion)}
       settings={settings}
       templates={templates}
     />

@@ -5,6 +5,7 @@ import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadDocumentOrgSettings } from "@/lib/documents/settings-server";
 import { loadDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { canManageUnionSettings } from "@/lib/union-settings/types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -19,5 +20,11 @@ export default async function DocumentTemplatesPage() {
     loadDocumentTemplates(db),
     loadDocumentOrgSettings(db),
   ]);
-  return <DocumentTemplatesManager initialSettings={initialSettings} templates={templates} />;
+  return (
+    <DocumentTemplatesManager
+      canManageUnionSettings={canManageUnionSettings(access)}
+      initialSettings={initialSettings}
+      templates={templates}
+    />
+  );
 }

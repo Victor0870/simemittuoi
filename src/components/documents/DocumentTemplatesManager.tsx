@@ -36,9 +36,12 @@ function normalize(text: string): string {
 export function DocumentTemplatesManager({
   templates,
   initialSettings = DEFAULT_DOCUMENT_ORG_SETTINGS,
+  canManageUnionSettings = false,
 }: {
   templates: DocumentTemplate[];
   initialSettings?: DocumentOrgSettings;
+  /** Có quyền mở trang Cài đặt công đoàn (forms.settings) thì mới hiện nút tới trang đó. */
+  canManageUnionSettings?: boolean;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -325,13 +328,15 @@ export function DocumentTemplatesManager({
           </span>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Link
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2dfe9] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
-            href="/admin/union-settings"
-          >
-            <MaterialIcon className="text-[17px]" name="badge" />
-            Cài đặt công đoàn
-          </Link>
+          {canManageUnionSettings ? (
+            <Link
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2dfe9] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
+              href="/admin/union-settings"
+            >
+              <MaterialIcon className="text-[17px]" name="badge" />
+              Cài đặt công đoàn
+            </Link>
+          ) : null}
           <button
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#173A67] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#ecf4ff]"
             type="button"
