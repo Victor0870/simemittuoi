@@ -59,6 +59,17 @@ export default async function AdministrationHubPage() {
       tint: "surface",
       allowed: hasPermission(access, PERMISSIONS.formsSettings),
     },
+    {
+      href: "/admin/union-settings",
+      title: "Cài đặt công đoàn",
+      description: "Danh sách cán bộ công đoàn, chức danh và nhiệm kỳ dùng trong văn bản, biên bản họp.",
+      icon: "badge",
+      tint: "dusty",
+      allowed:
+        access.isAdmin ||
+        hasPermission(access, PERMISSIONS.formsSettings) ||
+        hasPermission(access, PERMISSIONS.postsManage),
+    },
   ];
 
   return (

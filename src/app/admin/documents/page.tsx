@@ -54,6 +54,14 @@ export default async function DocumentsHubPage() {
       tint: "amber",
       allowed: canTemplates,
     },
+    {
+      href: "/admin/union-settings",
+      title: "Cài đặt công đoàn",
+      description: "Danh sách cán bộ công đoàn, chức danh và nhiệm kỳ dùng để gợi ý thành phần tham gia khi soạn văn bản, biên bản họp.",
+      icon: "badge",
+      tint: "surface",
+      allowed: canTemplates || hasPermission(access, PERMISSIONS.formsSettings),
+    },
   ];
 
   return (

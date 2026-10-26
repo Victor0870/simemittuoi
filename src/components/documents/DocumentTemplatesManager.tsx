@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
@@ -324,6 +325,13 @@ export function DocumentTemplatesManager({
           </span>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <Link
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2dfe9] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
+            href="/admin/union-settings"
+          >
+            <MaterialIcon className="text-[17px]" name="badge" />
+            Cài đặt công đoàn
+          </Link>
           <button
             className="inline-flex items-center gap-1.5 rounded-lg border border-[#173A67] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#ecf4ff]"
             type="button"

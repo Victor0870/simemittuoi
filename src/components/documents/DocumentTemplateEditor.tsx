@@ -36,6 +36,7 @@ import {
   type TemplateField,
   type TemplateFieldType,
 } from "@/lib/documents/templates";
+import { isAttendeeField } from "@/lib/union-settings/types";
 
 export type TemplateDraft = {
   id?: string;
@@ -971,6 +972,14 @@ export function DocumentTemplateEditor({
                         value={f.key}
                         onChange={(e) => setField(index, { key: e.target.value.trim() })}
                       />
+                      {isAttendeeField(f) ? (
+                        <span
+                          className="shrink-0 rounded bg-[#ecf4ff] px-1.5 py-0.5 text-[10px] font-bold text-[#173A67]"
+                          title="Khi soạn văn bản, ô này sẽ tự động gợi ý cán bộ Công đoàn đang hoạt động (Họ tên - Chức danh)"
+                        >
+                          Gợi ý cán bộ CĐ
+                        </span>
+                      ) : null}
                       <select
                         aria-label={`Kiểu nhập trường ${index + 1}`}
                         className={`${fieldControlClass} w-[115px] shrink-0`}

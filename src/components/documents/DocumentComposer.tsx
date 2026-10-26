@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useMemo, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { DocumentPreview } from "@/components/documents/DocumentPreview";
 import { IssueDocumentDialog } from "@/components/documents/IssueDocumentDialog";
@@ -21,6 +22,14 @@ import {
   type DocumentType,
   type TemplateField,
 } from "@/lib/documents/templates";
+import {
+  applyOfficerSelection,
+  extractAttendeeToken,
+  formatOfficerAttendee,
+  isAttendeeField,
+  matchActiveOfficers,
+  type UnionOfficer,
+} from "@/lib/union-settings/types";
 
 type Tab = "compose" | "drafts";
 
@@ -52,43 +61,201 @@ function FieldInput({
   field,
   value,
   error,
+  officers = [],
   onChange,
 }: {
   field: TemplateField;
   value: string;
   error?: string;
+  officers?: UnionOfficer[];
   onChange: (value: string) => void;
 }) {
   const id = `field-${field.key}`;
   const border = error ? "border-error" : "border-outline-variant";
+  const attendeeMode = isAttendeeField(field);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const [focused, setFocused] = useState(false);
+  const [cursor, setCursor] = useState(0);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [dismissedQuery, setDismissedQuery] = useState<string | null>(null);
+
+  const tokenCtx = useMemo(
+    () => (focused && attendeeMode ? extractAttendeeToken(value, cursor) : null),
+    [focused, attendeeMode, value, cursor],
+  );
+
+  const suggestions = useMemo(() => {
+    if (!tokenCtx || tokenCtx.query === dismissedQuery) return [];
+    return matchActiveOfficers(officers, tokenCtx.query);
+  }, [tokenCtx, dismissedQuery, officers]);
+
+  function selectOfficer(officer: UnionOfficer) {
+    const currentCursor = inputRef.current?.selectionStart ?? cursor;
+    const { nextValue, nextCursor } = applyOfficerSelection(value, currentCursor, officer);
+    onChange(nextValue);
+    setHighlightedIndex(-1);
+    setDismissedQuery(null);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextCursor, nextCursor);
+      setCursor(nextCursor);
+    });
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    if (!attendeeMode || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((prev) => (prev <= 0 ? suggestions.length - 1 : prev - 1));
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+        e.preventDefault();
+        selectOfficer(suggestions[highlightedIndex]);
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setDismissedQuery(tokenCtx?.query ?? null);
+      setHighlightedIndex(-1);
+    }
+  }
+
   return (
-    <label className="block" htmlFor={id}>
-      <span className="mb-0.5 flex items-baseline gap-1 text-[11px] font-semibold text-on-surface-variant">
-        <span className="min-w-0 flex-1">
-          {field.label}
-          {field.required ? <span className="text-error"> *</span> : null}
+    <div className="relative">
+      <label className="block" htmlFor={id}>
+        <span className="mb-0.5 flex items-baseline gap-1 text-[11px] font-semibold text-on-surface-variant">
+          <span className="min-w-0 flex-1">
+            {field.label}
+            {field.required ? <span className="text-error"> *</span> : null}
+          </span>
+          {attendeeMode ? (
+            <span
+              className="shrink-0 rounded bg-[#ecf4ff] px-1.5 py-0.2 text-[10px] font-bold text-[#173A67]"
+              title="Gõ tên để gợi ý cán bộ Công đoàn đang hoạt động (Họ tên - Chức danh); tên ngoài danh sách giữ nguyên không kèm chức danh"
+            >
+              Gợi ý cán bộ CĐ
+            </span>
+          ) : null}
+          {error ? <span className="shrink-0 text-[10px] font-bold text-error">{error}</span> : null}
         </span>
-        {error ? <span className="shrink-0 text-[10px] font-bold text-error">{error}</span> : null}
-      </span>
-      {field.type === "textarea" ? (
-        <textarea
-          className={`${fieldControlClass} ${border} min-h-[76px] py-1.5 leading-snug`}
-          id={id}
-          rows={3}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      ) : (
-        <input
-          className={`${fieldControlClass} ${border} h-8`}
-          id={id}
-          inputMode={field.type === "number" ? "numeric" : undefined}
-          type={field.type === "date" ? "date" : "text"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-      )}
-    </label>
+        {field.type === "textarea" ? (
+          <textarea
+            ref={(el) => {
+              inputRef.current = el;
+            }}
+            className={`${fieldControlClass} ${border} min-h-[76px] py-1.5 leading-snug`}
+            id={id}
+            placeholder={
+              attendeeMode
+                ? "Gõ tên để chọn cán bộ CĐ (VD: Nguyễn Văn A - Chủ tịch) hoặc nhập tên thường..."
+                : undefined
+            }
+            rows={3}
+            value={value}
+            onBlur={() => {
+              setTimeout(() => setFocused(false), 150);
+            }}
+            onChange={(e) => {
+              onChange(e.target.value);
+              setCursor(e.target.selectionStart ?? e.target.value.length);
+              setHighlightedIndex(-1);
+              setDismissedQuery(null);
+            }}
+            onClick={(e) => setCursor(e.currentTarget.selectionStart ?? value.length)}
+            onFocus={(e) => {
+              setFocused(true);
+              setCursor(e.currentTarget.selectionStart ?? value.length);
+            }}
+            onKeyDown={handleKeyDown}
+            onKeyUp={(e) => setCursor(e.currentTarget.selectionStart ?? value.length)}
+          />
+        ) : (
+          <input
+            ref={(el) => {
+              inputRef.current = el;
+            }}
+            className={`${fieldControlClass} ${border} h-8`}
+            id={id}
+            inputMode={field.type === "number" ? "numeric" : undefined}
+            placeholder={
+              attendeeMode
+                ? "Gõ tên để gợi ý cán bộ CĐ (Họ tên - Chức danh)..."
+                : undefined
+            }
+            type={field.type === "date" ? "date" : "text"}
+            value={value}
+            onBlur={() => {
+              setTimeout(() => setFocused(false), 150);
+            }}
+            onChange={(e) => {
+              onChange(e.target.value);
+              setCursor(e.target.selectionStart ?? e.target.value.length);
+              setHighlightedIndex(-1);
+              setDismissedQuery(null);
+            }}
+            onClick={(e) => setCursor(e.currentTarget.selectionStart ?? value.length)}
+            onFocus={(e) => {
+              setFocused(true);
+              setCursor(e.currentTarget.selectionStart ?? value.length);
+            }}
+            onKeyDown={handleKeyDown}
+            onKeyUp={(e) => setCursor(e.currentTarget.selectionStart ?? value.length)}
+          />
+        )}
+      </label>
+
+      {attendeeMode && focused && suggestions.length > 0 ? (
+        <div
+          aria-label="Gợi ý cán bộ công đoàn"
+          className="absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#173A67]/30 bg-white p-1 shadow-xl"
+          role="listbox"
+        >
+          <div className="flex items-center justify-between px-2 py-1 text-[10px] font-bold text-[#173A67]">
+            <span>Cán bộ Công đoàn đang hoạt động (chọn để chèn Họ tên - Chức danh):</span>
+            <span className="font-normal text-on-surface-variant">↑↓ / Enter</span>
+          </div>
+          {suggestions.map((o, idx) => {
+            const active = idx === highlightedIndex;
+            const formatted = formatOfficerAttendee(o);
+            return (
+              <button
+                key={o.id}
+                aria-selected={active}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition ${
+                  active
+                    ? "bg-[#173A67] text-white"
+                    : "text-on-surface hover:bg-[#ecf4ff]"
+                }`}
+                role="option"
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectOfficer(o);
+                }}
+              >
+                <span className="font-bold">{formatted}</span>
+                {o.term ? (
+                  <span
+                    className={`shrink-0 text-[10px] ${
+                      active ? "text-white/80" : "text-on-surface-variant"
+                    }`}
+                  >
+                    NK: {o.term}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+          <div className="border-t border-outline-variant/50 px-2 py-1 text-[10px] text-on-surface-variant">
+            Người ngoài BCH Công đoàn: tiếp tục gõ bình thường để giữ nguyên họ tên (không kèm chức danh).
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -99,6 +266,7 @@ export function DocumentComposer({
   initialDrafts,
   initialDraftId = null,
   isAdmin = false,
+  officers = [],
 }: {
   templates: DocumentTemplate[];
   settings: DocumentOrgSettings;
@@ -107,6 +275,8 @@ export function DocumentComposer({
   initialDraftId?: string | null;
   /** Quản trị viên được nhập số văn bản thủ công khi ban hành. */
   isAdmin?: boolean;
+  /** Danh sách cán bộ công đoàn đang hoạt động để gợi ý tự động ở trường thành phần tham gia. */
+  officers?: UnionOfficer[];
 }) {
   const opened = initialDrafts.find(
     (d) => d.id === initialDraftId && templates.some((t) => t.id === d.templateId),
@@ -443,6 +613,14 @@ export function DocumentComposer({
             Đang sửa bản nháp{dirty ? <strong className="text-amber-700"> • chưa lưu</strong> : null}
           </span>
         ) : null}
+        <Link
+          className="ml-auto inline-flex items-center gap-1 rounded-lg border border-[#d2dfe9] bg-white px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:border-[#173A67] hover:bg-[#ecf4ff]"
+          href="/admin/union-settings"
+          title="Quản lý danh sách cán bộ và chức danh công đoàn dùng để gợi ý thành phần tham gia"
+        >
+          <MaterialIcon className="text-[15px]" name="badge" />
+          Cài đặt công đoàn ({officers.length})
+        </Link>
       </div>
 
       {error ? (
@@ -537,6 +715,7 @@ export function DocumentComposer({
                       key={field.key}
                       error={showErrors ? fieldErrors[field.key] : undefined}
                       field={field}
+                      officers={officers}
                       value={values[field.key] ?? ""}
                       onChange={(v) => setValues((prev) => ({ ...prev, [field.key]: v }))}
                     />

@@ -6,6 +6,7 @@ import { loadDocumentDrafts } from "@/lib/documents/drafts-server";
 import { loadDocumentOrgSettings } from "@/lib/documents/settings-server";
 import { loadDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { loadUnionOfficers } from "@/lib/union-settings/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,16 +22,18 @@ export default async function DocumentComposePage({
 
   const { draft } = await searchParams;
   const db = createServiceClient();
-  const [templates, settings, drafts] = await Promise.all([
+  const [templates, settings, drafts, officers] = await Promise.all([
     loadDocumentTemplates(db),
     loadDocumentOrgSettings(db),
     loadDocumentDrafts(db),
+    loadUnionOfficers(db, { activeOnly: true }),
   ]);
   return (
     <DocumentComposer
       initialDraftId={typeof draft === "string" ? draft : null}
       initialDrafts={drafts}
       isAdmin={access.isAdmin}
+      officers={officers}
       settings={settings}
       templates={templates}
     />

@@ -75,7 +75,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Hệ thống",
     icon: "settings",
     href: "/admin/system",
-    prefixes: ["/admin/system", "/admin/roles"],
+    prefixes: ["/admin/system", "/admin/roles", "/admin/union-settings"],
   },
 ];
 
@@ -126,7 +126,10 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/documents/compose", label: "Soạn văn bản" },
     { href: "/admin/documents/registry", label: "Sổ văn bản" },
   ],
-  system: [{ href: "/admin/roles", label: "Phân quyền theo cấp" }],
+  system: [
+    { href: "/admin/union-settings", label: "Cài đặt công đoàn" },
+    { href: "/admin/roles", label: "Phân quyền theo cấp" },
+  ],
 };
 
 function matchesPath(pathname: string, prefix: string): boolean {

@@ -1,0 +1,1072 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { MaterialIcon } from "@/components/ui/MaterialIcon";
+import {
+  UNION_SETTINGS_LIMITS,
+  formatOfficerAttendee,
+  normalizeViSearch,
+  type AssignableUnionMember,
+  type UnionOfficer,
+  type UnionPosition,
+} from "@/lib/union-settings/types";
+
+type ActiveFilter = "all" | "active" | "inactive";
+
+type OfficerFormState = {
+  id?: string;
+  userId: string;
+  fullName: string;
+  positionId: string;
+  displayOrder: number;
+  isActive: boolean;
+  term: string;
+};
+
+const inputClass =
+  "w-full rounded-lg border border-outline-variant bg-white px-2.5 py-1.5 text-sm text-on-surface outline-none focus:border-[#173A67]";
+const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
+const controlClass =
+  "h-8 rounded-lg border border-outline-variant bg-white px-2 text-xs text-on-surface outline-none focus:border-[#173A67]";
+const iconButtonClass =
+  "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] disabled:opacity-30";
+
+export function UnionSettingsManager({
+  initialPositions,
+  initialOfficers,
+  members,
+}: {
+  initialPositions: UnionPosition[];
+  initialOfficers: UnionOfficer[];
+  members: AssignableUnionMember[];
+}) {
+  const [positions, setPositions] = useState<UnionPosition[]>(initialPositions);
+  const [officers, setOfficers] = useState<UnionOfficer[]>(initialOfficers);
+
+  // Bộ lọc danh sách cán bộ
+  const [query, setQuery] = useState("");
+  const [positionFilter, setPositionFilter] = useState<string>("");
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+
+  // Modal / Form thêm & sửa cán bộ
+  const [editingOfficer, setEditingOfficer] = useState<OfficerFormState | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [savingOfficer, setSavingOfficer] = useState(false);
+  const [busyOfficerId, setBusyOfficerId] = useState<string | null>(null);
+
+  // Quản lý chức danh (Thêm mới / Đổi tên / Ngừng dùng)
+  const [newPosName, setNewPosName] = useState("");
+  const [newPosOrder, setNewPosOrder] = useState<number>(
+    () => (initialPositions.reduce((max, p) => Math.max(max, p.displayOrder), 0) || 0) + 1,
+  );
+  const [addingPos, setAddingPos] = useState(false);
+  const [editingPosId, setEditingPosId] = useState<string | null>(null);
+  const [editingPosName, setEditingPosName] = useState("");
+  const [editingPosOrder, setEditingPosOrder] = useState<number>(1);
+  const [busyPosId, setBusyPosId] = useState<string | null>(null);
+
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const sortedPositions = useMemo(
+    () =>
+      [...positions].sort(
+        (a, b) => a.displayOrder - b.displayOrder || a.createdAt.localeCompare(b.createdAt),
+      ),
+    [positions],
+  );
+  const activePositions = useMemo(
+    () => sortedPositions.filter((p) => p.isActive),
+    [sortedPositions],
+  );
+
+  const sortedOfficers = useMemo(
+    () =>
+      [...officers].sort(
+        (a, b) => a.displayOrder - b.displayOrder || a.createdAt.localeCompare(b.createdAt),
+      ),
+    [officers],
+  );
+
+  const filteredOfficers = useMemo(() => {
+    const q = normalizeViSearch(query);
+    return sortedOfficers.filter((o) => {
+      if (positionFilter && o.positionId !== positionFilter) return false;
+      if (activeFilter === "active" && !o.isActive) return false;
+      if (activeFilter === "inactive" && o.isActive) return false;
+      if (!q) return true;
+      const hay = normalizeViSearch(
+        `${o.fullName} ${o.positionName} ${o.term ?? ""} ${o.userEmployeeCode ?? ""} ${o.userDepartment ?? ""}`,
+      );
+      return hay.includes(q);
+    });
+  }, [sortedOfficers, query, positionFilter, activeFilter]);
+
+  const filteredMembers = useMemo(() => {
+    const q = normalizeViSearch(memberSearch);
+    if (!q) return members.slice(0, 40);
+    return members
+      .filter((m) =>
+        normalizeViSearch(`${m.fullName} ${m.employeeCode ?? ""} ${m.department ?? ""}`).includes(q),
+      )
+      .slice(0, 40);
+  }, [members, memberSearch]);
+
+  const activeOfficersCount = officers.filter((o) => o.isActive && o.positionIsActive).length;
+
+  function clearNotice() {
+    setMessage(null);
+    setError(null);
+  }
+
+  function openNewOfficer() {
+    clearNotice();
+    const defaultPos = activePositions[0] ?? sortedPositions[0];
+    const nextOrder =
+      (officers.reduce((max, o) => Math.max(max, o.displayOrder), 0) || 0) + 1;
+    setMemberSearch("");
+    setEditingOfficer({
+      userId: "",
+      fullName: "",
+      positionId: defaultPos?.id ?? "",
+      displayOrder: nextOrder,
+      isActive: true,
+      term: "",
+    });
+  }
+
+  function openEditOfficer(officer: UnionOfficer) {
+    clearNotice();
+    setMemberSearch("");
+    setEditingOfficer({
+      id: officer.id,
+      userId: officer.userId ?? "",
+      fullName: officer.fullName,
+      positionId: officer.positionId,
+      displayOrder: officer.displayOrder,
+      isActive: officer.isActive,
+      term: officer.term ?? "",
+    });
+  }
+
+  function handleSelectMember(userId: string) {
+    if (!editingOfficer) return;
+    const picked = members.find((m) => m.id === userId);
+    const prevPicked = members.find((m) => m.id === editingOfficer.userId);
+    const shouldAutofillName =
+      !editingOfficer.fullName.trim() ||
+      (prevPicked && editingOfficer.fullName.trim() === prevPicked.fullName.trim());
+
+    setEditingOfficer({
+      ...editingOfficer,
+      userId,
+      fullName: picked && shouldAutofillName ? picked.fullName : editingOfficer.fullName,
+    });
+  }
+
+  async function saveOfficer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingOfficer || savingOfficer) return;
+    const cleanName = editingOfficer.fullName.trim();
+    if (!cleanName) {
+      setError("Vui lòng nhập họ và tên cán bộ công đoàn.");
+      return;
+    }
+    if (!editingOfficer.positionId) {
+      setError("Vui lòng chọn chức danh công đoàn.");
+      return;
+    }
+
+    setSavingOfficer(true);
+    clearNotice();
+    try {
+      const isCreate = !editingOfficer.id;
+      const res = await fetch(
+        isCreate
+          ? "/api/union-settings/officers"
+          : `/api/union-settings/officers/${editingOfficer.id}`,
+        {
+          method: isCreate ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: editingOfficer.userId || null,
+            fullName: cleanName,
+            positionId: editingOfficer.positionId,
+            displayOrder: editingOfficer.displayOrder,
+            isActive: editingOfficer.isActive,
+            term: editingOfficer.term.trim() || null,
+          }),
+        },
+      );
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        officer?: UnionOfficer;
+      };
+      if (!res.ok || !data.officer) {
+        throw new Error(data.error || "Không lưu được thông tin cán bộ công đoàn.");
+      }
+      const saved = data.officer;
+      setOfficers((prev) =>
+        isCreate ? [...prev, saved] : prev.map((o) => (o.id === saved.id ? saved : o)),
+      );
+      setEditingOfficer(null);
+      setMessage(
+        isCreate
+          ? `Đã thêm cán bộ “${saved.fullName} - ${saved.positionName}”.`
+          : `Đã cập nhật thông tin cán bộ “${saved.fullName} - ${saved.positionName}”.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không lưu được thông tin cán bộ.");
+    } finally {
+      setSavingOfficer(false);
+    }
+  }
+
+  async function toggleOfficerActive(officer: UnionOfficer) {
+    clearNotice();
+    setBusyOfficerId(officer.id);
+    try {
+      const res = await fetch(`/api/union-settings/officers/${officer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !officer.isActive }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        officer?: UnionOfficer;
+      };
+      if (!res.ok || !data.officer) {
+        throw new Error(data.error || "Không cập nhật được trạng thái cán bộ.");
+      }
+      const saved = data.officer;
+      setOfficers((prev) => prev.map((o) => (o.id === saved.id ? saved : o)));
+      setMessage(
+        saved.isActive
+          ? `Đã kích hoạt cán bộ “${saved.fullName}”.`
+          : `Đã ngừng kích hoạt cán bộ “${saved.fullName}”.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không cập nhật được trạng thái cán bộ.");
+    } finally {
+      setBusyOfficerId(null);
+    }
+  }
+
+  async function moveOfficerOrder(officer: UnionOfficer, delta: -1 | 1) {
+    const idx = sortedOfficers.findIndex((o) => o.id === officer.id);
+    const target = sortedOfficers[idx + delta];
+    if (!target) return;
+
+    clearNotice();
+    setBusyOfficerId(officer.id);
+    try {
+      const newOrderA = target.displayOrder;
+      const newOrderB =
+        officer.displayOrder === target.displayOrder
+          ? target.displayOrder + (delta < 0 ? 1 : -1)
+          : officer.displayOrder;
+
+      const [resA, resB] = await Promise.all([
+        fetch(`/api/union-settings/officers/${officer.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ displayOrder: newOrderA }),
+        }),
+        fetch(`/api/union-settings/officers/${target.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ displayOrder: newOrderB }),
+        }),
+      ]);
+      const dataA = (await resA.json().catch(() => ({}))) as { officer?: UnionOfficer };
+      const dataB = (await resB.json().catch(() => ({}))) as { officer?: UnionOfficer };
+      if (dataA.officer && dataB.officer) {
+        setOfficers((prev) =>
+          prev.map((o) => {
+            if (o.id === dataA.officer!.id) return dataA.officer!;
+            if (o.id === dataB.officer!.id) return dataB.officer!;
+            return o;
+          }),
+        );
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không đổi được thứ tự hiển thị.");
+    } finally {
+      setBusyOfficerId(null);
+    }
+  }
+
+  async function removeOfficer(officer: UnionOfficer) {
+    if (
+      !window.confirm(
+        `Xóa cán bộ “${officer.fullName} (${officer.positionName})” khỏi danh sách? (Nếu chỉ muốn tạm ẩn khi gợi ý văn bản, bạn có thể bấm “Ngừng” thay vì xóa).`,
+      )
+    ) {
+      return;
+    }
+    clearNotice();
+    setBusyOfficerId(officer.id);
+    try {
+      const res = await fetch(`/api/union-settings/officers/${officer.id}`, {
+        method: "DELETE",
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Không xóa được cán bộ công đoàn.");
+      setOfficers((prev) => prev.filter((o) => o.id !== officer.id));
+      setMessage(`Đã xóa cán bộ “${officer.fullName}”.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không xóa được cán bộ công đoàn.");
+    } finally {
+      setBusyOfficerId(null);
+    }
+  }
+
+  async function handleAddPosition(e: React.FormEvent) {
+    e.preventDefault();
+    const clean = newPosName.trim();
+    if (!clean || addingPos) return;
+
+    setAddingPos(true);
+    clearNotice();
+    try {
+      const res = await fetch("/api/union-settings/positions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: clean,
+          displayOrder: newPosOrder,
+          isActive: true,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        position?: UnionPosition;
+      };
+      if (!res.ok || !data.position) {
+        throw new Error(data.error || "Không thêm được chức danh.");
+      }
+      const created = data.position;
+      setPositions((prev) => [...prev, created]);
+      setNewPosName("");
+      setNewPosOrder(created.displayOrder + 1);
+      setMessage(`Đã thêm chức danh “${created.name}”.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thêm được chức danh.");
+    } finally {
+      setAddingPos(false);
+    }
+  }
+
+  function startEditPosition(pos: UnionPosition) {
+    clearNotice();
+    setEditingPosId(pos.id);
+    setEditingPosName(pos.name);
+    setEditingPosOrder(pos.displayOrder);
+  }
+
+  async function saveEditPosition(posId: string) {
+    const clean = editingPosName.trim();
+    if (!clean) {
+      setError("Tên chức danh không được để trống.");
+      return;
+    }
+    setBusyPosId(posId);
+    clearNotice();
+    try {
+      const res = await fetch(`/api/union-settings/positions/${posId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: clean,
+          displayOrder: editingPosOrder,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        position?: UnionPosition;
+      };
+      if (!res.ok || !data.position) {
+        throw new Error(data.error || "Không cập nhật được chức danh.");
+      }
+      const updated = data.position;
+      setPositions((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setOfficers((prev) =>
+        prev.map((o) =>
+          o.positionId === updated.id
+            ? { ...o, positionName: updated.name, positionIsActive: updated.isActive }
+            : o,
+        ),
+      );
+      setEditingPosId(null);
+      setMessage(`Đã cập nhật chức danh “${updated.name}”.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không cập nhật được chức danh.");
+    } finally {
+      setBusyPosId(null);
+    }
+  }
+
+  async function togglePositionActive(pos: UnionPosition) {
+    setBusyPosId(pos.id);
+    clearNotice();
+    try {
+      const res = await fetch(`/api/union-settings/positions/${pos.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !pos.isActive }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        position?: UnionPosition;
+      };
+      if (!res.ok || !data.position) {
+        throw new Error(data.error || "Không đổi được trạng thái chức danh.");
+      }
+      const updated = data.position;
+      setPositions((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setOfficers((prev) =>
+        prev.map((o) =>
+          o.positionId === updated.id ? { ...o, positionIsActive: updated.isActive } : o,
+        ),
+      );
+      setMessage(
+        updated.isActive
+          ? `Đã bật chức danh “${updated.name}”.`
+          : `Đã ngừng dùng chức danh “${updated.name}”.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không đổi được trạng thái chức danh.");
+    } finally {
+      setBusyPosId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-6 pb-10">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-headline-md font-extrabold text-[#173A67]">Cài đặt công đoàn</h1>
+          <p className="mt-1 text-sm text-on-surface-variant">
+            Quản lý danh sách cán bộ công đoàn và danh mục chức danh dùng để gợi ý tự động{" "}
+            <strong className="text-[#173A67]">“Họ tên - Chức danh”</strong> khi soạn thảo văn bản, biên bản họp.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#173A67] bg-white px-3 py-1.5 text-xs font-bold text-[#173A67] transition hover:bg-[#ecf4ff]"
+            href="/admin/documents/compose"
+          >
+            <MaterialIcon className="text-[17px]" name="edit_document" />
+            Soạn văn bản
+          </Link>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-[#1E4A7D]"
+            type="button"
+            onClick={openNewOfficer}
+          >
+            <MaterialIcon className="text-[18px]" name="person_add" />
+            Thêm cán bộ công đoàn
+          </button>
+        </div>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-border-subtle bg-white p-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+            <MaterialIcon className="text-[16px] text-primary" name="verified_user" />
+            <span>Cán bộ đang hoạt động</span>
+          </div>
+          <p className="mt-1.5 text-xl font-extrabold text-[#173A67]">{activeOfficersCount}</p>
+        </div>
+        <div className="rounded-xl border border-border-subtle bg-white p-4">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+            <MaterialIcon className="text-[16px] text-primary" name="groups" />
+            <span>Tổng số cán bộ</span>
+          </div>
+          <p className="mt-1.5 text-xl font-extrabold text-[#173A67]">{officers.length}</p>
+        </div>
+        <div className="col-span-2 rounded-xl border border-border-subtle bg-white p-4 sm:col-span-1">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant">
+            <MaterialIcon className="text-[16px] text-primary" name="badge" />
+            <span>Chức danh đang dùng</span>
+          </div>
+          <p className="mt-1.5 text-xl font-extrabold text-[#173A67]">
+            {activePositions.length}/{positions.length}
+          </p>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="rounded-xl border border-error/30 bg-error-container/40 px-3.5 py-2 text-xs font-semibold text-on-error-container">
+          {error}
+        </div>
+      ) : null}
+      {message ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-semibold text-emerald-800">
+          {message}
+        </div>
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        {/* CỘT TRÁI: DANH SÁCH CÁN BỘ CÔNG ĐOÀN */}
+        <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-4 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e3ecf3] pb-3">
+            <div>
+              <h2 className="text-base font-extrabold text-[#173A67]">
+                Danh sách cán bộ công đoàn ({filteredOfficers.length})
+              </h2>
+              <p className="text-xs text-on-surface-variant">
+                Cán bộ đang hoạt động sẽ hiện trong gợi ý tự động ở ô <strong>Thành phần tham gia</strong> khi soạn biên bản.
+              </p>
+            </div>
+            <button
+              className="inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1E4A7D]"
+              type="button"
+              onClick={openNewOfficer}
+            >
+              <MaterialIcon className="text-[16px]" name="add" />
+              Thêm cán bộ
+            </button>
+          </div>
+
+          {/* Thanh tìm kiếm & lọc */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="relative min-w-[180px] flex-1">
+              <MaterialIcon
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-on-surface-variant"
+                name="search"
+              />
+              <input
+                aria-label="Tìm cán bộ công đoàn"
+                className={`${controlClass} w-full pl-8`}
+                placeholder="Tìm theo họ tên, chức danh, mã NV, nhiệm kỳ..."
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+            <select
+              aria-label="Lọc theo chức danh"
+              className={controlClass}
+              value={positionFilter}
+              onChange={(e) => setPositionFilter(e.target.value)}
+            >
+              <option value="">Tất cả chức danh</option>
+              {sortedPositions.map((pos) => (
+                <option key={pos.id} value={pos.id}>
+                  {pos.name}
+                  {pos.isActive ? "" : " (đã ẩn)"}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Lọc theo trạng thái"
+              className={controlClass}
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
+            >
+              <option value="all">Mọi trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="inactive">Ngừng hoạt động</option>
+            </select>
+          </div>
+
+          {/* Bảng danh sách cán bộ */}
+          {filteredOfficers.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-outline-variant py-10 text-center text-xs text-on-surface-variant">
+              {officers.length === 0
+                ? "Chưa có cán bộ công đoàn nào. Bấm “+ Thêm cán bộ” để khởi tạo danh sách."
+                : "Không có cán bộ nào khớp điều kiện lọc."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-[#e3ecf3]">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[#d2dfe9] bg-[#ecf4ff] text-[11px] font-bold text-[#173A67]">
+                    <th className="w-16 px-2.5 py-2 text-center">Thứ tự</th>
+                    <th className="px-3 py-2">Họ và tên</th>
+                    <th className="px-3 py-2">Chức danh</th>
+                    <th className="px-3 py-2">Nhiệm kỳ</th>
+                    <th className="px-3 py-2">Mẫu chèn văn bản</th>
+                    <th className="px-3 py-2 text-center">Trạng thái</th>
+                    <th className="px-3 py-2 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#eef3f8]">
+                  {filteredOfficers.map((o) => {
+                    const effectiveActive = o.isActive && o.positionIsActive;
+                    return (
+                      <tr
+                        key={o.id}
+                        className={
+                          effectiveActive ? "bg-white hover:bg-[#f8fbff]" : "bg-surface-container-low/60 opacity-75"
+                        }
+                      >
+                        <td className="px-2.5 py-2 text-center tabular-nums">
+                          <div className="inline-flex items-center gap-0.5">
+                            <span className="min-w-[1.5rem] font-bold text-[#173A67]">{o.displayOrder}</span>
+                            <button
+                              aria-label="Đưa lên"
+                              className={iconButtonClass}
+                              disabled={busyOfficerId === o.id || sortedOfficers[0]?.id === o.id}
+                              title="Đưa lên"
+                              type="button"
+                              onClick={() => void moveOfficerOrder(o, -1)}
+                            >
+                              <MaterialIcon className="text-[15px]" name="arrow_upward" />
+                            </button>
+                            <button
+                              aria-label="Đưa xuống"
+                              className={iconButtonClass}
+                              disabled={
+                                busyOfficerId === o.id ||
+                                sortedOfficers[sortedOfficers.length - 1]?.id === o.id
+                              }
+                              title="Đưa xuống"
+                              type="button"
+                              onClick={() => void moveOfficerOrder(o, 1)}
+                            >
+                              <MaterialIcon className="text-[15px]" name="arrow_downward" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="font-bold text-[#173A67]">{o.fullName}</div>
+                          {o.userId ? (
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] text-on-surface-variant">
+                              <MaterialIcon className="text-[13px] text-emerald-700" name="link" />
+                              <span>
+                                TK: {o.userFullName || o.fullName}
+                                {o.userEmployeeCode ? ` (${o.userEmployeeCode})` : ""}
+                                {o.userDepartment ? ` • ${o.userDepartment}` : ""}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-on-surface-variant">Nhập trực tiếp</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-[#d2dfe9] bg-[#f5f9ff] px-2 py-0.5 font-bold text-[#173A67]">
+                            {o.positionName}
+                          </span>
+                          {!o.positionIsActive ? (
+                            <span className="ml-1 text-[10px] font-semibold text-amber-700">
+                              (chức danh đã ẩn)
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2 text-on-surface-variant">{o.term || "—"}</td>
+                        <td className="px-3 py-2">
+                          <code className="rounded bg-slate-100 px-1.5 py-0.5 font-sans text-[11px] font-semibold text-slate-800">
+                            {formatOfficerAttendee(o)}
+                          </code>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span
+                            className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                              effectiveActive
+                                ? "bg-emerald-50 text-emerald-800"
+                                : "bg-surface-container text-on-surface-variant"
+                            }`}
+                          >
+                            {o.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
+                          </span>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+                              type="button"
+                              onClick={() => openEditOfficer(o)}
+                            >
+                              <MaterialIcon className="text-[15px]" name="edit" />
+                              Sửa
+                            </button>
+                            <button
+                              className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
+                                o.isActive
+                                  ? "border-outline-variant text-on-surface-variant hover:border-amber-600 hover:text-amber-800"
+                                  : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                              }`}
+                              disabled={busyOfficerId === o.id}
+                              type="button"
+                              onClick={() => void toggleOfficerActive(o)}
+                            >
+                              <MaterialIcon
+                                className="text-[15px]"
+                                name={o.isActive ? "visibility_off" : "visibility"}
+                              />
+                              {o.isActive ? "Ngừng" : "Bật"}
+                            </button>
+                            <button
+                              aria-label={`Xóa ${o.fullName}`}
+                              className="inline-flex h-7 items-center rounded-lg border border-outline-variant px-1.5 text-on-surface-variant hover:border-error hover:text-error disabled:opacity-50"
+                              disabled={busyOfficerId === o.id}
+                              title="Xóa cán bộ"
+                              type="button"
+                              onClick={() => void removeOfficer(o)}
+                            >
+                              <MaterialIcon className="text-[15px]" name="delete" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* CỘT PHẢI: DANH MỤC CHỨC DANH CÔNG ĐOÀN */}
+        <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-4 shadow-2xs">
+          <div className="border-b border-[#e3ecf3] pb-2.5">
+            <h2 className="text-base font-extrabold text-[#173A67]">
+              Chức danh công đoàn ({positions.length})
+            </h2>
+            <p className="text-xs text-on-surface-variant">
+              Mặc định: Chủ tịch, Phó chủ tịch, Ủy viên, Kế toán. Có thể thêm chức danh mới, đổi tên hoặc ngừng dùng.
+            </p>
+          </div>
+
+          {/* Form thêm chức danh mới */}
+          <form
+            className="flex flex-col gap-2 rounded-xl border border-[#d2dfe9] bg-[#f8fbff] p-3"
+            onSubmit={handleAddPosition}
+          >
+            <span className="text-xs font-bold text-[#173A67]">Thêm chức danh mới</span>
+            <div className="flex gap-1.5">
+              <input
+                className={`${inputClass} flex-1`}
+                maxLength={UNION_SETTINGS_LIMITS.positionName}
+                placeholder="VD: Thủ quỹ, Ủy viên UBKT..."
+                value={newPosName}
+                onChange={(e) => setNewPosName(e.target.value)}
+              />
+              <input
+                aria-label="Thứ tự chức danh"
+                className={`${inputClass} w-16 text-center tabular-nums`}
+                title="Thứ tự hiển thị"
+                type="number"
+                value={newPosOrder}
+                onChange={(e) => setNewPosOrder(Number(e.target.value) || 0)}
+              />
+              <button
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                disabled={addingPos || !newPosName.trim()}
+                type="submit"
+              >
+                <MaterialIcon className="text-[16px]" name="add" />
+                Thêm
+              </button>
+            </div>
+          </form>
+
+          {/* Danh sách chức danh */}
+          <div className="space-y-2">
+            {sortedPositions.map((pos) => {
+              const isEditing = editingPosId === pos.id;
+              const usedCount = officers.filter((o) => o.positionId === pos.id).length;
+
+              return (
+                <div
+                  key={pos.id}
+                  className={`rounded-xl border p-2.5 transition ${
+                    pos.isActive
+                      ? "border-[#d2dfe9] bg-white"
+                      : "border-dashed border-outline-variant bg-surface-container-low/50 opacity-75"
+                  }`}
+                >
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-1.5">
+                        <input
+                          className={`${inputClass} flex-1`}
+                          maxLength={UNION_SETTINGS_LIMITS.positionName}
+                          placeholder="Tên chức danh"
+                          value={editingPosName}
+                          onChange={(e) => setEditingPosName(e.target.value)}
+                        />
+                        <input
+                          aria-label="Thứ tự hiển thị"
+                          className={`${inputClass} w-16 text-center tabular-nums`}
+                          title="Thứ tự"
+                          type="number"
+                          value={editingPosOrder}
+                          onChange={(e) => setEditingPosOrder(Number(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          className="rounded-lg border border-outline-variant px-2.5 py-1 text-xs font-semibold text-on-surface-variant hover:bg-surface-container"
+                          type="button"
+                          onClick={() => setEditingPosId(null)}
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          className="rounded-lg bg-[#173A67] px-3 py-1 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                          disabled={busyPosId === pos.id || !editingPosName.trim()}
+                          type="button"
+                          onClick={() => void saveEditPosition(pos.id)}
+                        >
+                          Lưu
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-[#ecf4ff] text-[11px] font-bold text-[#173A67] tabular-nums">
+                            {pos.displayOrder}
+                          </span>
+                          <span
+                            className={`truncate text-sm font-bold ${
+                              pos.isActive ? "text-[#173A67]" : "text-on-surface-variant line-through"
+                            }`}
+                          >
+                            {pos.name}
+                          </span>
+                        </div>
+                        <p className="mt-0.5 pl-6 text-[11px] text-on-surface-variant">
+                          {usedCount > 0 ? `${usedCount} cán bộ` : "Chưa gán cán bộ"} •{" "}
+                          {pos.isActive ? "Đang dùng" : "Đã ngừng dùng"}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
+                          title="Đổi tên hoặc sửa thứ tự chức danh"
+                          type="button"
+                          onClick={() => startEditPosition(pos)}
+                        >
+                          <MaterialIcon className="text-[14px]" name="edit" />
+                          Đổi tên
+                        </button>
+                        <button
+                          className={`inline-flex h-7 items-center rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
+                            pos.isActive
+                              ? "border-outline-variant text-on-surface-variant hover:border-amber-600 hover:text-amber-800"
+                              : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+                          }`}
+                          disabled={busyPosId === pos.id}
+                          title={pos.isActive ? "Ngừng dùng chức danh này" : "Kích hoạt lại chức danh này"}
+                          type="button"
+                          onClick={() => void togglePositionActive(pos)}
+                        >
+                          {pos.isActive ? "Ngừng" : "Bật"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
+      {/* MODAL THÊM / SỬA CÁN BỘ CÔNG ĐOÀN */}
+      {editingOfficer ? (
+        <div
+          aria-labelledby="officer-modal-title"
+          aria-modal="true"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-3"
+          role="dialog"
+        >
+          <div className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#d2dfe9] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-outline-variant px-5 py-3.5">
+              <div className="flex items-center gap-2">
+                <MaterialIcon className="text-[22px] text-[#173A67]" name="badge" />
+                <h3 id="officer-modal-title" className="text-base font-extrabold text-[#173A67]">
+                  {editingOfficer.id ? "Cập nhật cán bộ công đoàn" : "Thêm cán bộ công đoàn"}
+                </h3>
+              </div>
+              <button
+                aria-label="Đóng"
+                className={iconButtonClass}
+                type="button"
+                onClick={() => setEditingOfficer(null)}
+              >
+                <MaterialIcon className="text-[20px]" name="close" />
+              </button>
+            </div>
+
+            <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveOfficer}>
+              <div className="space-y-3.5 overflow-y-auto p-5">
+                {/* 1. Liên kết tài khoản đoàn viên (không bắt buộc) */}
+                <div className="rounded-xl border border-[#d2dfe9] bg-[#f8fbff] p-3">
+                  <label className={labelClass} htmlFor="officer-user-link">
+                    Liên kết tài khoản đoàn viên{" "}
+                    <span className="font-normal text-on-surface-variant">(không bắt buộc)</span>
+                  </label>
+                  <input
+                    className={`${inputClass} mb-1.5 text-xs`}
+                    placeholder="Gõ tên hoặc mã nhân viên để lọc nhanh..."
+                    type="search"
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                  />
+                  <select
+                    className={inputClass}
+                    id="officer-user-link"
+                    value={editingOfficer.userId}
+                    onChange={(e) => handleSelectMember(e.target.value)}
+                  >
+                    <option value="">— Không liên kết (nhập họ tên trực tiếp) —</option>
+                    {filteredMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.fullName}
+                        {m.employeeCode ? ` (${m.employeeCode})` : ""}
+                        {m.department ? ` — ${m.department}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2. Họ và tên */}
+                <div>
+                  <label className={labelClass} htmlFor="officer-full-name">
+                    Họ và tên cán bộ <span className="text-error">*</span>
+                  </label>
+                  <input
+                    required
+                    className={inputClass}
+                    id="officer-full-name"
+                    maxLength={UNION_SETTINGS_LIMITS.officerName}
+                    placeholder="VD: Nguyễn Văn A"
+                    value={editingOfficer.fullName}
+                    onChange={(e) =>
+                      setEditingOfficer({ ...editingOfficer, fullName: e.target.value })
+                    }
+                  />
+                </div>
+
+                {/* 3. Chức danh & Thứ tự */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px]">
+                  <div>
+                    <label className={labelClass} htmlFor="officer-position">
+                      Chức danh công đoàn <span className="text-error">*</span>
+                    </label>
+                    <select
+                      required
+                      className={inputClass}
+                      id="officer-position"
+                      value={editingOfficer.positionId}
+                      onChange={(e) =>
+                        setEditingOfficer({ ...editingOfficer, positionId: e.target.value })
+                      }
+                    >
+                      <option value="">— Chọn chức danh —</option>
+                      {sortedPositions
+                        .filter((p) => p.isActive || p.id === editingOfficer.positionId)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                            {p.isActive ? "" : " (đã ngừng dùng)"}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClass} htmlFor="officer-order">
+                      Thứ tự hiển thị
+                    </label>
+                    <input
+                      className={`${inputClass} tabular-nums`}
+                      id="officer-order"
+                      type="number"
+                      value={editingOfficer.displayOrder}
+                      onChange={(e) =>
+                        setEditingOfficer({
+                          ...editingOfficer,
+                          displayOrder: Number(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Nhiệm kỳ (không bắt buộc) */}
+                <div>
+                  <label className={labelClass} htmlFor="officer-term">
+                    Nhiệm kỳ <span className="font-normal text-on-surface-variant">(tùy chọn)</span>
+                  </label>
+                  <input
+                    className={inputClass}
+                    id="officer-term"
+                    maxLength={UNION_SETTINGS_LIMITS.term}
+                    placeholder="VD: 2023 - 2028"
+                    value={editingOfficer.term}
+                    onChange={(e) => setEditingOfficer({ ...editingOfficer, term: e.target.value })}
+                  />
+                </div>
+
+                {/* 5. Cờ đang hoạt động */}
+                <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-[#d2dfe9] bg-surface-container-lowest p-3 text-sm font-semibold text-on-surface select-none">
+                  <input
+                    checked={editingOfficer.isActive}
+                    className="h-4 w-4 rounded border-slate-300 text-[#173A67]"
+                    type="checkbox"
+                    onChange={(e) =>
+                      setEditingOfficer({ ...editingOfficer, isActive: e.target.checked })
+                    }
+                  />
+                  <div>
+                    <div>Đang hoạt động</div>
+                    <p className="text-xs font-normal text-on-surface-variant">
+                      Hiển thị trong danh sách gợi ý khi gõ tên ở mục Thành phần tham gia của văn bản.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Xem trước định dạng chèn vào văn bản */}
+                {editingOfficer.fullName.trim() ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-xs text-emerald-950">
+                    <span className="font-semibold">Định dạng khi chọn trong biên bản họp: </span>
+                    <strong className="font-bold">
+                      {formatOfficerAttendee({
+                        fullName: editingOfficer.fullName,
+                        positionName:
+                          positions.find((p) => p.id === editingOfficer.positionId)?.name ??
+                          "Chủ tịch",
+                      })}
+                    </strong>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-outline-variant bg-white px-5 py-3">
+                <button
+                  className="rounded-lg border border-outline-variant px-4 py-1.5 text-xs font-bold text-on-surface-variant hover:bg-surface-container"
+                  disabled={savingOfficer}
+                  type="button"
+                  onClick={() => setEditingOfficer(null)}
+                >
+                  Hủy
+                </button>
+                <button
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[#173A67] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                  disabled={
+                    savingOfficer ||
+                    !editingOfficer.fullName.trim() ||
+                    !editingOfficer.positionId
+                  }
+                  type="submit"
+                >
+                  <MaterialIcon className="text-[16px]" name="save" />
+                  {savingOfficer ? "Đang lưu…" : "Lưu cán bộ"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}

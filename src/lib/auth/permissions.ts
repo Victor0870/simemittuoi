@@ -504,6 +504,13 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.formsSettings,
   },
   {
+    href: "/admin/union-settings",
+    title: "Cài đặt công đoàn",
+    description: "Danh sách cán bộ công đoàn, chức danh và nhiệm kỳ dùng trong văn bản, biên bản họp.",
+    icon: "badge",
+    permission: PERMISSIONS.formsSettings,
+  },
+  {
     href: "/albums",
     title: "Quản lý album ảnh",
     description: "Tạo album, cài đặt thời gian và điểm thưởng đăng ảnh, kiểm duyệt ảnh và bình luận.",
@@ -562,6 +569,7 @@ export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCo
   { prefix: "/admin/content/guides", permission: PERMISSIONS.postsManage },
   { prefix: "/admin/finance/regulations", permission: PERMISSIONS.financeManage },
   { prefix: "/admin/documents", permission: PERMISSIONS.postsManage },
+  { prefix: "/admin/union-settings", permission: PERMISSIONS.formsSettings },
 ];
 
 export function findAdminRoutePermission(pathname: string): PermissionCode | null {
