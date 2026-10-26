@@ -15,7 +15,6 @@ import {
   PAYMENT_LOG_LABEL,
   PAYMENT_METHOD_LABEL,
   PAYMENT_RECEIVER_KIND_LABEL,
-  toTransferText,
 } from "@/lib/payments/registry";
 import type { PaymentAbilities, PaymentMember, PaymentRequestDetail } from "@/lib/payments/server";
 import type { SlipSigners } from "@/lib/payments/slip-data";
@@ -30,6 +29,7 @@ type Props = {
   counterparties: Counterparty[];
   members: PaymentMember[];
   slipSigners: SlipSigners;
+  slipLogoUrl: string | null;
   /** Vừa bấm “Lập & tải giấy đề nghị” – tự tải file in một lần. */
   autoPrint?: boolean;
 };
@@ -45,6 +45,7 @@ export function PaymentRequestDetailView({
   counterparties,
   members,
   slipSigners,
+  slipLogoUrl,
   autoPrint,
 }: Props) {
   const router = useRouter();
@@ -53,7 +54,6 @@ export function PaymentRequestDetailView({
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [editing, setEditing] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const isProposed = detail.status === "proposed";
   const canDecide = can.approve && isProposed;
@@ -102,7 +102,6 @@ export function PaymentRequestDetailView({
         canGatherVisits={canViewVisits}
         initial={{
           requestDate: detail.request_date,
-          title: toTransferText(detail.title).trim(),
           requesterName: detail.requester_name,
           requesterDepartment: detail.requester_department ?? "",
           paymentMethod: detail.payment_method,
@@ -129,6 +128,7 @@ export function PaymentRequestDetailView({
         mode="edit"
         requestCode={detail.code}
         requestId={detail.id}
+        slipLogoUrl={slipLogoUrl}
         slipSigners={slipSigners}
         onCancel={() => setEditing(false)}
       />
@@ -145,25 +145,7 @@ export function PaymentRequestDetailView({
           </span>
           <span className="ml-auto text-xs font-semibold text-on-surface-variant">{detail.code}</span>
         </div>
-        <div className="mt-2 flex flex-wrap items-start gap-2">
-          <h1 className="min-w-0 flex-1 text-headline-sm font-extrabold break-words text-[#173A67]">{detail.title}</h1>
-          {detail.payment_method === "transfer" ? (
-            <button
-              className="inline-flex items-center gap-1 rounded-xl border border-outline-variant px-2.5 py-1 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-              title="Sao chép nội dung chuyển khoản"
-              type="button"
-              onClick={() => {
-                void navigator.clipboard?.writeText(detail.title).then(() => {
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                });
-              }}
-            >
-              <MaterialIcon className="text-[16px]" name={copied ? "check" : "content_copy"} />
-              {copied ? "Đã chép" : "Chép nội dung CK"}
-            </button>
-          ) : null}
-        </div>
+        <h1 className="mt-2 text-headline-sm font-extrabold break-words text-[#173A67]">{detail.title}</h1>
 
         <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div>
@@ -227,7 +209,6 @@ export function PaymentRequestDetailView({
               <tr className="[&>th]:px-3 [&>th]:py-2 [&>th]:font-bold [&>th]:whitespace-nowrap">
                 <th>#</th>
                 <th>Chi tiết chi phí</th>
-                <th>Đối tượng nhận</th>
                 <th className="text-right">Thực trả</th>
                 <th className="text-right">Đã tạm ứng</th>
               </tr>
@@ -253,7 +234,6 @@ export function PaymentRequestDetailView({
                       )
                     ) : null}
                   </td>
-                  <td>{i.paid_to ?? "—"}</td>
                   <td className="text-right font-semibold whitespace-nowrap">{formatVnd(i.amount)}</td>
                   <td className="text-right whitespace-nowrap">{i.advanced ? formatVnd(i.advanced) : "—"}</td>
                 </tr>
@@ -261,7 +241,7 @@ export function PaymentRequestDetailView({
             </tbody>
             <tfoot>
               <tr className="border-t-2 border-[#173A67]/20 font-bold text-[#173A67] [&>td]:px-3 [&>td]:py-2">
-                <td colSpan={3}>Tổng cộng</td>
+                <td colSpan={2}>Tổng cộng</td>
                 <td className="text-right whitespace-nowrap">{formatVnd(detail.total_amount)}</td>
                 <td className="text-right whitespace-nowrap">
                   {detail.advanced_amount ? formatVnd(detail.advanced_amount) : "—"}

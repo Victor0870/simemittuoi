@@ -12,15 +12,18 @@ export type TemplateDef = {
   file: string;
   /** Vùng thừa trong mẫu cần xóa trắng (gỡ cả ô gộp nằm trong vùng). */
   clear?: string[];
-  /** Bỏ ảnh EMF (ảnh liên kết / “camera” của Excel) – exceljs không cập nhật được nội dung ảnh này. */
-  dropEmfImages?: boolean;
+  /**
+   * Bỏ ảnh có sẵn trong mẫu: "emf" = ảnh liên kết / “camera” của Excel (exceljs không cập nhật được nội dung),
+   * "all" = mọi ảnh (kể cả logo in sẵn – logo do customize chèn lại theo cài đặt).
+   */
+  dropImages?: "emf" | "all";
 };
 
 export const PRINT_TEMPLATES = {
   /** Mẫu C11-TLĐ – Phiếu thăm hỏi đoàn viên (khối chữ ký cũ M49:S55 nằm ngoài vùng in). */
   visitSlip: { file: "phieu_tham_hoi.xlsx", clear: ["M49:S55"] },
-  /** Giấy đề nghị thanh toán – khối chữ ký gốc là ảnh liên kết tới K46:Q52, được thay bằng ô thật. */
-  paymentSlip: { file: "de_nghi_thanh_toan.xlsx", clear: ["K46:S55"], dropEmfImages: true },
+  /** Giấy đề nghị thanh toán – khối chữ ký gốc là ảnh liên kết tới K46:Q52, được thay bằng ô thật; logo theo cài đặt. */
+  paymentSlip: { file: "de_nghi_thanh_toan.xlsx", clear: ["K46:S55"], dropImages: "all" },
 } satisfies Record<string, TemplateDef>;
 
 export type TemplateId = keyof typeof PRINT_TEMPLATES;
@@ -57,10 +60,12 @@ export function clearRange(ws: ExcelJS.Worksheet, range: string) {
 type MediaModel = { extension?: string };
 type WorksheetMedia = { type: string; imageId: string | number };
 
-function dropEmfImages(workbook: ExcelJS.Workbook, ws: ExcelJS.Worksheet) {
+function dropImages(workbook: ExcelJS.Workbook, ws: ExcelJS.Worksheet, which: "emf" | "all") {
   const media = (workbook as unknown as { model: { media: MediaModel[] } }).model.media;
   const sheet = ws as unknown as { _media: WorksheetMedia[] };
-  sheet._media = sheet._media.filter((m) => m.type !== "image" || media[Number(m.imageId)]?.extension !== "emf");
+  sheet._media = sheet._media.filter(
+    (m) => m.type !== "image" || (which === "emf" && media[Number(m.imageId)]?.extension !== "emf"),
+  );
 }
 
 /**
@@ -79,7 +84,7 @@ export async function renderTemplate(
   const ws = workbook.worksheets[0];
   if (!ws) throw new Error(`Mẫu ${def.file} không có trang tính.`);
 
-  if (def.dropEmfImages) dropEmfImages(workbook, ws);
+  if (def.dropImages) dropImages(workbook, ws, def.dropImages);
   for (const range of def.clear ?? []) clearRange(ws, range);
   for (const [address, value] of Object.entries(values)) ws.getCell(address).value = value;
   customize?.(ws, workbook);

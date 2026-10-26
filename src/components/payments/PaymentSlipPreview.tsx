@@ -43,7 +43,8 @@ function Colgroup({ widths }: { widths: number[] }) {
   );
 }
 
-export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
+/** logoUrl: logo theo Cài đặt biểu mẫu in; null = để trống chỗ logo (giữ nguyên chiều cao). */
+export function PaymentSlipPreview({ data, logoUrl }: { data: PaymentSlipData; logoUrl: string | null }) {
   return (
     <div className="space-y-4">
       <div
@@ -54,12 +55,14 @@ export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
           <tbody>
             <tr>
               <td className="h-[48px] align-top sm:h-[96px]" colSpan={9}>
-                <img
-                  alt="Logo"
-                  className="h-[40px] w-auto sm:h-[84px]"
-                  src="/print/payment-slip-logo.png"
-                  style={{ maxWidth: `${((COLUMN_WIDTHS[0] + COLUMN_WIDTHS[1]) / TOTAL_WIDTH) * 100}%` }}
-                />
+                {logoUrl ? (
+                  <img
+                    alt="Logo"
+                    className="h-[40px] w-auto object-contain object-left sm:h-[84px]"
+                    src={logoUrl}
+                    style={{ maxWidth: `${((COLUMN_WIDTHS[0] + COLUMN_WIDTHS[1]) / TOTAL_WIDTH) * 100}%` }}
+                  />
+                ) : null}
               </td>
             </tr>
             <tr>
@@ -113,15 +116,10 @@ export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
               </td>
             </tr>
             <tr className="text-center">
-              <td className={cell} colSpan={4}>
+              <td className={cell} colSpan={6}>
                 Expenditure in detail
                 <br />
                 <i>(Chi phí chi tiết)</i>
-              </td>
-              <td className={cell} colSpan={2}>
-                Paid to
-                <br />
-                <i>(đối tượng nhận)</i>
               </td>
               <td className={cell}>
                 Paid amount
@@ -137,11 +135,8 @@ export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
             {data.lines.map((line, i) => (
               <tr key={i} className="h-[22px] sm:h-[42px]">
                 <td className={`${cell} text-center`}>{line?.no ?? ""}</td>
-                <td className={`${cell} break-words`} colSpan={4}>
+                <td className={`${cell} break-words`} colSpan={6}>
                   {line?.content ?? ""}
-                </td>
-                <td className={`${cell} text-center break-words`} colSpan={2}>
-                  {line?.paidTo ?? ""}
                 </td>
                 <td className={`${cell} text-right whitespace-nowrap`}>{line ? amount(line.amount) : ""}</td>
                 <td className={`${cell} text-right whitespace-nowrap`}>{line ? amount(line.advanced) : ""}</td>
@@ -222,17 +217,6 @@ export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
               </td>
             </tr>
             <tr>
-              <td colSpan={4} />
-              <td className="border-b border-l border-black py-1 pl-2" colSpan={2}>
-                {data.descriptionLabel}
-              </td>
-              <td className="py-1">:</td>
-              <td className="py-1 font-bold break-words" colSpan={2}>
-                {data.description}
-              </td>
-            </tr>
-
-            <tr>
               <td className="pt-6" colSpan={9} />
             </tr>
             <tr className="text-center font-bold">
@@ -254,15 +238,13 @@ export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
 
       {data.itemSheet ? (
         <div className="mx-auto w-full max-w-[820px] bg-white p-2 font-[Arial,Helvetica,sans-serif] text-[9px] leading-snug text-black shadow-md sm:p-6 sm:text-[12px]">
-          <p className="text-center text-[11px] font-bold sm:text-[16px]">{data.itemSheet.heading}</p>
-          <p className="mb-3 text-center italic">{data.itemSheet.title}</p>
+          <p className="mb-3 text-center text-[11px] font-bold sm:text-[16px]">{data.itemSheet.heading}</p>
           <table className="w-full table-fixed border-collapse">
-            <Colgroup widths={[6, 52, 26, 15, 15]} />
+            <Colgroup widths={[6, 70, 15, 15]} />
             <thead>
               <tr className="bg-[#EFF3F8] text-center font-bold">
                 <th className={cell}>STT</th>
                 <th className={cell}>Chi tiết chi phí</th>
-                <th className={cell}>Đối tượng nhận</th>
                 <th className={cell}>Thực trả</th>
                 <th className={cell}>Đã tạm ứng</th>
               </tr>
@@ -272,13 +254,12 @@ export function PaymentSlipPreview({ data }: { data: PaymentSlipData }) {
                 <tr key={row.no}>
                   <td className={`${cell} text-center`}>{row.no}</td>
                   <td className={`${cell} break-words`}>{row.content}</td>
-                  <td className={`${cell} break-words`}>{row.paidTo}</td>
                   <td className={`${cell} text-right whitespace-nowrap`}>{amount(row.amount)}</td>
                   <td className={`${cell} text-right whitespace-nowrap`}>{amount(row.advanced)}</td>
                 </tr>
               ))}
               <tr className="font-bold">
-                <td className={cell} colSpan={3}>
+                <td className={cell} colSpan={2}>
                   Tổng cộng
                 </td>
                 <td className={`${cell} text-right whitespace-nowrap`}>{amount(data.itemSheet.totalPaid)}</td>

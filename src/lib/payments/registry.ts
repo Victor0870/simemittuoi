@@ -2,7 +2,7 @@
  * Giấy đề nghị thanh toán: nhãn, giới hạn, kiểm tra dữ liệu form (dùng ở cả trình duyệt và API).
  * Trạng thái dùng chung bộ nhãn / màu với đề nghị thăm hỏi.
  */
-import { TRANSFER_TEXT_MAX, toTransferText } from "@/lib/bank-transfer";
+import { toTransferText } from "@/lib/bank-transfer";
 import { MAX_AMOUNT } from "@/lib/forms/settings";
 
 export { toTransferText };
@@ -41,8 +41,8 @@ export const PAYMENT_LOG_LABEL: Record<string, string> = {
 };
 
 export const PAYMENT_LIMITS = {
-  /** Nội dung đề nghị = nội dung chuyển khoản ngân hàng. */
-  title: TRANSFER_TEXT_MAX,
+  /** Nhãn đề nghị (cột title, ràng buộc 1–200 ký tự trong CSDL). */
+  title: 200,
   name: 120,
   account: 40,
   content: 300,
@@ -62,6 +62,7 @@ export type PaymentItemInput = {
 
 export type PaymentInput = {
   requestDate: string;
+  /** Tự tạo từ các dòng chi (paymentTitleFromItems) – không nhập trên form, không in trên phiếu. */
   title: string;
   requesterName: string;
   requesterDepartment: string | null;
@@ -90,10 +91,18 @@ function money(value: unknown): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** Nhãn đề nghị cho danh sách, thông báo và sổ quỹ: dòng chi đầu tiên (+ số khoản còn lại). */
+export function paymentTitleFromItems(items: { content: string }[]): string {
+  const first = items[0]?.content.trim() ?? "";
+  const suffix = items.length > 1 ? ` (+${items.length - 1} khoản)` : "";
+  const room = PAYMENT_LIMITS.title - suffix.length;
+  const head = first.length > room ? `${first.slice(0, room - 1).trimEnd()}…` : first;
+  return `${head}${suffix}`;
+}
+
 /** Ô trên form bị lỗi: tên trường, hoặc `items.<thứ tự dòng>.<trường>` cho dòng chi phí. */
 export type PaymentField =
   | "requestDate"
-  | "title"
   | "requesterName"
   | "requesterDepartment"
   | "receiverMemberId"
@@ -118,10 +127,6 @@ export function parsePaymentInput(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(requestDate) || Number.isNaN(Date.parse(requestDate))) {
     fail("Ngày đề nghị không hợp lệ.", "requestDate");
   }
-
-  const title = toTransferText(oneLine(raw.title)).trim();
-  if (!/[A-Za-z0-9]/.test(title)) fail("Vui lòng nhập nội dung chuyển khoản.", "title");
-  if (title.length > PAYMENT_LIMITS.title) fail(`Nội dung chuyển khoản tối đa ${PAYMENT_LIMITS.title} ký tự.`, "title");
 
   const requesterName = oneLine(raw.requesterName);
   if (!requesterName) fail("Vui lòng nhập người đề nghị.", "requesterName");
@@ -206,7 +211,7 @@ export function parsePaymentInput(
     ok: true,
     value: {
       requestDate,
-      title,
+      title: paymentTitleFromItems(items),
       requesterName,
       requesterDepartment,
       paymentMethod,

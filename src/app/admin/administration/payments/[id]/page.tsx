@@ -7,6 +7,8 @@ import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadCounterparties } from "@/lib/catalogs/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { loadPaymentMembers, loadPaymentRequestDetail, paymentAbilities } from "@/lib/payments/server";
+import { printLogoUrl } from "@/lib/print/logo";
+import { loadPrintLogoPath } from "@/lib/print/logo-server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +30,13 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
   const [detail, settings] = await Promise.all([loadPaymentRequestDetail(db, id), loadFormSettings(db)]);
   if (!detail) notFound();
   const editable = can.create && detail.status === "proposed";
-  const [counterparties, members] = editable
+  const [counterparties, members, logoPath] = editable
     ? await Promise.all([
         loadCounterparties(db, { activeOnly: true, includeIds: [detail.counterparty_id] }),
         loadPaymentMembers(db, detail.receiver_member_id),
+        loadPrintLogoPath(db),
       ])
-    : [[], []];
+    : [[], [], null];
 
   const missingSigners = [
     !settings.accountantName ? "Kế toán Công đoàn" : null,
@@ -75,6 +78,7 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
         autoPrint={Boolean(created && print)}
         can={can}
         members={members}
+        slipLogoUrl={printLogoUrl(logoPath)}
         slipSigners={{
           preparerDepartment: settings.preparerDepartment,
           accountantName: settings.accountantName,

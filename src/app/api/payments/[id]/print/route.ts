@@ -4,6 +4,7 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { buildPaymentSlip } from "@/lib/payments/print";
 import { loadPaymentItems, loadPaymentRequestRow } from "@/lib/payments/server";
+import { loadPrintLogoImage } from "@/lib/print/logo-server";
 import { XLSX_MIME, renderTemplate } from "@/lib/print/xlsx-template";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC } from "@/lib/supabase/tables";
@@ -27,8 +28,12 @@ export async function GET(_request: Request, { params }: Params) {
       return NextResponse.json({ error: "Đề nghị đã bị từ chối hoặc đã hủy, không in được." }, { status: 409 });
     }
 
-    const [items, settings] = await Promise.all([loadPaymentItems(db, id), loadFormSettings(db)]);
-    const slip = buildPaymentSlip(req, items, settings);
+    const [items, settings, logo] = await Promise.all([
+      loadPaymentItems(db, id),
+      loadFormSettings(db),
+      loadPrintLogoImage(db),
+    ]);
+    const slip = buildPaymentSlip(req, items, settings, logo);
     const buffer = await renderTemplate("paymentSlip", slip.values, slip.customize);
 
     await db.rpc(CDILV_RPC.paymentRequestLog, {

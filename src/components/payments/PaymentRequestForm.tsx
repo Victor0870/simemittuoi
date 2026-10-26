@@ -13,7 +13,6 @@ import {
   PAYMENT_METHOD_LABEL,
   PAYMENT_RECEIVER_KIND_LABEL,
   parsePaymentInput,
-  toTransferText,
   type PaymentInput,
   type PaymentMethod,
   type PaymentReceiverKind,
@@ -25,7 +24,6 @@ import { formatVnd } from "@/lib/visits/registry";
 
 export type PaymentFormValues = {
   requestDate: string;
-  title: string;
   requesterName: string;
   requesterDepartment: string;
   paymentMethod: PaymentMethod;
@@ -51,6 +49,8 @@ type Props = {
   members?: PaymentMember[];
   /** Bộ phận mặc định và người ký theo Cài đặt biểu mẫu in – để xem trước giấy đề nghị. */
   slipSigners: SlipSigners;
+  /** Logo theo Cài đặt biểu mẫu in (null = để trống chỗ logo). */
+  slipLogoUrl: string | null;
   /** Mã đề nghị đã cấp (khi sửa); lập mới thì chưa có. */
   requestCode?: string;
   onCancel?: () => void;
@@ -63,7 +63,6 @@ const inputClass =
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
 const invalidInputClass = inputClass.replace("border-outline-variant", "border-error bg-error-container/20");
 
-const transferTitle = (value: string) => toTransferText(value).slice(0, PAYMENT_LIMITS.title);
 const toNumber = (value: string) => Number(value.replace(/\D/g, "")) || 0;
 const formatInput = (value: string) => (value ? new Intl.NumberFormat("vi-VN").format(toNumber(value)) : "");
 
@@ -80,6 +79,7 @@ export function PaymentRequestForm({
   counterparties,
   members,
   slipSigners,
+  slipLogoUrl,
   requestCode,
   onCancel,
 }: Props) {
@@ -229,15 +229,12 @@ export function PaymentRequestForm({
       const added = chosen.map((c) =>
         newPaymentItem({
           content: visitLine(c),
-          paidTo: c.visitor_name,
           amount: String(c.amount),
           visitRequestId: c.id,
           visitCode: c.code,
         }),
       );
-      const title =
-        v.title.trim() || (kept.length === 0 ? `Chi tham hoi doan vien ${added.length} phieu` : v.title);
-      return { ...v, title, items: [...kept, ...added] };
+      return { ...v, items: [...kept, ...added] };
     });
     setCandidates(null);
     setPicked(new Set());
@@ -284,7 +281,6 @@ export function PaymentRequestForm({
         {
           code: requestCode ?? null,
           request_date: input.requestDate,
-          title: input.title,
           requester_name: input.requesterName,
           requester_department: input.requesterDepartment,
           payment_method: input.paymentMethod,
@@ -294,7 +290,7 @@ export function PaymentRequestForm({
           total_amount: input.items.reduce((sum, i) => sum + i.amount, 0),
           advanced_amount: input.items.reduce((sum, i) => sum + i.advanced, 0),
         },
-        input.items.map((i) => ({ content: i.content, paid_to: i.paidTo, amount: i.amount, advanced: i.advanced })),
+        input.items.map((i) => ({ content: i.content, amount: i.amount, advanced: i.advanced })),
         slipSigners,
       ),
     );
@@ -333,28 +329,7 @@ export function PaymentRequestForm({
 
   return (
     <div className="space-y-4 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
-      <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
-        <div>
-          <label className={labelClass}>Nội dung chuyển khoản * (tự bỏ dấu)</label>
-          <input
-            className={field("title")}
-            maxLength={PAYMENT_LIMITS.title}
-            placeholder="Ví dụ: CDILV chi tham hoi doan vien T10 2026"
-            value={values.title}
-            onBlur={() => setValues((v) => ({ ...v, title: transferTitle(v.title).trim() }))}
-            onChange={(e) => {
-              const composing = (e.nativeEvent as InputEvent).isComposing;
-              set({ title: composing ? e.target.value : transferTitle(e.target.value) });
-            }}
-            onCompositionEnd={(e) => set({ title: transferTitle(e.currentTarget.value) })}
-          />
-          <p className="mt-1 flex justify-between gap-2 text-[11px] text-on-surface-variant">
-            <span>Tiếng Việt không dấu, chỉ chữ, số và . , - để dán vào nội dung chuyển khoản ngân hàng.</span>
-            <span className="whitespace-nowrap">
-              {values.title.trim().length}/{PAYMENT_LIMITS.title}
-            </span>
-          </p>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-[180px_1fr_1fr]">
         <div>
           <label className={labelClass}>Ngày đề nghị *</label>
           <input
@@ -364,9 +339,6 @@ export function PaymentRequestForm({
             onChange={(e) => set({ requestDate: e.target.value })}
           />
         </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className={labelClass}>Người đề nghị (Requestor) *</label>
           <input
@@ -517,22 +489,13 @@ export function PaymentRequestForm({
                   </button>
                 </span>
               </div>
-              <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
-                <input
-                  className={field(`items.${item.key}.content`)}
-                  maxLength={PAYMENT_LIMITS.content}
-                  placeholder="Chi tiết chi phí"
-                  value={item.content}
-                  onChange={(e) => setItem(item.key, { content: e.target.value })}
-                />
-                <input
-                  className={field(`items.${item.key}.paidTo`)}
-                  maxLength={PAYMENT_LIMITS.name}
-                  placeholder="Đối tượng nhận"
-                  value={item.paidTo}
-                  onChange={(e) => setItem(item.key, { paidTo: e.target.value })}
-                />
-              </div>
+              <input
+                className={field(`items.${item.key}.content`)}
+                maxLength={PAYMENT_LIMITS.content}
+                placeholder="Chi tiết chi phí"
+                value={item.content}
+                onChange={(e) => setItem(item.key, { content: e.target.value })}
+              />
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <label className="text-xs text-on-surface-variant">
                   Thực trả (VNĐ) *
@@ -835,7 +798,7 @@ export function PaymentRequestForm({
                   </p>
                 ) : null}
               </div>
-              <PaymentSlipPreview data={preview} />
+              <PaymentSlipPreview data={preview} logoUrl={slipLogoUrl} />
             </div>
             {error ? (
               <div className="border-t border-error/30 bg-error-container/40 px-4 py-2 text-sm text-on-error-container">{error}</div>

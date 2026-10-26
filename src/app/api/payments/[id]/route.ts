@@ -7,6 +7,7 @@ import {
   PAYMENT_RECEIVER_KIND_LABEL,
   parsePaymentInput,
   paymentRpcPayload,
+  paymentTitleFromItems,
 } from "@/lib/payments/registry";
 import {
   loadPaymentItems,
@@ -38,9 +39,12 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const parsed = parsePaymentInput(body);
     if (!parsed.ok) return NextResponse.json({ error: parsed.errors.join(" ") }, { status: 400 });
-    const v = parsed.value;
 
     const currentItems = await loadPaymentItems(db, id);
+    // Nội dung chuyển khoản nhập tay ở đề nghị cũ được giữ nguyên; nhãn tự tạo thì cập nhật theo dòng chi.
+    const autoTitle = current.title === paymentTitleFromItems(currentItems);
+    const v = autoTitle ? parsed.value : { ...parsed.value, title: current.title };
+
     const keepIds = currentItems.map((i) => i.visit_request_id).filter((x): x is string => Boolean(x));
     const visitIds = v.items.map((i) => i.visitRequestId).filter((x): x is string => Boolean(x));
     const linkErrors = await validateVisitLinks(db, visitIds, { exceptId: id, keepIds });
@@ -52,7 +56,6 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const total = v.items.reduce((sum, i) => sum + i.amount, 0);
     const changes: string[] = [];
-    if (v.title !== current.title) changes.push(`Nội dung: ${v.title}`);
     if (v.requestDate !== current.request_date) changes.push(`Ngày: ${v.requestDate}`);
     if (v.requesterName !== current.requester_name) changes.push(`Người đề nghị: ${v.requesterName}`);
     if (v.paymentMethod !== current.payment_method) changes.push(`Hình thức: ${PAYMENT_METHOD_LABEL[v.paymentMethod]}`);

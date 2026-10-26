@@ -12,7 +12,6 @@ export const SLIP_CODE_PENDING = "Số: (cấp khi lập)";
 export type SlipSource = {
   code: string | null;
   request_date: string;
-  title: string;
   requester_name: string;
   requester_department: string | null;
   payment_method: PaymentMethod;
@@ -25,7 +24,6 @@ export type SlipSource = {
 
 export type SlipItem = {
   content: string;
-  paid_to: string | null;
   amount: number;
   advanced: number;
 };
@@ -35,7 +33,6 @@ export type SlipSigners = Pick<FormSettings, "preparerDepartment" | "accountantN
 export type PaymentSlipLine = {
   no: number;
   content: string;
-  paidTo: string;
   amount: number;
   /** null = để trống ô Đã tạm ứng. */
   advanced: number | null;
@@ -54,13 +51,10 @@ export type PaymentSlipData = {
   receiverName: string;
   receiverAccount: string;
   receiverBank: string;
-  descriptionLabel: string;
-  description: string;
   signatures: { title: string; name: string }[];
   /** Trang “Bảng kê” khi đề nghị nhiều dòng hơn mẫu chứa được. */
   itemSheet: {
     heading: string;
-    title: string;
     rows: PaymentSlipLine[];
     totalPaid: number;
     totalAdvanced: number;
@@ -77,8 +71,7 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
     ? [
         {
           no: 1,
-          content: `${req.title} – chi theo bảng kê đính kèm (${items.length} khoản)`,
-          paidTo: req.receiver_name ?? "",
+          content: `Chi theo bảng kê đính kèm (${items.length} khoản)`,
           amount: req.total_amount,
           advanced: advancedCell(req.advanced_amount),
         },
@@ -86,7 +79,6 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
     : items.map((item, index) => ({
         no: index + 1,
         content: item.content,
-        paidTo: item.paid_to ?? "",
         amount: item.amount,
         advanced: advancedCell(item.advanced),
       }));
@@ -105,8 +97,6 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
     receiverName: req.receiver_name ?? "",
     receiverAccount: req.receiver_account ?? "",
     receiverBank: req.receiver_bank ?? "",
-    descriptionLabel: req.payment_method === "transfer" ? "Nội dung CK/ Description" : "Nội dung/ Description",
-    description: req.title,
     signatures: [
       { title: "Người Lập", name: req.requester_name },
       { title: "Kế toán Công Đoàn", name: signers.accountantName },
@@ -115,11 +105,9 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
     itemSheet: useItemSheet
       ? {
           heading: `BẢNG KÊ KÈM GIẤY ĐỀ NGHỊ THANH TOÁN ${req.code ?? SLIP_CODE_PENDING}`,
-          title: req.title,
           rows: items.map((item, index) => ({
             no: index + 1,
             content: item.content,
-            paidTo: item.paid_to ?? "",
             amount: item.amount,
             advanced: advancedCell(item.advanced),
           })),
