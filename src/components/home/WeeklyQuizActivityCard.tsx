@@ -67,8 +67,8 @@ export function WeeklyQuizActivityCard() {
     };
 
     update();
-    // Cập nhật mỗi 30 giây để tự động mở/đóng đúng giờ
-    const interval = setInterval(update, 30000);
+    // Cập nhật mỗi 2 phút để tự động mở/đóng đúng giờ
+    const interval = setInterval(update, 120000);
     return () => clearInterval(interval);
   }, []);
 

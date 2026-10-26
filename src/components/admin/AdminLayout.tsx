@@ -7,6 +7,7 @@ import { AdminTrailContext, type AdminTrail } from "@/components/admin/AdminBrea
 import { AdminSidebar, resolveAdminLocation } from "@/components/admin/AdminSidebar";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 
 /** Khung chung cho /admin/*: sidebar cố định (drawer trên mobile), thanh tiêu đề, vùng nội dung. */
@@ -75,6 +76,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </button>
             {group && page ? (
               <Link
+                prefetch={false}
                 aria-label={`Quay lại ${parent?.label ?? group.label}`}
                 className="shrink-0 rounded-lg p-1 text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] md:hidden"
                 href={backHref}
@@ -83,7 +85,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               </Link>
             ) : null}
             <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-sm">
-              <Link className="shrink-0 text-on-surface-variant hover:text-[#173A67]" href="/admin">
+              <Link prefetch={false} className="shrink-0 text-on-surface-variant hover:text-[#173A67]" href="/admin">
                 Quản trị
               </Link>
               <span className="shrink-0 text-outline">/</span>
@@ -94,6 +96,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               ) : (
                 <>
                   <Link
+                    prefetch={false}
                     className={`min-w-0 truncate text-on-surface-variant hover:text-[#173A67] ${page ? "max-w-[9rem] sm:max-w-[14rem] md:max-w-none" : ""}`}
                     href={hubHref}
                   >
@@ -103,6 +106,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                     <>
                       <span className="shrink-0 text-outline">/</span>
                       <Link
+                        prefetch={false}
                         className="min-w-0 max-w-[6rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
                         href={page.href}
                       >
@@ -114,6 +118,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                           <Fragment key={crumb.href}>
                             <span className="shrink-0 text-outline">/</span>
                             <Link
+                              prefetch={false}
                               aria-current={isLast ? "page" : undefined}
                               className={
                                 isLast
@@ -132,6 +137,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                     <>
                       <span className="shrink-0 text-outline">/</span>
                       <Link
+                        prefetch={false}
                         className="min-w-0 max-w-[7rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
                         href={page.href}
                       >
@@ -146,6 +152,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                     <>
                       <span className="shrink-0 text-outline">/</span>
                       <Link
+                        prefetch={false}
                         className="min-w-0 max-w-[7rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
                         href={page.href}
                       >
@@ -171,17 +178,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex shrink-0 items-center gap-3">
             <NotificationBell />
             <Link
+              prefetch={false}
               aria-label="Cài đặt tài khoản"
               className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-dusty-light font-bold text-primary transition hover:opacity-90"
               href="/settings"
               title="Cài đặt / Avatar"
             >
-              {profile?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img alt="Ảnh đại diện" className="h-full w-full object-cover" src={profile.avatar_url} />
-              ) : (
-                initial
-              )}
+              <Avatar alt="Ảnh đại diện" fallback={initial} size={32} src={profile?.avatar_url} />
             </Link>
           </div>
         </header>

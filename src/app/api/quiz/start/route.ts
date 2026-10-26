@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   ensureCurrentSession,
+  finalizeDueSessionsThrottled,
   loadQuizSettings,
   QUIZ_SUBMIT_GRACE_MS,
   resolveQuizProgram,
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
     const programId = program.id;
     const settings = await loadQuizSettings(db, programId);
     const now = new Date();
+    await finalizeDueSessionsThrottled(db, program, settings, now);
     const session = await ensureCurrentSession(db, program, settings, now);
     if (!session) {
       return NextResponse.json(

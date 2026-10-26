@@ -69,8 +69,8 @@ export function NotificationBell() {
 
     fetchNotifications();
 
-    // Tự động kiểm tra thông báo mới mỗi 45 giây hoặc khi người dùng quay lại tab
-    const interval = setInterval(fetchNotifications, 45000);
+    // Tự động kiểm tra thông báo mới mỗi 3 phút hoặc khi người dùng quay lại tab
+    const interval = setInterval(fetchNotifications, 180000);
     const handleFocus = () => fetchNotifications();
     window.addEventListener("focus", handleFocus);
 

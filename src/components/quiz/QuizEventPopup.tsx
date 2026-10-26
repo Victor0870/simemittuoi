@@ -6,7 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatQuizTime, WEEKLY_QUIZ_PROGRAM_ID, type QuizStatus } from "@/lib/quiz-shared";
 
-const POLL_MS = 120_000;
+const POLL_MS = 300_000;
 
 function dismissKey(sessionId: string) {
   return `cdilv_quiz_popup_${sessionId}`;
@@ -19,9 +19,10 @@ export function QuizEventPopup() {
   const { user, isApproved } = useAuth();
   const [status, setStatus] = useState<QuizStatus | null>(null);
   const [visible, setVisible] = useState(false);
+  const isAdminArea = pathname.startsWith("/admin");
 
   useEffect(() => {
-    if (!user || !isApproved) {
+    if (!user || !isApproved || isAdminArea) {
       setStatus(null);
       return;
     }
@@ -38,13 +39,11 @@ export function QuizEventPopup() {
     }
     void check();
     const timer = window.setInterval(check, POLL_MS);
-    window.addEventListener("focus", check);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
-      window.removeEventListener("focus", check);
     };
-  }, [user, isApproved]);
+  }, [user, isApproved, isAdminArea]);
 
   useEffect(() => {
     const session = status?.session;

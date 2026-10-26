@@ -183,6 +183,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         className="flex h-16 shrink-0 items-center gap-2 whitespace-nowrap border-b border-dusty-border px-5 text-[#173A67]"
         href={overviewHref}
+        prefetch={false}
         onClick={onNavigate}
       >
         <MaterialIcon className="text-[24px]" name="shield" />
@@ -199,6 +200,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
               aria-current={isActive ? "page" : undefined}
               className={`${itemClass} ${isActive ? "bg-primary text-white" : "hover:bg-surface-container-high"}`}
               href={g.key === "overview" ? overviewHref : g.href}
+              prefetch={false}
               onClick={onNavigate}
             >
               <MaterialIcon className="text-[20px]" name={g.icon} />
@@ -209,7 +211,7 @@ export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="space-y-1 border-t border-dusty-border p-3">
-        <Link className={`${itemClass} hover:bg-surface-container-high`} href="/" onClick={onNavigate}>
+        <Link className={`${itemClass} hover:bg-surface-container-high`} href="/" prefetch={false} onClick={onNavigate}>
           <MaterialIcon className="text-[20px]" name="home" />
           <span>Trang đoàn viên</span>
         </Link>

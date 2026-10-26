@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
 import { ScoreHistoryRangeFilter } from "@/components/admin/ScoreHistoryRangeFilter";
 import { HISTORY_FROM_ALL, type ScoreHistoryFrom } from "@/components/admin/scoreHistoryRange";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { readableAwardLabel } from "@/lib/score-labels";
 
@@ -463,12 +464,13 @@ export function AdminScoresManager({
       render: (p) => (
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-            {p.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img alt="" className="h-full w-full rounded-full object-cover" src={p.avatar_url} />
-            ) : (
-              p.full_name.slice(0, 1)
-            )}
+            <Avatar
+              alt=""
+              className="h-full w-full rounded-full object-cover"
+              fallback={p.full_name.slice(0, 1)}
+              size={28}
+              src={p.avatar_url}
+            />
           </div>
           <span className="font-bold text-[#173A67]">{p.full_name}</span>
         </div>
@@ -717,16 +719,13 @@ export function AdminScoresManager({
               <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-2 border-primary bg-primary/5 p-4">
                 <div className="flex items-center gap-3.5">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary font-bold text-white shadow-xs">
-                    {selectedUser.avatar_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        alt={selectedUser.full_name}
-                        className="h-full w-full rounded-full object-cover"
-                        src={selectedUser.avatar_url}
-                      />
-                    ) : (
-                      selectedUser.full_name.slice(0, 1).toUpperCase()
-                    )}
+                    <Avatar
+                      alt={selectedUser.full_name}
+                      className="h-full w-full rounded-full object-cover"
+                      fallback={selectedUser.full_name.slice(0, 1).toUpperCase()}
+                      size={48}
+                      src={selectedUser.avatar_url}
+                    />
                   </div>
                   <div>
                     <h3 className="text-title-md font-extrabold text-[#173A67]">{selectedUser.full_name}</h3>

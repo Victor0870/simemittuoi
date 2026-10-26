@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { computeSessionRanking, loadQuizProgram, loadQuizSettings, QUIZ_SUBMIT_GRACE_MS } from "@/lib/quiz";
+import {
+  computeSessionRanking,
+  finalizeDueSessionsThrottled,
+  loadQuizProgram,
+  loadQuizSettings,
+  QUIZ_SUBMIT_GRACE_MS,
+} from "@/lib/quiz";
 import { requireQuizMember } from "@/lib/quiz-access";
 import { quizLabelPrefix } from "@/lib/quiz-shared";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -107,6 +113,7 @@ export async function POST(request: NextRequest) {
       computeSessionRanking(db, attempt.session_id, settings),
     ]);
     const mine = ranking.find((r) => r.user_id === userId);
+    if (program) await finalizeDueSessionsThrottled(db, program, settings);
 
     revalidatePath("/quiz");
     revalidatePath("/score-history");

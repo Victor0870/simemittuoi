@@ -1,3 +1,4 @@
+import { Avatar as AvatarImage } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import { maskDisplayName } from "@/lib/privacy";
@@ -87,18 +88,16 @@ function Avatar({
     <div
       className={`flex items-center justify-center overflow-hidden rounded-full shadow-md ${ringClass} ${sizeClass}`}
     >
-      {!maskIdentity && entry.avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          alt={entry.name}
-          className="h-full w-full object-cover"
-          src={entry.avatarUrl}
-        />
-      ) : (
-        <span className="text-xl font-extrabold text-primary md:text-2xl">
-          {maskIdentity ? `#${entry.rank}` : initial}
-        </span>
-      )}
+      <AvatarImage
+        alt={entry.name}
+        fallback={
+          <span className="text-xl font-extrabold text-primary md:text-2xl">
+            {maskIdentity ? `#${entry.rank}` : initial}
+          </span>
+        }
+        size={96}
+        src={maskIdentity ? null : entry.avatarUrl}
+      />
     </div>
   );
 }

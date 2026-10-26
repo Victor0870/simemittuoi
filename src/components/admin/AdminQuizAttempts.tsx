@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatQuizDate, formatQuizDateTime, formatQuizDuration, formatQuizTime, type QuizSessionRow } from "@/lib/quiz-shared";
 
@@ -116,17 +117,17 @@ export function AdminQuizAttempts({ sessions, initialSessionId }: Props) {
       accessor: (a) => a.profile.full_name,
       render: (a) => (
         <div className="flex items-center gap-2.5">
-          {a.profile.avatar_url ? (
-            <img
-              alt={a.profile.full_name}
-              className="h-8 w-8 rounded-full object-cover shrink-0"
-              src={a.profile.avatar_url}
-            />
-          ) : (
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-dusty-light text-xs font-bold text-primary">
-              {a.profile.full_name.slice(0, 1).toUpperCase()}
-            </span>
-          )}
+          <Avatar
+            alt={a.profile.full_name}
+            className="h-8 w-8 rounded-full object-cover shrink-0"
+            fallback={
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-dusty-light text-xs font-bold text-primary">
+                {a.profile.full_name.slice(0, 1).toUpperCase()}
+              </span>
+            }
+            size={32}
+            src={a.profile.avatar_url}
+          />
           <div className="min-w-0">
             <p className="truncate font-bold text-on-surface text-sm">
               {a.profile.full_name}

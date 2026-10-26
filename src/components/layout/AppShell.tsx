@@ -63,7 +63,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="min-h-screen bg-surface-bg text-on-surface print:min-h-0 print:bg-white">
             {children}
             <div className="print:hidden">
-              <QuizEventPopup />
               <AnnouncementPopup />
             </div>
           </div>

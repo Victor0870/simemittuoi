@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { NotificationBell } from "@/components/layout/NotificationBell";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -63,16 +64,7 @@ export function TopNavAuth() {
         href={isAdmin ? "/admin" : "/settings"}
         title={isAdmin ? "Trang quản trị" : "Cài đặt / Avatar"}
       >
-        {profile?.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            alt="Ảnh đại diện"
-            className="h-full w-full object-cover"
-            src={profile.avatar_url}
-          />
-        ) : (
-          initial
-        )}
+        <Avatar alt="Ảnh đại diện" fallback={initial} size={32} src={profile?.avatar_url} />
       </Link>
     </>
   );

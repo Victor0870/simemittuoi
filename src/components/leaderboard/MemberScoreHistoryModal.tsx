@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import { readableAwardLabel } from "@/lib/score-labels";
@@ -195,16 +196,12 @@ export function MemberScoreHistoryModal({
                 <div className="flex items-center gap-3.5">
                   <div className="relative shrink-0">
                     <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#173A67] to-dusty-dark text-white font-extrabold text-xl shadow-xs ring-2 ring-primary/20">
-                      {member.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          alt={member.name}
-                          className="h-full w-full object-cover"
-                          src={member.avatarUrl}
-                        />
-                      ) : (
-                        member.name.trim().slice(0, 1).toUpperCase()
-                      )}
+                      <Avatar
+                        alt={member.name}
+                        fallback={member.name.trim().slice(0, 1).toUpperCase()}
+                        size={56}
+                        src={member.avatarUrl}
+                      />
                     </div>
                     {member.rank && member.rank <= 3 ? (
                       <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-400 text-amber-900 shadow-xs border border-white">

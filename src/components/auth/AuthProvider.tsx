@@ -71,8 +71,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [access, setAccess] = useState<AccessInfo>(EMPTY_ACCESS);
   const [loading, setLoading] = useState(true);
   const loadedUserIdRef = useRef<string | null | undefined>(undefined);
+  const inflightRef = useRef<{ userId: string | null; promise: Promise<void> } | null>(null);
 
-  async function loadProfile(u: User | null) {
+  /** Gộp các lần tải trùng cho cùng user; force = luôn tải lại (sau khi hồ sơ thay đổi). */
+  function loadProfile(u: User | null, force = false) {
+    const userId = u?.id ?? null;
+    const current = inflightRef.current;
+    if (!force && current && current.userId === userId) return current.promise;
+    const promise = fetchProfile(u).finally(() => {
+      if (inflightRef.current?.promise === promise) inflightRef.current = null;
+    });
+    inflightRef.current = { userId, promise };
+    return promise;
+  }
+
+  async function fetchProfile(u: User | null) {
     loadedUserIdRef.current = u?.id ?? null;
     if (!u) {
       setUser(null);
@@ -118,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loadedUserIdRef.current = nextUser?.id ?? null;
       // Không gọi Supabase trực tiếp trong callback để tránh khóa auth (deadlock)
       setTimeout(() => {
-        if (!cancelled) void loadProfile(nextUser);
+        if (!cancelled) void loadProfile(nextUser, event === "USER_UPDATED");
       }, 0);
     });
 
@@ -147,8 +160,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       canOpenAdmin: (pathname) => canAccessAdminPath(effectiveAccess, pathname),
       refreshProfile: async () => {
         const supabase = createClient();
-        const { data } = await supabase.auth.getUser();
-        await loadProfile(data.user);
+        // getSession() đọc phiên đã lưu, không gọi mạng như getUser()
+        const { data } = await supabase.auth.getSession();
+        await loadProfile(data.session?.user ?? null, true);
       },
     };
   }, [user, profile, access, loading]);

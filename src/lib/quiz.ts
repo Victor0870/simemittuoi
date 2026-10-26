@@ -68,17 +68,22 @@ export async function selectAllRows<T>(
   }
 }
 
+const QUIZ_SETTINGS_COLUMNS =
+  "schedule_mode, schedule_weekday, start_time, end_time, questions_per_attempt, max_attempts, " +
+  "time_limit_seconds, points_per_attempt, base_points, top1_bonus, top2_5_bonus, top6_10_bonus, " +
+  "auto_finalize, result_post_title, result_post_template, result_post_publish";
+
 export async function loadQuizSettings(db: SupabaseClient, programId: string): Promise<QuizSettings> {
   const { data, error } = await db
     .from(CDILV_TABLE.quizSettings)
-    .select("*")
+    .select(QUIZ_SETTINGS_COLUMNS)
     .eq("program_id", programId)
     .maybeSingle();
   if (error) throw error;
   // Chương trình mới chưa lưu cài đặt thì không tự mở theo lịch mặc định của Trắc nghiệm tuần.
   const fallback: QuizSettings =
     programId === WEEKLY_QUIZ_PROGRAM_ID ? DEFAULT_QUIZ_SETTINGS : { ...DEFAULT_QUIZ_SETTINGS, schedule_mode: "manual" };
-  return { ...fallback, ...(data ?? {}) } as QuizSettings;
+  return { ...fallback, ...((data as Partial<QuizSettings> | null) ?? {}) } as QuizSettings;
 }
 
 function parseHHMM(value: string) {
@@ -167,6 +172,11 @@ export async function ensureCurrentSession(
     }
   }
 
+  return loadOpenSession(db, programId, now);
+}
+
+/** Đợt thi đang mở (chỉ đọc). */
+async function loadOpenSession(db: SupabaseClient, programId: string, now: Date) {
   const nowIso = now.toISOString();
   const { data, error } = await db
     .from(CDILV_TABLE.quizSessions)
@@ -417,19 +427,41 @@ export async function finalizeDueSessions(
   return results;
 }
 
+const FINALIZE_CHECK_INTERVAL_MS = 60_000;
+const lastFinalizeCheck = new Map<string, number>();
+
+/** Tự tổng kết đợt đã hết hạn, mỗi chương trình tối đa một lần mỗi phút trên một instance; lỗi chỉ ghi log. */
+export async function finalizeDueSessionsThrottled(
+  db: SupabaseClient,
+  program: QuizProgramRef,
+  settings: QuizSettings,
+  now = new Date(),
+) {
+  if (!settings.auto_finalize) return;
+  const last = lastFinalizeCheck.get(program.id) ?? 0;
+  if (now.getTime() - last < FINALIZE_CHECK_INTERVAL_MS) return;
+  lastFinalizeCheck.set(program.id, now.getTime());
+  try {
+    await finalizeDueSessions(db, program, settings, now);
+  } catch (err) {
+    console.error("[quiz] auto finalize error:", err);
+  }
+}
+
 export async function getQuizStatus(
   db: SupabaseClient,
   program: QuizProgramRef,
   userId: string | null,
   now = new Date(),
 ): Promise<QuizStatus> {
-  const settings = await loadQuizSettings(db, program.id);
-  try {
-    await finalizeDueSessions(db, program, settings, now);
-  } catch (err) {
-    console.error("[quiz] auto finalize error:", err);
-  }
-  const session = await ensureCurrentSession(db, program, settings, now);
+  const [settings, openSession] = await Promise.all([
+    loadQuizSettings(db, program.id),
+    loadOpenSession(db, program.id, now),
+  ]);
+  await finalizeDueSessionsThrottled(db, program, settings, now);
+  // Đầu khung giờ tự động mà đợt thi chưa được tạo thì tạo (upsert bỏ qua nếu đã có).
+  const session =
+    openSession ?? (isInAutoWindow(settings, now) ? await ensureCurrentSession(db, program, settings, now) : null);
 
   let attemptsUsed = 0;
   let hasInProgress = false;

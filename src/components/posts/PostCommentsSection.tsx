@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_STORAGE } from "@/lib/supabase/tables";
@@ -517,11 +518,12 @@ export function PostCommentsSection({
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dusty-border bg-dusty-light text-xs font-bold text-primary">
-              {reply.authorAvatar ? (
-                <img src={reply.authorAvatar} alt={reply.authorName} className="h-full w-full object-cover" />
-              ) : (
-                <span>{(reply.authorName || "?").slice(0, 1).toUpperCase()}</span>
-              )}
+              <Avatar
+                alt={reply.authorName}
+                fallback={<span>{(reply.authorName || "?").slice(0, 1).toUpperCase()}</span>}
+                size={28}
+                src={reply.authorAvatar}
+              />
             </div>
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-1 text-xs font-bold text-on-surface">
@@ -1003,15 +1005,12 @@ export function PostCommentsSection({
                         <div className="flex items-start gap-3">
                           {/* Avatar */}
                           <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dusty-border bg-dusty-light font-bold text-primary">
-                            {comment.authorAvatar ? (
-                              <img
-                                src={comment.authorAvatar}
-                                alt={comment.authorName}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <span>{initial}</span>
-                            )}
+                            <Avatar
+                              alt={comment.authorName}
+                              fallback={<span>{initial}</span>}
+                              size={40}
+                              src={comment.authorAvatar}
+                            />
                           </div>
 
                           {/* Name & metadata */}

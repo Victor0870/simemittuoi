@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_RPC, CDILV_STORAGE } from "@/lib/supabase/tables";
@@ -105,11 +106,7 @@ export function AccountInfo(props: Props) {
         <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:gap-4 sm:text-left">
           <label className="group relative h-24 w-24 shrink-0 cursor-pointer" title="Đổi ảnh đại diện">
             <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-4 border-primary-fixed bg-primary-fixed text-3xl font-extrabold text-[#173A67]">
-              {avatarUrl ? (
-                <img alt={name} className="h-full w-full object-cover" src={avatarUrl} />
-              ) : (
-                name.slice(0, 1)
-              )}
+              <Avatar alt={name} fallback={name.slice(0, 1)} size={96} src={avatarUrl} />
             </span>
             <span className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-full bg-[#173A67] text-white shadow-md transition group-hover:scale-110">
               <MaterialIcon className="text-[18px]" name={saving ? "progress_activity" : "photo_camera"} />

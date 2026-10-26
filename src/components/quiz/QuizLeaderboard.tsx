@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatQuizDuration, formatQuizTime, type QuizRankingRow } from "@/lib/quiz-shared";
 
@@ -188,17 +189,17 @@ export function QuizLeaderboard({
                 >
                   {r.rank}
                 </span>
-                {r.avatar_url ? (
-                  <img
-                    alt={r.full_name}
-                    className="h-9 w-9 shrink-0 rounded-full object-cover"
-                    src={r.avatar_url}
-                  />
-                ) : (
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-dusty-light text-sm font-bold text-primary">
-                    {r.full_name.slice(0, 1).toUpperCase()}
-                  </span>
-                )}
+                <Avatar
+                  alt={r.full_name}
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                  fallback={
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-dusty-light text-sm font-bold text-primary">
+                      {r.full_name.slice(0, 1).toUpperCase()}
+                    </span>
+                  }
+                  size={36}
+                  src={r.avatar_url}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-bold text-on-surface">
                     {r.full_name}
