@@ -5,6 +5,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadCounterparties } from "@/lib/catalogs/server";
+import { loadCategories } from "@/lib/finance/server";
 import { loadFormSettings } from "@/lib/forms/settings-server";
 import { loadPaymentMembers, loadPaymentRequestDetail, paymentAbilities } from "@/lib/payments/server";
 import { printLogoUrl } from "@/lib/print/logo";
@@ -27,7 +28,11 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
   if (!can.view) notFound();
 
   const db = createServiceClient();
-  const [detail, settings] = await Promise.all([loadPaymentRequestDetail(db, id), loadFormSettings(db)]);
+  const [detail, settings, categories] = await Promise.all([
+    loadPaymentRequestDetail(db, id),
+    loadFormSettings(db),
+    loadCategories(db),
+  ]);
   if (!detail) notFound();
   const editable = can.create && detail.status === "proposed";
   const [counterparties, members, logoPath] = editable
@@ -77,6 +82,7 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
       <PaymentRequestDetailView
         autoPrint={Boolean(created && print)}
         can={can}
+        expenseCategories={categories.filter((c) => c.kind === "expense")}
         members={members}
         slipLogoUrl={printLogoUrl(logoPath)}
         slipSigners={{

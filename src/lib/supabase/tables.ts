@@ -93,6 +93,7 @@ export const CDILV_RPC = {
   paymentRequestSave: "cdilv_payment_request_save",
   reportTemplatePublish: "cdilv_report_template_publish",
   paymentRequestTransition: "cdilv_payment_request_transition",
+  paymentRequestApprove: "cdilv_payment_request_approve",
   paymentRequestLog: "cdilv_payment_request_log",
   fundEntrySave: "cdilv_fund_entry_save",
   fundEntryVoid: "cdilv_fund_entry_void",

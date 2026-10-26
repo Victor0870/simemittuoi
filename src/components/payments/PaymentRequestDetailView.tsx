@@ -8,6 +8,7 @@ import { newPaymentItem } from "@/lib/payments/form-items";
 import { VisitStatusBadge } from "@/components/visits/VisitStatusBadge";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { Counterparty } from "@/lib/catalogs/registry";
+import type { FundCategory } from "@/lib/finance/registry";
 import { formatDateTimeVi } from "@/lib/data/albums";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import {
@@ -30,6 +31,8 @@ type Props = {
   members: PaymentMember[];
   slipSigners: SlipSigners;
   slipLogoUrl: string | null;
+  /** Danh mục chi (kể cả đã ẩn – để hiện tên danh mục đã chọn); chỉ danh mục đang dùng được chọn khi duyệt. */
+  expenseCategories: FundCategory[];
   /** Vừa bấm “Lập & tải giấy đề nghị” – tự tải file in một lần. */
   autoPrint?: boolean;
 };
@@ -46,6 +49,7 @@ export function PaymentRequestDetailView({
   members,
   slipSigners,
   slipLogoUrl,
+  expenseCategories,
   autoPrint,
 }: Props) {
   const router = useRouter();
@@ -65,6 +69,16 @@ export function PaymentRequestDetailView({
   const linkedVisits = detail.items.filter((i) => i.visit_request_id).length;
   const remaining = detail.total_amount - detail.advanced_amount;
   const receiverKind = detail.receiver_kind ?? detail.counterparty?.kind ?? null;
+  const category = expenseCategories.find((c) => c.id === detail.fund_category_id) ?? null;
+  const categoryOptions = expenseCategories.filter((c) => c.is_active);
+  const allVisits = detail.items.length > 0 && detail.items.every((i) => i.visit_request_id);
+  const [categoryId, setCategoryId] = useState(
+    () =>
+      (category?.is_active ? category.id : null) ??
+      (allVisits ? categoryOptions.find((c) => c.system_key === "visit")?.id : null) ??
+      "",
+  );
+  const [categoryMissing, setCategoryMissing] = useState(false);
 
   useEffect(() => {
     if (!autoPrint || !printable || printedRef.current) return;
@@ -74,13 +88,18 @@ export function PaymentRequestDetailView({
   }, [autoPrint, printable, detail.id]);
 
   async function transition(to: "approved" | "rejected" | "paid" | "cancelled") {
+    if (to === "approved" && !categoryId) {
+      setCategoryMissing(true);
+      setError("Vui lòng chọn danh mục chi trước khi duyệt.");
+      return;
+    }
     setBusy(to);
     setError(null);
     try {
       const res = await fetch(`/api/payments/${detail.id}/transition`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to, note }),
+        body: JSON.stringify(to === "approved" ? { to, note, categoryId } : { to, note }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -189,6 +208,18 @@ export function PaymentRequestDetailView({
               ) : null}
             </dd>
           </div>
+          {category || detail.status === "approved" || detail.status === "paid" ? (
+            <div>
+              <dt className="text-xs text-on-surface-variant">Danh mục chi</dt>
+              <dd className="font-semibold">
+                {category ? (
+                  category.name
+                ) : (
+                  <span className="font-normal text-on-surface-variant">Chưa chọn – ghi sổ theo danh mục mặc định</span>
+                )}
+              </dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-xs text-on-surface-variant">Người lập</dt>
             <dd>
@@ -327,6 +358,33 @@ export function PaymentRequestDetailView({
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
+          {canDecide ? (
+            <div>
+              <label className="mb-1 block text-xs font-bold text-on-surface-variant" htmlFor="payment-category">
+                Danh mục chi * (dùng khi ghi sổ quỹ lúc xác nhận đã chi)
+              </label>
+              <select
+                className={
+                  categoryMissing
+                    ? textareaClass.replace("border-outline-variant bg-white", "border-error bg-error-container/20")
+                    : textareaClass
+                }
+                id="payment-category"
+                value={categoryId}
+                onChange={(e) => {
+                  setCategoryId(e.target.value);
+                  setCategoryMissing(false);
+                }}
+              >
+                <option value="">— Chọn danh mục chi —</option>
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code ? `${c.code} – ${c.name}` : c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             {canDecide ? (
               <>

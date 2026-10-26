@@ -8,7 +8,7 @@ import { loadNames } from "@/lib/visits/server";
 import type { PaymentMethod, PaymentReceiverKind, PaymentStatus } from "./registry";
 
 const REQUEST_COLUMNS =
-  "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_kind, receiver_member_id, receiver_name, receiver_account, receiver_bank, counterparty_id, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
+  "id, code, request_date, title, requester_name, requester_department, payment_method, receiver_kind, receiver_member_id, receiver_name, receiver_account, receiver_bank, counterparty_id, fund_category_id, total_amount, advanced_amount, note, status, created_by, decided_by, decided_at, decision_note, paid_by, paid_at, created_at, updated_at";
 
 const ITEM_COLUMNS = "id, order_num, content, paid_to, amount, advanced, visit_request_id";
 
@@ -29,6 +29,8 @@ export type PaymentRequestRow = {
   receiver_account: string | null;
   receiver_bank: string | null;
   counterparty_id: string | null;
+  /** Danh mục chi người duyệt chọn – dùng khi tự ghi phiếu chi lúc “Đã chi” (null = đề nghị cũ, ghi theo mặc định). */
+  fund_category_id: string | null;
   total_amount: number;
   advanced_amount: number;
   note: string | null;
