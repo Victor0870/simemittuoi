@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   UNION_SETTINGS_LIMITS,
@@ -86,6 +87,8 @@ export function UnionSettingsManager({
   const memberInputRef = useRef<HTMLInputElement | null>(null);
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [busyOfficerId, setBusyOfficerId] = useState<string | null>(null);
+  // Chỉ mở một menu Thao tác tại một thời điểm ("desktop:<id>" hoặc "mobile:<id>")
+  const [openOfficerMenu, setOpenOfficerMenu] = useState<string | null>(null);
 
   // Quản lý chức danh (tab Chức danh: Thêm mới / Đổi tên / Số người tối đa / Thứ tự / Ngừng dùng)
   const [newPosName, setNewPosName] = useState("");
@@ -1038,42 +1041,15 @@ export function UnionSettingsManager({
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-3 py-2.5 text-right">
-                            <div className="inline-flex items-center gap-1">
-                              <button
-                                className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-                                type="button"
-                                onClick={() => openEditOfficer(o)}
-                              >
-                                <MaterialIcon className="text-[15px]" name="edit" />
-                                Sửa
-                              </button>
-                              <button
-                                className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-semibold disabled:opacity-50 ${
-                                  o.isActive
-                                    ? "border-outline-variant text-on-surface-variant hover:border-amber-600 hover:text-amber-800"
-                                    : "border-emerald-300 text-emerald-800 hover:bg-emerald-50"
-                                }`}
-                                disabled={busyOfficerId === o.id}
-                                type="button"
-                                onClick={() => void toggleOfficerActive(o)}
-                              >
-                                <MaterialIcon
-                                  className="text-[15px]"
-                                  name={o.isActive ? "visibility_off" : "visibility"}
-                                />
-                                {o.isActive ? "Ngừng" : "Bật"}
-                              </button>
-                              <button
-                                aria-label={`Xóa ${o.fullName}`}
-                                className="inline-flex h-7 items-center rounded-lg border border-outline-variant px-1.5 text-on-surface-variant hover:border-error hover:text-error disabled:opacity-50"
-                                disabled={busyOfficerId === o.id}
-                                title="Xóa cán bộ"
-                                type="button"
-                                onClick={() => void removeOfficer(o)}
-                              >
-                                <MaterialIcon className="text-[15px]" name="delete" />
-                              </button>
-                            </div>
+                            <OfficerActionsMenu
+                              busy={busyOfficerId === o.id}
+                              officer={o}
+                              open={openOfficerMenu === `desktop:${o.id}`}
+                              onEdit={() => openEditOfficer(o)}
+                              onOpenChange={(next) => setOpenOfficerMenu(next ? `desktop:${o.id}` : null)}
+                              onRemove={() => void removeOfficer(o)}
+                              onToggleActive={() => void toggleOfficerActive(o)}
+                            />
                           </td>
                         </tr>
                       );
@@ -1165,38 +1141,15 @@ export function UnionSettingsManager({
                           </button>
                         </div>
 
-                        <div className="inline-flex items-center gap-1.5">
-                          <button
-                            className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2.5 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-                            type="button"
-                            onClick={() => openEditOfficer(o)}
-                          >
-                            <MaterialIcon className="text-[14px]" name="edit" />
-                            Sửa
-                          </button>
-                          <button
-                            className={`inline-flex h-7 items-center gap-1 rounded-lg border px-2.5 text-xs font-semibold disabled:opacity-50 ${
-                              o.isActive
-                                ? "border-outline-variant text-on-surface-variant"
-                                : "border-emerald-300 text-emerald-800"
-                            }`}
-                            disabled={busyOfficerId === o.id}
-                            type="button"
-                            onClick={() => void toggleOfficerActive(o)}
-                          >
-                            {o.isActive ? "Ngừng" : "Bật"}
-                          </button>
-                          <button
-                            aria-label={`Xóa ${o.fullName}`}
-                            className="inline-flex h-7 items-center rounded-lg border border-outline-variant px-1.5 text-on-surface-variant hover:border-error hover:text-error disabled:opacity-50"
-                            disabled={busyOfficerId === o.id}
-                            title="Xóa cán bộ"
-                            type="button"
-                            onClick={() => void removeOfficer(o)}
-                          >
-                            <MaterialIcon className="text-[15px]" name="delete" />
-                          </button>
-                        </div>
+                        <OfficerActionsMenu
+                          busy={busyOfficerId === o.id}
+                          officer={o}
+                          open={openOfficerMenu === `mobile:${o.id}`}
+                          onEdit={() => openEditOfficer(o)}
+                          onOpenChange={(next) => setOpenOfficerMenu(next ? `mobile:${o.id}` : null)}
+                          onRemove={() => void removeOfficer(o)}
+                          onToggleActive={() => void toggleOfficerActive(o)}
+                        />
                       </div>
                     </div>
                   );
@@ -1818,5 +1771,179 @@ export function UnionSettingsManager({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Nút Thao tác gọn của một cán bộ: menu dọc gắn vào body (không bị khung cuộn của bảng cắt mất). */
+function OfficerActionsMenu({
+  officer,
+  open,
+  busy,
+  onOpenChange,
+  onEdit,
+  onToggleActive,
+  onRemove,
+}: {
+  officer: UnionOfficer;
+  open: boolean;
+  busy: boolean;
+  onOpenChange: (open: boolean) => void;
+  onEdit: () => void;
+  onToggleActive: () => void;
+  onRemove: () => void;
+}) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+  const close = useCallback(
+    (restoreFocus: boolean) => {
+      onOpenChange(false);
+      setPos(null);
+      if (restoreFocus) buttonRef.current?.focus();
+    },
+    [onOpenChange],
+  );
+
+  const updatePosition = useCallback(() => {
+    const button = buttonRef.current;
+    const menu = menuRef.current;
+    if (!button || !menu) return;
+    const rect = button.getBoundingClientRect();
+    const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
+    const left = Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8));
+    let top = rect.bottom + 4;
+    if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - height - 4);
+    setPos({ top, left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (open) updatePosition();
+  }, [open, updatePosition]);
+
+  const positioned = pos !== null;
+  useEffect(() => {
+    if (open && positioned) {
+      menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    }
+  }, [open, positioned]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || buttonRef.current?.contains(target)) return;
+      close(false);
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close(true);
+        return;
+      }
+      if (event.key === "Tab") {
+        close(false);
+        return;
+      }
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        const items = Array.from(
+          menuRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [],
+        );
+        if (items.length === 0) return;
+        event.preventDefault();
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        items[(index + step + items.length) % items.length]?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, close, updatePosition]);
+
+  function run(action: () => void) {
+    close(false);
+    action();
+  }
+
+  const itemClass =
+    "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold transition focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-50";
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Thao tác cho ${officer.fullName}`}
+        className={`inline-flex h-7 items-center gap-0.5 rounded-lg border pl-2 pr-1 text-xs font-semibold transition ${
+          open
+            ? "border-[#173A67] bg-[#ecf4ff] text-[#173A67]"
+            : "border-outline-variant text-[#173A67] hover:border-[#173A67]"
+        }`}
+        title="Sửa, tạm ẩn / kích hoạt hoặc xóa cán bộ"
+        type="button"
+        onClick={() => (open ? close(false) : onOpenChange(true))}
+      >
+        Thao tác
+        <MaterialIcon className="text-[16px]" name={open ? "expand_less" : "expand_more"} />
+      </button>
+
+      {open
+        ? createPortal(
+            <div
+              ref={menuRef}
+              aria-label={`Thao tác cho ${officer.fullName}`}
+              className="fixed z-[60] w-44 rounded-xl border border-[#d2dfe9] bg-white p-1 text-on-surface shadow-xl"
+              role="menu"
+              style={{ top: pos?.top ?? 0, left: pos?.left ?? 0, visibility: pos ? "visible" : "hidden" }}
+            >
+              <button
+                className={`${itemClass} text-[#173A67] hover:bg-[#ecf4ff] focus:bg-[#ecf4ff]`}
+                role="menuitem"
+                type="button"
+                onClick={() => run(onEdit)}
+              >
+                <MaterialIcon className="text-[16px]" name="edit" />
+                Sửa
+              </button>
+              <button
+                className={`${itemClass} ${
+                  officer.isActive
+                    ? "text-amber-900 hover:bg-amber-50 focus:bg-amber-50"
+                    : "text-emerald-800 hover:bg-emerald-50 focus:bg-emerald-50"
+                }`}
+                disabled={busy}
+                role="menuitem"
+                type="button"
+                onClick={() => run(onToggleActive)}
+              >
+                <MaterialIcon className="text-[16px]" name={officer.isActive ? "visibility_off" : "visibility"} />
+                {officer.isActive ? "Tạm ẩn" : "Kích hoạt"}
+              </button>
+              <div className="my-1 border-t border-[#eef3f8]" role="separator" />
+              <button
+                className={`${itemClass} text-error hover:bg-red-50 focus:bg-red-50`}
+                disabled={busy}
+                role="menuitem"
+                type="button"
+                onClick={() => run(onRemove)}
+              >
+                <MaterialIcon className="text-[16px]" name="delete" />
+                Xóa
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
