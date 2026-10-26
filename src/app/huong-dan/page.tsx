@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PostEditButton } from "@/components/posts/PostEditButton";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { PostsListClient } from "@/components/posts/PostsListClient";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { BRAND } from "@/lib/brand";
 import { getPosts } from "@/lib/data/posts";
 import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 
-// Như /posts: bản cache chung chỉ gồm bài đang hiển thị; bài Inactive / hẹn giờ chỉ người có quyền thấy (phía trình duyệt).
+// Như /posts: bản cache chung chỉ gồm bài đang hiển thị; bài Inactive / hẹn giờ quản lý ở /admin/content/guides.
 export const revalidate = 60;
 
 export const metadata: Metadata = {
@@ -42,12 +42,11 @@ export default async function GuidePostsPage() {
             <MaterialIcon className="text-[16px]" name="arrow_back" />
             Về trang chủ
           </Link>
-          <PostEditButton defaultTag={GUIDE_POST_CATEGORY.tag} />
+          <AdminShortcutLink href="/admin/content/guides" icon="edit_note" label="Quản lý bài hướng dẫn" />
         </div>
       </header>
 
       <PostsListClient
-        categorySlug={GUIDE_POST_CATEGORY.slug}
         emptyMessage="Chưa có bài hướng dẫn nào."
         initialPosts={posts}
       />

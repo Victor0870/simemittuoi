@@ -12,9 +12,9 @@ export default async function ContentHubPage() {
 
   const tiles: (HubTile & { allowed: boolean })[] = [
     {
-      href: "/posts",
+      href: "/admin/content/posts",
       title: "Bài viết",
-      description: "Đăng bài viết mới, sửa bài, đánh dấu thông báo quan trọng, ẩn / hiện bài.",
+      description: "Đăng bài viết mới, sửa bài, đánh dấu thông báo quan trọng, ẩn / hiện bài, tổng hợp tác phẩm dự thi.",
       icon: "newspaper",
       tint: "dusty",
       allowed: hasPermission(access, PERMISSIONS.postsManage),
@@ -36,7 +36,7 @@ export default async function ContentHubPage() {
       allowed: access.isAdmin,
     },
     {
-      href: "/albums",
+      href: "/admin/content/albums",
       title: "Album ảnh",
       description: "Tạo album, cài đặt thời gian và điểm thưởng đăng ảnh, kiểm duyệt ảnh và bình luận.",
       icon: "photo_library",

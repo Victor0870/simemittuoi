@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { AlbumEditorModal } from "@/components/albums/AlbumEditorModal";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateTimeVi, getUploadWindowState, type AlbumSummary } from "@/lib/data/albums";
 
@@ -13,9 +11,6 @@ type AlbumsClientProps = {
 };
 
 export function AlbumsClient({ albums, canManage }: AlbumsClientProps) {
-  const router = useRouter();
-  const [showCreate, setShowCreate] = useState(false);
-
   return (
     <div className="space-y-6 sm:space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant pb-4 sm:gap-4 sm:pb-6">
@@ -33,16 +28,7 @@ export function AlbumsClient({ albums, canManage }: AlbumsClientProps) {
           </div>
         </div>
 
-        {canManage && (
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-dusty-dark sm:px-4 sm:text-label-md"
-          >
-            <MaterialIcon className="text-[18px]" name="create_new_folder" />
-            Tạo album mới
-          </button>
-        )}
+        <AdminShortcutLink href="/admin/content/albums" icon="photo_library" label="Quản lý album" />
       </header>
 
       {albums.length === 0 ? (
@@ -51,7 +37,7 @@ export function AlbumsClient({ albums, canManage }: AlbumsClientProps) {
           <h3 className="text-title-md font-bold text-[#173A67]">Chưa có album nào</h3>
           <p className="mt-1 text-body-sm text-on-surface-variant">
             {canManage
-              ? "Bấm “Tạo album mới” để bắt đầu chia sẻ hình ảnh hoạt động."
+              ? "Tạo album mới trong Trang quản trị (nút “Quản lý album”) để bắt đầu chia sẻ hình ảnh hoạt động."
               : "Ban Chấp hành Công đoàn sẽ sớm cập nhật các album ảnh hoạt động tại đây."}
           </p>
         </div>
@@ -140,16 +126,6 @@ export function AlbumsClient({ albums, canManage }: AlbumsClientProps) {
           ))}
         </div>
       )}
-
-      <AlbumEditorModal
-        isOpen={showCreate}
-        mode="create"
-        onClose={() => setShowCreate(false)}
-        onSaved={(id) => {
-          if (id) router.push(`/albums/${id}`);
-          else router.refresh();
-        }}
-      />
     </div>
   );
 }

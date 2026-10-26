@@ -1,25 +1,55 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { PostEditButton } from "@/components/posts/PostEditButton";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PostDetail } from "@/lib/data/posts";
 import { GUIDE_POST_CATEGORY } from "@/lib/post-categories";
 import { formatScheduleLabel } from "@/lib/post-schedule";
 
-type GuideRow = PostDetail;
+type PostRow = PostDetail;
 
-function statusLabel(p: GuideRow): string {
+function statusLabel(p: PostRow): string {
   if (!p.isActive) return "Inactive";
   return p.isScheduled ? "Hẹn giờ" : "Active";
 }
 
-/** Bảng bài hướng dẫn sử dụng (gồm cả bài Inactive / hẹn giờ) cho người quản lý bài viết. */
-export function AdminGuidePostsManager({ posts }: { posts: GuideRow[] }) {
+type AdminPostsManagerProps = {
+  posts: PostRow[];
+  heading: string;
+  intro: ReactNode;
+  listLabel: string;
+  createLabel: string;
+  emptyText: string;
+  /** Tag mặc định cho bài mới (vd. chuyên mục Hướng dẫn sử dụng). */
+  defaultTag?: string;
+  showTag?: boolean;
+  /** Bài mở sẵn form sửa (?edit=). */
+  editId?: string | null;
+  /** Mở sẵn form đăng bài mới (?new=1). */
+  openCreate?: boolean;
+};
+
+/** Bảng bài viết (gồm cả bài Inactive / hẹn giờ) cho người quản lý bài viết: xem trước, sửa, đăng bài mới. */
+export function AdminPostsManager({
+  posts,
+  heading,
+  intro,
+  listLabel,
+  createLabel,
+  emptyText,
+  defaultTag,
+  showTag = false,
+  editId = null,
+  openCreate = false,
+}: AdminPostsManagerProps) {
+  const { canOpenAdmin } = useAuth();
   const activeCount = posts.filter((p) => p.isActive && !p.isScheduled).length;
 
-  const columns: DataTableColumn<GuideRow>[] = [
+  const columns: DataTableColumn<PostRow>[] = [
     {
       key: "title",
       header: "Tiêu đề",
@@ -41,6 +71,17 @@ export function AdminGuidePostsManager({ posts }: { posts: GuideRow[] }) {
         </div>
       ),
     },
+    ...(showTag
+      ? [
+          {
+            key: "tag",
+            header: "Chuyên mục",
+            type: "enum",
+            accessor: (p: PostRow) => p.tag,
+            className: "whitespace-nowrap text-xs font-semibold text-on-surface-variant",
+          } satisfies DataTableColumn<PostRow>,
+        ]
+      : []),
     {
       key: "status",
       header: "Trạng thái",
@@ -94,7 +135,17 @@ export function AdminGuidePostsManager({ posts }: { posts: GuideRow[] }) {
           >
             <MaterialIcon className="text-[18px]" name="visibility" />
           </Link>
-          <PostEditButton compact post={p} />
+          {p.isContest && canOpenAdmin(`/admin/content/posts/submissions/${p.id}`) ? (
+            <Link
+              aria-label="Tác phẩm dự thi"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant bg-white text-[#173A67] shadow-2xs transition hover:bg-surface-container-high"
+              href={`/admin/content/posts/submissions/${p.id}`}
+              title="Tác phẩm dự thi"
+            >
+              <MaterialIcon className="text-[18px]" name="palette" />
+            </Link>
+          ) : null}
+          <PostEditButton autoOpen={p.id === editId} compact post={p} />
         </div>
       ),
     },
@@ -104,20 +155,16 @@ export function AdminGuidePostsManager({ posts }: { posts: GuideRow[] }) {
     <div className="space-y-5 pb-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-5">
         <div>
-          <h1 className="text-headline-md font-extrabold text-[#173A67]">{GUIDE_POST_CATEGORY.tag}</h1>
-          <p className="text-body-md text-[#27496D]">
-            Bài viết thuộc chuyên mục Hướng dẫn sử dụng (gồm cả bài Inactive). Bài Active hiện trên trang{" "}
-            <Link className="font-semibold text-primary hover:underline" href={GUIDE_POST_CATEGORY.href}>
-              {GUIDE_POST_CATEGORY.href}
-            </Link>
-            .
-          </p>
+          <h1 className="text-headline-md font-extrabold text-[#173A67]">{heading}</h1>
+          <p className="text-body-md text-[#27496D]">{intro}</p>
         </div>
-        <PostEditButton createLabel="Thêm bài hướng dẫn" defaultTag={GUIDE_POST_CATEGORY.tag} />
+        <PostEditButton autoOpen={openCreate} createLabel={createLabel} defaultTag={defaultTag} />
       </div>
 
       <div className="flex items-center justify-between">
-        <h2 className="text-title-lg font-bold text-[#173A67]">Danh sách bài hướng dẫn ({posts.length})</h2>
+        <h2 className="text-title-lg font-bold text-[#173A67]">
+          {listLabel} ({posts.length})
+        </h2>
         <span className="text-xs font-medium text-on-surface-variant">
           Đang hiển thị công khai: <strong>{activeCount}</strong>
         </span>
@@ -127,11 +174,44 @@ export function AdminGuidePostsManager({ posts }: { posts: GuideRow[] }) {
         columns={columns}
         defaultPageSize={10}
         density="compact"
-        emptyText="Chưa có bài hướng dẫn nào. Bấm “Thêm bài hướng dẫn” để tạo bài đầu tiên."
+        emptyText={emptyText}
         maxHeightClass="max-h-[calc(100dvh-300px)] min-h-[240px]"
         rowKey={(p) => p.id}
         rows={posts}
       />
     </div>
+  );
+}
+
+/** Bảng bài hướng dẫn sử dụng (gồm cả bài Inactive / hẹn giờ) cho người quản lý bài viết. */
+export function AdminGuidePostsManager({
+  posts,
+  editId,
+  openCreate,
+}: {
+  posts: PostRow[];
+  editId?: string | null;
+  openCreate?: boolean;
+}) {
+  return (
+    <AdminPostsManager
+      createLabel="Thêm bài hướng dẫn"
+      defaultTag={GUIDE_POST_CATEGORY.tag}
+      editId={editId}
+      emptyText="Chưa có bài hướng dẫn nào. Bấm “Thêm bài hướng dẫn” để tạo bài đầu tiên."
+      heading={GUIDE_POST_CATEGORY.tag}
+      intro={
+        <>
+          Bài viết thuộc chuyên mục Hướng dẫn sử dụng (gồm cả bài Inactive). Bài Active hiện trên trang{" "}
+          <Link className="font-semibold text-primary hover:underline" href={GUIDE_POST_CATEGORY.href}>
+            {GUIDE_POST_CATEGORY.href}
+          </Link>
+          .
+        </>
+      }
+      listLabel="Danh sách bài hướng dẫn"
+      openCreate={openCreate}
+      posts={posts}
+    />
   );
 }

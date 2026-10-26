@@ -47,7 +47,7 @@ export default async function NewVisitRequestPage({ searchParams }: PageProps) {
     <div className="max-w-3xl space-y-4 pb-10">
       <Link
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
-        href={event ? `/life-events/${event.id}` : "/admin/administration/visits"}
+        href={event ? `/admin/administration/life-events/${event.id}` : "/admin/administration/visits"}
       >
         <MaterialIcon className="text-[18px]" name="arrow_back" />
         {event ? `Tin báo ${event.code}` : "Đề nghị thăm hỏi"}

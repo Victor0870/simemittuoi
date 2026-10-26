@@ -86,7 +86,7 @@ export async function ManagerOverview({ access }: { access: CurrentAccess }) {
   }
 
   const actions: OverviewAction[] = visibleAdminLinks(access, [
-    { href: "/posts", label: "Đăng bài", icon: "edit_note", allowed: hasPermission(access, PERMISSIONS.postsManage) },
+    { href: "/admin/content/posts?new=1", label: "Đăng bài", icon: "edit_note", allowed: hasPermission(access, PERMISSIONS.postsManage) },
     { href: "/admin/finance/ledger", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: financeAbilities(access).record },
     { href: "/admin/administration/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: paymentAbilities(access).create },
     { href: "/admin/popups", label: "Popup mới", icon: "notification_important", allowed: hasPermission(access, PERMISSIONS.popupsManage) },

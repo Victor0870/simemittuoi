@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { CategoryBadge, StatusBadge } from "@/components/life-events/LifeEventBadges";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { formatDateTimeVi } from "@/lib/data/albums";
 import { MEMBER_LIFE_EVENT_CATEGORIES, TYPE_BY_CODE, describeSubject } from "@/lib/life-events/registry";
-import { canViewAllLifeEvents, loadLifeEventList } from "@/lib/life-events/server";
+import { loadLifeEventList } from "@/lib/life-events/server";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -28,15 +29,7 @@ export default async function LifeEventsPage() {
             và báo lại cho bạn.
           </p>
         </div>
-        {canViewAllLifeEvents(access) ? (
-          <Link
-            className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]"
-            href="/admin/administration/life-events"
-          >
-            <MaterialIcon className="text-[18px]" name="inbox" />
-            Hộp tin báo (quản lý)
-          </Link>
-        ) : null}
+        <AdminShortcutLink href="/admin/administration/life-events" icon="inbox" label="Hộp tin báo" />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

@@ -1,9 +1,9 @@
 import Link from "next/link";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { PostCard } from "@/components/posts/PostCard";
 import { PostCommentsSection } from "@/components/posts/PostCommentsSection";
 import { PostContent } from "@/components/posts/PostContent";
 import { PostCoverImage } from "@/components/posts/PostCoverImage";
-import { PostEditButton } from "@/components/posts/PostEditButton";
 import { PostShareButtons } from "@/components/posts/PostShareButtons";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PostDetail, PostSummary } from "@/lib/data/posts";
@@ -64,13 +64,17 @@ export function PostDetailView({ post, related, commentCount }: PostDetailViewPr
                 postExcerpt={post.excerpt}
                 variant="compact"
               />
-              <PostEditButton post={post} />
+              <AdminShortcutLink
+                href={`/admin/content/posts?edit=${encodeURIComponent(post.id)}`}
+                icon="edit"
+                label="Sửa bài viết"
+              />
             </div>
           </div>
           {!post.isActive ? (
             <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-950">
               <MaterialIcon className="text-[16px]" name="visibility_off" />
-              Đang Inactive — chưa hiện với đoàn viên. Sửa bài rồi bật Active khi muốn đăng.
+              Đang Inactive — chưa hiện với đoàn viên. Sửa bài trong Trang quản trị rồi bật Active khi muốn đăng.
             </p>
           ) : null}
           {post.isActive && post.isScheduled ? (

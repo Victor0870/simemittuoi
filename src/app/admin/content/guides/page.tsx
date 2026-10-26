@@ -15,7 +15,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AdminGuidePostsPage() {
+export default async function AdminGuidePostsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string; new?: string }>;
+}) {
   const access = await getCurrentAccess();
   if (!access) {
     redirect("/login?next=/admin/content/guides");
@@ -24,7 +28,10 @@ export default async function AdminGuidePostsPage() {
     redirect("/");
   }
 
-  const posts = await getPostDetails(200, { includeInactive: true, tag: GUIDE_POST_CATEGORY.tag });
+  const [posts, params] = await Promise.all([
+    getPostDetails(200, { includeInactive: true, tag: GUIDE_POST_CATEGORY.tag }),
+    searchParams,
+  ]);
 
-  return <AdminGuidePostsManager posts={posts} />;
+  return <AdminGuidePostsManager editId={params.edit ?? null} openCreate={params.new === "1"} posts={posts} />;
 }

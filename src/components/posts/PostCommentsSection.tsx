@@ -7,6 +7,8 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 import { CDILV_STORAGE } from "@/lib/supabase/tables";
 import type { PostComment } from "@/lib/data/posts";
+import { downloadImageFile, parseCommentContent } from "@/lib/post-comment-content";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 
 type PostCommentsSectionProps = {
   postId: string;
@@ -16,40 +18,6 @@ type PostCommentsSectionProps = {
   initialCommentCount?: number;
   initialComments?: PostComment[];
 };
-
-/**
- * Trích xuất các URL ảnh trong nội dung bình luận để hiển thị ảnh trực quan
- */
-function parseCommentContent(text: string): { cleanText: string; imageUrls: string[] } {
-  if (!text) return { cleanText: "", imageUrls: [] };
-
-  // Nhận diện các link ảnh thông dụng hoặc link upload từ Supabase Storage
-  const imgUrlRegex =
-    /(https?:\/\/[^\s]+?\.(?:png|jpe?g|webp|gif|svg)(?:\?[^\s]*)?|https?:\/\/[^\s]+?\/storage\/v1\/object\/public\/[^\s]+)/gi;
-
-  const matches = text.match(imgUrlRegex) || [];
-  const imageUrls: string[] = [];
-  matches.forEach((url) => {
-    // Làm sạch dấu ngoặc hoặc dấu câu ở cuối nếu bị dính
-    const cleanUrl = url.replace(/[),;.]+$/, "");
-    if (!imageUrls.includes(cleanUrl)) {
-      imageUrls.push(cleanUrl);
-    }
-  });
-
-  // Loại bỏ các dòng gắn nhãn link ảnh đính kèm mà KHÔNG ảnh hưởng đến chữ 'ảnh' trong văn bản của người dùng
-  let cleanText = text;
-  imageUrls.forEach((url) => {
-    const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    // Chỉ loại bỏ tiền tố [Ảnh ...]: đi liền trên cùng một dòng với link ảnh
-    cleanText = cleanText.replace(new RegExp(`\\[Ảnh[^\\]\\r\\n]*\\]:\\s*${escapedUrl}`, "gi"), "");
-    // Loại bỏ link ảnh đứng riêng dòng hoặc còn sót lại
-    cleanText = cleanText.replace(new RegExp(`^\\s*${escapedUrl}\\s*$`, "gim"), "");
-    cleanText = cleanText.replace(new RegExp(`\\s*${escapedUrl}`, "gi"), "");
-  });
-
-  return { cleanText: cleanText.trim(), imageUrls };
-}
 
 export function PostCommentsSection({
   postId,
@@ -78,10 +46,8 @@ export function PostCommentsSection({
   const [attachedImageUrl, setAttachedImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  // Tải ảnh về & Sao chép link (Hỗ trợ Admin tạo bình chọn)
+  // Tải ảnh về máy
   const [downloadingUrl, setDownloadingUrl] = useState<string | null>(null);
-  const [downloadingAll, setDownloadingAll] = useState(false);
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
 
   // Popup hiển thị quy định bình luận (khi bình luận lần thứ 4 hoặc bấm xem quy định)
   const [showRulePopup, setShowRulePopup] = useState(false);
@@ -160,22 +126,6 @@ export function PostCommentsSection({
   const isLimitReached = !isAdmin && myCommentCount >= 3;
   const remainingCount = Math.max(0, 3 - myCommentCount);
 
-  // Danh sách toàn bộ tác phẩm logo được gửi qua bình luận (cho Admin tổng hợp và tải về)
-  const allContestSubmissions = useMemo(() => {
-    return rootComments.flatMap((c) => {
-      const { imageUrls } = parseCommentContent(c.content);
-      return imageUrls.map((url, idx) => ({
-        url,
-        authorName: c.authorName,
-        authorDepartment: c.authorDepartment,
-        authorCode: c.authorCode,
-        commentId: c.id,
-        index: idx + 1,
-        filename: `Logo_CDILV_${(c.authorName || "tac_gia").replace(/[^a-zA-Z0-9_\u00C0-\u024F\u1EA0-\u1EF9]/g, "_")}_${c.id.slice(0, 6)}.png`,
-      }));
-    });
-  }, [rootComments]);
-
   function clearNoticeAfterTimeout() {
     setTimeout(() => {
       setNotice(null);
@@ -186,54 +136,9 @@ export function PostCommentsSection({
   async function handleDownloadImage(url: string, filename: string) {
     setDownloadingUrl(url);
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Fetch failed");
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-    } catch {
-      // Fallback
-      const link = document.createElement("a");
-      link.href = url;
-      link.target = "_blank";
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      await downloadImageFile(url, filename);
     } finally {
       setDownloadingUrl(null);
-    }
-  }
-
-  // Tải toàn bộ ảnh dự thi về máy (Admin)
-  async function handleDownloadAll() {
-    if (downloadingAll || allContestSubmissions.length === 0) return;
-    setDownloadingAll(true);
-    try {
-      for (let i = 0; i < allContestSubmissions.length; i++) {
-        const item = allContestSubmissions[i];
-        await handleDownloadImage(item.url, item.filename);
-        // Nghỉ 350ms giữa các lần tải để trình duyệt không chặn nhiều file tải xuống
-        await new Promise((r) => setTimeout(r, 350));
-      }
-      setNotice({
-        type: "success",
-        text: `Đã hoàn tất tải ${allContestSubmissions.length} ảnh thiết kế Logo về máy!`,
-      });
-      clearNoticeAfterTimeout();
-    } catch {
-      setNotice({
-        type: "error",
-        text: "Có lỗi khi tải hàng loạt ảnh. Bạn có thể bấm nút Tải ảnh trên từng mẫu logo.",
-      });
-    } finally {
-      setDownloadingAll(false);
     }
   }
 
@@ -319,17 +224,6 @@ export function PostCommentsSection({
         type: "error",
         text: err?.message || "Lỗi khi thả cảm xúc.",
       });
-    }
-  }
-
-  // Sao chép link ảnh vào clipboard
-  async function handleCopyLink(url: string) {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopiedUrl(url);
-      setTimeout(() => setCopiedUrl(null), 2500);
-    } catch {
-      // fallback
     }
   }
 
@@ -1053,61 +947,15 @@ export function PostCommentsSection({
             </form>
           </div>
 
-          {/* ADMIN TOOLBAR: TỔNG HỢP & TẢI TOÀN BỘ ẢNH THIẾT KẾ ĐỂ TẠO BÌNH CHỌN */}
-          {isContest && isAdmin && allContestSubmissions.length > 0 && (
-            <div className="rounded-2xl border-2 border-primary/30 bg-gradient-to-r from-primary/10 via-primary/[0.04] to-white p-4 sm:p-5 shadow-xs">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white shadow-xs">
-                    <MaterialIcon className="text-[24px]" name="palette" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-body-md sm:text-title-sm font-bold text-on-surface">
-                        Quản trị: Tác phẩm thiết kế Logo ({allContestSubmissions.length} ảnh dự thi)
-                      </h4>
-                      <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-900">
-                        Quyền Admin
-                      </span>
-                    </div>
-                    <p className="text-xs text-on-surface-variant mt-0.5">
-                      Tải tất cả các mẫu logo về máy hoặc lấy link ảnh trực tiếp để tạo danh sách
-                      bình chọn trong trang Quản lý Vote.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleDownloadAll}
-                    disabled={downloadingAll}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs sm:text-label-sm font-bold text-white shadow-xs transition hover:bg-dusty-dark disabled:opacity-50"
-                  >
-                    {downloadingAll ? (
-                      <>
-                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        <span>Đang tải...</span>
-                      </>
-                    ) : (
-                      <>
-                        <MaterialIcon className="text-[17px]" name="cloud_download" />
-                        <span>Tải toàn bộ ({allContestSubmissions.length} ảnh)</span>
-                      </>
-                    )}
-                  </button>
-
-                  <Link
-                    href="/admin/polls"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-primary bg-white px-3.5 py-2 text-xs sm:text-label-sm font-bold text-primary transition hover:bg-primary/5"
-                  >
-                    <MaterialIcon className="text-[17px]" name="how_to_vote" />
-                    <span>Tạo cuộc bình chọn</span>
-                  </Link>
-                </div>
-              </div>
+          {isContest ? (
+            <div className="flex justify-end">
+              <AdminShortcutLink
+                href={`/admin/content/posts/submissions/${encodeURIComponent(postId)}`}
+                icon="palette"
+                label="Tổng hợp tác phẩm dự thi"
+              />
             </div>
-          )}
+          ) : null}
 
           {/* Member Comments List */}
           <div className="space-y-4 pt-2">
@@ -1277,22 +1125,6 @@ export function PostCommentsSection({
                                         )}
                                         <span>Tải ảnh</span>
                                       </button>
-
-                                      {/* Nút Copy link ảnh (rất tiện khi Admin dán vào Poll Option) */}
-                                      {isContest && isAdmin && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleCopyLink(imgUrl)}
-                                          className="inline-flex items-center gap-1 rounded-lg border border-dusty-border bg-dusty-light/60 px-2 py-1 text-[11px] font-semibold text-primary transition hover:bg-dusty-light"
-                                          title="Sao chép link ảnh trực tiếp để tạo ứng viên Bình chọn"
-                                        >
-                                          <MaterialIcon
-                                            className="text-[14px]"
-                                            name={copiedUrl === imgUrl ? "done" : "content_copy"}
-                                          />
-                                          <span>{copiedUrl === imgUrl ? "Đã chép link" : "Copy link"}</span>
-                                        </button>
-                                      )}
 
                                       {/* Xem ảnh gốc */}
                                       <a

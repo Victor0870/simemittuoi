@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { LifeEventDetailView } from "@/components/life-events/LifeEventDetailView";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getCurrentAccess } from "@/lib/auth/guard";
-import {
-  canHandleLifeEvents,
-  canViewAllLifeEvents,
-  canViewLifeEvent,
-  loadLifeEventDetail,
-} from "@/lib/life-events/server";
+import { canViewAllLifeEvents, canViewLifeEvent, loadLifeEventDetail } from "@/lib/life-events/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { LinkedVisitRequests } from "@/components/visits/LinkedVisitRequests";
-import { loadVisitRequestList, visitAbilities } from "@/lib/visits/server";
 
 export const dynamic = "force-dynamic";
 
@@ -31,20 +25,23 @@ export default async function LifeEventDetailPage({ params, searchParams }: Page
 
   const isOffice = canViewAllLifeEvents(access);
   const isOwner = detail.member_id === access.userId;
-  const visible = isOffice ? detail : { ...detail, logs: detail.logs.filter((l) => l.action !== "note") };
-  const visitCan = visitAbilities(access);
-  const visitList =
-    isOffice && visitCan.view ? await loadVisitRequestList(createServiceClient(), { lifeEventId: detail.id }) : null;
+  const adminHref = `/admin/administration/life-events/${detail.id}`;
+  // Tiếp nhận / xử lý tin báo chỉ ở trang quản trị; trang này là góc nhìn của người báo tin
+  if (isOffice && !isOwner) redirect(adminHref);
+  const visible = { ...detail, logs: detail.logs.filter((l) => l.action !== "note") };
 
   return (
     <div className="max-w-3xl space-y-4 pb-10">
-      <Link
-        className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
-        href={isOffice && !isOwner ? "/admin/administration/life-events" : "/life-events"}
-      >
-        <MaterialIcon className="text-[18px]" name="arrow_back" />
-        {isOffice && !isOwner ? "Hộp tin báo" : "Tin bạn đã báo"}
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link
+          className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
+          href="/life-events"
+        >
+          <MaterialIcon className="text-[18px]" name="arrow_back" />
+          Tin bạn đã báo
+        </Link>
+        <AdminShortcutLink href={adminHref} icon="inbox" label="Xử lý trong Hộp tin báo" />
+      </div>
       {sent ? (
         <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           <MaterialIcon className="text-[20px]" name="check_circle" />
@@ -58,19 +55,12 @@ export default async function LifeEventDetailPage({ params, searchParams }: Page
         </div>
       ) : null}
       <LifeEventDetailView
-        canHandle={canHandleLifeEvents(access)}
+        canHandle={false}
         detail={visible}
-        isOffice={isOffice}
+        isOffice={false}
         isOwner={isOwner}
         userId={access.userId}
       />
-      {visitList ? (
-        <LinkedVisitRequests
-          canCreate={visitCan.create && detail.status !== "withdrawn"}
-          items={visitList}
-          lifeEventId={detail.id}
-        />
-      ) : null}
     </div>
   );
 }

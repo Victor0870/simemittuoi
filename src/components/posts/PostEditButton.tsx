@@ -31,6 +31,8 @@ type PostEditButtonProps = {
   createLabel?: string;
   /** Nút sửa dạng icon gọn (dùng trong bảng quản trị). */
   compact?: boolean;
+  /** Mở sẵn form khi vào trang (link ?edit= / ?new= từ nút tắt trên trang công khai). */
+  autoOpen?: boolean;
 };
 
 function defaultScheduleValue(): string {
@@ -56,8 +58,11 @@ export function PostEditButton({
   defaultTag,
   createLabel = "Đăng bài mới",
   compact = false,
+  autoOpen = false,
 }: PostEditButtonProps) {
   const { can } = useAuth();
+  const canManage = can(PERMISSIONS.postsManage);
+  const autoOpenedRef = useRef(false);
   const router = useRouter();
   const isCreate = !post;
   const wasScheduled = post?.publishedAt ? isScheduledAt(post.publishedAt) : false;
@@ -94,7 +99,16 @@ export function PostEditButton({
     };
   }, [isOpen]);
 
-  if (!can(PERMISSIONS.postsManage)) return null;
+  useEffect(() => {
+    if (!autoOpen || !canManage || autoOpenedRef.current) return;
+    autoOpenedRef.current = true;
+    handleOpen();
+    // Bỏ ?edit= / ?new= để tải lại trang không tự mở form lần nữa
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, canManage]);
+
+  if (!canManage) return null;
 
   function handleOpen() {
     setTitle(post?.title ?? "");

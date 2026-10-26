@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { AdminNavLinks } from "@/components/layout/AdminNavLinks";
 import { MemberNavLinks } from "@/components/layout/MemberNavLinks";
 import { TopNavAuth } from "@/components/layout/TopNavAuth";
 import { BRAND } from "@/lib/brand";
@@ -47,7 +46,6 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
           );
         })}
         <MemberNavLinks activeHref={activeHref} />
-        <AdminNavLinks activeHref={activeHref} />
       </div>
 
       <div className="flex items-center gap-4">

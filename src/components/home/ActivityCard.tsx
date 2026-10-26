@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { ActivityEditorModal } from "@/components/activities/ActivityEditorModal";
 import type { Activity } from "@/lib/mock-data";
 
 type ActivityCardProps = {
@@ -15,20 +14,17 @@ type ActivityCardProps = {
 
 export function ActivityCard({ activity }: ActivityCardProps) {
   const router = useRouter();
-  const { isGuest, isAdmin } = useAuth();
+  const { isGuest } = useAuth();
 
   const [isRegistered, setIsRegistered] = useState(activity.isRegistered ?? false);
   useEffect(() => {
     setIsRegistered(activity.isRegistered ?? false);
   }, [activity.isRegistered]);
-  const [isRegistrationOpen, setIsRegistrationOpen] = useState(
-    activity.isRegistrationOpen !== false,
-  );
+  const isRegistrationOpen = activity.isRegistrationOpen !== false;
   const [participantCount, setParticipantCount] = useState(
     activity.participantCount ?? 0,
   );
   const [loading, setLoading] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
@@ -38,35 +34,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     setTimeout(() => {
       setFeedback(null);
     }, 4000);
-  }
-
-  async function handleDeleteActivity() {
-    if (loading) return;
-
-    const confirmed = window.confirm(
-      `Bạn có chắc chắn muốn xóa hoạt động "${activity.title}"? Dữ liệu người đăng ký cũng sẽ bị xóa vĩnh viễn.`,
-    );
-    if (!confirmed) return;
-
-    setLoading(true);
-    setFeedback(null);
-
-    try {
-      const res = await fetch(`/api/activities/delete?id=${encodeURIComponent(activity.id)}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Xóa không thành công.");
-      }
-
-      showToast("success", "Đã xóa hoạt động thành công!");
-      router.refresh();
-    } catch (err: any) {
-      showToast("error", err.message || "Lỗi khi xóa hoạt động.");
-      setLoading(false);
-    }
   }
 
   async function handleRegister() {
@@ -143,40 +110,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     }
   }
 
-  async function handleToggleAdmin(targetOpen: boolean) {
-    if (loading) return;
-
-    const actionText = targetOpen ? "mở lại đăng ký" : "dừng nhận đăng ký";
-    const confirmed = window.confirm(
-      `Xác nhận ${actionText} cho hoạt động "${activity.title}"?`,
-    );
-    if (!confirmed) return;
-
-    setLoading(true);
-    setFeedback(null);
-
-    try {
-      const res = await fetch("/api/activities/toggle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activityId: activity.id, isOpen: targetOpen }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Cập nhật không thành công.");
-      }
-
-      setIsRegistrationOpen(targetOpen);
-      showToast("success", data.message || "Cập nhật trạng thái thành công!");
-      router.refresh();
-    } catch (err: any) {
-      showToast("error", err.message || "Lỗi khi cập nhật trạng thái.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-dusty-border/80 bg-surface-container-lowest shadow-sm transition-all hover:shadow-md sm:flex-row">
       {/* Activity Image / Badge */}
@@ -221,52 +154,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
               </h4>
             </Link>
 
-            {/* Admin Management Toolbar */}
-            {isAdmin && (
-              <div className="flex items-center gap-1 shrink-0 rounded-lg bg-surface-container/60 p-0.5 border border-dusty-border/60">
-                {isRegistrationOpen ? (
-                  <button
-                    onClick={() => handleToggleAdmin(false)}
-                    disabled={loading}
-                    type="button"
-                    title="Quyền Admin: Dừng nhận đăng ký hoạt động này"
-                    className="inline-flex items-center gap-0.5 rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
-                  >
-                    <MaterialIcon className="text-[13px] text-amber-700" name="pause_circle" />
-                    <span>Dừng ĐK</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => handleToggleAdmin(true)}
-                    disabled={loading}
-                    type="button"
-                    title="Quyền Admin: Mở lại nhận đăng ký"
-                    className="inline-flex items-center gap-0.5 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
-                  >
-                    <MaterialIcon className="text-[13px] text-emerald-600" name="play_circle" />
-                    <span>Mở ĐK</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setIsEditOpen(true)}
-                  disabled={loading}
-                  title="Admin: Chỉnh sửa thông tin"
-                  className="rounded-md p-1 text-on-surface-variant hover:bg-white hover:text-primary transition"
-                >
-                  <MaterialIcon className="text-[15px]" name="edit" />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeleteActivity}
-                  disabled={loading}
-                  title="Admin: Xóa hoạt động"
-                  className="rounded-md p-1 text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition"
-                >
-                  <MaterialIcon className="text-[15px]" name="delete_outline" />
-                </button>
-              </div>
-            )}
           </div>
 
           <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-body-sm text-on-surface-variant">
@@ -366,16 +253,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           </div>
         </div>
       </div>
-
-      {/* Admin Edit Modal */}
-      {isAdmin && isEditOpen && (
-        <ActivityEditorModal
-          isOpen={isEditOpen}
-          mode="edit"
-          initialActivity={activity}
-          onClose={() => setIsEditOpen(false)}
-        />
-      )}
     </article>
   );
 }

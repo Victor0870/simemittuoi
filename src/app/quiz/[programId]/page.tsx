@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { QuizLeaderboard } from "@/components/quiz/QuizLeaderboard";
 import { QuizPlayClient } from "@/components/quiz/QuizPlayClient";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
@@ -49,10 +50,13 @@ export default async function QuizProgramPage({ params }: { params: Promise<{ pr
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-10">
-      <Link className="inline-flex items-center gap-1 text-sm font-semibold text-[#173A67] hover:underline" href="/quiz">
-        <MaterialIcon className="text-[18px]" name="arrow_back" />
-        Tất cả chương trình trắc nghiệm
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Link className="inline-flex items-center gap-1 text-sm font-semibold text-[#173A67] hover:underline" href="/quiz">
+          <MaterialIcon className="text-[18px]" name="arrow_back" />
+          Tất cả chương trình trắc nghiệm
+        </Link>
+        <AdminShortcutLink href={`/admin/quiz/${program.id}/history`} icon="leaderboard" label="Quản lý kết quả thi" />
+      </div>
 
       {!program.is_active ? (
         <p className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
@@ -97,8 +101,6 @@ export default async function QuizProgramPage({ params }: { params: Promise<{ pr
           resultPostId={displaySession.result_post_id}
           title={displaySession.title}
           totalQuestions={settings.questions_per_attempt}
-          isAdmin={isAdmin}
-          sessionId={displaySession.id}
         />
       ) : null}
     </div>

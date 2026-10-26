@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -14,15 +15,13 @@ type Props = {
 
 export function ActivityDetailActionButtons({
   activityId,
-  activityTitle,
   initialIsRegistered,
-  initialIsRegistrationOpen,
+  initialIsRegistrationOpen: isRegistrationOpen,
 }: Props) {
   const router = useRouter();
-  const { isGuest, isAdmin } = useAuth();
+  const { isGuest } = useAuth();
 
   const [isRegistered, setIsRegistered] = useState(initialIsRegistered);
-  const [isRegistrationOpen, setIsRegistrationOpen] = useState(initialIsRegistrationOpen);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
@@ -107,40 +106,6 @@ export function ActivityDetailActionButtons({
     }
   }
 
-  async function handleToggleAdmin(targetOpen: boolean) {
-    if (loading) return;
-
-    const actionText = targetOpen ? "mở lại nhận đăng ký" : "dừng nhận đăng ký";
-    const confirmed = window.confirm(
-      `Xác nhận ${actionText} cho hoạt động "${activityTitle}"?`,
-    );
-    if (!confirmed) return;
-
-    setLoading(true);
-    setFeedback(null);
-
-    try {
-      const res = await fetch("/api/activities/toggle", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activityId, isOpen: targetOpen }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Cập nhật không thành công.");
-      }
-
-      setIsRegistrationOpen(targetOpen);
-      showToast("success", data.message || "Cập nhật trạng thái thành công!");
-      router.refresh();
-    } catch (err: any) {
-      showToast("error", err.message || "Lỗi khi cập nhật trạng thái.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <div className="space-y-3">
       {feedback && (
@@ -156,30 +121,7 @@ export function ActivityDetailActionButtons({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        {/* Admin control */}
-        {isAdmin && (
-          isRegistrationOpen ? (
-            <button
-              onClick={() => handleToggleAdmin(false)}
-              disabled={loading}
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
-            >
-              <MaterialIcon className="text-[18px] text-amber-700" name="pause_circle" />
-              <span>Dừng đăng ký (Admin)</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => handleToggleAdmin(true)}
-              disabled={loading}
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs sm:text-sm font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50"
-            >
-              <MaterialIcon className="text-[18px] text-emerald-600" name="play_circle" />
-              <span>Mở lại đăng ký (Admin)</span>
-            </button>
-          )
-        )}
+        <AdminShortcutLink href="/admin/activities" icon="event_available" label="Mở / dừng đăng ký" />
 
         {/* Member button */}
         {isRegistered ? (

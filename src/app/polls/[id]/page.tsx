@@ -6,7 +6,7 @@ import { PollPodiumResults } from "@/components/polls/PollPodiumResults";
 import { PollVotingSection } from "@/components/polls/PollVotingSection";
 import { PollPointsVotingSection } from "@/components/polls/PollPointsVotingSection";
 import { PollEntrySubmissionSection } from "@/components/polls/PollEntrySubmissionSection";
-import { PollAdminToolbar } from "@/components/polls/PollAdminToolbar";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { PollQrButton } from "@/components/polls/PollQrButton";
 import { PollPhaseBadge } from "@/components/polls/PollPhaseBadge";
 import { formatPollTime } from "@/lib/polls/phase";
@@ -36,11 +36,9 @@ export default async function PollDetailPage({ params }: Props) {
 
   return (
     <div className="space-y-8">
-      {/* Admin Action Toolbar */}
-      <PollAdminToolbar poll={poll} />
-
       {/* Breadcrumb */}
       <nav className="flex flex-wrap items-center gap-2 text-body-sm text-on-surface-variant">
+        <AdminShortcutLink className="order-last ml-auto" href={`/admin/polls/${poll.id}`} label="Quản lý chương trình" />
         <Link className="hover:text-primary" href="/">
           Trang chủ
         </Link>

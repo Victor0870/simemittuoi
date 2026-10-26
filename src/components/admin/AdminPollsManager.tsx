@@ -178,7 +178,7 @@ export function AdminPollsManager({ polls, currentAdminName, isAdmin = true }: P
       render: (p) => (
         <>
           <div className="flex items-start gap-2">
-            <Link className="line-clamp-2 break-words hover:underline" href={`/polls/${p.id}`} title={p.title}>
+            <Link className="line-clamp-2 break-words hover:underline" href={`/admin/polls/${p.id}`} title={p.title}>
               {p.title}
             </Link>
             {!p.isActive ? (

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { BackToHubBar } from "@/components/admin/BackToHubBar";
-import { PostEditButton } from "@/components/posts/PostEditButton";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { PostsListClient } from "@/components/posts/PostsListClient";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { getPosts } from "@/lib/data/posts";
 
-// Bản cache chung chỉ gồm bài đang hiển thị; nút đăng bài và bài Inactive chỉ hiện với người có quyền (phía trình duyệt).
+// Bản cache chung chỉ gồm bài đang hiển thị; nút tắt tới trang quản trị bài viết chỉ hiện với người có quyền (phía trình duyệt).
 export const revalidate = 60;
 
 export default async function PostsPage() {
@@ -36,7 +36,7 @@ export default async function PostsPage() {
             <MaterialIcon className="text-[16px]" name="arrow_back" />
             Về trang chủ
           </Link>
-          <PostEditButton />
+          <AdminShortcutLink href="/admin/content/posts" icon="edit_note" label="Quản lý bài viết" />
         </div>
       </header>
 

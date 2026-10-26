@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlbumEditorModal } from "@/components/albums/AlbumEditorModal";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { PhotoViewerModal } from "@/components/albums/PhotoViewerModal";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
@@ -51,8 +51,6 @@ export function AlbumDetailClient({
   const [queue, setQueue] = useState<PendingUpload[]>([]);
   const [uploading, setUploading] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [deletingAlbum, setDeletingAlbum] = useState(false);
 
   useEffect(() => {
     setPhotos(initialPhotos);
@@ -233,26 +231,6 @@ export function AlbumDetailClient({
     [album.id],
   );
 
-  async function handleDeleteAlbum() {
-    if (deletingAlbum) return;
-    const confirmed = window.confirm(
-      `Xóa album “${album.title}” cùng toàn bộ ${photos.length} ảnh? Điểm thi đua đã cộng từ ảnh và bình luận trong album sẽ bị thu hồi. Thao tác không thể hoàn tác.`,
-    );
-    if (!confirmed) return;
-
-    setDeletingAlbum(true);
-    try {
-      const res = await fetch(`/api/albums?id=${encodeURIComponent(album.id)}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Không thể xóa album.");
-      router.push("/albums");
-      router.refresh();
-    } catch (err: any) {
-      showNotice({ type: "error", text: err?.message || "Không thể xóa album." });
-      setDeletingAlbum(false);
-    }
-  }
-
   const pendingQueue = queue.filter((q) => q.status !== "done");
 
   return (
@@ -332,27 +310,7 @@ export function AlbumDetailClient({
             </div>
           </div>
 
-          {canManage && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSettings(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-primary bg-white px-3 py-2 text-xs font-bold text-primary transition hover:bg-primary/5"
-              >
-                <MaterialIcon className="text-[17px]" name="settings" />
-                Cài đặt
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteAlbum}
-                disabled={deletingAlbum}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-              >
-                <MaterialIcon className="text-[17px]" name="delete" />
-                {deletingAlbum ? "Đang xóa..." : "Xóa album"}
-              </button>
-            </div>
-          )}
+          <AdminShortcutLink href="/admin/content/albums" icon="settings" label="Cài đặt album" />
         </div>
       </header>
 
@@ -589,14 +547,6 @@ export function AlbumDetailClient({
           onSetCover={handleSetCover}
         />
       )}
-
-      <AlbumEditorModal
-        isOpen={showSettings}
-        mode="edit"
-        album={album}
-        onClose={() => setShowSettings(false)}
-        onSaved={() => router.refresh()}
-      />
     </div>
   );
 }

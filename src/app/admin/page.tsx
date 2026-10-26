@@ -159,7 +159,7 @@ export default async function AdminDashboardPage() {
       emptyText: "Không có tài khoản chờ duyệt",
     },
     {
-      href: "/feedback",
+      href: "/admin/competition/feedback",
       count: pendingFeedbackCount ?? 0,
       text: `${pendingFeedbackCount ?? 0} góp ý chờ phản hồi`,
       emptyText: "Không có góp ý chờ phản hồi",
@@ -212,7 +212,7 @@ export default async function AdminDashboardPage() {
 
   const actions: OverviewAction[] = [
     { href: "/admin/scores", label: "Cộng điểm", icon: "military_tech", allowed: true },
-    { href: "/posts", label: "Đăng bài", icon: "edit_note", allowed: access ? hasPermission(access, PERMISSIONS.postsManage) : false },
+    { href: "/admin/content/posts?new=1", label: "Đăng bài", icon: "edit_note", allowed: access ? hasPermission(access, PERMISSIONS.postsManage) : false },
     { href: "/admin/finance/ledger", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: access ? financeAbilities(access).record : false },
     { href: "/admin/administration/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: access ? paymentAbilities(access).create : false },
     { href: "/admin/quiz", label: "Bật trắc nghiệm", icon: "quiz", allowed: true },

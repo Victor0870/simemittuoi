@@ -164,7 +164,7 @@ export function PollAdminToolbar({ poll }: Props) {
             </span>
             <div>
               <p className="text-[10px] sm:text-xs uppercase tracking-wider font-extrabold text-amber-300">
-                Chế độ Quản Trị Viên
+                Quản lý chương trình
               </p>
               <p className="text-xs sm:text-sm font-semibold text-white/90 line-clamp-1 sm:line-clamp-none">
                 Cấu hình, tải ảnh lên, nhập thành viên và chốt giải cuộc thi
@@ -311,7 +311,7 @@ export function PollAdminToolbar({ poll }: Props) {
               className="flex items-center gap-0.5 rounded-xl bg-white/10 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-semibold text-white hover:bg-white/20 transition"
               href="/admin/polls"
             >
-              <span>Tất cả</span>
+              <span>Tất cả chương trình</span>
               <MaterialIcon className="text-[13px] sm:text-[14px]" name="arrow_forward" />
             </Link>
           </div>

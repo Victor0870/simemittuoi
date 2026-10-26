@@ -511,14 +511,14 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.formsSettings,
   },
   {
-    href: "/albums",
+    href: "/admin/content/albums",
     title: "Quản lý album ảnh",
     description: "Tạo album, cài đặt thời gian và điểm thưởng đăng ảnh, kiểm duyệt ảnh và bình luận.",
     icon: "photo_library",
     permission: PERMISSIONS.albumsManage,
   },
   {
-    href: "/posts",
+    href: "/admin/content/posts",
     title: "Đăng & sửa bài viết",
     description: "Đăng bài viết mới, sửa bài, đánh dấu thông báo quan trọng, ẩn / hiện bài.",
     icon: "newspaper",
@@ -614,6 +614,10 @@ export const ADMIN_ROUTE_PERMISSIONS: AdminRoutePermission[] = [
   { prefix: "/admin/polls", permissions: [PERMISSIONS.pollsManage] },
   { prefix: "/admin/popups", permissions: [PERMISSIONS.popupsManage] },
   { prefix: "/admin/content/guides", permissions: [PERMISSIONS.postsManage] },
+  { prefix: "/admin/content/posts", permissions: [PERMISSIONS.postsManage] },
+  // Tổng hợp ảnh dự thi trong bình luận: như trước, chỉ admin
+  { prefix: "/admin/content/posts/submissions", permissions: [] },
+  { prefix: "/admin/content/albums", permissions: [PERMISSIONS.albumsManage] },
   { prefix: "/admin/administration/life-events", permissions: [PERMISSIONS.lifeEventsView] },
   { prefix: "/admin/administration/visits", permissions: [PERMISSIONS.visitsView] },
   { prefix: "/admin/administration/payments", permissions: [PERMISSIONS.paymentsView] },

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   formatQuizDateTime,
@@ -156,36 +157,6 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không thể bắt đầu lượt thi.");
       router.refresh();
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDeleteLastTest() {
-    if (!lastAttemptId) return;
-    if (
-      !window.confirm(
-        "Xác nhận xóa lượt thi thử nghiệm này khỏi hệ thống? (Kết quả sẽ được hủy hoàn toàn và thu hồi điểm nếu có)",
-      )
-    )
-      return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/quiz/attempts?attemptId=${lastAttemptId}`, {
-        method: "DELETE",
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Không thể xóa lượt thi.");
-      setResult(null);
-      setLastAttemptId(null);
-      setStatus((s) => ({
-        ...s,
-        attemptsUsed: Math.max(0, s.attemptsUsed - 1),
-        hasInProgress: false,
-      }));
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể xóa lượt thi.");
     } finally {
       setBusy(false);
     }
@@ -418,15 +389,11 @@ export function QuizPlayClient({ initialStatus, isLoggedIn, isApproved, pointRul
 
           {isAdmin && lastAttemptId ? (
             <div className="mt-4 flex justify-center border-t border-dusty-border/60 pt-3">
-              <button
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-300 bg-white px-3.5 py-1.5 text-xs font-bold text-red-700 shadow-2xs transition hover:bg-red-50 disabled:opacity-50"
-                disabled={busy}
-                type="button"
-                onClick={() => void handleDeleteLastTest()}
-              >
-                <MaterialIcon className="text-[16px] text-red-600" name="delete_forever" />
-                <span>Xóa lượt test này (Admin)</span>
-              </button>
+              <AdminShortcutLink
+                href={`/admin/quiz/${programId}/history`}
+                icon="delete_forever"
+                label="Xóa lượt test trong Lịch sử thi"
+              />
             </div>
           ) : null}
         </div>

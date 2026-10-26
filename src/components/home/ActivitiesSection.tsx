@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { ActivityCard } from "@/components/home/ActivityCard";
 import { WeeklyQuizActivityCard } from "@/components/home/WeeklyQuizActivityCard";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { ActivityEditorModal } from "@/components/activities/ActivityEditorModal";
 import type { Activity } from "@/lib/mock-data";
 
 type ActivitiesSectionProps = {
@@ -13,9 +11,6 @@ type ActivitiesSectionProps = {
 };
 
 export function ActivitiesSection({ activities }: ActivitiesSectionProps) {
-  const { isAdmin } = useAuth();
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-
   return (
     <section className="space-y-4" id="nhiem-vu">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -30,16 +25,7 @@ export function ActivitiesSection({ activities }: ActivitiesSectionProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-1.5 sm:py-2 text-xs sm:text-sm font-bold text-white shadow-xs hover:bg-amber-600 transition"
-              type="button"
-            >
-              <MaterialIcon className="text-[18px]" name="add_circle" />
-              <span>+ Tạo hoạt động mới</span>
-            </button>
-          )}
+          <AdminShortcutLink href="/admin/activities" icon="event_available" label="Quản lý hoạt động" />
 
           <a
             href="#nhiem-vu"
@@ -56,15 +42,6 @@ export function ActivitiesSection({ activities }: ActivitiesSectionProps) {
           <ActivityCard key={activity.id} activity={activity} />
         ))}
       </div>
-
-      {/* Admin Create Modal */}
-      {isAdmin && (
-        <ActivityEditorModal
-          isOpen={isCreateOpen}
-          mode="create"
-          onClose={() => setIsCreateOpen(false)}
-        />
-      )}
     </section>
   );
 }

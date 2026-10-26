@@ -131,7 +131,7 @@ export function VisitRequestDetailView({ detail, can, isCreator, defaultAmounts,
             <div>
               <dt className="text-xs text-on-surface-variant">Tin báo gốc</dt>
               <dd>
-                <Link className="font-semibold text-[#173A67] underline" href={`/life-events/${detail.life_event_id}`}>
+                <Link className="font-semibold text-[#173A67] underline" href={`/admin/administration/life-events/${detail.life_event_id}`}>
                   {detail.life_event_code ?? "Xem tin báo"}
                 </Link>
               </dd>

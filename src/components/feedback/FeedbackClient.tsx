@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -40,8 +41,10 @@ function formatTimeAgo(isoDate: string): string {
   });
 }
 
-export function FeedbackClient() {
-  const { user, profile, isAdmin } = useAuth();
+/** `admin`: trang /admin/competition/feedback (thống kê, trả lời, xóa mọi ý kiến); trang công khai giống nhau với mọi người. */
+export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" }) {
+  const { user, profile, isAdmin: isAdminRole } = useAuth();
+  const isAdmin = mode === "admin" && isAdminRole;
   const [, startTransition] = useTransition();
 
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
@@ -232,7 +235,14 @@ export function FeedbackClient() {
         )}
       </header>
 
+      {mode === "public" ? (
+        <div className="-mt-4 flex justify-end">
+          <AdminShortcutLink href="/admin/competition/feedback" icon="reply" label="Trả lời góp ý" />
+        </div>
+      ) : null}
+
       {/* 2. Khung gửi ý kiến đóng góp */}
+      {mode === "public" ? (
       <section className="rounded-2xl border border-dusty-border bg-white p-5 shadow-xs sm:p-6">
         <div className="flex items-center gap-2 border-b border-dusty-border/60 pb-3">
           <div className="rounded-lg bg-amber-100 p-1.5 text-amber-900">
@@ -327,6 +337,7 @@ export function FeedbackClient() {
           </form>
         )}
       </section>
+      ) : null}
 
       {/* 3. Danh sách ý kiến & phản hồi */}
       <section className="space-y-4">

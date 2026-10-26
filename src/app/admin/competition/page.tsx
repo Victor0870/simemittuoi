@@ -64,7 +64,7 @@ export default async function CompetitionHubPage() {
       allowed: access.isAdmin,
     },
     {
-      href: "/feedback",
+      href: "/admin/competition/feedback",
       title: "Góp ý & nguyện vọng",
       description: "Tiếp nhận ý kiến, tâm tư và sáng kiến của đoàn viên; Ban Chấp hành phản hồi giải quyết.",
       icon: "rate_review",
