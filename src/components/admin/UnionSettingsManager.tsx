@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   UNION_SETTINGS_LIMITS,
@@ -24,13 +24,19 @@ type OfficerFormState = {
   term: string;
 };
 
-const inputClass =
-  "w-full rounded-lg border border-outline-variant bg-white px-2.5 py-1.5 text-sm text-on-surface outline-none focus:border-[#173A67]";
+const baseInputClass =
+  "rounded-lg border border-outline-variant bg-white px-2.5 py-1.5 text-sm text-on-surface outline-none focus:border-[#173A67]";
+const inputClass = `w-full ${baseInputClass}`;
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
 const controlClass =
   "h-8 rounded-lg border border-outline-variant bg-white px-2 text-xs text-on-surface outline-none focus:border-[#173A67]";
 const iconButtonClass =
   "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-[#173A67] disabled:opacity-30";
+
+function formatMemberLabel(member: Pick<AssignableUnionMember, "fullName" | "employeeCode" | "department">): string {
+  const head = member.employeeCode ? `${member.fullName} (${member.employeeCode})` : member.fullName;
+  return member.department ? `${head} — ${member.department}` : head;
+}
 
 export function UnionSettingsManager({
   initialPositions,
@@ -49,9 +55,12 @@ export function UnionSettingsManager({
   const [positionFilter, setPositionFilter] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
 
-  // Modal / Form thêm & sửa cán bộ
+  // Modal / Form thêm & sửa cán bộ + Combobox liên kết đoàn viên
   const [editingOfficer, setEditingOfficer] = useState<OfficerFormState | null>(null);
   const [memberSearch, setMemberSearch] = useState("");
+  const [memberDropdownOpen, setMemberDropdownOpen] = useState(false);
+  const [memberHighlightIndex, setMemberHighlightIndex] = useState(0);
+  const memberInputRef = useRef<HTMLInputElement | null>(null);
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [busyOfficerId, setBusyOfficerId] = useState<string | null>(null);
 
@@ -103,15 +112,39 @@ export function UnionSettingsManager({
     });
   }, [sortedOfficers, query, positionFilter, activeFilter]);
 
+  const linkedMember = useMemo(() => {
+    if (!editingOfficer?.userId) return null;
+    return members.find((m) => m.id === editingOfficer.userId) ?? null;
+  }, [editingOfficer?.userId, members]);
+
   const filteredMembers = useMemo(() => {
     const q = normalizeViSearch(memberSearch);
-    if (!q) return members.slice(0, 40);
-    return members
-      .filter((m) =>
-        normalizeViSearch(`${m.fullName} ${m.employeeCode ?? ""} ${m.department ?? ""}`).includes(q),
-      )
-      .slice(0, 40);
-  }, [members, memberSearch]);
+    // Nếu đang hiển thị đúng nhãn của đoàn viên đã chọn thì gợi ý danh sách đầu để đổi nhanh nếu muốn
+    if (!q || (linkedMember && normalizeViSearch(formatMemberLabel(linkedMember)) === q)) {
+      return members.slice(0, 30);
+    }
+    const startsWithMatches: AssignableUnionMember[] = [];
+    const includesMatches: AssignableUnionMember[] = [];
+
+    for (const m of members) {
+      const nameNorm = normalizeViSearch(m.fullName);
+      const codeNorm = normalizeViSearch(m.employeeCode ?? "");
+      const deptNorm = normalizeViSearch(m.department ?? "");
+      const combined = `${nameNorm} ${codeNorm} ${deptNorm}`;
+      if (!combined.includes(q)) continue;
+      if (nameNorm.startsWith(q) || (codeNorm && codeNorm.startsWith(q))) {
+        startsWithMatches.push(m);
+      } else {
+        includesMatches.push(m);
+      }
+    }
+    return [...startsWithMatches, ...includesMatches].slice(0, 30);
+  }, [members, memberSearch, linkedMember]);
+
+  const safeMemberHighlight =
+    filteredMembers.length > 0
+      ? Math.max(0, Math.min(memberHighlightIndex, filteredMembers.length - 1))
+      : 0;
 
   const activeOfficersCount = officers.filter((o) => o.isActive && o.positionIsActive).length;
 
@@ -126,6 +159,8 @@ export function UnionSettingsManager({
     const nextOrder =
       (officers.reduce((max, o) => Math.max(max, o.displayOrder), 0) || 0) + 1;
     setMemberSearch("");
+    setMemberDropdownOpen(false);
+    setMemberHighlightIndex(0);
     setEditingOfficer({
       userId: "",
       fullName: "",
@@ -138,7 +173,19 @@ export function UnionSettingsManager({
 
   function openEditOfficer(officer: UnionOfficer) {
     clearNotice();
-    setMemberSearch("");
+    const matched = officer.userId ? members.find((m) => m.id === officer.userId) : null;
+    const initialMemberText = matched
+      ? formatMemberLabel(matched)
+      : officer.userId
+        ? formatMemberLabel({
+            fullName: officer.userFullName || officer.fullName,
+            employeeCode: officer.userEmployeeCode,
+            department: officer.userDepartment,
+          })
+        : "";
+    setMemberSearch(initialMemberText);
+    setMemberDropdownOpen(false);
+    setMemberHighlightIndex(0);
     setEditingOfficer({
       id: officer.id,
       userId: officer.userId ?? "",
@@ -163,6 +210,83 @@ export function UnionSettingsManager({
       userId,
       fullName: picked && shouldAutofillName ? picked.fullName : editingOfficer.fullName,
     });
+    setMemberSearch(picked ? formatMemberLabel(picked) : "");
+    setMemberDropdownOpen(false);
+    setMemberHighlightIndex(0);
+  }
+
+  function handleUnlinkMember() {
+    if (!editingOfficer) return;
+    setEditingOfficer({
+      ...editingOfficer,
+      userId: "",
+    });
+    setMemberSearch("");
+    setMemberDropdownOpen(false);
+    setMemberHighlightIndex(0);
+    memberInputRef.current?.focus();
+  }
+
+  function handleMemberInputChange(value: string) {
+    setMemberSearch(value);
+    setMemberDropdownOpen(true);
+    setMemberHighlightIndex(0);
+    if (editingOfficer && editingOfficer.userId) {
+      // Khi người dùng gõ lại để tìm người khác hoặc xóa trắng, tạm ngắt userId cũ nhưng giữ nguyên Họ tên
+      setEditingOfficer({
+        ...editingOfficer,
+        userId: "",
+      });
+    }
+  }
+
+  function handleMemberInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (!memberDropdownOpen) {
+        setMemberDropdownOpen(true);
+        setMemberHighlightIndex(0);
+        return;
+      }
+      if (filteredMembers.length > 0) {
+        setMemberHighlightIndex((prev) => (prev + 1) % filteredMembers.length);
+      }
+      return;
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!memberDropdownOpen) {
+        setMemberDropdownOpen(true);
+        setMemberHighlightIndex(Math.max(0, filteredMembers.length - 1));
+        return;
+      }
+      if (filteredMembers.length > 0) {
+        setMemberHighlightIndex(
+          (prev) => (prev - 1 + filteredMembers.length) % filteredMembers.length,
+        );
+      }
+      return;
+    }
+
+    if (e.key === "Enter") {
+      if (memberDropdownOpen && filteredMembers[safeMemberHighlight]) {
+        e.preventDefault();
+        handleSelectMember(filteredMembers[safeMemberHighlight].id);
+      } else if (memberDropdownOpen) {
+        e.preventDefault();
+        setMemberDropdownOpen(false);
+      }
+      return;
+    }
+
+    if (e.key === "Escape") {
+      if (memberDropdownOpen) {
+        e.preventDefault();
+        e.stopPropagation();
+        setMemberDropdownOpen(false);
+      }
+    }
   }
 
   async function saveOfficer(e: React.FormEvent) {
@@ -510,7 +634,7 @@ export function UnionSettingsManager({
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_390px]">
         {/* CỘT TRÁI: DANH SÁCH CÁN BỘ CÔNG ĐOÀN */}
         <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-4 shadow-2xs">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e3ecf3] pb-3">
@@ -723,7 +847,7 @@ export function UnionSettingsManager({
         </section>
 
         {/* CỘT PHẢI: DANH MỤC CHỨC DANH CÔNG ĐOÀN */}
-        <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-4 shadow-2xs">
+        <section className="flex flex-col gap-3 rounded-2xl border border-[#d2dfe9] bg-white p-3.5 sm:p-4 shadow-2xs">
           <div className="border-b border-[#e3ecf3] pb-2.5">
             <h2 className="text-base font-extrabold text-[#173A67]">
               Chức danh công đoàn ({positions.length})
@@ -739,24 +863,43 @@ export function UnionSettingsManager({
             onSubmit={handleAddPosition}
           >
             <span className="text-xs font-bold text-[#173A67]">Thêm chức danh mới</span>
-            <div className="flex gap-1.5">
-              <input
-                className={`${inputClass} flex-1`}
-                maxLength={UNION_SETTINGS_LIMITS.positionName}
-                placeholder="VD: Thủ quỹ, Ủy viên UBKT..."
-                value={newPosName}
-                onChange={(e) => setNewPosName(e.target.value)}
-              />
-              <input
-                aria-label="Thứ tự chức danh"
-                className={`${inputClass} w-16 text-center tabular-nums`}
-                title="Thứ tự hiển thị"
-                type="number"
-                value={newPosOrder}
-                onChange={(e) => setNewPosOrder(Number(e.target.value) || 0)}
-              />
+            <div className="grid grid-cols-[minmax(0,1fr)_84px_auto] items-end gap-2">
+              <div className="min-w-0">
+                <label
+                  className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
+                  htmlFor="new-position-name"
+                >
+                  Tên chức danh
+                </label>
+                <input
+                  className={inputClass}
+                  id="new-position-name"
+                  maxLength={UNION_SETTINGS_LIMITS.positionName}
+                  placeholder="VD: Thủ quỹ, Ủy viên UBKT..."
+                  value={newPosName}
+                  onChange={(e) => setNewPosName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label
+                  className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
+                  htmlFor="new-position-order"
+                >
+                  Thứ tự
+                </label>
+                <input
+                  aria-label="Thứ tự chức danh"
+                  className={`${baseInputClass} w-full text-center tabular-nums`}
+                  id="new-position-order"
+                  min={1}
+                  title="Thứ tự hiển thị"
+                  type="number"
+                  value={newPosOrder}
+                  onChange={(e) => setNewPosOrder(Number(e.target.value) || 0)}
+                />
+              </div>
               <button
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#173A67] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-lg bg-[#173A67] px-3 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
                 disabled={addingPos || !newPosName.trim()}
                 type="submit"
               >
@@ -783,22 +926,41 @@ export function UnionSettingsManager({
                 >
                   {isEditing ? (
                     <div className="space-y-2">
-                      <div className="flex gap-1.5">
-                        <input
-                          className={`${inputClass} flex-1`}
-                          maxLength={UNION_SETTINGS_LIMITS.positionName}
-                          placeholder="Tên chức danh"
-                          value={editingPosName}
-                          onChange={(e) => setEditingPosName(e.target.value)}
-                        />
-                        <input
-                          aria-label="Thứ tự hiển thị"
-                          className={`${inputClass} w-16 text-center tabular-nums`}
-                          title="Thứ tự"
-                          type="number"
-                          value={editingPosOrder}
-                          onChange={(e) => setEditingPosOrder(Number(e.target.value) || 0)}
-                        />
+                      <div className="grid grid-cols-[minmax(0,1fr)_84px] items-end gap-2">
+                        <div className="min-w-0">
+                          <label
+                            className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
+                            htmlFor={`edit-pos-name-${pos.id}`}
+                          >
+                            Tên chức danh
+                          </label>
+                          <input
+                            className={inputClass}
+                            id={`edit-pos-name-${pos.id}`}
+                            maxLength={UNION_SETTINGS_LIMITS.positionName}
+                            placeholder="Tên chức danh"
+                            value={editingPosName}
+                            onChange={(e) => setEditingPosName(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label
+                            className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
+                            htmlFor={`edit-pos-order-${pos.id}`}
+                          >
+                            Thứ tự
+                          </label>
+                          <input
+                            aria-label="Thứ tự hiển thị"
+                            className={`${baseInputClass} w-full text-center tabular-nums`}
+                            id={`edit-pos-order-${pos.id}`}
+                            min={1}
+                            title="Thứ tự"
+                            type="number"
+                            value={editingPosOrder}
+                            onChange={(e) => setEditingPosOrder(Number(e.target.value) || 0)}
+                          />
+                        </div>
                       </div>
                       <div className="flex justify-end gap-1.5">
                         <button
@@ -899,34 +1061,132 @@ export function UnionSettingsManager({
 
             <form className="flex min-h-0 flex-1 flex-col" onSubmit={saveOfficer}>
               <div className="space-y-3.5 overflow-y-auto p-5">
-                {/* 1. Liên kết tài khoản đoàn viên (không bắt buộc) */}
+                {/* 1. Liên kết tài khoản đoàn viên (1 ô combobox / autocomplete duy nhất, không bắt buộc) */}
                 <div className="rounded-xl border border-[#d2dfe9] bg-[#f8fbff] p-3">
                   <label className={labelClass} htmlFor="officer-user-link">
                     Liên kết tài khoản đoàn viên{" "}
                     <span className="font-normal text-on-surface-variant">(không bắt buộc)</span>
                   </label>
-                  <input
-                    className={`${inputClass} mb-1.5 text-xs`}
-                    placeholder="Gõ tên hoặc mã nhân viên để lọc nhanh..."
-                    type="search"
-                    value={memberSearch}
-                    onChange={(e) => setMemberSearch(e.target.value)}
-                  />
-                  <select
-                    className={inputClass}
-                    id="officer-user-link"
-                    value={editingOfficer.userId}
-                    onChange={(e) => handleSelectMember(e.target.value)}
-                  >
-                    <option value="">— Không liên kết (nhập họ tên trực tiếp) —</option>
-                    {filteredMembers.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.fullName}
-                        {m.employeeCode ? ` (${m.employeeCode})` : ""}
-                        {m.department ? ` — ${m.department}` : ""}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <MaterialIcon
+                      className={`pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[17px] ${
+                        editingOfficer.userId ? "text-emerald-700" : "text-on-surface-variant"
+                      }`}
+                      name={editingOfficer.userId ? "link" : "person_search"}
+                    />
+                    <input
+                      ref={memberInputRef}
+                      aria-autocomplete="list"
+                      aria-controls="officer-member-listbox"
+                      aria-expanded={memberDropdownOpen}
+                      autoComplete="off"
+                      className={`${inputClass} pl-8 pr-8 ${
+                        editingOfficer.userId
+                          ? "border-emerald-400 bg-emerald-50/40 font-semibold text-[#173A67]"
+                          : ""
+                      }`}
+                      id="officer-user-link"
+                      placeholder="Gõ tên hoặc mã nhân viên để tìm và chọn (hoặc bỏ trống)..."
+                      role="combobox"
+                      type="text"
+                      value={memberSearch}
+                      onBlur={() => setMemberDropdownOpen(false)}
+                      onChange={(e) => handleMemberInputChange(e.target.value)}
+                      onFocus={() => setMemberDropdownOpen(true)}
+                      onKeyDown={handleMemberInputKeyDown}
+                    />
+                    {editingOfficer.userId || memberSearch ? (
+                      <button
+                        aria-label="Bỏ liên kết tài khoản đoàn viên"
+                        className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-on-surface-variant hover:bg-slate-200/70 hover:text-error"
+                        title="Không liên kết (giữ họ tên để nhập trực tiếp)"
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleUnlinkMember();
+                        }}
+                      >
+                        <MaterialIcon className="text-[16px]" name="close" />
+                      </button>
+                    ) : null}
+
+                    {memberDropdownOpen ? (
+                      <div
+                        className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-xl border border-[#c5d6e6] bg-white p-1 shadow-xl"
+                        id="officer-member-listbox"
+                        role="listbox"
+                      >
+                        {filteredMembers.length === 0 ? (
+                          <div className="px-3 py-2.5 text-xs text-on-surface-variant">
+                            Không tìm thấy đoàn viên khớp từ khóa. Bạn có thể nhập họ tên cán bộ trực tiếp ở ô bên dưới.
+                          </div>
+                        ) : (
+                          filteredMembers.map((m, idx) => {
+                            const active = idx === safeMemberHighlight;
+                            const isSelected = editingOfficer.userId === m.id;
+                            return (
+                              <button
+                                key={m.id}
+                                aria-selected={isSelected}
+                                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition ${
+                                  active
+                                    ? "bg-[#173A67] text-white"
+                                    : isSelected
+                                      ? "bg-emerald-50 font-semibold text-emerald-950"
+                                      : "text-on-surface hover:bg-[#ecf4ff]"
+                                }`}
+                                role="option"
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleSelectMember(m.id);
+                                }}
+                                onMouseEnter={() => setMemberHighlightIndex(idx)}
+                              >
+                                <div className="min-w-0 truncate">
+                                  <span className="font-bold">{m.fullName}</span>
+                                  {m.employeeCode ? (
+                                    <span
+                                      className={`ml-1.5 ${
+                                        active ? "text-sky-100" : "text-on-surface-variant"
+                                      }`}
+                                    >
+                                      ({m.employeeCode})
+                                    </span>
+                                  ) : null}
+                                  {m.department ? (
+                                    <span
+                                      className={`ml-1.5 ${
+                                        active ? "text-sky-100" : "text-on-surface-variant"
+                                      }`}
+                                    >
+                                      — {m.department}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <span
+                                  className={`shrink-0 text-[10px] font-semibold ${
+                                    active ? "text-sky-100" : "text-[#173A67]"
+                                  }`}
+                                >
+                                  {isSelected ? "Đang chọn" : "Chọn ↵"}
+                                </span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-on-surface-variant">
+                    {editingOfficer.userId ? (
+                      <span className="font-semibold text-emerald-800">
+                        Đã liên kết tài khoản đoàn viên • Bấm dấu × bên phải ô nếu muốn hủy liên kết.
+                      </span>
+                    ) : (
+                      "Không liên kết: gõ tên hoặc mã NV để chọn nhanh, hoặc để trống và nhập họ tên trực tiếp bên dưới."
+                    )}
+                  </p>
                 </div>
 
                 {/* 2. Họ và tên */}
