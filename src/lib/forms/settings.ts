@@ -2,6 +2,7 @@
  * Cài đặt dùng chung cho các phiếu in (tên đơn vị, người ký) và mức chi thăm hỏi mặc định.
  * Lưu ở cdilv_app_settings (key = FORM_SETTINGS_KEY). Người ký thay đổi hằng năm nên không cố định trong code.
  */
+import { CHAIRMAN_TITLE, normalizeChairmanTitle } from "@/lib/chairman-title";
 import { LIFE_EVENT_TYPES } from "@/lib/life-events/registry";
 
 export const FORM_SETTINGS_KEY = "forms";
@@ -19,7 +20,7 @@ export type FormSettings = {
 
 export const DEFAULT_FORM_SETTINGS: FormSettings = {
   unionName: "Công đoàn Công ty TNHH dầu nhờn Idemitsu Việt Nam",
-  chairmanTitle: "Chủ tịch Công đoàn",
+  chairmanTitle: CHAIRMAN_TITLE,
   chairmanName: "",
   accountantName: "",
   preparerName: "",
@@ -55,7 +56,9 @@ export function normalizeFormSettings(raw: unknown): FormSettings {
   }
   return {
     unionName: text(data.unionName, DEFAULT_FORM_SETTINGS.unionName) || DEFAULT_FORM_SETTINGS.unionName,
-    chairmanTitle: text(data.chairmanTitle, DEFAULT_FORM_SETTINGS.chairmanTitle) || DEFAULT_FORM_SETTINGS.chairmanTitle,
+    chairmanTitle: normalizeChairmanTitle(
+      text(data.chairmanTitle, DEFAULT_FORM_SETTINGS.chairmanTitle) || DEFAULT_FORM_SETTINGS.chairmanTitle,
+    ),
     chairmanName: text(data.chairmanName, ""),
     accountantName: text(data.accountantName, ""),
     preparerName: text(data.preparerName, ""),

@@ -14,8 +14,8 @@ const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
 
 const TEXT_FIELDS: { key: keyof Omit<FormSettings, "visitAmounts">; label: string; hint?: string }[] = [
   { key: "unionName", label: "Tên đơn vị (dòng đầu phiếu)" },
-  { key: "chairmanTitle", label: "Chức danh người duyệt", hint: "Ví dụ: Chủ tịch Công đoàn" },
-  { key: "chairmanName", label: "Họ tên Chủ tịch Công đoàn" },
+  { key: "chairmanTitle", label: "Chức danh người duyệt", hint: "Ví dụ: Chủ tịch BCH Công đoàn" },
+  { key: "chairmanName", label: "Họ tên Chủ tịch BCH Công đoàn" },
   { key: "accountantName", label: "Họ tên Kế toán Công đoàn", hint: "Ký trên Giấy đề nghị thanh toán" },
   { key: "preparerName", label: "Người lập / người thăm hỏi mặc định", hint: "Để trống = lấy tên người lập phiếu" },
   { key: "preparerDepartment", label: "Bộ phận người lập", hint: "Dòng “Bộ phận / Department” trên Giấy đề nghị thanh toán" },

@@ -1,4 +1,5 @@
 import type ExcelJS from "exceljs";
+import { CHAIRMAN_TITLE } from "@/lib/chairman-title";
 import type { FormSettings } from "@/lib/forms/settings";
 import { PAYMENT_LIMITS } from "./registry";
 import type { PaymentItemRow, PaymentRequestRow } from "./server";
@@ -26,7 +27,7 @@ function writeSignatures(ws: ExcelJS.Worksheet, names: [string, string, string],
   const blocks: [string, string, string][] = [
     ["A", "D", "Người Lập"],
     ["E", "G", "Kế toán Công Đoàn"],
-    ["H", "I", "Chủ tịch Công đoàn"],
+    ["H", "I", CHAIRMAN_TITLE],
   ];
   const center: Partial<ExcelJS.Alignment> = { horizontal: "center", vertical: "middle", wrapText: true };
   blocks.forEach(([from, to, title], index) => {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { AdminShortcutLink } from "@/components/admin/AdminShortcutLink";
+import { CHAIRMAN_TITLE } from "@/lib/chairman-title";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -146,7 +147,7 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
         body: JSON.stringify({
           feedbackId,
           reply: replyText.trim(),
-          adminName: replyAdminName.trim() || "Chủ tịch Công đoàn",
+          adminName: replyAdminName.trim() || CHAIRMAN_TITLE,
         }),
       });
       const data = await res.json();
@@ -211,7 +212,7 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
             </h1>
             <p className="max-w-2xl text-xs sm:text-sm text-slate-200 leading-relaxed">
               Diễn đàn tiếp nhận tâm tư, kiến nghị và sáng kiến xây dựng Công đoàn cơ sở vững mạnh.
-              Mọi ý kiến đóng góp đều được Ban Chấp hành và Chủ tịch Công đoàn lắng nghe, tiếp thu và
+              Mọi ý kiến đóng góp đều được Ban Chấp hành và Chủ tịch BCH Công đoàn lắng nghe, tiếp thu và
               trực tiếp phản hồi.
             </p>
           </div>
@@ -488,7 +489,7 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
                       <div className="flex items-center justify-between border-b border-blue-100 pb-2">
                         <div className="flex items-center gap-1.5 text-xs font-bold text-[#173A67]">
                           <MaterialIcon className="text-[18px] text-amber-500" name="verified" />
-                          <span>Phản hồi từ {fb.adminName || "Chủ tịch Công đoàn"}</span>
+                          <span>Phản hồi từ {fb.adminName || CHAIRMAN_TITLE}</span>
                         </div>
                         {fb.adminRepliedAt && (
                           <span className="text-[11px] text-slate-500">
@@ -507,7 +508,7 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
                             onClick={() => {
                               setReplyingId(fb.id);
                               setReplyText(fb.adminReply || "");
-                              setReplyAdminName(fb.adminName || "Chủ tịch Công đoàn");
+                              setReplyAdminName(fb.adminName || CHAIRMAN_TITLE);
                             }}
                             className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#173A67] hover:underline cursor-pointer"
                           >
@@ -528,7 +529,7 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
                             onClick={() => {
                               setReplyingId(fb.id);
                               setReplyText("");
-                              setReplyAdminName("Chủ tịch Công đoàn");
+                              setReplyAdminName(CHAIRMAN_TITLE);
                             }}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 border border-amber-300 hover:bg-amber-100 transition-all cursor-pointer"
                           >
@@ -552,7 +553,7 @@ export function FeedbackClient({ mode = "public" }: { mode?: "public" | "admin" 
 
                           <input
                             type="text"
-                            placeholder="Danh xưng phản hồi (Mặc định: Chủ tịch Công đoàn)"
+                            placeholder={`Danh xưng phản hồi (Mặc định: ${CHAIRMAN_TITLE})`}
                             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800"
                             value={replyAdminName}
                             onChange={(e) => setReplyAdminName(e.target.value)}

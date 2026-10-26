@@ -34,7 +34,7 @@ export default async function PaymentRequestPage({ params, searchParams }: PageP
 
   const missingSigners = [
     !settings.accountantName ? "Kế toán Công đoàn" : null,
-    !settings.chairmanName ? "Chủ tịch Công đoàn" : null,
+    !settings.chairmanName ? "Chủ tịch BCH Công đoàn" : null,
   ].filter(Boolean);
 
   return (

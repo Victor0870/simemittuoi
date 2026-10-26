@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CHAIRMAN_TITLE } from "@/lib/chairman-title";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     if (!isAdmin) {
       return NextResponse.json(
-        { error: "Chỉ Quản trị viên / Chủ tịch Công đoàn mới có quyền phản hồi góp ý." },
+        { error: "Chỉ Quản trị viên / Chủ tịch BCH Công đoàn mới có quyền phản hồi góp ý." },
         { status: 403 },
       );
     }
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const displayName = adminName?.trim() || me?.full_name || "Chủ tịch Công đoàn";
+    const displayName = adminName?.trim() || me?.full_name || CHAIRMAN_TITLE;
     const finalReplyContent = sanitizeCompanyNames(replyContent);
 
     // Cập nhật phản hồi -> Chuyển status = 'replied'

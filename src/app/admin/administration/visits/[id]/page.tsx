@@ -50,7 +50,7 @@ export default async function VisitRequestPage({ params, searchParams }: PagePro
       {!settings.chairmanName ? (
         <div className="flex items-center gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <MaterialIcon className="text-[20px]" name="warning" />
-          Chưa cài họ tên Chủ tịch Công đoàn nên ô chữ ký trên phiếu sẽ để trống. Vào Cài đặt biểu mẫu in để nhập.
+          Chưa cài họ tên Chủ tịch BCH Công đoàn nên ô chữ ký trên phiếu sẽ để trống. Vào Cài đặt biểu mẫu in để nhập.
         </div>
       ) : null}
       <VisitRequestDetailView

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CHAIRMAN_TITLE, normalizeChairmanTitle } from "@/lib/chairman-title";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
         status: row.status || (row.admin_reply ? "replied" : "pending"),
         adminReply: row.admin_reply,
         adminRepliedAt: row.admin_replied_at,
-        adminName: row.admin_name || "Chủ tịch Công đoàn",
+        adminName: normalizeChairmanTitle(row.admin_name || CHAIRMAN_TITLE),
         createdAt: row.created_at,
         author: {
           id: prof?.id ?? row.user_id,
