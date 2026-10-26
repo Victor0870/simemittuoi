@@ -6,6 +6,8 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   UNION_SETTINGS_LIMITS,
   formatOfficerAttendee,
+  formatPositionUsageOptionLabel,
+  getCurrentTermActiveHolders,
   normalizeViSearch,
   type AssignableUnionMember,
   type UnionOfficer,
@@ -43,6 +45,19 @@ function formatMemberLabel(
   return member.department ? `${head} — ${member.department}` : head;
 }
 
+function parseMaxHoldersInput(raw: string): { value: number | null; error?: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { value: null };
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 1 || n > UNION_SETTINGS_LIMITS.maxHolders) {
+    return {
+      value: null,
+      error: "Số người tối đa phải là số nguyên từ 1 trở lên (hoặc để trống nếu không giới hạn).",
+    };
+  }
+  return { value: n };
+}
+
 export function UnionSettingsManager({
   initialPositions,
   initialOfficers,
@@ -72,14 +87,16 @@ export function UnionSettingsManager({
   const [savingOfficer, setSavingOfficer] = useState(false);
   const [busyOfficerId, setBusyOfficerId] = useState<string | null>(null);
 
-  // Quản lý chức danh (tab Chức danh: Thêm mới / Đổi tên / Thứ tự / Ngừng dùng)
+  // Quản lý chức danh (tab Chức danh: Thêm mới / Đổi tên / Số người tối đa / Thứ tự / Ngừng dùng)
   const [newPosName, setNewPosName] = useState("");
+  const [newPosMaxHolders, setNewPosMaxHolders] = useState("");
   const [newPosOrder, setNewPosOrder] = useState<number>(
     () => (initialPositions.reduce((max, p) => Math.max(max, p.displayOrder), 0) || 0) + 1,
   );
   const [addingPos, setAddingPos] = useState(false);
   const [editingPosId, setEditingPosId] = useState<string | null>(null);
   const [editingPosName, setEditingPosName] = useState("");
+  const [editingPosMaxHolders, setEditingPosMaxHolders] = useState("");
   const [editingPosOrder, setEditingPosOrder] = useState<number>(1);
   const [busyPosId, setBusyPosId] = useState<string | null>(null);
 
@@ -130,6 +147,28 @@ export function UnionSettingsManager({
     [officers],
   );
 
+  // Thống kê số cán bộ đang hoạt động trong nhiệm kỳ hiện tại theo từng chức danh
+  const currentHoldersByPosition = useMemo(() => {
+    const map = new Map<string, UnionOfficer[]>();
+    for (const pos of sortedPositions) {
+      map.set(pos.id, getCurrentTermActiveHolders(sortedOfficers, pos.id));
+    }
+    return map;
+  }, [sortedPositions, sortedOfficers]);
+
+  // Danh sách chức danh đang có số người giữ vượt quá giới hạn maxHolders (cảnh báo để Admin tự điều chỉnh)
+  const exceededPositions = useMemo(() => {
+    const list: Array<{ position: UnionPosition; holders: UnionOfficer[] }> = [];
+    for (const pos of sortedPositions) {
+      if (pos.maxHolders === null) continue;
+      const holders = currentHoldersByPosition.get(pos.id) ?? [];
+      if (holders.length > pos.maxHolders) {
+        list.push({ position: pos, holders });
+      }
+    }
+    return list;
+  }, [sortedPositions, currentHoldersByPosition]);
+
   const filteredOfficers = useMemo(() => {
     const q = normalizeViSearch(query);
     return sortedOfficers.filter((o) => {
@@ -177,10 +216,20 @@ export function UnionSettingsManager({
       ? Math.max(0, Math.min(memberHighlightIndex, filteredMembers.length - 1))
       : 0;
 
+  const originalEditingPositionId = useMemo(() => {
+    if (!editingOfficer?.id) return null;
+    return officers.find((o) => o.id === editingOfficer.id)?.positionId ?? null;
+  }, [editingOfficer?.id, officers]);
+
   const selectablePositionsForModal = useMemo(() => {
     if (!editingOfficer) return activePositions;
-    return sortedPositions.filter((p) => p.isActive || p.id === editingOfficer.positionId);
-  }, [sortedPositions, activePositions, editingOfficer]);
+    return sortedPositions.filter(
+      (p) =>
+        p.isActive ||
+        p.id === editingOfficer.positionId ||
+        p.id === originalEditingPositionId,
+    );
+  }, [sortedPositions, activePositions, editingOfficer, originalEditingPositionId]);
 
   const activeOfficersCount = officers.filter((o) => o.isActive && o.positionIsActive).length;
 
@@ -191,7 +240,13 @@ export function UnionSettingsManager({
 
   function openNewOfficer() {
     clearNotice();
-    const defaultPos = activePositions[0] ?? sortedPositions[0];
+    const firstAvailablePos =
+      activePositions.find((p) => {
+        if (p.maxHolders === null) return true;
+        const holders = currentHoldersByPosition.get(p.id) ?? [];
+        return holders.length < p.maxHolders;
+      }) ?? null;
+
     const nextOrder =
       (officers.reduce((max, o) => Math.max(max, o.displayOrder), 0) || 0) + 1;
     setMemberSearch("");
@@ -200,7 +255,7 @@ export function UnionSettingsManager({
     setEditingOfficer({
       userId: "",
       fullName: "",
-      positionId: defaultPos?.id ?? "",
+      positionId: firstAvailablePos?.id ?? "",
       displayOrder: nextOrder,
       isActive: true,
       term: "",
@@ -486,6 +541,12 @@ export function UnionSettingsManager({
     const clean = newPosName.trim();
     if (!clean || addingPos) return;
 
+    const parsedLimit = parseMaxHoldersInput(newPosMaxHolders);
+    if (parsedLimit.error) {
+      setError(parsedLimit.error);
+      return;
+    }
+
     setAddingPos(true);
     clearNotice();
     try {
@@ -495,6 +556,7 @@ export function UnionSettingsManager({
         body: JSON.stringify({
           name: clean,
           displayOrder: newPosOrder,
+          maxHolders: parsedLimit.value,
           isActive: true,
         }),
       });
@@ -508,6 +570,7 @@ export function UnionSettingsManager({
       const created = data.position;
       setPositions((prev) => [...prev, created]);
       setNewPosName("");
+      setNewPosMaxHolders("");
       setNewPosOrder(created.displayOrder + 1);
       setMessage(`Đã thêm chức danh “${created.name}”.`);
     } catch (err) {
@@ -521,6 +584,7 @@ export function UnionSettingsManager({
     clearNotice();
     setEditingPosId(pos.id);
     setEditingPosName(pos.name);
+    setEditingPosMaxHolders(pos.maxHolders !== null ? String(pos.maxHolders) : "");
     setEditingPosOrder(pos.displayOrder);
   }
 
@@ -530,6 +594,12 @@ export function UnionSettingsManager({
       setError("Tên chức danh không được để trống.");
       return;
     }
+    const parsedLimit = parseMaxHoldersInput(editingPosMaxHolders);
+    if (parsedLimit.error) {
+      setError(parsedLimit.error);
+      return;
+    }
+
     setBusyPosId(posId);
     clearNotice();
     try {
@@ -539,6 +609,7 @@ export function UnionSettingsManager({
         body: JSON.stringify({
           name: clean,
           displayOrder: editingPosOrder,
+          maxHolders: parsedLimit.value,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -778,6 +849,45 @@ export function UnionSettingsManager({
               Thêm cán bộ
             </button>
           </div>
+
+          {/* Cảnh báo nếu dữ liệu hiện có vượt giới hạn số người tối đa của chức danh */}
+          {exceededPositions.length > 0 ? (
+            <div className="rounded-xl border border-amber-300 bg-amber-50/90 px-3.5 py-3 text-xs text-amber-950">
+              <div className="flex items-start gap-2">
+                <MaterialIcon
+                  className="mt-0.5 shrink-0 text-[18px] text-amber-700"
+                  name="warning"
+                />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="font-extrabold text-amber-900">
+                    Có chức danh đang vượt quá số người tối đa theo quy định:
+                  </div>
+                  <ul className="list-inside list-disc space-y-0.5">
+                    {exceededPositions.map(({ position: pos, holders }) => (
+                      <li key={pos.id}>
+                        <strong>{pos.name}</strong>: đang có{" "}
+                        <strong>
+                          {holders.length}/{pos.maxHolders} người
+                        </strong>{" "}
+                        ({holders.map((h) => h.fullName).join(", ")})
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="pt-0.5 text-[11px] text-amber-900/90">
+                    Dữ liệu hiện có được giữ nguyên. Vui lòng đổi chức danh / ngừng kích hoạt cán bộ thừa ở bảng dưới, hoặc{" "}
+                    <button
+                      className="font-bold text-[#173A67] underline hover:no-underline"
+                      type="button"
+                      onClick={() => switchTab("chuc-danh")}
+                    >
+                      điều chỉnh giới hạn ở mục Chức danh
+                    </button>
+                    .
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Thanh tìm kiếm & lọc */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px_160px]">
@@ -1105,17 +1215,17 @@ export function UnionSettingsManager({
               Danh mục chức danh công đoàn ({positions.length})
             </h2>
             <p className="text-xs text-on-surface-variant">
-              Mặc định gồm Chủ tịch, Phó chủ tịch, Ủy viên, Kế toán. Bạn có thể thêm chức danh mới, đổi tên, sắp xếp thứ tự hoặc ngừng dùng.
+              Cấu hình tên chức danh, <strong>số người tối đa</strong> trong nhiệm kỳ hiện tại (để trống = không giới hạn) và thứ tự hiển thị.
             </p>
           </div>
 
-          {/* Form thêm chức danh mới (giữ bố cục gọn từ c84f1e2) */}
+          {/* Form thêm chức danh mới (giữ bố cục gọn từ c84f1e2, kèm ô Số người tối đa) */}
           <form
             className="flex flex-col gap-2 rounded-xl border border-[#d2dfe9] bg-[#f8fbff] p-3 sm:p-4"
             onSubmit={handleAddPosition}
           >
             <span className="text-xs font-bold text-[#173A67]">Thêm chức danh mới</span>
-            <div className="grid grid-cols-[minmax(0,1fr)_88px_auto] items-end gap-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_88px] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_140px_88px_auto]">
               <div className="min-w-0">
                 <label
                   className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
@@ -1130,6 +1240,26 @@ export function UnionSettingsManager({
                   placeholder="VD: Thủ quỹ, Ủy viên UBKT..."
                   value={newPosName}
                   onChange={(e) => setNewPosName(e.target.value)}
+                />
+              </div>
+              <div className="min-w-0">
+                <label
+                  className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
+                  htmlFor="new-position-max-holders"
+                >
+                  Số người tối đa
+                </label>
+                <input
+                  aria-label="Số người tối đa của chức danh mới"
+                  className={`${baseInputClass} w-full tabular-nums`}
+                  id="new-position-max-holders"
+                  max={UNION_SETTINGS_LIMITS.maxHolders}
+                  min={1}
+                  placeholder="Không giới hạn"
+                  title="Để trống nếu không giới hạn số người giữ chức danh này"
+                  type="number"
+                  value={newPosMaxHolders}
+                  onChange={(e) => setNewPosMaxHolders(e.target.value)}
                 />
               </div>
               <div>
@@ -1151,7 +1281,7 @@ export function UnionSettingsManager({
                 />
               </div>
               <button
-                className="inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-lg bg-[#173A67] px-3.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50"
+                className="col-start-2 row-start-1 inline-flex h-[34px] shrink-0 items-center justify-center gap-1 rounded-lg bg-[#173A67] px-3.5 text-xs font-bold text-white hover:bg-[#1E4A7D] disabled:opacity-50 sm:col-start-auto sm:row-start-auto"
                 disabled={addingPos || !newPosName.trim()}
                 type="submit"
               >
@@ -1165,7 +1295,12 @@ export function UnionSettingsManager({
           <div className="space-y-2">
             {sortedPositions.map((pos) => {
               const isEditing = editingPosId === pos.id;
-              const usedCount = officers.filter((o) => o.positionId === pos.id).length;
+              const activeHolders = currentHoldersByPosition.get(pos.id) ?? [];
+              const totalAssignedCount = officers.filter((o) => o.positionId === pos.id).length;
+              const isOverLimit =
+                pos.maxHolders !== null && activeHolders.length > pos.maxHolders;
+              const isAtLimit =
+                pos.maxHolders !== null && activeHolders.length === pos.maxHolders;
 
               return (
                 <div
@@ -1178,8 +1313,8 @@ export function UnionSettingsManager({
                 >
                   {isEditing ? (
                     <div className="space-y-2.5">
-                      <div className="grid grid-cols-[minmax(0,1fr)_88px] items-end gap-2">
-                        <div className="min-w-0">
+                      <div className="grid grid-cols-[minmax(0,1fr)_88px] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_140px_88px]">
+                        <div className="col-span-2 min-w-0 sm:col-span-1">
                           <label
                             className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
                             htmlFor={`edit-pos-name-${pos.id}`}
@@ -1193,6 +1328,26 @@ export function UnionSettingsManager({
                             placeholder="Tên chức danh"
                             value={editingPosName}
                             onChange={(e) => setEditingPosName(e.target.value)}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <label
+                            className="mb-1 block text-[11px] font-semibold text-on-surface-variant"
+                            htmlFor={`edit-pos-max-holders-${pos.id}`}
+                          >
+                            Số người tối đa
+                          </label>
+                          <input
+                            aria-label="Số người tối đa"
+                            className={`${baseInputClass} w-full tabular-nums`}
+                            id={`edit-pos-max-holders-${pos.id}`}
+                            max={UNION_SETTINGS_LIMITS.maxHolders}
+                            min={1}
+                            placeholder="Không giới hạn"
+                            title="Để trống nếu không giới hạn"
+                            type="number"
+                            value={editingPosMaxHolders}
+                            onChange={(e) => setEditingPosMaxHolders(e.target.value)}
                           />
                         </div>
                         <div>
@@ -1234,8 +1389,8 @@ export function UnionSettingsManager({
                     </div>
                   ) : (
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-[1_1_16rem]">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span className="inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-[#ecf4ff] px-1.5 text-xs font-bold text-[#173A67] tabular-nums">
                             {pos.displayOrder}
                           </span>
@@ -1257,9 +1412,26 @@ export function UnionSettingsManager({
                           >
                             {pos.isActive ? "Đang dùng" : "Đã ngừng dùng"}
                           </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${
+                              isOverLimit
+                                ? "border border-amber-300 bg-amber-50 text-amber-900"
+                                : isAtLimit
+                                  ? "border border-[#c5d6e6] bg-[#ecf4ff] text-[#173A67]"
+                                  : "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {pos.maxHolders !== null
+                              ? `${activeHolders.length}/${pos.maxHolders} người`
+                              : `${activeHolders.length} người • Không giới hạn`}
+                          </span>
                         </div>
                         <p className="mt-0.5 pl-8 text-[11px] text-on-surface-variant">
-                          {usedCount > 0 ? `Đang gán cho ${usedCount} cán bộ` : "Chưa gán cán bộ nào"}
+                          {activeHolders.length > 0
+                            ? `Đang giữ chức danh: ${activeHolders.map((h) => h.fullName).join(", ")}`
+                            : totalAssignedCount > 0
+                              ? `Chưa có cán bộ đang hoạt động trong nhiệm kỳ hiện tại (${totalAssignedCount} cán bộ ngừng/nhiệm kỳ cũ)`
+                              : "Chưa gán cán bộ nào"}
                         </p>
                       </div>
 
@@ -1289,12 +1461,12 @@ export function UnionSettingsManager({
                         </button>
                         <button
                           className="inline-flex h-7 items-center gap-1 rounded-lg border border-outline-variant px-2.5 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-                          title="Đổi tên hoặc sửa thứ tự chức danh"
+                          title="Đổi tên, chỉnh số người tối đa hoặc thứ tự chức danh"
                           type="button"
                           onClick={() => startEditPosition(pos)}
                         >
                           <MaterialIcon className="text-[14px]" name="edit" />
-                          Đổi tên
+                          Sửa
                         </button>
                         <button
                           className={`inline-flex h-7 items-center rounded-lg border px-2.5 text-xs font-semibold disabled:opacity-50 ${
@@ -1513,12 +1685,26 @@ export function UnionSettingsManager({
                       }
                     >
                       <option value="">— Chọn chức danh —</option>
-                      {selectablePositionsForModal.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                          {p.isActive ? "" : " (đã ngừng dùng)"}
-                        </option>
-                      ))}
+                      {selectablePositionsForModal.map((p) => {
+                        const totalHolders = currentHoldersByPosition.get(p.id) ?? [];
+                        const holdersExcludingSelf = editingOfficer.id
+                          ? totalHolders.filter((h) => h.id !== editingOfficer.id)
+                          : totalHolders;
+                        const isOwnCurrentTitle =
+                          Boolean(editingOfficer.id) &&
+                          (p.id === originalEditingPositionId ||
+                            p.id === editingOfficer.positionId);
+                        const isFull =
+                          p.maxHolders !== null &&
+                          holdersExcludingSelf.length >= p.maxHolders &&
+                          !isOwnCurrentTitle;
+
+                        return (
+                          <option key={p.id} disabled={isFull} value={p.id}>
+                            {formatPositionUsageOptionLabel(p, totalHolders.length)}
+                          </option>
+                        );
+                      })}
                     </select>
                     {selectablePositionsForModal.length === 0 ? (
                       <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900">
@@ -1565,7 +1751,7 @@ export function UnionSettingsManager({
                     className={inputClass}
                     id="officer-term"
                     maxLength={UNION_SETTINGS_LIMITS.term}
-                    placeholder="VD: 2023 - 2028"
+                    placeholder="VD: 2026 - 2030"
                     value={editingOfficer.term}
                     onChange={(e) => setEditingOfficer({ ...editingOfficer, term: e.target.value })}
                   />
