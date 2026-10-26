@@ -54,7 +54,7 @@ export function AccountShell({ children }: { children: ReactNode }) {
   const manageLink = isAdmin
     ? { href: "/admin", label: "Trang quản trị", icon: "shield" }
     : hasAnyPermission
-      ? { href: "/admin", label: "Khu vực quản lý", icon: "work" }
+      ? { href: "/admin", label: "Trang quản trị", icon: "admin_panel_settings" }
       : null;
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);

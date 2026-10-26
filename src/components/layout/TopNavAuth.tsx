@@ -50,10 +50,10 @@ export function TopNavAuth() {
         <Link
           className="hidden items-center gap-1 rounded-full border border-[#173A67]/30 bg-[#D9F2EC] px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:bg-[#c6eae1] sm:inline-flex"
           href="/admin"
-          title="Khu vực quản lý"
+          title="Trang quản trị"
         >
-          <MaterialIcon className="text-[15px]" name="work" />
-          <span>Quản lý</span>
+          <MaterialIcon className="text-[15px]" name="admin_panel_settings" />
+          <span>Trang quản trị</span>
         </Link>
       ) : null}
       <NotificationBell />

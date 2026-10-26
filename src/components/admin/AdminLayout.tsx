@@ -17,7 +17,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [trail, setTrail] = useState<AdminTrail | null>(null);
   const extra = page && trail?.pathname === pathname ? trail.items : [];
   const hubHref = group && canOpenAdmin(group.href) ? group.href : "/admin";
-  const parent = extra.length > 1 ? extra[extra.length - 2] : extra.length === 1 || subpage ? page : null;
+  const detailLabel =
+    page && !subpage && pathname !== page.href ? (pathname.endsWith("/new") ? "Tạo mới" : "Chi tiết") : null;
+  const parent =
+    extra.length > 1 ? extra[extra.length - 2] : extra.length === 1 || subpage || detailLabel ? page : null;
   const backHref = parent?.href ?? hubHref;
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -137,6 +140,20 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                       <span className="shrink-0 text-outline">/</span>
                       <span aria-current="page" className="min-w-0 truncate font-bold text-[#173A67]">
                         {subpage.label}
+                      </span>
+                    </>
+                  ) : page && detailLabel ? (
+                    <>
+                      <span className="shrink-0 text-outline">/</span>
+                      <Link
+                        className="min-w-0 max-w-[7rem] truncate text-on-surface-variant hover:text-[#173A67] sm:max-w-[12rem] md:max-w-none"
+                        href={page.href}
+                      >
+                        {page.label}
+                      </Link>
+                      <span className="shrink-0 text-outline">/</span>
+                      <span aria-current="page" className="min-w-0 truncate font-bold text-[#173A67]">
+                        {detailLabel}
                       </span>
                     </>
                   ) : page ? (
