@@ -31,7 +31,7 @@ export default async function LifeEventsPage() {
         {canViewAllLifeEvents(access) ? (
           <Link
             className="flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]"
-            href="/office/life-events"
+            href="/admin/administration/life-events"
           >
             <MaterialIcon className="text-[18px]" name="inbox" />
             Hộp tin báo (quản lý)

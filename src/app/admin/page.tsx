@@ -5,6 +5,7 @@ import {
   type OverviewKpi,
   type OverviewTask,
 } from "@/components/admin/AdminOverview";
+import { ManagerOverview } from "@/components/admin/ManagerOverview";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { getSessionUserId } from "@/lib/auth/session";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
@@ -26,6 +27,13 @@ export default async function AdminDashboardPage() {
 
   if (!userId) {
     redirect("/login?next=/admin");
+  }
+
+  const viewer = await getCurrentAccess();
+  if (!viewer) redirect("/login?next=/admin");
+  if (!viewer.isAdmin) {
+    if (!viewer.isApproved) redirect("/");
+    return <ManagerOverview access={viewer} />;
   }
 
   // Hồ sơ, số liệu nhanh và quyền chạy song song; chỉ dùng số liệu sau khi đã kiểm tra quyền admin
@@ -159,7 +167,7 @@ export default async function AdminDashboardPage() {
     ...(canLifeEvents
       ? [
           {
-            href: "/office/life-events",
+            href: "/admin/administration/life-events",
             count: pendingLifeEvents,
             text: `${pendingLifeEvents} tin báo chờ tiếp nhận`,
             emptyText: "Không có tin báo chờ tiếp nhận",
@@ -169,7 +177,7 @@ export default async function AdminDashboardPage() {
     ...(canVisits
       ? [
           {
-            href: "/office/visits",
+            href: "/admin/administration/visits",
             count: pendingVisits,
             text: `${pendingVisits} đề nghị thăm hỏi chờ duyệt`,
             emptyText: "Không có đề nghị thăm hỏi chờ duyệt",
@@ -179,7 +187,7 @@ export default async function AdminDashboardPage() {
     ...(canPayments
       ? [
           {
-            href: "/office/payments",
+            href: "/admin/administration/payments",
             count: pendingPayments,
             text: `${pendingPayments} đề nghị thanh toán chờ duyệt`,
             emptyText: "Không có đề nghị thanh toán chờ duyệt",
@@ -205,8 +213,8 @@ export default async function AdminDashboardPage() {
   const actions: OverviewAction[] = [
     { href: "/admin/scores", label: "Cộng điểm", icon: "military_tech", allowed: true },
     { href: "/posts", label: "Đăng bài", icon: "edit_note", allowed: access ? hasPermission(access, PERMISSIONS.postsManage) : false },
-    { href: "/office/finance", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: access ? financeAbilities(access).record : false },
-    { href: "/office/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: access ? paymentAbilities(access).create : false },
+    { href: "/admin/finance/ledger", label: "Ghi thu / chi", icon: "account_balance_wallet", allowed: access ? financeAbilities(access).record : false },
+    { href: "/admin/administration/payments/new", label: "Lập đề nghị", icon: "request_quote", allowed: access ? paymentAbilities(access).create : false },
     { href: "/admin/quiz", label: "Bật trắc nghiệm", icon: "quiz", allowed: true },
     { href: "/admin/popups", label: "Popup mới", icon: "notification_important", allowed: access ? hasPermission(access, PERMISSIONS.popupsManage) : false },
   ].filter((a) => a.allowed);

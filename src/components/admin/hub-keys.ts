@@ -7,9 +7,9 @@ export function isHubKey(value: unknown): value is HubKey {
   return typeof value === "string" && (HUB_KEYS as readonly string[]).includes(value);
 }
 
-/** Thêm from=<hub> cho link ra ngoài /admin, /office (giữ query sẵn có, đặt trước #hash). */
+/** Thêm from=<hub> cho link ra ngoài /admin (giữ query sẵn có, đặt trước #hash). */
 export function withHubFrom(href: string, hubKey: HubKey | undefined): string {
-  if (!hubKey || /^\/(admin|office)(\/|$|\?|#)/.test(href)) return href;
+  if (!hubKey || /^\/admin(\/|$|\?|#)/.test(href)) return href;
   const hashIndex = href.indexOf("#");
   const base = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
   const hash = hashIndex >= 0 ? href.slice(hashIndex) : "";

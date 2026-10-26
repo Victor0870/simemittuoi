@@ -409,7 +409,7 @@ export function hasPermission(access: AccessInfo, code: PermissionCode): boolean
   return access.isAdmin || access.permissions.includes(code);
 }
 
-/** Công cụ hiển thị ở trang "Khu vực quản lý" (/office), lọc theo quyền. */
+/** Công cụ hiển thị ở trang tổng quan /admin của cấp quản lý (không phải admin), lọc theo quyền. */
 export type OfficeTool = {
   href: string;
   title: string;
@@ -427,63 +427,63 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.employeesView,
   },
   {
-    href: "/office/members",
+    href: "/admin/members",
     title: "Hồ sơ đoàn viên",
     description: "Tra cứu hồ sơ, tình trạng khai báo, thông tin con của đoàn viên.",
     icon: "contact_page",
     permission: PERMISSIONS.membersView,
   },
   {
-    href: "/office/gifts/children",
+    href: "/admin/administration/gifts/children",
     title: "Quà thiếu nhi",
     description: "Một nút lọc con đoàn viên dưới 16 tuổi theo mốc ngày, in danh sách ký nhận và xuất Excel.",
     icon: "redeem",
     permission: PERMISSIONS.giftsChildren,
   },
   {
-    href: "/office/rewards",
+    href: "/admin/administration/rewards",
     title: "Thanh toán thưởng",
     description: "Danh sách nhận thưởng của chương trình bình chọn đã kết thúc: số tài khoản, số tiền, in và xuất Excel.",
     icon: "payments",
     permission: PERMISSIONS.rewardsPayout,
   },
   {
-    href: "/office/life-events",
+    href: "/admin/administration/life-events",
     title: "Tin báo của đoàn viên",
     description: "Tin vui, tin ốm, khó khăn đoàn viên gửi lên: xem giấy tờ, tiếp nhận, ghi chú.",
     icon: "campaign",
     permission: PERMISSIONS.lifeEventsView,
   },
   {
-    href: "/office/visits",
+    href: "/admin/administration/visits",
     title: "Đề nghị thăm hỏi",
     description: "Lập đề nghị thăm hỏi từ tin báo, duyệt, xác nhận đã chi và in phiếu thăm hỏi theo mẫu C11-TLĐ.",
     icon: "volunteer_activism",
     permission: PERMISSIONS.visitsView,
   },
   {
-    href: "/office/payments",
+    href: "/admin/administration/payments",
     title: "Đề nghị thanh toán",
     description: "Lập giấy đề nghị thanh toán (gom phiếu thăm hỏi đã duyệt), duyệt, xác nhận đã chi và tải phiếu Excel theo mẫu.",
     icon: "request_quote",
     permission: PERMISSIONS.paymentsView,
   },
   {
-    href: "/office/finance",
+    href: "/admin/finance/ledger",
     title: "Sổ quỹ công đoàn",
     description: "Số dư quỹ tiền mặt / ngân hàng, phiếu thu – chi, chuyển quỹ, khóa sổ và xuất sổ quỹ Excel.",
     icon: "account_balance_wallet",
     permission: PERMISSIONS.financeView,
   },
   {
-    href: "/office/catalogs",
+    href: "/admin/finance/catalogs",
     title: "Quản lý danh mục",
     description: "Danh mục thu – chi và danh mục đối tượng (công ty, cá nhân: MST, số tài khoản, ngân hàng) dùng cho sổ quỹ và đề nghị thanh toán.",
     icon: "category",
     permission: PERMISSIONS.catalogsManage,
   },
   {
-    href: "/office/reports",
+    href: "/admin/finance/reports",
     title: "Báo cáo tổng hợp",
     description: "Thu – chi theo danh mục, số dư quỹ, thăm hỏi và đề nghị thanh toán theo tháng / quý / năm, xuất Excel.",
     icon: "monitoring",
@@ -497,7 +497,7 @@ export const OFFICE_TOOLS: OfficeTool[] = [
     permission: PERMISSIONS.financeManage,
   },
   {
-    href: "/office/print-settings",
+    href: "/admin/administration/print-settings",
     title: "Cài đặt biểu mẫu in",
     description: "Tên đơn vị, người ký trên phiếu in và mức chi thăm hỏi mặc định.",
     icon: "print",
@@ -561,20 +561,52 @@ export const OFFICE_TOOLS: OfficeTool[] = [
   },
 ];
 
-/** Các trang trong /admin mở cho người có quyền (trang /admin khác vẫn chỉ dành cho admin). */
-export const ADMIN_ROUTE_PERMISSIONS: { prefix: string; permission: PermissionCode }[] = [
-  { prefix: "/admin/employees", permission: PERMISSIONS.employeesView },
-  { prefix: "/admin/polls", permission: PERMISSIONS.pollsManage },
-  { prefix: "/admin/popups", permission: PERMISSIONS.popupsManage },
-  { prefix: "/admin/content/guides", permission: PERMISSIONS.postsManage },
-  { prefix: "/admin/finance/regulations", permission: PERMISSIONS.financeManage },
-  { prefix: "/admin/documents", permission: PERMISSIONS.postsManage },
-  { prefix: "/admin/union-settings", permission: PERMISSIONS.formsSettings },
+export type AdminRoutePermission = {
+  prefix: string;
+  /** Chỉ cần một trong các quyền này. */
+  permissions: PermissionCode[];
+  /** Chỉ áp dụng đúng đường dẫn prefix, không áp dụng cho trang con. */
+  exact?: boolean;
+};
+
+const OFFICE_TOOL_PERMISSIONS = [...new Set(OFFICE_TOOLS.map((tool) => tool.permission))];
+
+/** Các trang trong /admin mở cho người có quyền (trang /admin khác vẫn chỉ dành cho admin). Khớp đường dẫn dài nhất. */
+export const ADMIN_ROUTE_PERMISSIONS: AdminRoutePermission[] = [
+  { prefix: "/admin", permissions: OFFICE_TOOL_PERMISSIONS, exact: true },
+  { prefix: "/admin/employees", permissions: [PERMISSIONS.employeesView] },
+  { prefix: "/admin/members", permissions: [PERMISSIONS.membersView] },
+  { prefix: "/admin/polls", permissions: [PERMISSIONS.pollsManage] },
+  { prefix: "/admin/popups", permissions: [PERMISSIONS.popupsManage] },
+  { prefix: "/admin/content/guides", permissions: [PERMISSIONS.postsManage] },
+  { prefix: "/admin/administration/life-events", permissions: [PERMISSIONS.lifeEventsView] },
+  { prefix: "/admin/administration/visits", permissions: [PERMISSIONS.visitsView] },
+  { prefix: "/admin/administration/payments", permissions: [PERMISSIONS.paymentsView] },
+  { prefix: "/admin/administration/rewards", permissions: [PERMISSIONS.rewardsPayout] },
+  { prefix: "/admin/administration/gifts", permissions: [PERMISSIONS.giftsChildren] },
+  { prefix: "/admin/administration/print-settings", permissions: [PERMISSIONS.formsSettings] },
+  { prefix: "/admin/finance/ledger", permissions: [PERMISSIONS.financeView] },
+  { prefix: "/admin/finance/settings", permissions: [PERMISSIONS.financeManage] },
+  { prefix: "/admin/finance/reports", permissions: [PERMISSIONS.reportsView] },
+  { prefix: "/admin/finance/catalogs", permissions: [PERMISSIONS.catalogsManage] },
+  { prefix: "/admin/finance/regulations", permissions: [PERMISSIONS.financeManage] },
+  { prefix: "/admin/documents", permissions: [PERMISSIONS.postsManage] },
+  { prefix: "/admin/union-settings", permissions: [PERMISSIONS.formsSettings] },
 ];
 
-export function findAdminRoutePermission(pathname: string): PermissionCode | null {
-  const match = ADMIN_ROUTE_PERMISSIONS.find(
-    (r) => pathname === r.prefix || pathname.startsWith(`${r.prefix}/`),
-  );
-  return match?.permission ?? null;
+/** Quyền (một trong số) mở được trang /admin này cho người không phải admin; null = chỉ admin. */
+export function findAdminRoutePermissions(pathname: string): PermissionCode[] | null {
+  const match = ADMIN_ROUTE_PERMISSIONS.filter((r) =>
+    r.exact ? pathname === r.prefix : pathname === r.prefix || pathname.startsWith(`${r.prefix}/`),
+  ).sort((a, b) => b.prefix.length - a.prefix.length)[0];
+  return match?.permissions ?? null;
+}
+
+/** Cùng quy tắc với middleware: admin vào mọi trang /admin, người khác theo ADMIN_ROUTE_PERMISSIONS. */
+export function canAccessAdminPath(access: AccessInfo, pathname: string): boolean {
+  if (!access.isApproved) return false;
+  if (access.isAdmin) return true;
+  const path = pathname.split(/[?#]/)[0];
+  const permissions = findAdminRoutePermissions(path);
+  return permissions !== null && permissions.some((code) => hasPermission(access, code));
 }

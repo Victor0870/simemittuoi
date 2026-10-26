@@ -200,7 +200,7 @@ export function PaymentRequestDetailView({ detail, can, isCreator, canViewVisits
                       canViewVisits ? (
                         <Link
                           className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800 hover:underline"
-                          href={`/office/visits/${i.visit_request_id}`}
+                          href={`/admin/administration/visits/${i.visit_request_id}`}
                         >
                           {i.visit_code ?? "Phiếu thăm hỏi"}
                         </Link>

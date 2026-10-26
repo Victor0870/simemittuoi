@@ -40,7 +40,7 @@ export default async function LifeEventDetailPage({ params, searchParams }: Page
     <div className="max-w-3xl space-y-4 pb-10">
       <Link
         className="inline-flex items-center gap-1 text-sm font-semibold text-on-surface-variant hover:text-[#173A67]"
-        href={isOffice && !isOwner ? "/office/life-events" : "/life-events"}
+        href={isOffice && !isOwner ? "/admin/administration/life-events" : "/life-events"}
       >
         <MaterialIcon className="text-[18px]" name="arrow_back" />
         {isOffice && !isOwner ? "Hộp tin báo" : "Tin bạn đã báo"}

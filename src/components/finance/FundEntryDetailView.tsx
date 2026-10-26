@@ -156,7 +156,7 @@ export function FundEntryDetailView({ detail, funds, categories, lockedThrough, 
               <dt className="text-xs text-on-surface-variant">Ghi tự động từ</dt>
               <dd>
                 {canViewPayments ? (
-                  <Link className="font-semibold text-[#173A67] underline" href={`/office/payments/${detail.payment_request_id}`}>
+                  <Link className="font-semibold text-[#173A67] underline" href={`/admin/administration/payments/${detail.payment_request_id}`}>
                     Đề nghị thanh toán {detail.payment_code ?? ""}
                   </Link>
                 ) : (

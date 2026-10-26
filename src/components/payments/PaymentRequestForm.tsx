@@ -168,7 +168,7 @@ export function PaymentRequestForm({ mode, initial, requestId, canGatherVisits, 
         setError(data.error ?? "Không lưu được đề nghị.");
         return;
       }
-      if (mode === "create") router.push(`/office/payments/${data.id}?created=1`);
+      if (mode === "create") router.push(`/admin/administration/payments/${data.id}?created=1`);
       else {
         router.refresh();
         onCancel?.();

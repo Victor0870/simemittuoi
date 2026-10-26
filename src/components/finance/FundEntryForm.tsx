@@ -79,7 +79,7 @@ export function FundEntryForm({ mode, initial, funds, categories, lockedThrough,
         setError(data.error ?? "Không lưu được bút toán.");
         return;
       }
-      if (mode === "create") router.push(`/office/finance/${data.id}?created=1`);
+      if (mode === "create") router.push(`/admin/finance/ledger/${data.id}?created=1`);
       else {
         router.refresh();
         onCancel?.();

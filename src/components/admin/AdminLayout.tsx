@@ -9,14 +9,14 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { NotificationBell } from "@/components/layout/NotificationBell";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 
-/** Khung chung cho /admin/* và /office/*: sidebar cố định (drawer trên mobile), thanh tiêu đề, vùng nội dung. */
+/** Khung chung cho /admin/*: sidebar cố định (drawer trên mobile), thanh tiêu đề, vùng nội dung. */
 export function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() || "/admin";
   const { group, page, subpage, isHub } = resolveAdminLocation(pathname);
   const { user, profile, isAdmin } = useAuth();
   const [trail, setTrail] = useState<AdminTrail | null>(null);
   const extra = page && trail?.pathname === pathname ? trail.items : [];
-  const hubHref = group && isAdmin ? group.href : "/office";
+  const hubHref = group && isAdmin ? group.href : "/admin";
   const parent = extra.length > 1 ? extra[extra.length - 2] : extra.length === 1 || subpage ? page : null;
   const backHref = parent?.href ?? hubHref;
   const [open, setOpen] = useState(false);
@@ -80,7 +80,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               </Link>
             ) : null}
             <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-sm">
-              <Link className="shrink-0 text-on-surface-variant hover:text-[#173A67]" href={isAdmin ? "/admin" : "/office"}>
+              <Link className="shrink-0 text-on-surface-variant hover:text-[#173A67]" href="/admin">
                 Quản trị
               </Link>
               <span className="shrink-0 text-outline">/</span>

@@ -13,7 +13,7 @@ type MobileBottomNavProps = {
 
 type NavItem = { href: string; label: string; icon: string };
 
-const SECTION_PREFIXES = ["/admin", "/office", "/albums"];
+const SECTION_PREFIXES = ["/admin", "/albums"];
 
 export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
   const pathname = usePathname();
@@ -39,7 +39,7 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
     ? { href: "/admin", label: "Tài khoản", icon: "admin_panel_settings" }
     : { href: "/settings", label: "Tài khoản", icon: "person" };
   const officeItems: NavItem[] =
-    hasAnyPermission && !isAdmin ? [{ href: "/office", label: "Quản lý", icon: "work" }] : [];
+    hasAnyPermission && !isAdmin ? [{ href: "/admin", label: "Quản lý", icon: "work" }] : [];
   const scrollItems: NavItem[] = [...restItems, ...memberItems, ...officeItems, accountItem];
 
   function isItemActive(href: string) {

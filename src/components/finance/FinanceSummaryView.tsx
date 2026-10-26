@@ -188,7 +188,7 @@ export function FinanceSummaryView({
         accessor: (r) => r.code,
         className: "whitespace-nowrap",
         render: (r) => (
-          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/finance/${r.id}`}>
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/admin/finance/ledger/${r.id}`}>
             {r.code}
           </Link>
         ),
@@ -286,7 +286,7 @@ export function FinanceSummaryView({
             <MaterialIcon className="text-[18px]" name="arrow_back" />
             Về Tài chính
           </Link>
-          <Link className={navButtonClass} href="/office/finance">
+          <Link className={navButtonClass} href="/admin/finance/ledger">
             <MaterialIcon className="text-[18px]" name="account_balance_wallet" />
             Mở Sổ quỹ
           </Link>

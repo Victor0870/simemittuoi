@@ -49,7 +49,7 @@ export function TopNavAuth() {
       ) : hasAnyPermission ? (
         <Link
           className="hidden items-center gap-1 rounded-full border border-[#173A67]/30 bg-[#D9F2EC] px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:bg-[#c6eae1] sm:inline-flex"
-          href="/office"
+          href="/admin"
           title="Khu vực quản lý"
         >
           <MaterialIcon className="text-[15px]" name="work" />

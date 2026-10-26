@@ -1,6 +1,6 @@
 import { DETAIL_FIELD_LABEL, type MemberDetails } from "@/lib/members/profile-shared";
 
-/** Cột của bảng Hồ sơ đoàn viên (/office/members), theo thứ tự hiển thị. */
+/** Cột của bảng Hồ sơ đoàn viên (/admin/members), theo thứ tự hiển thị. */
 export const MEMBER_TABLE_COLUMNS = [
   "employee_code",
   "full_name",

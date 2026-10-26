@@ -72,7 +72,7 @@ export function PaymentRequestList({ items }: Props) {
       className: "whitespace-nowrap",
       render: (i) => (
         <>
-          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/payments/${i.id}`}>
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/admin/administration/payments/${i.id}`}>
             {i.code}
           </Link>
           <p className="text-[11px] text-on-surface-variant">{formatDateVi(i.request_date)}</p>

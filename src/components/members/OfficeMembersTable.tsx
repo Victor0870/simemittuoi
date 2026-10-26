@@ -262,7 +262,7 @@ export function OfficeMembersTable({ rows, canExport = false, canImport = false 
       key: "full_name",
       header: MEMBER_TABLE_COLUMN_LABEL.full_name,
       render: (r) => (
-        <Link className="font-semibold text-[#173A67] hover:underline" href={`/office/members/${r.id}`}>
+        <Link className="font-semibold text-[#173A67] hover:underline" href={`/admin/members/${r.id}`}>
           {r.full_name}
         </Link>
       ),

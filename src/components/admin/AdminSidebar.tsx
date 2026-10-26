@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AdminLogoutButton } from "@/components/admin/AdminLogoutButton";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { BRAND } from "@/lib/brand";
 
@@ -19,13 +18,13 @@ export type AdminNavGroup = {
 };
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
-  { key: "overview", label: "Tổng quan", icon: "dashboard", href: "/admin", prefixes: [], exact: ["/admin", "/office"] },
+  { key: "overview", label: "Tổng quan", icon: "dashboard", href: "/admin", prefixes: [], exact: ["/admin"] },
   {
     key: "members",
     label: "Quản lý đoàn viên",
     icon: "groups",
     href: "/admin/members-hub",
-    prefixes: ["/admin/members-hub", "/admin/users", "/admin/employees", "/office/members"],
+    prefixes: ["/admin/members-hub", "/admin/users", "/admin/employees", "/admin/members"],
   },
   {
     key: "competition",
@@ -46,22 +45,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Quản lý hành chính",
     icon: "assignment",
     href: "/admin/administration",
-    prefixes: [
-      "/admin/administration",
-      "/office/life-events",
-      "/office/visits",
-      "/office/payments",
-      "/office/rewards",
-      "/office/gifts",
-      "/office/print-settings",
-    ],
+    prefixes: ["/admin/administration"],
   },
   {
     key: "finance",
     label: "Tài chính công đoàn",
     icon: "account_balance_wallet",
     href: "/admin/finance",
-    prefixes: ["/admin/finance", "/office/finance", "/office/reports", "/office/catalogs"],
+    prefixes: ["/admin/finance"],
   },
   {
     key: "documents",
@@ -90,7 +81,7 @@ export type AdminChildPage = {
 export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
   members: [
     { href: "/admin/users", label: "Duyệt thành viên" },
-    { href: "/office/members", label: "Hồ sơ đoàn viên" },
+    { href: "/admin/members", label: "Hồ sơ đoàn viên" },
     { href: "/admin/employees", label: "DS nhân viên được đăng ký" },
   ],
   competition: [
@@ -106,19 +97,19 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/popups", label: "Popup thông báo" },
   ],
   administration: [
-    { href: "/office/life-events", label: "Hộp tin báo" },
-    { href: "/office/visits", label: "Đề nghị thăm hỏi" },
-    { href: "/office/payments", label: "Đề nghị thanh toán" },
-    { href: "/office/rewards", label: "Thanh toán thưởng" },
-    { href: "/office/gifts/children", label: "Quà thiếu nhi" },
-    { href: "/office/print-settings", label: "Cài đặt biểu mẫu in" },
+    { href: "/admin/administration/life-events", label: "Hộp tin báo" },
+    { href: "/admin/administration/visits", label: "Đề nghị thăm hỏi" },
+    { href: "/admin/administration/payments", label: "Đề nghị thanh toán" },
+    { href: "/admin/administration/rewards", label: "Thanh toán thưởng" },
+    { href: "/admin/administration/gifts/children", label: "Quà thiếu nhi" },
+    { href: "/admin/administration/print-settings", label: "Cài đặt biểu mẫu in" },
   ],
   finance: [
     { href: "/admin/finance/income", label: "Tổng hợp thu" },
     { href: "/admin/finance/expense", label: "Tổng hợp chi" },
-    { href: "/office/finance", label: "Sổ quỹ" },
-    { href: "/office/reports", label: "Báo cáo tổng hợp" },
-    { href: "/office/catalogs", label: "Danh mục thu chi" },
+    { href: "/admin/finance/ledger", label: "Sổ quỹ" },
+    { href: "/admin/finance/reports", label: "Báo cáo tổng hợp" },
+    { href: "/admin/finance/catalogs", label: "Danh mục thu chi" },
     { href: "/admin/finance/regulations", label: "Quy chế chi tiêu" },
   ],
   documents: [
@@ -174,8 +165,7 @@ const itemClass = "flex items-center gap-3 whitespace-nowrap rounded-lg px-3 py-
 export function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname() || "/admin";
   const active = findAdminNavGroup(pathname);
-  const { isAdmin } = useAuth();
-  const overviewHref = isAdmin ? "/admin" : "/office";
+  const overviewHref = "/admin";
 
   return (
     <div className="flex h-full w-[270px] flex-col border-r border-dusty-border bg-surface-container-low text-on-surface-variant">

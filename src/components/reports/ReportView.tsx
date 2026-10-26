@@ -106,7 +106,7 @@ export function ReportView({ report }: { report: ReportBundle }) {
   const { year, granularity: g, finance: f, visits: v, payments: p } = report;
   const labels = periodLabels(g);
   const href = (patch: { year?: number; period?: string }) =>
-    `/office/reports?year=${patch.year ?? year}&period=${patch.period ?? g}`;
+    `/admin/finance/reports?year=${patch.year ?? year}&period=${patch.period ?? g}`;
   const maxBar = Math.max(1, ...f.income.totals, ...f.expense.totals);
   const fundTotals = sumFunds(f.funds);
   const fundSplit = splitFundTotals(f.funds);

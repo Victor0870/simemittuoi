@@ -60,7 +60,7 @@ export default async function FinanceHubPage() {
       allowed: canFinance,
     },
     {
-      href: "/office/finance",
+      href: "/admin/finance/ledger",
       title: "Sổ quỹ",
       description: "Số dư quỹ tiền mặt / ngân hàng, phiếu thu – chi, chuyển quỹ, khóa sổ và xuất sổ quỹ Excel.",
       icon: "account_balance_wallet",
@@ -68,7 +68,7 @@ export default async function FinanceHubPage() {
       allowed: canFinance,
     },
     {
-      href: "/office/reports",
+      href: "/admin/finance/reports",
       title: "Báo cáo tổng hợp",
       description: "Thu – chi theo danh mục, số dư quỹ, thăm hỏi và đề nghị thanh toán theo tháng / quý / năm, xuất Excel.",
       icon: "monitoring",
@@ -76,7 +76,7 @@ export default async function FinanceHubPage() {
       allowed: hasPermission(access, PERMISSIONS.reportsView),
     },
     {
-      href: "/office/catalogs",
+      href: "/admin/finance/catalogs",
       title: "Danh mục thu chi",
       description: "Danh mục thu – chi, danh mục đối tượng và mẫu báo cáo dùng cho sổ quỹ và đề nghị thanh toán.",
       icon: "category",

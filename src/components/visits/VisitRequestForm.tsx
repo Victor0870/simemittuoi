@@ -64,7 +64,7 @@ export function VisitRequestForm({ mode, initial, defaultAmounts, requestId, lif
         setError(data.error ?? "Không lưu được đề nghị.");
         return;
       }
-      if (mode === "create") router.push(`/office/visits/${data.id}?created=1`);
+      if (mode === "create") router.push(`/admin/administration/visits/${data.id}?created=1`);
       else {
         router.refresh();
         onCancel?.();

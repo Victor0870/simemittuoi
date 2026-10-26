@@ -319,7 +319,7 @@ export function FinanceSettings({ funds, lockedThrough, today, canManageCatalogs
         {canManageCatalogs ? (
           <Link
             className="inline-flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67]"
-            href="/office/catalogs"
+            href="/admin/finance/catalogs"
           >
             Mở Quản lý danh mục
             <MaterialIcon className="text-[18px]" name="chevron_right" />

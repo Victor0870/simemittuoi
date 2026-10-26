@@ -45,7 +45,7 @@ export default async function MembersHubPage() {
       allowed: access.isAdmin,
     },
     {
-      href: "/office/members",
+      href: "/admin/members",
       title: "Hồ sơ đoàn viên",
       description: "Tra cứu hồ sơ, tình trạng khai báo, thông tin con của đoàn viên.",
       icon: "contact_page",

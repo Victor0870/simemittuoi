@@ -74,7 +74,7 @@ export function VisitRequestList({ items }: Props) {
       className: "whitespace-nowrap",
       render: (i) => (
         <>
-          <Link className="font-bold text-[#173A67] hover:underline" href={`/office/visits/${i.id}`}>
+          <Link className="font-bold text-[#173A67] hover:underline" href={`/admin/administration/visits/${i.id}`}>
             {i.code}
           </Link>
           <p className="text-[11px] text-on-surface-variant">{formatDateTimeVi(i.created_at)}</p>

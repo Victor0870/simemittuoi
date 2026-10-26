@@ -34,7 +34,6 @@ function resolveActiveHref(pathname: string): string {
     "/admin/quiz",
     "/admin/roles",
     "/admin/popups",
-    "/office",
     "/profile",
   ];
 
@@ -50,7 +49,7 @@ function resolveActiveHref(pathname: string): string {
 }
 
 function isAdminAreaPath(pathname: string): boolean {
-  return ["/admin", "/office"].some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
 export function AppShell({ children }: { children: ReactNode }) {

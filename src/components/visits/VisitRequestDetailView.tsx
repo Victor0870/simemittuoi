@@ -170,7 +170,7 @@ export function VisitRequestDetailView({ detail, can, isCreator, defaultAmounts,
             <span>
               Đã gom vào đề nghị thanh toán{" "}
               {paymentLinkable ? (
-                <Link className="font-bold underline" href={`/office/payments/${payment.id}`}>
+                <Link className="font-bold underline" href={`/admin/administration/payments/${payment.id}`}>
                   {payment.code}
                 </Link>
               ) : (

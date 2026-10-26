@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 import {
-  findAdminRoutePermission,
+  findAdminRoutePermissions,
   hasPermission,
   parseAccess,
   type PermissionCode,
@@ -15,8 +15,6 @@ type SupabaseMiddlewareClient = ReturnType<typeof createServerClient>;
 function isMemberOnlyPath(pathname: string) {
   return (
     pathname.startsWith("/admin") ||
-    pathname === "/office" ||
-    pathname.startsWith("/office/") ||
     pathname === "/profile" ||
     pathname === "/life-events" ||
     pathname.startsWith("/life-events/") ||
@@ -51,7 +49,7 @@ type GateInfo = {
 async function loadGateInfo(
   supabase: SupabaseMiddlewareClient,
   userId: string,
-  adminPermission: PermissionCode | null,
+  adminPermissions: PermissionCode[] | null,
   needsRejectedFlag: boolean,
 ): Promise<GateInfo> {
   const { data: rawAccess, error } = await supabase.rpc(CDILV_RPC.myPermissions);
@@ -62,7 +60,9 @@ async function loadGateInfo(
       return {
         status: "approved",
         isAdminRole: access.isAdmin,
-        adminPermissionAllowed: adminPermission ? hasPermission(access, adminPermission) : false,
+        adminPermissionAllowed: adminPermissions
+          ? adminPermissions.some((code) => hasPermission(access, code))
+          : false,
         rawAccess,
       };
     }
@@ -86,18 +86,20 @@ async function loadGateInfo(
   }
 
   // RPC lỗi: kiểm tra như cũ bằng hồ sơ + cdilv_has_permission
-  const [{ data: profile }, permissionResult] = await Promise.all([
+  const [{ data: profile }, permissionResults] = await Promise.all([
     supabase
       .from(CDILV_TABLE.profiles)
       .select("role, approval_status")
       .eq("id", userId)
       .maybeSingle(),
-    adminPermission ? supabase.rpc(CDILV_RPC.hasPermission, { p_code: adminPermission }) : null,
+    Promise.all(
+      (adminPermissions ?? []).map((code) => supabase.rpc(CDILV_RPC.hasPermission, { p_code: code })),
+    ),
   ]);
   return {
     status: profile?.approval_status ?? "pending",
     isAdminRole: (profile?.role ?? "user") === "admin",
-    adminPermissionAllowed: permissionResult?.data === true,
+    adminPermissionAllowed: permissionResults.some((result) => result.data === true),
     rawAccess: null,
   };
 }
@@ -207,11 +209,11 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    const adminPermission = pathname.startsWith("/admin") ? findAdminRoutePermission(pathname) : null;
+    const adminPermissions = pathname.startsWith("/admin") ? findAdminRoutePermissions(pathname) : null;
     const gate = await loadGateInfo(
       supabase,
       userId,
-      adminPermission,
+      adminPermissions,
       !isAuthExemptPath(pathname),
     );
     const status = gate.status;
