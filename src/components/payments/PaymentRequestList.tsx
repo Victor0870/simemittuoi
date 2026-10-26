@@ -8,6 +8,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { PAYMENT_METHOD_LABEL, type PaymentStatus } from "@/lib/payments/registry";
 import type { PaymentRequestListItem } from "@/lib/payments/server";
+import { PAYMENT_TRANSFER_HEADER, buildPaymentTransferRows } from "@/lib/payments/transfer-export";
 import { VISIT_STATUS_LABEL, formatVnd } from "@/lib/visits/registry";
 
 type Props = { items: PaymentRequestListItem[] };
@@ -64,6 +65,44 @@ export function PaymentRequestList({ items }: Props) {
   }, [inYear, tab, search]);
 
   const total = filtered.reduce((sum, i) => sum + i.total_amount, 0);
+  /** Dòng đang hiện trong bảng (sau cả bộ lọc theo cột) – xuất Excel đúng danh sách này. */
+  const [visible, setVisible] = useState<PaymentRequestListItem[]>(filtered);
+  const transfer = useMemo(() => buildPaymentTransferRows(visible), [visible]);
+  const [exporting, setExporting] = useState(false);
+
+  async function exportTransfers() {
+    if (!transfer.rows.length) return;
+    setExporting(true);
+    try {
+      const XLSX = await import("xlsx");
+      const sum = transfer.rows.reduce((s, r) => s + r.amount, 0);
+      const data = transfer.rows.map((r, idx) => [idx + 1, r.code, r.name, r.account, r.bank, r.content, r.amount]);
+      const sheet = XLSX.utils.aoa_to_sheet([
+        PAYMENT_TRANSFER_HEADER,
+        ...data,
+        [],
+        ["", "", `TỔNG CỘNG (${transfer.rows.length} đề nghị)`, "", "", "", sum],
+      ]);
+      const amountCol = PAYMENT_TRANSFER_HEADER.length - 1;
+      for (let r = 1; r <= data.length + 2; r++) {
+        const cell = sheet[XLSX.utils.encode_cell({ r, c: amountCol })];
+        if (cell) cell.z = "#,##0";
+      }
+      sheet["!cols"] = [6, 18, 30, 20, 30, 60, 16].map((wch) => ({ wch }));
+      const book = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(book, sheet, "Chuyen khoan");
+      const tabName = tab === "all" ? "tat_ca" : tab;
+      XLSX.writeFile(book, `chuyen_khoan_de_nghi_${tabName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } finally {
+      setExporting(false);
+    }
+  }
+  const skippedNote = [
+    transfer.skippedCash ? `${transfer.skippedCash} đề nghị tiền mặt` : null,
+    transfer.skippedZero ? `${transfer.skippedZero} đề nghị không còn tiền phải chi` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   const columns: DataTableColumn<PaymentRequestListItem>[] = [
     {
@@ -172,7 +211,26 @@ export function PaymentRequestList({ items }: Props) {
         <span className="text-xs font-semibold text-on-surface-variant">
           {filtered.length} đề nghị · {formatVnd(total)}
         </span>
+        <button
+          className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm font-bold text-[#173A67] hover:border-[#173A67] disabled:opacity-50"
+          disabled={transfer.rows.length === 0 || exporting}
+          title={
+            transfer.rows.length
+              ? `Xuất ${transfer.rows.length} đề nghị chuyển khoản đang hiện trong bảng${skippedNote ? ` (bỏ qua ${skippedNote})` : ""}`
+              : "Bảng đang lọc không có đề nghị chuyển khoản nào còn tiền phải chi"
+          }
+          type="button"
+          onClick={() => void exportTransfers()}
+        >
+          <MaterialIcon className="text-[18px]" name={exporting ? "progress_activity" : "download"} />
+          Xuất Excel chuyển khoản ({transfer.rows.length})
+        </button>
       </div>
+      {skippedNote && transfer.rows.length ? (
+        <p className="-mt-2 text-right text-[11px] text-on-surface-variant">
+          File chuyển khoản theo đúng bảng đang lọc, bỏ qua {skippedNote}. Số tiền = thực trả − đã tạm ứng.
+        </p>
+      ) : null}
 
       <DataTable
         columns={columns}
@@ -187,6 +245,7 @@ export function PaymentRequestList({ items }: Props) {
         rowClassName={(i) => (i.status === "proposed" ? "bg-amber-50/40" : "")}
         rowKey={(i) => i.id}
         rows={filtered}
+        onVisibleRowsChange={setVisible}
       />
     </div>
   );

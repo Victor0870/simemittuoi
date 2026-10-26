@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ColumnFilter,
   EMPTY_LABEL,
@@ -51,6 +51,8 @@ type DataTableProps<T> = {
   fill?: boolean;
   /** compact: đệm ô nhỏ hơn cho bảng nhiều cột (mặc định normal, giữ nguyên như cũ). */
   density?: "normal" | "compact";
+  /** Nhận các dòng đang hiện sau khi lọc theo cột và sắp xếp (mọi trang) – VD để xuất đúng bảng đang xem. */
+  onVisibleRowsChange?: (rows: T[]) => void;
 };
 
 type Cell = { label: string; norm: string; num: number | null; day: string | null; sortValue: number | string | null };
@@ -164,6 +166,7 @@ export function DataTable<T>({
   sortHint,
   fill = false,
   density = "normal",
+  onVisibleRowsChange,
 }: DataTableProps<T>) {
   const cellPadding = density === "compact" ? "px-2.5 py-2" : "px-4 py-3";
   const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({});
@@ -207,6 +210,13 @@ export function DataTable<T>({
           return sort.dir === "asc" ? result : -result;
         })
       : filtered;
+
+  const visibleSignature = sorted.map((p) => rowKey(p.row)).join("\u0001");
+  const visibleRef = useRef(sorted);
+  visibleRef.current = sorted;
+  useEffect(() => {
+    onVisibleRowsChange?.(visibleRef.current.map((p) => p.row));
+  }, [visibleSignature, onVisibleRowsChange]);
 
   const total = sorted.length;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));

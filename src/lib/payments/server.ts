@@ -59,6 +59,8 @@ export type PaymentItemRow = {
 export type PaymentRequestListItem = PaymentRequestRow & {
   creator_name: string | null;
   item_count: number;
+  /** Mã NV (người nhận là đoàn viên) hoặc mã đối tượng trong danh mục – cho bảng chuyển khoản. */
+  receiver_code: string | null;
 };
 
 export type PaymentRequestLog = {
@@ -137,20 +139,36 @@ export async function loadPaymentRequestList(db: SupabaseClient, limit = 1000): 
   if (error) throw new Error(`Không tải được đề nghị thanh toán: ${error.message}`);
   const rows = (data ?? []).map(normalizeRow);
   const ids = rows.map((r) => r.id);
-  const [names, items] = await Promise.all([
+  const memberIds = [...new Set(rows.map((r) => r.receiver_member_id).filter((x): x is string => Boolean(x)))];
+  const partyIds = [...new Set(rows.map((r) => r.counterparty_id).filter((x): x is string => Boolean(x)))];
+  const [names, items, members, parties] = await Promise.all([
     loadNames(db, rows.map((r) => r.created_by)),
     ids.length
       ? db.from(CDILV_TABLE.paymentRequestItems).select("request_id").in("request_id", ids)
       : Promise.resolve({ data: [] as { request_id: string }[] }),
+    memberIds.length
+      ? db.from(CDILV_TABLE.profiles).select("id, employee_code").in("id", memberIds)
+      : Promise.resolve({ data: [] as { id: string; employee_code: string | null }[] }),
+    partyIds.length
+      ? db.from(CDILV_TABLE.counterparties).select("id, code").in("id", partyIds)
+      : Promise.resolve({ data: [] as { id: string; code: string | null }[] }),
   ]);
   const counts = new Map<string, number>();
   for (const item of (items.data ?? []) as { request_id: string }[]) {
     counts.set(item.request_id, (counts.get(item.request_id) ?? 0) + 1);
   }
+  const memberCodes = new Map(
+    ((members.data ?? []) as { id: string; employee_code: string | null }[]).map((m) => [m.id, m.employee_code]),
+  );
+  const partyCodes = new Map(((parties.data ?? []) as { id: string; code: string | null }[]).map((p) => [p.id, p.code]));
   return rows.map((r) => ({
     ...r,
     creator_name: r.created_by ? (names.get(r.created_by) ?? null) : null,
     item_count: counts.get(r.id) ?? 0,
+    receiver_code:
+      (r.receiver_member_id ? memberCodes.get(r.receiver_member_id) : null) ??
+      (r.counterparty_id ? partyCodes.get(r.counterparty_id) : null) ??
+      null,
   }));
 }
 
