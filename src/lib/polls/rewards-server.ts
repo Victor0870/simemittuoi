@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import {
+  REWARD_KINDS,
   normalizeRewardMoney,
   type PollRewardRow,
   type RewardItem,
@@ -8,7 +9,13 @@ import {
   type RewardMoney,
 } from "@/lib/polls/reward-money";
 
-export type ClosedPollOption = { id: string; title: string; closedAt: string | null };
+export type ClosedPollOption = {
+  id: string;
+  title: string;
+  closedAt: string | null;
+  /** Đã cài ít nhất một mức "Tiền thưởng" trong Cài đặt cuộc thi. */
+  hasRewardMoney: boolean;
+};
 
 export type PollRewardList = {
   pollId: string;
@@ -39,11 +46,19 @@ function prizeKind(rank: number | null, consolationCount: number): RewardKind | 
 export async function listClosedPolls(db: SupabaseClient): Promise<ClosedPollOption[]> {
   const { data, error } = await db
     .from(CDILV_TABLE.polls)
-    .select("id, title, closed_at")
+    .select("id, title, closed_at, reward_money")
     .eq("status", "closed")
     .order("closed_at", { ascending: false, nullsFirst: false });
   if (error) throw error;
-  return (data ?? []).map((p) => ({ id: p.id, title: p.title, closedAt: p.closed_at ?? null }));
+  return (data ?? []).map((p) => {
+    const money = normalizeRewardMoney(p.reward_money);
+    return {
+      id: p.id,
+      title: p.title,
+      closedAt: p.closed_at ?? null,
+      hasRewardMoney: REWARD_KINDS.some(({ kind }) => money[kind] > 0),
+    };
+  });
 }
 
 /**

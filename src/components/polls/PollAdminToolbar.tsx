@@ -278,7 +278,7 @@ export function PollAdminToolbar({ poll }: Props) {
               <Link
                 prefetch={false}
                 className="flex items-center justify-center gap-1 rounded-xl bg-white px-2.5 py-1.5 text-[11px] font-bold text-[#173A67] shadow-xs hover:bg-amber-100 transition sm:px-3.5 sm:py-2 sm:text-xs"
-                href={`/admin/administration/rewards?poll=${encodeURIComponent(poll.id)}`}
+                href={`/admin/administration/rewards/${encodeURIComponent(poll.id)}`}
               >
                 <MaterialIcon className="text-[15px] sm:text-[16px]" name="payments" />
                 <span>DS nhận thưởng</span>

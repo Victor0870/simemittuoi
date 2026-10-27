@@ -422,6 +422,15 @@ export async function validateRewardLinks(
   return errors;
 }
 
+/** poll id → đề nghị thanh toán còn hiệu lực đi kèm danh sách thưởng – dùng cho trang danh sách chương trình. */
+export async function loadPaymentsForRewardPolls(
+  db: SupabaseClient,
+  pollIds: string[],
+): Promise<Map<string, { id: string; code: string; status: PaymentStatus }>> {
+  if (!pollIds.length) return new Map();
+  return loadActiveRewardLinks(db, pollIds);
+}
+
 /** Đề nghị thanh toán (còn hiệu lực) đi kèm danh sách thưởng – số đề nghị đứng đầu nội dung chuyển khoản. */
 export async function loadPaymentForRewardPoll(
   db: SupabaseClient,

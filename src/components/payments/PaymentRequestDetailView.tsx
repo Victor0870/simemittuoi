@@ -279,7 +279,7 @@ export function PaymentRequestDetailView({
                         <Link
                           prefetch={false}
                           className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-900 hover:underline"
-                          href={`/admin/administration/rewards?poll=${i.reward_poll_id}`}
+                          href={`/admin/administration/rewards/${i.reward_poll_id}`}
                         >
                           Xem danh sách thưởng
                         </Link>

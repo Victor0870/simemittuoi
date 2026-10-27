@@ -443,7 +443,7 @@ export const OFFICE_TOOLS: OfficeTool[] = [
   {
     href: "/admin/administration/rewards",
     title: "Thanh toán thưởng",
-    description: "Danh sách nhận thưởng của chương trình bình chọn đã kết thúc: số tài khoản, số tiền, in và xuất Excel.",
+    description: "Các chương trình đã kết thúc, mỗi chương trình một danh sách nhận thưởng riêng: số tài khoản, số tiền, in và xuất Excel.",
     icon: "payments",
     permission: PERMISSIONS.rewardsPayout,
   },

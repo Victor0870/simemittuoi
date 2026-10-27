@@ -39,7 +39,7 @@ export default async function AdministrationHubPage() {
     {
       href: "/admin/administration/rewards",
       title: "Thanh toán thưởng",
-      description: "Danh sách nhận thưởng sau bình chọn: số tài khoản, số tiền, in và xuất Excel.",
+      description: "Chọn chương trình đã kết thúc để xem danh sách nhận thưởng riêng: số tài khoản, số tiền, in và xuất Excel.",
       icon: "payments",
       tint: "surface",
       allowed: hasPermission(access, PERMISSIONS.rewardsPayout),
