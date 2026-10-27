@@ -30,7 +30,7 @@ export type SlipItem = {
   rewardList?: boolean;
 };
 
-/** Ô người nhận khi đề nghị chi theo danh sách thưởng mà không ghi người nhận cụ thể. */
+/** Đối tượng nhận khi đề nghị chi theo danh sách thưởng (in dưới nhãn Người nhận / Receiver). */
 export const SLIP_REWARD_RECEIVER = "Theo danh sách thưởng đính kèm";
 
 export type SlipSigners = Pick<FormSettings, "preparerDepartment" | "accountantName" | "chairmanName">;
@@ -53,6 +53,8 @@ export type PaymentSlipData = {
   totals: { paid: number; advanced: number; underPaid: number; overPaid: number | null };
   cash: boolean;
   bank: boolean;
+  /** Chữ dưới nhãn Người nhận / Receiver (ô A26); khi có, ô Chủ TK, TK số, Tại NH để trống. */
+  receiverNote: string;
   receiverName: string;
   receiverAccount: string;
   receiverBank: string;
@@ -90,6 +92,7 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
 
   const paid = slipLines.reduce((sum, l) => sum + l.amount, 0);
   const advanced = slipLines.reduce((sum, l) => sum + (l.advanced ?? 0), 0);
+  const rewardList = items.some((i) => i.rewardList);
 
   return {
     date: req.request_date.slice(0, 10),
@@ -99,9 +102,10 @@ export function mapPaymentSlip(req: SlipSource, items: SlipItem[], signers: Slip
     totals: { paid, advanced, underPaid: paid - advanced, overPaid: advanced > paid ? advanced - paid : null },
     cash: req.payment_method === "cash",
     bank: req.payment_method === "transfer",
-    receiverName: req.receiver_name ?? (items.some((i) => i.rewardList) ? SLIP_REWARD_RECEIVER : ""),
-    receiverAccount: req.receiver_account ?? "",
-    receiverBank: req.receiver_bank ?? "",
+    receiverNote: rewardList ? SLIP_REWARD_RECEIVER : "",
+    receiverName: rewardList ? "" : (req.receiver_name ?? ""),
+    receiverAccount: rewardList ? "" : (req.receiver_account ?? ""),
+    receiverBank: rewardList ? "" : (req.receiver_bank ?? ""),
     signatures: [
       { title: "Người Lập", name: req.requester_name },
       { title: "Kế toán Công Đoàn", name: signers.accountantName },

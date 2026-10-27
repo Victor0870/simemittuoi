@@ -252,6 +252,7 @@ export function buildPaymentSlip(
     D6: data.department,
     E21: `${data.cash ? "☑" : "☐"} Cash`,
     E22: `${data.bank ? "☑" : "☐"} Bank`,
+    A26: data.receiverNote || null,
     H24: data.receiverName,
     H25: data.receiverAccount,
     H26: data.receiverBank,
@@ -275,6 +276,11 @@ export function buildPaymentSlip(
       for (const col of ["H", "I"]) ws.getCell(`${col}${row}`).numFmt = MONEY_FORMAT;
     }
     ws.getCell("H25").numFmt = "@";
+    if (data.receiverNote) {
+      ws.mergeCells("A26:D26");
+      ws.getCell("A26").font = { name: fontName, bold: true, size: 11 };
+      ws.getCell("A26").alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+    }
     if (logo) addLogo(ws, workbook, logo);
     writeSignatures(ws, data.signatures, fontName);
     if (data.itemSheet) addItemSheet(workbook, data.itemSheet, fontName);

@@ -69,7 +69,8 @@ export type PaymentInput = {
   requesterName: string;
   requesterDepartment: string | null;
   paymentMethod: PaymentMethod;
-  receiverKind: PaymentReceiverKind;
+  /** null = chi theo danh sách thưởng đính kèm (không có người nhận chung). */
+  receiverKind: PaymentReceiverKind | null;
   /** Đoàn viên nhận tiền (khi receiverKind = member). */
   receiverMemberId: string | null;
   receiverName: string | null;
@@ -142,15 +143,23 @@ export function parsePaymentInput(
   }
 
   const paymentMethod: PaymentMethod = raw.paymentMethod === "cash" ? "cash" : "transfer";
-  const receiverName = oneLine(raw.receiverName) || null;
-  const receiverAccount = oneLine(raw.receiverAccount).replace(/\s/g, "") || null;
-  const receiverBank = oneLine(raw.receiverBank) || null;
   const rawItems = Array.isArray(raw.items) ? raw.items : [];
   const hasRewardList = rawItems.some((value) => {
     const id = (value as Record<string, unknown> | null)?.rewardPollId;
     return typeof id === "string" && UUID_RE.test(id);
   });
-  const receiverKind: PaymentReceiverKind = isPaymentReceiverKind(raw.receiverKind) ? raw.receiverKind : "organization";
+  if (hasRewardList && rawItems.length > 1) {
+    fail("Đề nghị theo danh sách thưởng chỉ gồm một dòng chi là danh sách thưởng đó.", "items");
+  }
+  // Chi theo danh sách thưởng: mỗi người nhận theo danh sách đính kèm, không lưu người nhận / số TK / ngân hàng chung.
+  const receiverName = hasRewardList ? null : oneLine(raw.receiverName) || null;
+  const receiverAccount = hasRewardList ? null : oneLine(raw.receiverAccount).replace(/\s/g, "") || null;
+  const receiverBank = hasRewardList ? null : oneLine(raw.receiverBank) || null;
+  const receiverKind: PaymentReceiverKind | null = hasRewardList
+    ? null
+    : isPaymentReceiverKind(raw.receiverKind)
+      ? raw.receiverKind
+      : "organization";
   const receiverMemberId =
     receiverKind === "member" && typeof raw.receiverMemberId === "string" && UUID_RE.test(raw.receiverMemberId)
       ? raw.receiverMemberId
@@ -159,7 +168,7 @@ export function parsePaymentInput(
     fail("Vui lòng chọn đoàn viên nhận tiền (theo tên hoặc mã NV).", "receiverMemberId");
   }
   const counterpartyId =
-    receiverKind !== "member" && typeof raw.counterpartyId === "string" && UUID_RE.test(raw.counterpartyId)
+    receiverKind && receiverKind !== "member" && typeof raw.counterpartyId === "string" && UUID_RE.test(raw.counterpartyId)
       ? raw.counterpartyId
       : null;
   if ((receiverName?.length ?? 0) > PAYMENT_LIMITS.name || (receiverBank?.length ?? 0) > PAYMENT_LIMITS.name) {

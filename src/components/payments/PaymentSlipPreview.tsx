@@ -207,7 +207,9 @@ export function PaymentSlipPreview({ data, logoUrl }: { data: PaymentSlipData; l
               </td>
             </tr>
             <tr>
-              <td colSpan={4} />
+              <td className="font-bold break-words" colSpan={4}>
+                {data.receiverNote}
+              </td>
               <td className="pl-2" colSpan={2}>
                 Tại NH/ At bank
               </td>

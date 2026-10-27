@@ -18,7 +18,13 @@ import {
   type PaymentReceiverKind,
 } from "@/lib/payments/registry";
 import type { PaymentMember, PaymentMemberBank, RewardCandidate, VisitCandidate } from "@/lib/payments/server";
-import { SLIP_CODE_PENDING, mapPaymentSlip, type PaymentSlipData, type SlipSigners } from "@/lib/payments/slip-data";
+import {
+  SLIP_CODE_PENDING,
+  SLIP_REWARD_RECEIVER,
+  mapPaymentSlip,
+  type PaymentSlipData,
+  type SlipSigners,
+} from "@/lib/payments/slip-data";
 import { vndInWords } from "@/lib/print/vn-money";
 import { formatVnd } from "@/lib/visits/registry";
 
@@ -64,18 +70,22 @@ const inputClass =
   "w-full rounded-xl border border-outline-variant bg-white px-3 py-2 text-sm outline-none focus:border-[#173A67]";
 const labelClass = "mb-1 block text-xs font-bold text-on-surface-variant";
 const invalidInputClass = inputClass.replace("border-outline-variant", "border-error bg-error-container/20");
+const disabledInputClass = "disabled:cursor-not-allowed disabled:bg-surface-container-low";
 
 const toNumber = (value: string) => Number(value.replace(/\D/g, "")) || 0;
 const formatInput = (value: string) => (value ? new Intl.NumberFormat("vi-VN").format(toNumber(value)) : "");
 
 type RewardSummary = { pollId: string; title: string; people: number; total: number; missingBank: number };
 
-function rewardLine(s: RewardSummary): string {
-  const tail = ` (${s.people} người – theo danh sách thưởng đính kèm)`;
-  const room = PAYMENT_LIMITS.content - "Chi thưởng ".length - tail.length;
-  const title = s.title.length > room ? `${s.title.slice(0, room - 1).trimEnd()}…` : s.title;
-  return `Chi thưởng ${title}${tail}`;
-}
+/** Chi theo danh sách thưởng: không có người nhận chung – các ô thanh toán để trống. */
+const BLANK_RECEIVER = {
+  receiverKind: "organization",
+  receiverMemberId: "",
+  receiverName: "",
+  receiverAccount: "",
+  receiverBank: "",
+  counterpartyId: "",
+} satisfies Partial<PaymentFormValues>;
 
 function visitLine(v: VisitCandidate): string {
   const who = v.member_department ? `${v.member_name} (${v.member_department})` : v.member_name;
@@ -96,7 +106,9 @@ export function PaymentRequestForm({
   onCancel,
 }: Props) {
   const router = useRouter();
-  const [values, setValues] = useState<PaymentFormValues>(initial);
+  const [values, setValues] = useState<PaymentFormValues>(() =>
+    initial.items.some((i) => i.rewardPollId) ? { ...initial, ...BLANK_RECEIVER } : initial,
+  );
   /** Ô lỗi sau lần kiểm tra gần nhất; dòng chi phí ghi theo item.key: `items.<key>.<trường>`. */
   const [invalid, setInvalid] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<PaymentSlipData | null>(null);
@@ -162,6 +174,7 @@ export function PaymentRequestForm({
   const linkedIds = new Set(values.items.map((i) => i.visitRequestId).filter(Boolean));
   const linkedPolls = new Set(values.items.map((i) => i.rewardPollId).filter(Boolean));
   const hasRewardList = linkedPolls.size > 0;
+  const rewardItem = values.items.find((i) => i.rewardPollId) ?? null;
   const receiverRequired = values.paymentMethod === "transfer" && !hasRewardList;
   const isMember = values.receiverKind === "member";
   const party = counterparties?.find((c) => c.id === values.counterpartyId) ?? null;
@@ -283,23 +296,47 @@ export function PaymentRequestForm({
     }
   }
 
+  /** Danh sách thưởng thay toàn bộ dòng chi: nội dung = tên danh sách, số tiền = tổng thưởng, bỏ người nhận chung. */
   function addRewardLine() {
     const s = rewardSummary;
-    if (!s || s.total <= 0 || linkedPolls.has(s.pollId)) return;
-    setValues((v) => {
-      const kept = v.items.filter((i) => i.content.trim() || i.amount || i.visitRequestId || i.rewardPollId);
-      const added = newPaymentItem({
-        content: rewardLine(s),
-        amount: String(s.total),
-        rewardPollId: s.pollId,
-        rewardTitle: s.title,
-      });
-      return { ...v, items: [...kept, added] };
-    });
-    clearInvalid(["items"]);
+    if (!s || s.total <= 0 || hasRewardList) return;
+    const others = values.items.filter((i) => i.content.trim() || i.amount || i.visitRequestId).length;
+    if (
+      others > 0 &&
+      !window.confirm(
+        `Đề nghị theo danh sách thưởng chỉ gồm một dòng chi là danh sách thưởng. ${others} dòng đang nhập sẽ bị thay thế – tiếp tục?`,
+      )
+    ) {
+      return;
+    }
+    setValues((v) => ({
+      ...v,
+      ...BLANK_RECEIVER,
+      items: [
+        newPaymentItem({
+          content: s.title.trim().slice(0, PAYMENT_LIMITS.content),
+          amount: String(s.total),
+          rewardPollId: s.pollId,
+          rewardTitle: s.title,
+        }),
+      ],
+    }));
+    setInvalid(new Set());
+    setError(null);
+    setPartySearch("");
+    setMemberBank({ loading: false, missing: false, error: null });
+    setCandidates(null);
+    rewardPickRef.current = "";
     setRewardPolls(null);
     setRewardPick("");
     setRewardSummary(null);
+  }
+
+  /** Bỏ danh sách thưởng: form về như đề nghị thường, các ô để trống cho nhập lại. */
+  function removeRewardList() {
+    setValues((v) => ({ ...v, ...BLANK_RECEIVER, items: [newPaymentItem()] }));
+    setInvalid(new Set());
+    setError(null);
   }
 
   function addPicked() {
@@ -451,7 +488,8 @@ export function PaymentRequestForm({
             {canGatherRewards ? (
               <button
                 className="inline-flex items-center gap-1 rounded-xl border border-amber-500/50 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-50 disabled:opacity-60"
-                disabled={rewardLoading === "list"}
+                disabled={rewardLoading === "list" || hasRewardList}
+                title={hasRewardList ? "Đề nghị đã có danh sách thưởng" : undefined}
                 type="button"
                 onClick={() => void openRewardPolls()}
               >
@@ -462,7 +500,8 @@ export function PaymentRequestForm({
             {canGatherVisits ? (
               <button
                 className="inline-flex items-center gap-1 rounded-xl border border-[#173A67]/40 px-3 py-1.5 text-xs font-bold text-[#173A67] hover:bg-[#173A67]/5 disabled:opacity-60"
-                disabled={loadingCandidates}
+                disabled={loadingCandidates || hasRewardList}
+                title={hasRewardList ? "Bỏ danh sách thưởng để gom phiếu thăm hỏi" : undefined}
                 type="button"
                 onClick={() => void openCandidates()}
               >
@@ -480,7 +519,8 @@ export function PaymentRequestForm({
             ) : (
               <>
                 <label className="block text-xs font-bold text-amber-900" htmlFor="payment-reward-poll">
-                  Chương trình bình chọn đã kết thúc – tổng tiền thưởng thành một dòng chi, danh sách thưởng là chi tiết đi kèm
+                  Chương trình bình chọn đã kết thúc – đề nghị chỉ gồm một dòng chi: nội dung là tên danh sách, số tiền là tổng
+                  tiền thưởng; chi cho từng người theo danh sách đính kèm
                 </label>
                 <select
                   className={inputClass}
@@ -633,6 +673,16 @@ export function PaymentRequestForm({
                     Danh sách thưởng{item.rewardTitle ? `: ${item.rewardTitle}` : ""}
                   </span>
                 ) : null}
+                {item.rewardPollId ? (
+                  <button
+                    className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg border border-error/40 px-2 py-0.5 text-error hover:bg-error-container/40"
+                    type="button"
+                    onClick={removeRewardList}
+                  >
+                    <MaterialIcon className="text-[16px]" name="link_off" />
+                    Bỏ danh sách thưởng
+                  </button>
+                ) : (
                 <span className="ml-auto flex gap-1">
                   <button
                     aria-label="Lên"
@@ -662,6 +712,7 @@ export function PaymentRequestForm({
                     <MaterialIcon className="text-[18px]" name="delete" />
                   </button>
                 </span>
+                )}
               </div>
               <input
                 className={field(`items.${item.key}.content`)}
@@ -672,14 +723,23 @@ export function PaymentRequestForm({
               />
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <label className="text-xs text-on-surface-variant">
-                  Thực trả (VNĐ) *
-                  <input
-                    className={`${field(`items.${item.key}.amount`)} mt-0.5`}
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={formatInput(item.amount)}
-                    onChange={(e) => setItem(item.key, { amount: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                  />
+                  Thực trả (VNĐ) *{item.rewardPollId ? " – tổng tiền thưởng của danh sách" : ""}
+                  {item.rewardPollId ? (
+                    <input
+                      readOnly
+                      className={`${inputClass.replace("bg-white", "bg-surface-container-low")} mt-0.5 cursor-default font-bold`}
+                      title="Lấy từ tổng tiền thưởng của danh sách – bỏ danh sách thưởng để nhập tay"
+                      value={formatInput(item.amount)}
+                    />
+                  ) : (
+                    <input
+                      className={`${field(`items.${item.key}.amount`)} mt-0.5`}
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formatInput(item.amount)}
+                      onChange={(e) => setItem(item.key, { amount: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    />
+                  )}
                 </label>
                 <label className="text-xs text-on-surface-variant">
                   Đã tạm ứng (VNĐ)
@@ -699,7 +759,8 @@ export function PaymentRequestForm({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <button
             className="inline-flex items-center gap-1 rounded-xl border border-dashed border-outline-variant px-3 py-1.5 text-sm font-semibold text-[#173A67] hover:border-[#173A67] disabled:opacity-50"
-            disabled={values.items.length >= PAYMENT_LIMITS.items}
+            disabled={values.items.length >= PAYMENT_LIMITS.items || hasRewardList}
+            title={hasRewardList ? "Đề nghị theo danh sách thưởng chỉ gồm một dòng chi" : undefined}
             type="button"
             onClick={() => set({ items: [...values.items, newPaymentItem()] })}
           >
@@ -742,20 +803,30 @@ export function PaymentRequestForm({
             <label className="text-xs font-bold text-on-surface-variant" htmlFor="payment-receiver-kind">
               Đối tượng nhận tiền:
             </label>
-            <select
-              className={`${inputClass} w-auto min-w-[160px]`}
-              id="payment-receiver-kind"
-              value={values.receiverKind}
-              onChange={(e) => changeKind(e.target.value as PaymentReceiverKind)}
-            >
-              {RECEIVER_KINDS.map((k) => (
-                <option key={k} value={k}>
-                  {PAYMENT_RECEIVER_KIND_LABEL[k]}
-                </option>
-              ))}
-            </select>
+            {hasRewardList ? (
+              <input
+                readOnly
+                className={`${inputClass} min-w-[240px] flex-1 cursor-default font-semibold sm:flex-none`}
+                id="payment-receiver-kind"
+                title="Bỏ danh sách thưởng để chọn đối tượng nhận tiền"
+                value={SLIP_REWARD_RECEIVER}
+              />
+            ) : (
+              <select
+                className={`${inputClass} w-auto min-w-[160px]`}
+                id="payment-receiver-kind"
+                value={values.receiverKind}
+                onChange={(e) => changeKind(e.target.value as PaymentReceiverKind)}
+              >
+                {RECEIVER_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {PAYMENT_RECEIVER_KIND_LABEL[k]}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
-          {isMember ? (
+          {hasRewardList ? null : isMember ? (
             members ? (
               <div className="space-y-1.5">
                 <p className="text-[11px] text-on-surface-variant">
@@ -826,17 +897,18 @@ export function PaymentRequestForm({
           </div>
           ) : null}
         </div>
-        {hasRewardList && values.paymentMethod === "transfer" ? (
+        {hasRewardList ? (
           <p className="text-[11px] text-amber-800">
-            Đề nghị có danh sách thưởng: chuyển khoản cho từng người theo danh sách đi kèm (nội dung chuyển khoản bắt đầu bằng số
-            đề nghị), nên có thể để trống người nhận bên dưới.
+            Đề nghị theo danh sách thưởng: chi cho từng người theo danh sách đi kèm (nội dung chuyển khoản bắt đầu bằng số đề
+            nghị), nên người nhận, số tài khoản và ngân hàng để trống.
           </p>
         ) : null}
         <div className="grid gap-3 sm:grid-cols-3">
           <div>
             <label className={labelClass}>Người nhận / Chủ TK{receiverRequired ? " *" : ""}</label>
             <input
-              className={field("receiverName")}
+              className={`${field("receiverName")} ${disabledInputClass}`}
+              disabled={hasRewardList}
               maxLength={PAYMENT_LIMITS.name}
               value={values.receiverName}
               onChange={(e) => set({ receiverName: e.target.value })}
@@ -845,7 +917,8 @@ export function PaymentRequestForm({
           <div>
             <label className={labelClass}>Số tài khoản{receiverRequired ? " *" : ""}</label>
             <input
-              className={field("receiverAccount")}
+              className={`${field("receiverAccount")} ${disabledInputClass}`}
+              disabled={hasRewardList}
               inputMode="numeric"
               maxLength={PAYMENT_LIMITS.account}
               value={values.receiverAccount}
@@ -855,9 +928,10 @@ export function PaymentRequestForm({
           <div>
             <label className={labelClass}>Ngân hàng{receiverRequired ? " *" : ""}</label>
             <input
-              className={field("receiverBank")}
+              className={`${field("receiverBank")} ${disabledInputClass}`}
+              disabled={hasRewardList}
               maxLength={PAYMENT_LIMITS.name}
-              placeholder="Ví dụ: Vietcombank – CN Hải Phòng"
+              placeholder={hasRewardList ? "" : "Ví dụ: Vietcombank – CN Hải Phòng"}
               value={values.receiverBank}
               onChange={(e) => set({ receiverBank: e.target.value })}
             />

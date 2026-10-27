@@ -71,7 +71,8 @@ export function PaymentRequestDetailView({
   const printable = detail.status !== "rejected" && detail.status !== "cancelled";
   const linkedVisits = detail.items.filter((i) => i.visit_request_id).length;
   const remaining = detail.total_amount - detail.advanced_amount;
-  const receiverKind = detail.receiver_kind ?? detail.counterparty?.kind ?? null;
+  const hasRewardList = detail.items.some((i) => i.reward_poll_id);
+  const receiverKind = hasRewardList ? null : (detail.receiver_kind ?? detail.counterparty?.kind ?? null);
   const category = expenseCategories.find((c) => c.id === detail.fund_category_id) ?? null;
   const categoryOptions = expenseCategories.filter((c) => c.is_active);
   const allVisits = detail.items.length > 0 && detail.items.every((i) => i.visit_request_id);
@@ -188,25 +189,27 @@ export function PaymentRequestDetailView({
           </div>
           <div className="sm:col-span-2">
             <dt className="text-xs text-on-surface-variant">
-              Người nhận{receiverKind ? ` (${PAYMENT_RECEIVER_KIND_LABEL[receiverKind]})` : ""}
+              {hasRewardList
+                ? "Đối tượng nhận"
+                : `Người nhận${receiverKind ? ` (${PAYMENT_RECEIVER_KIND_LABEL[receiverKind]})` : ""}`}
             </dt>
             <dd className="font-semibold">
-              {detail.receiver_name ?? (detail.items.some((i) => i.reward_poll_id) ? SLIP_REWARD_RECEIVER : "—")}
-              {detail.receiver_account ? (
+              {hasRewardList ? SLIP_REWARD_RECEIVER : (detail.receiver_name ?? "—")}
+              {!hasRewardList && detail.receiver_account ? (
                 <span className="font-normal text-on-surface-variant">
                   {" "}
                   · TK {detail.receiver_account}
                   {detail.receiver_bank ? ` · ${detail.receiver_bank}` : ""}
                 </span>
               ) : null}
-              {detail.counterparty ? (
+              {!hasRewardList && detail.counterparty ? (
                 <span className="mt-0.5 block text-xs font-normal text-on-surface-variant">
                   Đối tượng {detail.counterparty.code} – {detail.counterparty.name}
                   {detail.counterparty.tax_code ? ` · MST ${detail.counterparty.tax_code}` : ""}
                   {detail.counterparty.address ? ` · ${detail.counterparty.address}` : ""}
                 </span>
               ) : null}
-              {detail.receiver_member ? (
+              {!hasRewardList && detail.receiver_member ? (
                 <span className="mt-0.5 block text-xs font-normal text-on-surface-variant">
                   Đoàn viên {[detail.receiver_member.employee_code, detail.receiver_member.full_name].filter(Boolean).join(" – ")}
                   {detail.receiver_member.department ? ` · ${detail.receiver_member.department}` : ""}

@@ -8,6 +8,7 @@ import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatDateVi } from "@/lib/members/profile-shared";
 import { PAYMENT_METHOD_LABEL, type PaymentStatus } from "@/lib/payments/registry";
 import type { PaymentRequestListItem } from "@/lib/payments/server";
+import { SLIP_REWARD_RECEIVER } from "@/lib/payments/slip-data";
 import { PAYMENT_TRANSFER_HEADER, buildPaymentTransferRows } from "@/lib/payments/transfer-export";
 import { VISIT_STATUS_LABEL, formatVnd } from "@/lib/visits/registry";
 
@@ -139,7 +140,7 @@ export function PaymentRequestList({ items }: Props) {
       header: "Người nhận",
       render: (i) => (
         <>
-          <p>{i.receiver_name ?? "—"}</p>
+          <p>{i.has_reward_list ? SLIP_REWARD_RECEIVER : (i.receiver_name ?? "—")}</p>
           <p className="text-[11px] text-on-surface-variant">{PAYMENT_METHOD_LABEL[i.payment_method]}</p>
         </>
       ),

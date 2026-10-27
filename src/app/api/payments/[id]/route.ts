@@ -17,6 +17,7 @@ import {
   validateRewardLinks,
   validateVisitLinks,
 } from "@/lib/payments/server";
+import { SLIP_REWARD_RECEIVER } from "@/lib/payments/slip-data";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC } from "@/lib/supabase/tables";
 import { formatVnd } from "@/lib/visits/registry";
@@ -79,7 +80,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       const linked = v.counterpartyId ? await loadCounterparty(db, v.counterpartyId) : null;
       changes.push(linked ? `Đối tượng: ${linked.code} – ${linked.name}` : "Bỏ gắn đối tượng");
     }
-    if (current.receiver_kind && v.receiverKind !== current.receiver_kind) changes.push(`Loại đối tượng: ${PAYMENT_RECEIVER_KIND_LABEL[v.receiverKind]}`);
+    if (current.receiver_kind && v.receiverKind !== current.receiver_kind) {
+      changes.push(`Loại đối tượng: ${v.receiverKind ? PAYMENT_RECEIVER_KIND_LABEL[v.receiverKind] : SLIP_REWARD_RECEIVER}`);
+    }
     if (v.receiverMemberId !== (current.receiver_member_id ?? null)) {
       const member = v.receiverMemberId ? await loadPaymentMember(db, v.receiverMemberId) : null;
       changes.push(
