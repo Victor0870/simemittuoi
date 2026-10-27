@@ -200,6 +200,7 @@ export async function updateSession(request: NextRequest) {
 
     // Tối ưu 2: Chỉ truy vấn quyền khi cần kiểm tra trang được bảo vệ hoặc trang đặc biệt
     const requiresProfileCheck =
+      pathname === "/" ||
       isMemberOnlyPath(pathname) ||
       pathname === "/pending" ||
       pathname === "/login" ||

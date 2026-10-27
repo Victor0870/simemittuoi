@@ -24,7 +24,7 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
           const isActive = item.href === activeHref;
 
           return (
-            <Link
+            <Link prefetch={false}
               key={item.href}
               className={`flex items-center gap-3 rounded-lg px-4 py-3 transition-all ${
                 isActive
@@ -40,7 +40,7 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
         })}
       </nav>
 
-      <Link
+      <Link prefetch={false}
         className="mx-2 mt-4 flex items-center justify-center gap-2 rounded-xl bg-tertiary px-4 py-3 font-bold text-on-tertiary transition-all hover:shadow-lg active:scale-95"
         href="/campaigns"
       >
@@ -49,14 +49,14 @@ export function Sidebar({ activeHref = "/" }: SidebarProps) {
       </Link>
 
       <div className="mt-auto border-t border-outline-variant pt-4 pb-2">
-        <Link
+        <Link prefetch={false}
           className="flex items-center gap-3 rounded-lg px-4 py-3 text-on-surface-variant transition-all hover:bg-surface-container-high"
           href="/settings"
         >
           <MaterialIcon name="settings" />
           <span className="text-label-md">Cài đặt</span>
         </Link>
-        <Link
+        <Link prefetch={false}
           className="flex items-center gap-3 rounded-lg px-4 py-3 text-on-surface-variant transition-all hover:bg-surface-container-high"
           href="/support"
         >

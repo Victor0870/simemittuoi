@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const dynamic = "force-dynamic";
@@ -24,20 +24,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const publicDb = createPublicClient();
+    const publicDb = createServiceClient();
 
     // Kiểm tra hồ sơ người xem
-    const { data: viewerProfile } = await publicDb
+    const { data: viewerProfile } = await supabase
       .from(CDILV_TABLE.profiles)
       .select("id, role, approval_status")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!viewerProfile) {
+    if (!viewerProfile || viewerProfile.approval_status !== "approved") {
       return NextResponse.json(
         {
           success: false,
-          error: "Tài khoản của bạn chưa hoàn tất đăng ký hồ sơ đoàn viên.",
+          error: "Chỉ đoàn viên đã được phê duyệt mới được xem lịch sử cộng điểm.",
           requireLogin: true,
         },
         { status: 403 },

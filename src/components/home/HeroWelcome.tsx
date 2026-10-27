@@ -64,14 +64,14 @@ export function HeroWelcome({ user, isGuest = false, loading = false }: HeroWelc
             <div className="h-11 w-full animate-pulse rounded-xl bg-dusty-border/40 sm:w-72" />
           ) : isGuest ? (
             <>
-              <Link
+              <Link prefetch={false}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-label-lg font-bold text-white shadow-xs transition-all hover:bg-dusty-dark active:scale-95 sm:flex-none"
                 href="/login"
               >
                 <MaterialIcon className="text-[18px] sm:text-[20px]" name="login" />
                 Đăng nhập ngay
               </Link>
-              <Link
+              <Link prefetch={false}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary px-4 py-2.5 sm:px-5 sm:py-3 text-sm sm:text-label-lg font-semibold text-primary transition-all hover:bg-primary/10 active:scale-95 sm:flex-none"
                 href="/register"
               >
@@ -81,14 +81,14 @@ export function HeroWelcome({ user, isGuest = false, loading = false }: HeroWelc
             </>
           ) : (
             <>
-              <Link
+              <Link prefetch={false}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-label-lg font-bold text-white shadow-xs transition-all hover:bg-dusty-dark active:scale-95 sm:flex-none"
                 href="/score-history"
               >
                 <MaterialIcon className="text-[18px] sm:text-[20px]" name="history" />
                 Lịch sử điểm
               </Link>
-              <Link
+              <Link prefetch={false}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-primary px-4 py-2.5 sm:px-5 sm:py-3 text-sm sm:text-label-lg font-semibold text-primary transition-all hover:bg-primary/10 active:scale-95 sm:flex-none"
                 href="/leaderboard"
               >

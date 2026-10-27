@@ -17,6 +17,26 @@ function formatTimeAgo(isoDate: string): string {
   return `${days} ngày trước`;
 }
 
+const PUBLISH_DUE_INTERVAL_MS = 3 * 60_000;
+let lastPublishCheck = 0;
+
+async function triggerDuePostsPublishIfDue() {
+  const now = Date.now();
+  if (now - lastPublishCheck < PUBLISH_DUE_INTERVAL_MS) return;
+  lastPublishCheck = now;
+  try {
+    const serviceDb = createServiceClient();
+    const { error } = await serviceDb.rpc("cdilv_publish_due_posts");
+    if (error) {
+      console.error("[api/notifications] publish due posts:", error.message);
+    }
+
+
+  } catch (err) {
+    console.error("[api/notifications] publish due posts init:", err);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -28,22 +48,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ notifications: [], unreadCount: 0 });
     }
 
-    const publicDb = createServiceClient();
-
-    // Project không có pg_cron: gửi thông báo cho bài hẹn giờ đã đến giờ ngay khi có người kiểm tra chuông.
-    const { error: publishErr } = await publicDb.rpc("cdilv_publish_due_posts");
-    if (publishErr) {
-      console.error("[api/notifications] publish due posts:", publishErr.message);
-    }
+    // Xuất bản bài viết hẹn giờ tối đa 1 lần mỗi 3 phút, không chạy mỗi lần poll
+    triggerDuePostsPublishIfDue();
 
     const [notifResult, countResult] = await Promise.all([
-      publicDb
+      supabase
         .from(CDILV_TABLE.notifications)
         .select("id, type, title, message, link, is_read, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(30),
-      publicDb
+      supabase
         .from(CDILV_TABLE.notifications)
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id)
@@ -67,6 +82,7 @@ export async function GET(request: NextRequest) {
       notifications,
       unreadCount: countResult.count ?? 0,
     });
+
   } catch (err: any) {
     console.error("[api/notifications] GET fatal:", err);
     return NextResponse.json(

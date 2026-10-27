@@ -12,6 +12,8 @@ export const CDILV_TABLE = {
   employeeScoreEvents: "cdilv_employee_score_events",
   leaderboardCache: "cdilv_leaderboard_cache",
   leaderboard: "cdilv_leaderboard",
+  leaderboardPublic: "cdilv_leaderboard_public",
+  activityParticipantCounts: "cdilv_activity_participant_counts",
   polls: "cdilv_polls",
   pollJudgeAccess: "cdilv_poll_judge_access",
   pollOptions: "cdilv_poll_options",

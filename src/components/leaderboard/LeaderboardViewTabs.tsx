@@ -17,7 +17,7 @@ export function LeaderboardViewTabs({ active }: LeaderboardViewTabsProps) {
       {TABS.map((tab) => {
         const isActive = tab.id === active;
         return (
-          <Link
+          <Link prefetch={false}
             key={tab.id}
             className={`rounded-lg px-5 py-2 text-sm font-bold transition-all ${
               isActive

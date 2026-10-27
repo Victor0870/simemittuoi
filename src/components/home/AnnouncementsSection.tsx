@@ -33,7 +33,7 @@ export function AnnouncementsSection({
             </p>
           </div>
         </div>
-        <Link
+        <Link prefetch={false}
           className="flex items-center gap-1 text-label-md font-semibold text-primary transition-colors hover:text-dusty-dark"
           href="/posts"
         >

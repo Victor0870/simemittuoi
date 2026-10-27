@@ -11,7 +11,7 @@ export function AnnouncementCard({ announcement }: AnnouncementCardProps) {
   const isUrgent = announcement.tagTone === "error";
 
   return (
-    <Link
+    <Link prefetch={false}
       className="group relative block overflow-hidden rounded-2xl border border-y border-r border-dusty-border/80 border-l-4 border-l-primary bg-surface-container-lowest p-5 shadow-sm transition-shadow hover:shadow-md"
       href={`/posts/${announcement.id}`}
     >

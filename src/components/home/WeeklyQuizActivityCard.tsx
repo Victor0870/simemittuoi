@@ -117,7 +117,7 @@ export function WeeklyQuizActivityCard() {
       <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <Link href={WEEKLY_QUIZ_HREF} className="flex-1 min-w-0">
+            <Link prefetch={false} href={WEEKLY_QUIZ_HREF} className="flex-1 min-w-0">
               <h4 className="text-headline-sm font-bold text-[#173A67] transition-colors group-hover:text-primary leading-snug">
                 Thi trắc nghiệm hàng tuần
               </h4>
@@ -163,7 +163,7 @@ export function WeeklyQuizActivityCard() {
         <div className="mt-4 border-t border-dusty-border/70 pt-3">
           <div className="flex items-center gap-2 w-full flex-nowrap">
             {/* Button 1: Xem bảng xếp hạng tuần / Thể lệ */}
-            <Link
+            <Link prefetch={false}
               href={WEEKLY_QUIZ_HREF}
               className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-dusty-border bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs md:text-sm font-semibold text-on-surface transition hover:bg-dusty-light/60 hover:text-primary shadow-2xs whitespace-nowrap"
               title="Xem thể lệ và bảng xếp hạng tuần"
@@ -178,7 +178,7 @@ export function WeeklyQuizActivityCard() {
             {/* Button 2: Nút Tham gia ngay (Chỉ hoạt động từ 21h đến 22h Thứ 2 hàng tuần, bình thường bị mờ đi) */}
             <div className="flex-1 min-w-0 flex items-center justify-center">
               {isOpen ? (
-                <Link
+                <Link prefetch={false}
                   href={WEEKLY_QUIZ_HREF}
                   className="w-full min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl bg-emerald-600 px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs md:text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 animate-pulse whitespace-nowrap"
                   title="Đang trong khung giờ thi! Bấm để vào làm bài ngay"

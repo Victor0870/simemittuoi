@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -17,11 +16,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { id, all } = body;
 
-    const publicDb = createServiceClient();
-
     if (all) {
       // Đánh dấu tất cả thông báo của user là đã đọc
-      const { error } = await publicDb
+      const { error } = await supabase
         .from(CDILV_TABLE.notifications)
         .update({ is_read: true })
         .eq("user_id", user.id)
@@ -30,7 +27,7 @@ export async function POST(request: NextRequest) {
       if (error) throw error;
     } else if (id) {
       // Đánh dấu 1 thông báo cụ thể
-      const { error } = await publicDb
+      const { error } = await supabase
         .from(CDILV_TABLE.notifications)
         .update({ is_read: true })
         .eq("id", id)

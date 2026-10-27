@@ -91,7 +91,7 @@ export function MobileBottomNav({ activeHref = "/" }: MobileBottomNavProps) {
           isActive ? "text-[#173A67]" : "text-slate-500 hover:text-slate-700"
         } ${pendingHref === item.href ? "scale-95 opacity-70" : ""}`}
         href={item.href}
-        prefetch
+        prefetch={false}
         onClick={() => {
           if (item.href === pathname) return;
           setPendingHref(item.href);

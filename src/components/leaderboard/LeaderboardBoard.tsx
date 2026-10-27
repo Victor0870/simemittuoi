@@ -127,7 +127,7 @@ export function LeaderboardBoard({ entries, tab }: LeaderboardBoardProps) {
       {session === "guest" ? (
         <p className="mb-4 text-sm text-on-surface-variant">
           Khách chỉ xem điểm. Tên đã được che một phần.{" "}
-          <Link className="font-bold text-primary hover:underline" href="/login">
+          <Link prefetch={false} className="font-bold text-primary hover:underline" href="/login">
             Đăng nhập
           </Link>{" "}
           để xem đầy đủ và lịch sử cộng điểm.

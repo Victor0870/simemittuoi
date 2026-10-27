@@ -139,31 +139,19 @@ async function loadHomePublicData(): Promise<HomePublicData> {
 async function loadHomeLeaderboard(): Promise<Pick<HomePublicData, "leaderboardRows" | "errors">> {
   const publicDb = createPublicClient();
   const leaderboardResult = await publicDb
-    .from(CDILV_TABLE.leaderboard)
+    .from(CDILV_TABLE.leaderboardPublic)
     .select(
-      "id, full_name, department, avatar_url, employee_code, total_score, rank",
+      "id, full_name, department, avatar_url, total_score, rank",
     )
     .order("rank", { ascending: true })
     .limit(10);
 
   const errors = [leaderboardResult.error?.message].filter((msg): msg is string => Boolean(msg));
 
-  let leaderboardRows = leaderboardResult.data ?? [];
-
-  // Fallback cache nếu view lỗi
-  if (leaderboardResult.error || leaderboardRows.length === 0) {
-    const cache = await publicDb
-      .from(CDILV_TABLE.leaderboardCache)
-      .select(
-        "id, full_name, department, avatar_url, employee_code, total_score, rank",
-      )
-      .gt("total_score", 0)
-      .order("rank", { ascending: true })
-      .limit(10);
-    if (!cache.error && cache.data?.length) {
-      leaderboardRows = cache.data;
-    }
-  }
+  const leaderboardRows = (leaderboardResult.data ?? []).map((row) => ({
+    ...row,
+    employee_code: null,
+  }));
 
   return { leaderboardRows, errors };
 }
@@ -220,17 +208,21 @@ export async function getHomeSessionInfo(activityIds: string[]): Promise<HomeSes
     const [{ data: profile }, registrationsResult] = await Promise.all([
       supabase
         .from(CDILV_TABLE.profiles)
-        .select("full_name, employee_code, total_score, rank")
+        .select("full_name, employee_code, total_score, rank, approval_status")
         .eq("id", authUserId)
         .maybeSingle(),
       activityIds.length
-        ? publicDb
+        ? supabase
             .from(CDILV_TABLE.activityRegistrations)
             .select("activity_id")
             .eq("user_id", authUserId)
             .in("activity_id", activityIds)
         : Promise.resolve({ data: [] as Array<{ activity_id: string }> }),
     ]);
+
+    if (!profile || profile.approval_status !== "approved") {
+      return guest;
+    }
 
     let score = profile?.total_score ?? 0;
     let rank = profile?.rank ? Number(profile.rank) : 0;
@@ -286,14 +278,17 @@ export async function getHomePageData(): Promise<HomePageData> {
     }
 
     const activityIds = activities.map((item) => item.id);
-    const registrationsResult = activityIds.length
+    const countsResult = activityIds.length
       ? await publicDb
-          .from(CDILV_TABLE.activityRegistrations)
-          .select("activity_id")
+          .from(CDILV_TABLE.activityParticipantCounts)
+          .select("activity_id, participant_count")
           .in("activity_id", activityIds)
-      : { data: [] as Array<{ activity_id: string }> };
+      : { data: [] as Array<{ activity_id: string; participant_count: number }> };
 
-    const allRegistrations = registrationsResult.data ?? [];
+    const countMap = new Map<string, number>();
+    for (const r of countsResult.data ?? []) {
+      countMap.set(r.activity_id, Number(r.participant_count) || 0);
+    }
 
     const allMappedPosts: Announcement[] = posts.map((post) => ({
       id: post.id,
@@ -314,20 +309,18 @@ export async function getHomePageData(): Promise<HomePageData> {
     const leaderboard: LeaderboardEntry[] = leaderboardRows
       .slice(0, 6)
       .map((row, index) => ({
-        id: row.id ?? row.employee_code ?? `rank-${row.rank}`,
+        id: row.id ?? `rank-${row.rank}`,
         rank: Number(row.rank),
         name: row.full_name,
         department: row.department ?? "",
         score: Number(row.total_score) || 0,
         avatarUrl: row.avatar_url ?? "",
         isTop: index === 0 || Number(row.rank) === 1,
-        employeeCode: row.employee_code ?? null,
+        employeeCode: null,
         userId: row.id ?? null,
       }));
 
     const activityItems: Activity[] = activities.map((item) => {
-      const actRegs = allRegistrations.filter((r) => r.activity_id === item.id);
-
       return {
         id: item.id,
         title: item.title,
@@ -340,7 +333,7 @@ export async function getHomePageData(): Promise<HomePageData> {
         participantAvatars: [],
         extraParticipants: 0,
         isRegistrationOpen: item.is_registration_open !== false,
-        participantCount: actRegs.length,
+        participantCount: countMap.get(item.id) ?? 0,
         isRegistered: false,
       };
     });

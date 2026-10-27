@@ -28,6 +28,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { data: profile } = await supabase
+      .from(CDILV_TABLE.profiles)
+      .select("approval_status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.approval_status !== "approved") {
+      return NextResponse.json(
+        { error: "Chỉ đoàn viên đã được phê duyệt mới được đăng ký hoạt động." },
+        { status: 403 },
+      );
+    }
+
     const publicDb = createServiceClient();
 
     // Check activity registration status
@@ -54,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert registration
-    const { error: insertErr } = await publicDb
+    const { error: insertErr } = await supabase
       .from(CDILV_TABLE.activityRegistrations)
       .insert({
         activity_id: activityId,

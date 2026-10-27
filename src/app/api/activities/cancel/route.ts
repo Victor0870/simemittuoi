@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export async function POST(request: NextRequest) {
@@ -28,9 +27,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const publicDb = createServiceClient();
+    const { data: profile } = await supabase
+      .from(CDILV_TABLE.profiles)
+      .select("approval_status")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    const { error: delErr } = await publicDb
+    if (profile?.approval_status !== "approved") {
+      return NextResponse.json(
+        { error: "Chỉ đoàn viên đã được phê duyệt mới được hủy đăng ký hoạt động." },
+        { status: 403 },
+      );
+    }
+
+    const { error: delErr } = await supabase
       .from(CDILV_TABLE.activityRegistrations)
       .delete()
       .eq("activity_id", activityId)

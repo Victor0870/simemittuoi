@@ -21,19 +21,19 @@ export function Footer() {
         </div>
 
         <div className="flex flex-wrap justify-center gap-6">
-          <Link
+          <Link prefetch={false}
             className="text-label-sm text-[#27496D] transition-colors hover:text-[#173A67]"
             href="#"
           >
             Chính sách bảo mật
           </Link>
-          <Link
+          <Link prefetch={false}
             className="text-label-sm text-[#27496D] transition-colors hover:text-[#173A67]"
             href="#"
           >
             Điều khoản dịch vụ
           </Link>
-          <Link
+          <Link prefetch={false}
             className="text-label-sm text-[#27496D] transition-colors hover:text-[#173A67]"
             href="#"
           >

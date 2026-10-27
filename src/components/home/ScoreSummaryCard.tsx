@@ -40,7 +40,7 @@ export function ScoreSummaryCard({ user }: ScoreSummaryCardProps) {
           </div>
           <span className="font-semibold text-on-surface">Xếp hạng</span>
         </div>
-        <Link
+        <Link prefetch={false}
           className="flex items-center text-sm font-bold text-on-tertiary-container hover:underline"
           href="/leaderboard"
         >

@@ -148,7 +148,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
       <div className="flex flex-1 flex-col justify-between p-4 sm:p-5">
         <div>
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <Link href={`/activities/${activity.id}`} className="flex-1 min-w-0">
+            <Link prefetch={false} href={`/activities/${activity.id}`} className="flex-1 min-w-0">
               <h4 className="text-headline-sm font-bold text-on-surface transition-colors group-hover:text-primary leading-snug">
                 {activity.title}
               </h4>
@@ -194,7 +194,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
         <div className="mt-4 border-t border-dusty-border/70 pt-3">
           <div className="flex items-center gap-2 w-full flex-nowrap">
             {/* Button 1: Nút xem Danh sách đăng ký */}
-            <Link
+            <Link prefetch={false}
               href={`/activities/${activity.id}`}
               className="flex-1 min-w-0 inline-flex items-center justify-center gap-1 sm:gap-1.5 rounded-xl border border-dusty-border bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs md:text-sm font-semibold text-on-surface transition hover:bg-dusty-light/60 hover:text-primary shadow-2xs whitespace-nowrap"
               title="Xem bài viết & danh sách những người đã tham gia"

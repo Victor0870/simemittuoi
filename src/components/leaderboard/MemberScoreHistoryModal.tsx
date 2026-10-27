@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { LeaderboardEntry } from "@/lib/mock-data";
 import { readableAwardLabel } from "@/lib/score-labels";
+import { maskDisplayName } from "@/lib/privacy";
 
 type MemberScoreEvent = {
   id: string;
@@ -165,14 +166,14 @@ export function MemberScoreHistoryModal({
                 <p className="text-body-md text-on-surface-variant max-w-md mx-auto">
                   Chi tiết minh chứng và lịch sử các lượt cộng điểm thi đua của đoàn viên{" "}
                   <strong className="text-on-surface font-semibold">
-                    {member.name}
+                    {isGuest ? maskDisplayName(member.name, 7) : member.name}
                   </strong>{" "}
                   được bảo vệ nội bộ. Vui lòng đăng nhập tài khoản đoàn viên để xem.
                 </p>
               </div>
 
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link
+                <Link prefetch={false}
                   href="/login?next=/leaderboard"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-[#173A67] px-6 py-3 font-bold text-white shadow-xs hover:bg-dusty-dark transition active:scale-[0.98]"
                 >
@@ -180,8 +181,8 @@ export function MemberScoreHistoryModal({
                   <span>Đăng nhập ngay</span>
                 </Link>
 
-                <Link
-                  href="/signup"
+                <Link prefetch={false}
+                  href="/register"
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant px-5 py-3 font-bold text-[#173A67] hover:bg-surface-container-high transition active:scale-[0.98]"
                 >
                   <span>Đăng ký tài khoản</span>
@@ -197,8 +198,8 @@ export function MemberScoreHistoryModal({
                   <div className="relative shrink-0">
                     <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#173A67] to-dusty-dark text-white font-extrabold text-xl shadow-xs ring-2 ring-primary/20">
                       <Avatar
-                        alt={member.name}
-                        fallback={member.name.trim().slice(0, 1).toUpperCase()}
+                        alt={isGuest ? maskDisplayName(member.name, 7) : member.name}
+                        fallback={isGuest ? `#${member.rank}` : member.name.trim().slice(0, 1).toUpperCase()}
                         size={56}
                         src={member.avatarUrl}
                       />
@@ -212,7 +213,7 @@ export function MemberScoreHistoryModal({
 
                   <div>
                     <h4 className="text-title-lg font-extrabold text-[#173A67]">
-                      {details?.name || member.name}
+                      {isGuest ? maskDisplayName(member.name, 7) : (details?.name || member.name)}
                     </h4>
                     <div className="flex flex-wrap items-center gap-2 mt-1 text-label-sm text-on-surface-variant">
                       {(details?.employeeCode || member.employeeCode) ? (

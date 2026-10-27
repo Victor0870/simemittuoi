@@ -83,13 +83,14 @@ function Avatar({
   sizeClass: string;
 }) {
   const initial = entry.name.trim().slice(0, 1) || "?";
+  const displayName = maskIdentity ? maskDisplayName(entry.name, 7) : entry.name;
 
   return (
     <div
       className={`flex items-center justify-center overflow-hidden rounded-full shadow-md ${ringClass} ${sizeClass}`}
     >
       <AvatarImage
-        alt={entry.name}
+        alt={displayName}
         fallback={
           <span className="text-xl font-extrabold text-primary md:text-2xl">
             {maskIdentity ? `#${entry.rank}` : initial}
@@ -234,7 +235,7 @@ export function LeaderboardPodium({
                     className={`line-clamp-1 font-bold text-on-surface group-hover/podium:text-primary ${
                       isFirst ? "text-headline-sm" : "text-body-md"
                     }`}
-                    title={entry.name}
+                    title={displayName}
                   >
                     {displayName}
                   </h3>

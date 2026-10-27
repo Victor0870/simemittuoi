@@ -11,7 +11,7 @@ type TopNavProps = {
 export function TopNav({ activeHref = "/" }: TopNavProps) {
   return (
     <nav className="fixed top-0 z-50 flex h-16 w-full items-center justify-between border-b border-outline-variant bg-surface-container-lowest px-margin-mobile shadow-sm md:px-margin-desktop">
-      <Link
+      <Link prefetch={false}
         className="shrink-0 text-sm font-extrabold tracking-wide text-[#173A67]"
         href="/"
       >
@@ -24,7 +24,7 @@ export function TopNav({ activeHref = "/" }: TopNavProps) {
           const shortLabel = "shortLabel" in item ? item.shortLabel : null;
 
           return (
-            <Link
+            <Link prefetch={false}
               key={item.href}
               className={`text-label-md transition-colors ${
                 isActive

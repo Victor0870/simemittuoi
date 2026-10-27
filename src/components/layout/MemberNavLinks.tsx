@@ -19,7 +19,7 @@ export function MemberNavLinks({ activeHref = "/" }: Props) {
         const isActive = activeHref === item.href || activeHref.startsWith(`${item.href}/`);
 
         return (
-          <Link
+          <Link prefetch={false}
             key={item.href}
             className={`text-label-md transition-colors ${
               isActive

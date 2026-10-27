@@ -18,13 +18,13 @@ export function TopNavAuth() {
   if (isGuest) {
     return (
       <div className="flex items-center gap-2">
-        <Link
+        <Link prefetch={false}
           className="rounded-xl border border-primary px-3 py-1.5 text-sm font-semibold text-primary hover:bg-primary/10"
           href="/login"
         >
           Đăng nhập
         </Link>
-        <Link
+        <Link prefetch={false}
           className="hidden rounded-xl bg-primary px-3 py-1.5 text-sm font-bold text-white hover:bg-dusty-dark sm:inline-flex"
           href="/register"
         >
@@ -39,7 +39,7 @@ export function TopNavAuth() {
   return (
     <>
       {isAdmin ? (
-        <Link
+        <Link prefetch={false}
           className="hidden items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 transition hover:bg-amber-100 sm:inline-flex"
           href="/admin"
           title="Trang quản trị"
@@ -48,7 +48,7 @@ export function TopNavAuth() {
           <span>Admin</span>
         </Link>
       ) : hasAnyPermission ? (
-        <Link
+        <Link prefetch={false}
           className="hidden items-center gap-1 rounded-full border border-[#173A67]/30 bg-[#D9F2EC] px-2.5 py-1 text-xs font-bold text-[#173A67] transition hover:bg-[#c6eae1] sm:inline-flex"
           href="/admin"
           title="Trang quản trị"
@@ -58,7 +58,7 @@ export function TopNavAuth() {
         </Link>
       ) : null}
       <NotificationBell />
-      <Link
+      <Link prefetch={false}
         aria-label={isAdmin ? "Trang quản trị" : "Cài đặt hồ sơ"}
         className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-dusty-light font-bold text-primary transition hover:opacity-90"
         href={isAdmin ? "/admin" : "/settings"}

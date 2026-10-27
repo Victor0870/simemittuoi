@@ -126,7 +126,7 @@ export function HomeLeaderboardSection({
             </div>
 
             <div className="mt-6 border-t border-dusty-border/70 pt-4">
-              <Link
+              <Link prefetch={false}
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary py-2.5 px-4 text-label-lg font-bold text-primary shadow-xs transition-all hover:bg-primary hover:text-white active:scale-[0.98]"
                 href="/leaderboard"
               >

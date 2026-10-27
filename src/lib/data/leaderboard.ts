@@ -5,6 +5,7 @@ import { refreshLeaderboardIfStale } from "@/lib/data/ranking-refresh";
 import { LEADERBOARD_CACHE_TAG, RANKING_REVALIDATE_SECONDS } from "@/lib/ranking-cache";
 import { createClient } from "@/lib/supabase/server";
 import { createPublicClient } from "@/lib/supabase/public";
+import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 
 export type MyLeaderboardPosition = {
@@ -43,8 +44,8 @@ async function loadLeaderboardRows(limit: number): Promise<{
   rows: LeaderboardRow[];
   error: string | null;
 }> {
-  const publicDb = createPublicClient();
-  const { data, error } = await publicDb
+  const db = createServiceClient();
+  const { data, error } = await db
     .from(CDILV_TABLE.leaderboard)
     .select(
       "id, full_name, department, avatar_url, employee_code, total_score, rank",
@@ -54,7 +55,7 @@ async function loadLeaderboardRows(limit: number): Promise<{
 
   if (!error && data?.length) return { rows: data, error: null };
 
-  const cache = await publicDb
+  const cache = await db
     .from(CDILV_TABLE.leaderboardCache)
     .select(
       "id, full_name, department, avatar_url, employee_code, total_score, rank",
