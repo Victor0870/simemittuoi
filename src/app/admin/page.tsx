@@ -9,8 +9,9 @@ import { ManagerOverview } from "@/components/admin/ManagerOverview";
 import { getCurrentAccess } from "@/lib/auth/guard";
 import { getSessionUserId } from "@/lib/auth/session";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
-import { fundBalance } from "@/lib/finance/registry";
+import { countSavingsNeedingAction, fundBalance } from "@/lib/finance/registry";
 import { financeAbilities, loadEntries, loadFunds } from "@/lib/finance/server";
+import { todayInVietnam } from "@/lib/life-events/registry";
 import { canViewAllLifeEvents } from "@/lib/life-events/server";
 import { paymentAbilities } from "@/lib/payments/server";
 import { formatVnd } from "@/lib/visits/registry";
@@ -82,6 +83,7 @@ export default async function AdminDashboardPage() {
   const pendingVisits = pendingVisitsCount ?? 0;
   const pendingLifeEvents = pendingLifeEventsCount ?? 0;
   const activeFunds = funds.filter((f) => f.is_active);
+  const dueSavings = canFinance ? countSavingsNeedingAction(funds, entries, todayInVietnam()) : 0;
   const balanceOf = (kinds: string[]) =>
     activeFunds.filter((f) => kinds.includes(f.kind)).reduce((sum, f) => sum + fundBalance(f, entries), 0);
 
@@ -151,6 +153,16 @@ export default async function AdminDashboardPage() {
             count: pendingPayments,
             text: `${pendingPayments} đề nghị thanh toán chờ duyệt`,
             emptyText: "Không có đề nghị thanh toán chờ duyệt",
+          },
+        ]
+      : []),
+    ...(canFinance
+      ? [
+          {
+            href: "/admin/finance/ledger",
+            count: dueSavings,
+            text: `${dueSavings} sổ tiết kiệm sắp / đã đến hạn cần tất toán hoặc tái tục`,
+            emptyText: "Không có sổ tiết kiệm sắp đến hạn",
           },
         ]
       : []),

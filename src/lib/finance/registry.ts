@@ -35,6 +35,106 @@ export function fundSubtitle(fund: Fund, formatDate: (iso: string) => string): s
   return parts.length ? parts.join(" · ") : FUND_KIND_LABEL[fund.kind];
 }
 
+/** Hiện nhãn "Sắp đáo hạn" từ trước ngày đáo hạn bao nhiêu ngày. Thông báo nhắc gửi trước 7 ngày (hàm cdilv_notify_savings_maturity). */
+export const SAVINGS_SOON_DAYS = 30;
+
+export type SavingsMaturityStatus = { tone: "soon" | "due" | "overdue"; label: string; days: number };
+
+function daysBetween(fromIso: string, toIso: string): number {
+  return Math.round((Date.parse(`${toIso}T00:00:00Z`) - Date.parse(`${fromIso}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Trạng thái đáo hạn của sổ tiết kiệm đang dùng; null nếu chưa tới lúc nhắc hoặc không phải sổ tiết kiệm. */
+export function savingsMaturityStatus(fund: Fund, today: string): SavingsMaturityStatus | null {
+  if (fund.kind !== "savings" || !fund.is_active || !fund.maturity_date) return null;
+  const days = daysBetween(today, fund.maturity_date);
+  if (days > SAVINGS_SOON_DAYS) return null;
+  if (days < 0) return { tone: "overdue", label: `Quá hạn ${-days} ngày`, days };
+  if (days === 0) return { tone: "due", label: "Đến hạn hôm nay", days };
+  return { tone: "soon", label: `Sắp đáo hạn (còn ${days} ngày)`, days };
+}
+
+/** Số sổ tiết kiệm còn tiền, đến hạn / quá hạn hoặc sẽ đáo hạn trong withinDays ngày (cùng cửa sổ với thông báo nhắc). */
+export function countSavingsNeedingAction(funds: Fund[], entries: FundEntry[], today: string, withinDays = 7): number {
+  return funds.filter((f) => {
+    const status = savingsMaturityStatus(f, today);
+    return status !== null && status.days <= withinDays && fundBalance(f, entries) > 0;
+  }).length;
+}
+
+export const SAVINGS_STATUS_CLASS: Record<SavingsMaturityStatus["tone"], string> = {
+  soon: "bg-amber-100 text-amber-900",
+  due: "bg-rose-100 text-rose-800",
+  overdue: "bg-rose-600 text-white",
+};
+
+export type SavingsMaturityAction = "settle" | "renew";
+
+export type SavingsMaturityInput = {
+  action: SavingsMaturityAction;
+  entryDate: string;
+  interestAmount: number;
+  /** Tất toán: quỹ nhận gốc + lãi (bắt buộc). Tái tục: quỹ nhận lãi, null = lãi nhập gốc vào sổ. */
+  targetFundId: string | null;
+  newMaturityDate: string | null;
+  newInterestRate: number | null;
+  documentNo: string | null;
+};
+
+export function parseSavingsMaturityInput(
+  raw: Record<string, unknown>,
+): { ok: true; value: SavingsMaturityInput } | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+  const action = raw.action;
+  if (action !== "settle" && action !== "renew") return { ok: false, errors: ["Vui lòng chọn Tất toán hoặc Tái tục."] };
+
+  const entryDate = oneLine(raw.entryDate);
+  if (!isValidDate(entryDate)) errors.push("Ngày ghi sổ không hợp lệ.");
+
+  const interestAmount = Math.round(Number(raw.interestAmount ?? 0));
+  if (!Number.isFinite(interestAmount) || interestAmount < 0) errors.push("Tiền lãi không hợp lệ.");
+  else if (interestAmount > FINANCE_LIMITS.maxAmount) errors.push("Tiền lãi quá lớn.");
+
+  const targetFundId = uuidOrNull(raw.targetFundId);
+  if (action === "settle" && !targetFundId) errors.push("Vui lòng chọn quỹ nhận tiền tất toán.");
+
+  let newMaturityDate: string | null = null;
+  let newInterestRate: number | null = null;
+  if (action === "renew") {
+    newMaturityDate = oneLine(raw.newMaturityDate);
+    if (!isValidDate(newMaturityDate)) errors.push("Vui lòng nhập ngày đáo hạn mới.");
+    else if (isValidDate(entryDate) && newMaturityDate <= entryDate) errors.push("Ngày đáo hạn mới phải sau ngày ghi sổ.");
+    const rateText = oneLine(raw.newInterestRate).replace(",", ".");
+    if (rateText) {
+      newInterestRate = Math.round(Number(rateText) * 100) / 100;
+      if (!Number.isFinite(newInterestRate) || newInterestRate < 0 || newInterestRate > 100) errors.push("Lãi suất không hợp lệ.");
+    }
+  }
+
+  const documentNo = oneLine(raw.documentNo) || null;
+  if ((documentNo?.length ?? 0) > FINANCE_LIMITS.documentNo) errors.push("Số chứng từ quá dài.");
+
+  if (errors.length) return { ok: false, errors };
+  return {
+    ok: true,
+    value: { action, entryDate, interestAmount, targetFundId, newMaturityDate, newInterestRate, documentNo },
+  };
+}
+
+/** Tham số p_data cho RPC cdilv_savings_mature. */
+export function savingsMaturityRpcData(input: SavingsMaturityInput) {
+  return {
+    action: input.action,
+    entry_date: input.entryDate,
+    interest_amount: input.interestAmount,
+    target_fund_id: input.action === "settle" ? input.targetFundId : null,
+    interest_fund_id: input.action === "renew" ? input.targetFundId : null,
+    new_maturity_date: input.newMaturityDate,
+    new_interest_rate: input.newInterestRate,
+    document_no: input.documentNo,
+  };
+}
+
 export const ENTRY_KIND_LABEL: Record<EntryKind, string> = {
   income: "Phiếu thu",
   expense: "Phiếu chi",

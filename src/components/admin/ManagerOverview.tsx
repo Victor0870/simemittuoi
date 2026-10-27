@@ -6,8 +6,9 @@ import {
 } from "@/components/admin/AdminOverview";
 import type { CurrentAccess } from "@/lib/auth/guard";
 import { OFFICE_TOOLS, PERMISSIONS, hasPermission, visibleAdminLinks } from "@/lib/auth/permissions";
-import { fundBalance } from "@/lib/finance/registry";
+import { countSavingsNeedingAction, fundBalance } from "@/lib/finance/registry";
 import { financeAbilities, loadEntries, loadFunds } from "@/lib/finance/server";
+import { todayInVietnam } from "@/lib/life-events/registry";
 import { canViewAllLifeEvents, loadLifeEventList } from "@/lib/life-events/server";
 import { loadPaymentRequestList, paymentAbilities } from "@/lib/payments/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -82,6 +83,15 @@ export async function ManagerOverview({ access }: { access: CurrentAccess }) {
       count: pendingPayments,
       text: `${pendingPayments} đề nghị thanh toán chờ duyệt`,
       emptyText: "Không có đề nghị thanh toán chờ duyệt",
+    });
+  }
+  if (canFinance) {
+    const dueSavings = countSavingsNeedingAction(funds, entries, todayInVietnam());
+    tasks.push({
+      href: "/admin/finance/ledger",
+      count: dueSavings,
+      text: `${dueSavings} sổ tiết kiệm sắp / đã đến hạn cần tất toán hoặc tái tục`,
+      emptyText: "Không có sổ tiết kiệm sắp đến hạn",
     });
   }
 

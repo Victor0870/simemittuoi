@@ -99,6 +99,8 @@ export const CDILV_RPC = {
   paymentRequestLog: "cdilv_payment_request_log",
   fundEntrySave: "cdilv_fund_entry_save",
   fundEntryVoid: "cdilv_fund_entry_void",
+  savingsMature: "cdilv_savings_mature",
+  notifySavingsMaturity: "cdilv_notify_savings_maturity",
   documentIssue: "cdilv_document_issue",
   documentNumberPreview: "cdilv_document_number_preview",
   documentNumberState: "cdilv_document_number_state",

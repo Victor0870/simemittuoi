@@ -8,8 +8,10 @@ import {
   FINANCE_LIMITS,
   FUND_KIND_ICON,
   FUND_KIND_LABEL,
+  SAVINGS_STATUS_CLASS,
   endOfPreviousMonth,
   fundSubtitle,
+  savingsMaturityStatus,
   type Fund,
   type FundKind,
 } from "@/lib/finance/registry";
@@ -263,6 +265,14 @@ export function FinanceSettings({ funds, lockedThrough, today, canManageCatalogs
                       <span className="ml-2 rounded-full bg-surface-container-high px-2 py-0.5 text-[11px] font-semibold text-on-surface-variant">
                         {FUND_KIND_LABEL[f.kind]}
                       </span>
+                      {(() => {
+                        const status = savingsMaturityStatus(f, today);
+                        return status ? (
+                          <span className={`ml-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${SAVINGS_STATUS_CLASS[status.tone]}`}>
+                            {status.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </p>
                     <p className="text-xs text-on-surface-variant">
                       {fundSubtitle(f, formatDateVi)}
@@ -301,10 +311,10 @@ export function FinanceSettings({ funds, lockedThrough, today, canManageCatalogs
           từ ngày đó trở đi. Đề nghị thanh toán chuyển khoản tự ghi vào tài khoản thanh toán đầu tiên, trả tiền mặt ghi vào quỹ tiền mặt.
         </p>
         <p className="text-xs text-on-surface-variant">
-          Tiền gửi tiết kiệm: mỗi sổ tiết kiệm là một quỹ riêng, không chi trực tiếp được. Gửi tiết kiệm / tất toán ghi bằng phiếu{" "}
-          <b>Chuyển quỹ</b> giữa tài khoản thanh toán và sổ tiết kiệm; tiền lãi ghi <b>Phiếu thu</b> danh mục &quot;Lãi tiền gửi ngân hàng&quot; vào quỹ
-          nhận lãi (sổ tiết kiệm nếu lãi nhập gốc, tài khoản thanh toán nếu lãi trả về tài khoản). Sổ đã tất toán thì bỏ chọn &quot;Đang sử
-          dụng&quot;.
+          Tiền gửi tiết kiệm: mỗi sổ tiết kiệm là một quỹ riêng, không chi trực tiếp được. Gửi tiết kiệm ghi bằng phiếu <b>Chuyển quỹ</b> từ
+          tài khoản thanh toán sang sổ. Khi sổ đến hạn, Chủ tịch và Kế toán (theo Cài đặt công đoàn) nhận thông báo trước 7 ngày và đúng ngày
+          đáo hạn; ở Sổ quỹ bấm <b>Tất toán / Tái tục</b> để tự ghi phiếu thu lãi (danh mục &quot;Lãi tiền gửi ngân hàng&quot;), chuyển gốc + lãi về
+          tài khoản và ngừng dùng sổ, hoặc đặt ngày đáo hạn / lãi suất mới khi gửi tiếp.
         </p>
       </section>
 

@@ -1,18 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { DataTable, type DataTableColumn } from "@/components/admin/DataTable";
+import { SavingsMaturityDialog } from "@/components/finance/SavingsMaturityDialog";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import {
   ENTRY_KIND_LABEL,
   FUND_KIND_ICON,
+  SAVINGS_STATUS_CLASS,
   compareEntries,
   entryEffect,
   entryTouchesFund,
   fundBalance,
   fundSubtitle,
   isSpendableFund,
+  savingsMaturityStatus,
   type EntryKind,
   type Fund,
   type FundCategory,
@@ -28,6 +32,10 @@ type Props = {
   lockedThrough: string | null;
   today: string;
   unionName: string;
+  /** Có quyền ghi sổ: hiện nút Tất toán / Tái tục cho sổ tiết kiệm đến hạn. */
+  canRecord: boolean;
+  /** Chọn sẵn quỹ (link ?fund= từ thông báo nhắc đáo hạn). */
+  initialFundId?: string | null;
 };
 
 const inputClass =
@@ -64,9 +72,14 @@ function periods(today: string) {
 
 type Row = { entry: FundEntry; income: number; expense: number; balance: number | null };
 
-export function FundLedger({ funds, categories, entries, lockedThrough, today, unionName }: Props) {
+export function FundLedger({ funds, categories, entries, lockedThrough, today, unionName, canRecord, initialFundId = null }: Props) {
+  const router = useRouter();
   const presets = useMemo(() => periods(today), [today]);
-  const [fundId, setFundId] = useState<string>("all");
+  const [fundId, setFundId] = useState<string>(() =>
+    initialFundId && funds.some((f) => f.id === initialFundId) ? initialFundId : "all",
+  );
+  const [maturing, setMaturing] = useState<Fund | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [from, setFrom] = useState(presets[3].from);
   const [to, setTo] = useState(today);
   const [kind, setKind] = useState<EntryKind | "all">("all");
@@ -87,6 +100,10 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
   const totalBalance = balances.reduce((sum, b) => sum + b.balance, 0);
   const savingsBalance = balances.reduce((sum, b) => sum + (isSpendableFund(b.fund) ? 0 : b.balance), 0);
   const hasSavings = funds.some((f) => !isSpendableFund(f));
+  const dueSavings = balances
+    .map(({ fund, balance }) => ({ fund, balance, status: savingsMaturityStatus(fund, today) }))
+    .filter((d) => d.status !== null && d.balance > 0)
+    .sort((a, b) => (a.status?.days ?? 0) - (b.status?.days ?? 0));
 
   const ledger = useMemo(() => {
     const scopeFunds = selectedFund ? [selectedFund] : funds;
@@ -245,6 +262,46 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
 
   return (
     <div className="space-y-4">
+      {notice ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800">{notice}</p>
+      ) : null}
+      {dueSavings.length ? (
+        <div className="space-y-2 rounded-2xl border border-amber-300 bg-amber-50 p-3 sm:p-4">
+          <p className="flex items-center gap-1 text-sm font-bold text-amber-900">
+            <MaterialIcon className="text-[18px]" name="savings" />
+            Sổ tiết kiệm cần xử lý
+          </p>
+          <ul className="space-y-1.5">
+            {dueSavings.map(({ fund, balance, status }) => (
+              <li key={fund.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white px-3 py-2 text-sm">
+                <span className="font-bold text-[#173A67]">{fund.name}</span>
+                {status ? (
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${SAVINGS_STATUS_CLASS[status.tone]}`}>{status.label}</span>
+                ) : null}
+                <span className="text-xs text-on-surface-variant">
+                  {fundSubtitle(fund, formatDateVi)} · số dư {formatVnd(balance)}
+                </span>
+                {canRecord ? (
+                  <button
+                    className="ml-auto inline-flex items-center gap-1 rounded-lg bg-[#173A67] px-2.5 py-1 text-xs font-bold text-white hover:bg-[#1E4A7D]"
+                    type="button"
+                    onClick={() => {
+                      setNotice(null);
+                      setMaturing(fund);
+                    }}
+                  >
+                    <MaterialIcon className="text-[16px]" name="autorenew" />
+                    Tất toán / Tái tục
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-amber-900/80">
+            Chủ tịch và Kế toán nhận thông báo trước 7 ngày và khi sổ đến hạn. Tất toán / Tái tục tự ghi phiếu thu lãi và phiếu chuyển quỹ.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {balances.map(({ fund, balance }) => (
           <button
@@ -262,6 +319,14 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
             </p>
             <p className={`mt-1 text-xl font-extrabold ${balance < 0 ? "text-rose-700" : "text-[#173A67]"}`}>{formatVnd(balance)}</p>
             <p className="text-[11px] text-on-surface-variant">{fundSubtitle(fund, formatDateVi)}</p>
+            {(() => {
+              const status = savingsMaturityStatus(fund, today);
+              return status ? (
+                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${SAVINGS_STATUS_CLASS[status.tone]}`}>
+                  {status.label}
+                </span>
+              ) : null;
+            })()}
           </button>
         ))}
         <button
@@ -420,6 +485,20 @@ export function FundLedger({ funds, categories, entries, lockedThrough, today, u
         rows={ledger.rows}
         sortHint="Số tồn tính theo thứ tự ngày"
       />
+      {maturing ? (
+        <SavingsMaturityDialog
+          entries={entries}
+          fund={maturing}
+          funds={funds}
+          today={today}
+          onClose={() => setMaturing(null)}
+          onDone={(message) => {
+            setMaturing(null);
+            setNotice(message);
+            router.refresh();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

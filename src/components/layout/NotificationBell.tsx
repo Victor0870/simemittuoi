@@ -25,6 +25,7 @@ export type NotificationItem = {
     | "payment_new"
     | "payment_decided"
     | "password_reset_request"
+    | "savings_maturity"
     | "system"
     | string;
   title: string;
@@ -208,6 +209,11 @@ export function NotificationBell() {
       case "password_reset_request":
         return {
           name: "lock_reset",
+          bg: "bg-amber-100 text-amber-800",
+        };
+      case "savings_maturity":
+        return {
+          name: "savings",
           bg: "bg-amber-100 text-amber-800",
         };
       default:

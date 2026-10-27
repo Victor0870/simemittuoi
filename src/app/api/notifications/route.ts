@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +37,22 @@ async function triggerDuePostsPublishIfDue() {
   }
 }
 
+// Nhắc sổ tiết kiệm đáo hạn (hàm tự chống gửi trùng theo sổ + ngày đáo hạn), tối đa 1 lần mỗi 30 phút.
+const SAVINGS_CHECK_INTERVAL_MS = 30 * 60_000;
+let lastSavingsCheck = 0;
+
+async function triggerSavingsMaturityIfDue() {
+  const now = Date.now();
+  if (now - lastSavingsCheck < SAVINGS_CHECK_INTERVAL_MS) return;
+  lastSavingsCheck = now;
+  try {
+    const { error } = await createServiceClient().rpc(CDILV_RPC.notifySavingsMaturity);
+    if (error) console.error("[api/notifications] savings maturity:", error.message);
+  } catch (err) {
+    console.error("[api/notifications] savings maturity init:", err);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -50,6 +66,8 @@ export async function GET(request: NextRequest) {
 
     // Xuất bản bài viết hẹn giờ tối đa 1 lần mỗi 3 phút, không chạy mỗi lần poll
     triggerDuePostsPublishIfDue();
+    // Chờ xong để thông báo vừa tạo hiện ngay trong lần tải này (chỉ chạy thật tối đa 1 lần / 30 phút)
+    await triggerSavingsMaturityIfDue();
 
     const [notifResult, countResult] = await Promise.all([
       supabase

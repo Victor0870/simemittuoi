@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 const buttonClass =
   "flex items-center gap-1 rounded-xl border border-outline-variant px-3 py-1.5 text-sm font-semibold text-on-surface-variant hover:border-[#173A67] hover:text-[#173A67]";
 
-export default async function OfficeFinancePage() {
+export default async function OfficeFinancePage({ searchParams }: { searchParams: Promise<{ fund?: string }> }) {
+  const { fund: initialFundId } = await searchParams;
   const access = await getCurrentAccess();
   if (!access) redirect("/login?next=/admin/finance/ledger");
   const can = financeAbilities(access);
@@ -76,7 +77,9 @@ export default async function OfficeFinancePage() {
         </p>
       ) : (
         <FundLedger
+          canRecord={can.record}
           categories={categories}
+          initialFundId={typeof initialFundId === "string" ? initialFundId : null}
           entries={entries}
           funds={funds}
           lockedThrough={lockedThrough}
