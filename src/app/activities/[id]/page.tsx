@@ -8,7 +8,8 @@ import { getActivityById } from "@/lib/data/activities";
 import { formatScheduleLabel } from "@/lib/post-schedule";
 import { ActivityDetailActionButtons } from "@/components/activities/ActivityDetailActionButtons";
 
-export const revalidate = 10;
+// Nội dung phụ thuộc người xem (admin thấy danh sách đầy đủ) nên không được cache chung.
+export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -24,15 +25,15 @@ export default async function ActivityDetailPage({ params }: Props) {
     // ignore
   }
 
-  let activity = await getActivityById(id, currentUserId);
+  const isAdmin = currentUserId ? Boolean((await getCurrentAccess())?.isAdmin) : false;
+
+  // Danh sách người đăng ký đầy đủ chỉ dành cho admin; người khác chỉ thấy số lượng và đăng ký của chính mình.
+  let activity = await getActivityById(id, currentUserId, { includeParticipants: isAdmin });
   // Hoạt động Inactive / hẹn giờ: chỉ admin xem trước được, người khác coi như không tồn tại.
   let isPreview = false;
-  if (!activity && currentUserId) {
-    const access = await getCurrentAccess();
-    if (access?.isAdmin) {
-      activity = await getActivityById(id, currentUserId, { includeHidden: true });
-      isPreview = Boolean(activity);
-    }
+  if (!activity && isAdmin) {
+    activity = await getActivityById(id, currentUserId, { includeHidden: true, includeParticipants: true });
+    isPreview = Boolean(activity);
   }
   if (!activity) {
     notFound();
@@ -211,10 +212,14 @@ export default async function ActivityDetailPage({ params }: Props) {
               name="person_add_alt"
             />
             <p className="text-body-sm sm:text-body-md font-semibold text-on-surface">
-              Chưa có đoàn viên nào đăng ký tham gia
+              {activity.participantCount > 0
+                ? "Danh sách người tham gia được bảo mật"
+                : "Chưa có đoàn viên nào đăng ký tham gia"}
             </p>
             <p className="mt-1 text-xs sm:text-body-sm text-on-surface-variant">
-              Hãy bấm nút <strong>&quot;Đăng ký tham gia ngay&quot;</strong> ở trên để là người đầu tiên tham gia hoạt động này!
+              {activity.participantCount > 0
+                ? `Đã có ${activity.participantCount} đoàn viên đăng ký tham gia hoạt động này.`
+                : "Hãy bấm nút \"Đăng ký tham gia ngay\" ở trên để là người đầu tiên tham gia hoạt động này!"}
             </p>
           </div>
         ) : (
@@ -296,6 +301,12 @@ export default async function ActivityDetailPage({ params }: Props) {
                 })}
               </tbody>
             </table>
+            {!isAdmin && activity.participantCount > activity.participants.length ? (
+              <p className="mt-3 text-xs sm:text-body-sm text-on-surface-variant">
+                Danh sách người tham gia được bảo mật — bạn chỉ thấy đăng ký của chính mình trong tổng số{" "}
+                {activity.participantCount} đoàn viên.
+              </p>
+            ) : null}
           </div>
         )}
       </section>

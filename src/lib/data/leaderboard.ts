@@ -35,7 +35,7 @@ function mapRows(rows: LeaderboardRow[]): LeaderboardEntry[] {
     score: Number(row.total_score) || 0,
     avatarUrl: row.avatar_url ?? "",
     isTop: index === 0 || Number(row.rank) === 1,
-    employeeCode: row.employee_code ?? null,
+    employeeCode: null,
     userId: row.id ?? null,
   }));
 }
@@ -44,28 +44,41 @@ async function loadLeaderboardRows(limit: number): Promise<{
   rows: LeaderboardRow[];
   error: string | null;
 }> {
-  const db = createServiceClient();
-  const { data, error } = await db
-    .from(CDILV_TABLE.leaderboard)
+  const publicDb = createPublicClient();
+  const { data, error } = await publicDb
+    .from(CDILV_TABLE.leaderboardPublic)
     .select(
-      "id, full_name, department, avatar_url, employee_code, total_score, rank",
+      "id, full_name, department, avatar_url, total_score, rank",
     )
     .order("rank", { ascending: true })
     .limit(limit);
 
-  if (!error && data?.length) return { rows: data, error: null };
+  if (!error && data?.length) {
+    const rows = data.map((r: any) => ({
+      ...r,
+      employee_code: null,
+    }));
+    return { rows, error: null };
+  }
 
+  const db = createServiceClient();
   const cache = await db
     .from(CDILV_TABLE.leaderboardCache)
     .select(
-      "id, full_name, department, avatar_url, employee_code, total_score, rank",
+      "id, full_name, department, avatar_url, total_score, rank",
     )
     .gt("total_score", 0)
     .order("rank", { ascending: true })
     .limit(limit);
-  if (!cache.error && cache.data?.length) return { rows: cache.data, error: null };
+  if (!cache.error && cache.data?.length) {
+    const rows = cache.data.map((r: any) => ({
+      ...r,
+      employee_code: null,
+    }));
+    return { rows, error: null };
+  }
 
-  return { rows: data ?? [], error: error?.message ?? null };
+  return { rows: [], error: error?.message ?? null };
 }
 
 const getCachedLeaderboardRows = unstable_cache(
@@ -114,7 +127,6 @@ export async function getMyLeaderboardPosition(): Promise<MyLeaderboardPosition>
   };
 
   try {
-    const publicDb = createPublicClient();
     const [supabase, userId] = await Promise.all([createClient(), getSessionUserId()]);
     result.isGuest = !userId;
 
@@ -134,13 +146,13 @@ export async function getMyLeaderboardPosition(): Promise<MyLeaderboardPosition>
       } else {
         // Tra theo id và theo mã nhân viên song song; vẫn ưu tiên kết quả theo id như trước
         const [{ data: byId }, byCodeResult] = await Promise.all([
-          publicDb
+          supabase
             .from(CDILV_TABLE.leaderboard)
             .select("total_score, rank, id, employee_code")
             .eq("id", userId)
             .maybeSingle(),
           result.currentEmployeeCode
-            ? publicDb
+            ? supabase
                 .from(CDILV_TABLE.leaderboard)
                 .select("total_score, rank, id, employee_code")
                 .eq("employee_code", result.currentEmployeeCode)

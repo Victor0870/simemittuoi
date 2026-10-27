@@ -173,7 +173,8 @@ export async function GET(request: NextRequest) {
         authorAvatar: prof?.avatar_url || null,
         authorRole: prof?.role || "user",
         authorDepartment: prof?.department || null,
-        authorCode: prof?.employee_code || null,
+        // Mã NV chỉ trả cho admin (trang tổng hợp bài dự thi); đoàn viên chỉ thấy tên và phòng ban.
+        authorCode: isAdmin ? prof?.employee_code || null : null,
         content: row.content,
         createdAt: row.created_at,
         parentId: row.parent_id ?? null,

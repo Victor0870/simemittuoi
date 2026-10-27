@@ -6,8 +6,29 @@ import { isScheduledAt } from "@/lib/post-schedule";
 const ACTIVITY_COLUMNS =
   "id, title, description, location, event_date, points, image_url, image_alt, is_registration_open, is_active, published_at, created_at";
 
-/** includeHidden: kèm hoạt động Inactive / hẹn giờ (chỉ dùng ở trang quản trị / xem trước của admin). */
-type ActivityQueryOptions = { includeHidden?: boolean };
+/**
+ * includeHidden: kèm hoạt động Inactive / hẹn giờ (chỉ dùng ở trang quản trị / xem trước của admin).
+ * includeParticipants: kèm danh sách người đăng ký đầy đủ — chỉ truyền true khi người xem là admin.
+ */
+type ActivityQueryOptions = { includeHidden?: boolean; includeParticipants?: boolean };
+
+const PARTICIPANT_COLUMNS =
+  "id, activity_id, user_id, registered_at, cdilv_profiles(id, full_name, avatar_url, employee_code, department, role)";
+
+function mapParticipant(r: any): ActivityParticipant {
+  const prof = Array.isArray(r.cdilv_profiles) ? r.cdilv_profiles[0] : r.cdilv_profiles;
+  return {
+    id: r.id,
+    userId: r.user_id,
+    fullName: prof?.full_name || "Đoàn viên",
+    avatarUrl: prof?.avatar_url || null,
+    employeeCode: prof?.employee_code || null,
+    department: prof?.department || null,
+    role: prof?.role || "user",
+    registeredAt: r.registered_at,
+    timeAgo: formatTimeAgo(r.registered_at),
+  };
+}
 
 export type ActivityParticipant = {
   id: string;
@@ -78,40 +99,37 @@ export async function getActivities(
     activitiesQuery = activitiesQuery.eq("is_active", true).lte("published_at", new Date().toISOString());
   }
 
-  const [activitiesRes, registrationsRes] = await Promise.all([
+  const [activitiesRes, countsRes, userRegistrationsRes] = await Promise.all([
     activitiesQuery,
-    db
-      .from(CDILV_TABLE.activityRegistrations)
-      .select("id, activity_id, user_id, registered_at, cdilv_profiles(id, full_name, avatar_url, employee_code, department, role)")
-      .order("registered_at", { ascending: true }),
+    createPublicClient()
+      .from(CDILV_TABLE.activityParticipantCounts)
+      .select("activity_id, participant_count"),
+    userId
+      ? db
+          .from(CDILV_TABLE.activityRegistrations)
+          .select("activity_id")
+          .eq("user_id", userId)
+      : Promise.resolve({ data: [] as Array<{ activity_id: string }> }),
   ]);
 
   if (activitiesRes.error) {
     console.error("[activities] getActivities error:", activitiesRes.error.message);
     return [];
   }
+  if (countsRes.error) {
+    console.error("[activities] participant counts error:", countsRes.error.message);
+  }
 
-  const allRegistrations = registrationsRes.data ?? [];
+  const countMap = new Map<string, number>();
+  for (const c of countsRes.data ?? []) {
+    countMap.set(c.activity_id, Number(c.participant_count) || 0);
+  }
+
+  const userRegisteredSet = new Set<string>(
+    (userRegistrationsRes.data ?? []).map((r) => r.activity_id),
+  );
 
   return (activitiesRes.data ?? []).map((row: any) => {
-    const actRegs = allRegistrations.filter((r: any) => r.activity_id === row.id);
-    const isUserRegistered = userId ? actRegs.some((r: any) => r.user_id === userId) : false;
-
-    const participants: ActivityParticipant[] = actRegs.map((r: any) => {
-      const prof = Array.isArray(r.cdilv_profiles) ? r.cdilv_profiles[0] : r.cdilv_profiles;
-      return {
-        id: r.id,
-        userId: r.user_id,
-        fullName: prof?.full_name || "Đoàn viên",
-        avatarUrl: prof?.avatar_url || null,
-        employeeCode: prof?.employee_code || null,
-        department: prof?.department || null,
-        role: prof?.role || "user",
-        registeredAt: r.registered_at,
-        timeAgo: formatTimeAgo(r.registered_at),
-      };
-    });
-
     return {
       id: row.id,
       title: row.title,
@@ -127,9 +145,9 @@ export async function getActivities(
       publishedAt: row.published_at ?? row.created_at,
       isScheduled: isScheduledAt(row.published_at ?? row.created_at),
       createdAt: row.created_at,
-      participantCount: actRegs.length,
-      participants,
-      isRegistered: isUserRegistered,
+      participantCount: countMap.get(row.id) ?? 0,
+      participants: [],
+      isRegistered: userId ? userRegisteredSet.has(row.id) : false,
     };
   });
 }
@@ -146,13 +164,29 @@ export async function getActivityById(
     activityQuery = activityQuery.eq("is_active", true).lte("published_at", new Date().toISOString());
   }
 
-  const [actRes, regsRes] = await Promise.all([
+  // Người thường chỉ nhận số lượng + dòng đăng ký của chính mình; danh sách đầy đủ chỉ dành cho admin.
+  const registrationsQuery = options?.includeParticipants
+    ? db
+        .from(CDILV_TABLE.activityRegistrations)
+        .select(PARTICIPANT_COLUMNS)
+        .eq("activity_id", id)
+        .order("registered_at", { ascending: true })
+    : userId
+      ? db
+          .from(CDILV_TABLE.activityRegistrations)
+          .select(PARTICIPANT_COLUMNS)
+          .eq("activity_id", id)
+          .eq("user_id", userId)
+      : Promise.resolve({ data: [] as any[] });
+
+  const [actRes, countRes, regsRes] = await Promise.all([
     activityQuery.maybeSingle(),
-    db
-      .from(CDILV_TABLE.activityRegistrations)
-      .select("id, activity_id, user_id, registered_at, cdilv_profiles(id, full_name, avatar_url, employee_code, department, role)")
+    createPublicClient()
+      .from(CDILV_TABLE.activityParticipantCounts)
+      .select("participant_count")
       .eq("activity_id", id)
-      .order("registered_at", { ascending: true }),
+      .maybeSingle(),
+    registrationsQuery,
   ]);
 
   if (actRes.error) {
@@ -162,23 +196,11 @@ export async function getActivityById(
   if (!actRes.data) return null;
 
   const row = actRes.data as any;
-  const regs = regsRes.data ?? [];
-  const isUserRegistered = userId ? regs.some((r: any) => r.user_id === userId) : false;
-
-  const participants: ActivityParticipant[] = regs.map((r: any) => {
-    const prof = Array.isArray(r.cdilv_profiles) ? r.cdilv_profiles[0] : r.cdilv_profiles;
-    return {
-      id: r.id,
-      userId: r.user_id,
-      fullName: prof?.full_name || "Đoàn viên",
-      avatarUrl: prof?.avatar_url || null,
-      employeeCode: prof?.employee_code || null,
-      department: prof?.department || null,
-      role: prof?.role || "user",
-      registeredAt: r.registered_at,
-      timeAgo: formatTimeAgo(r.registered_at),
-    };
-  });
+  const participants: ActivityParticipant[] = (regsRes.data ?? []).map(mapParticipant);
+  const participantCount = options?.includeParticipants
+    ? participants.length
+    : Number(countRes.data?.participant_count) || 0;
+  const isUserRegistered = userId ? participants.some((p) => p.userId === userId) : false;
 
   return {
     id: row.id,
@@ -195,7 +217,7 @@ export async function getActivityById(
     publishedAt: row.published_at ?? row.created_at,
     isScheduled: isScheduledAt(row.published_at ?? row.created_at),
     createdAt: row.created_at,
-    participantCount: regs.length,
+    participantCount,
     participants,
     isRegistered: isUserRegistered,
   };

@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { createPublicClient } from "@/lib/supabase/public";
+import { getCurrentAccess } from "@/lib/auth/guard";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { stripPostFormatting } from "@/lib/post-format";
@@ -182,7 +183,25 @@ export type PostComment = {
   userReaction?: "like" | "heart" | "haha" | null;
 };
 
-export async function getPostComments(postId: string): Promise<PostComment[]> {
+export async function getPostComments(
+  postId: string,
+  options?: { isApproved?: boolean },
+): Promise<PostComment[]> {
+  let isApproved = options?.isApproved;
+  if (isApproved === undefined) {
+    try {
+      const access = await getCurrentAccess();
+      isApproved = access?.isApproved ?? false;
+    } catch {
+      isApproved = false;
+    }
+  }
+
+  // Khi người xem chưa được duyệt hoặc là khách: không trả về danh sách bình luận (UI đã khoá, chỉ giữ lại số lượng)
+  if (!isApproved) {
+    return [];
+  }
+
   const db = createServiceClient();
   const { data, error } = await db
     .from(CDILV_TABLE.postComments)
@@ -199,8 +218,7 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
         full_name,
         avatar_url,
         role,
-        department,
-        employee_code
+        department
       )
     `)
     .eq("post_id", postId)
@@ -243,7 +261,7 @@ export async function getPostComments(postId: string): Promise<PostComment[]> {
       authorAvatar: prof?.avatar_url || null,
       authorRole: prof?.role || "user",
       authorDepartment: prof?.department || null,
-      authorCode: prof?.employee_code || null,
+      authorCode: null,
       content: row.content,
       createdAt: row.created_at,
       timeAgo: formatTimeAgo(row.created_at),
