@@ -13,7 +13,7 @@ import { createPublicClient } from "@/lib/supabase/public";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { stripPostFormatting } from "@/lib/post-format";
 
-const HOME_PUBLIC_CACHE_SECONDS = 30;
+const HOME_PUBLIC_CACHE_SECONDS = 300;
 
 export type DashboardUser = {
   name: string;

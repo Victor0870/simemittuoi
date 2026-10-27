@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PopupCard } from "@/components/popups/PopupCard";
 import { isExternalLink, type ActivePopup } from "@/lib/popups";
+import { startVisiblePolling } from "@/lib/visible-polling";
 
 const POLL_MS = 5 * 60_000;
 
@@ -66,13 +67,10 @@ export function AnnouncementPopup() {
         // lỗi mạng: lần kiểm tra sau sẽ thử lại
       }
     }
-    void load();
-    const timer = window.setInterval(load, POLL_MS);
-    window.addEventListener("focus", load);
+    const stopPolling = startVisiblePolling(() => void load(), POLL_MS, { refetchOnFocus: true });
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
-      window.removeEventListener("focus", load);
+      stopPolling();
     };
   }, [loading, userId]);
 

@@ -8,7 +8,7 @@ import {
 import { NewsSection } from "@/components/home/NewsSection";
 import { getHomePageData } from "@/lib/data/home";
 
-export const revalidate = 30;
+export const revalidate = 300;
 
 export default async function HomePage() {
   const data = await getHomePageData();

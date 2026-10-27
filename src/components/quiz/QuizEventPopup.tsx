@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { formatQuizTime, WEEKLY_QUIZ_PROGRAM_ID, type QuizStatus } from "@/lib/quiz-shared";
+import { startVisiblePolling } from "@/lib/visible-polling";
 
 const POLL_MS = 300_000;
 
@@ -37,11 +38,10 @@ export function QuizEventPopup() {
         // bỏ qua lỗi mạng, lần kiểm tra sau sẽ thử lại
       }
     }
-    void check();
-    const timer = window.setInterval(check, POLL_MS);
+    const stopPolling = startVisiblePolling(() => void check(), POLL_MS);
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      stopPolling();
     };
   }, [user, isApproved, isAdminArea]);
 

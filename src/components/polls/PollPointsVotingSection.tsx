@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { PollDetail, PollOption } from "@/lib/data/polls";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -48,7 +47,6 @@ function toPoints(raw: string): number {
 }
 
 export function PollPointsVotingSection({ poll, initialNow }: Props) {
-  const router = useRouter();
   const phase = usePollPhase(poll, initialNow);
   const isPractice = phase === "upcoming";
   const isClosed = phase === "closed" || phase === "ended";
@@ -219,7 +217,6 @@ export function PollPointsVotingSection({ poll, initialNow }: Props) {
       if (!res.ok) throw new Error(data.error || "Không lưu được điểm bình chọn.");
       applyState(data as VoterState);
       setSuccessMessage(data.message || "Đã lưu điểm bình chọn.");
-      router.refresh();
     } catch (err: any) {
       setErrorMessage(err?.message || "Không lưu được điểm bình chọn.");
     } finally {

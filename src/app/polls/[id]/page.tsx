@@ -13,7 +13,7 @@ import { formatPollTime } from "@/lib/polls/phase";
 import { PollScheduleNotice } from "@/components/polls/PollScheduleNotice";
 import { toPublicPollView } from "@/lib/polls/entry-view";
 
-export const revalidate = 15;
+export const revalidate = 120;
 
 // Không dựng sẵn lúc build; mỗi poll được render lần đầu khi có người mở rồi cache chung (ISR).
 export async function generateStaticParams() {

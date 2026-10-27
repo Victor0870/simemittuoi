@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { CDILV_RPC, CDILV_TABLE } from "@/lib/supabase/tables";
@@ -17,7 +18,7 @@ function formatTimeAgo(isoDate: string): string {
   return `${days} ngày trước`;
 }
 
-const PUBLISH_DUE_INTERVAL_MS = 3 * 60_000;
+const PUBLISH_DUE_INTERVAL_MS = 5 * 60_000;
 let lastPublishCheck = 0;
 
 async function triggerDuePostsPublishIfDue() {
@@ -26,12 +27,16 @@ async function triggerDuePostsPublishIfDue() {
   lastPublishCheck = now;
   try {
     const serviceDb = createServiceClient();
-    const { error } = await serviceDb.rpc("cdilv_publish_due_posts");
+    const { data, error } = await serviceDb.rpc("cdilv_publish_due_posts");
     if (error) {
       console.error("[api/notifications] publish due posts:", error.message);
+      return;
     }
-
-
+    // Bài hẹn giờ vừa đến giờ đăng: làm mới trang chủ và danh sách bài viết (đang cache 5 phút)
+    if (typeof data === "number" && data > 0) {
+      revalidatePath("/");
+      revalidatePath("/posts");
+    }
   } catch (err) {
     console.error("[api/notifications] publish due posts init:", err);
   }
@@ -64,8 +69,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ notifications: [], unreadCount: 0 });
     }
 
-    // Xuất bản bài viết hẹn giờ tối đa 1 lần mỗi 3 phút, không chạy mỗi lần poll
-    triggerDuePostsPublishIfDue();
+    // Xuất bản bài viết hẹn giờ tối đa 1 lần mỗi 5 phút trên mỗi instance, không chạy mỗi lần poll
+    await triggerDuePostsPublishIfDue();
     // Chờ xong để thông báo vừa tạo hiện ngay trong lần tải này (chỉ chạy thật tối đa 1 lần / 30 phút)
     await triggerSavingsMaturityIfDue();
 

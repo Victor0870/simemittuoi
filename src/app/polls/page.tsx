@@ -4,7 +4,7 @@ import { PollCard } from "@/components/polls/PollCard";
 import { getPolls } from "@/lib/data/polls";
 import { getPollPhase } from "@/lib/polls/phase";
 
-export const revalidate = 30;
+export const revalidate = 300;
 
 type PollItem = Awaited<ReturnType<typeof getPolls>>[number];
 

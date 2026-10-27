@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { startVisiblePolling } from "@/lib/visible-polling";
 
 export type NotificationItem = {
   id: string;
@@ -68,17 +69,8 @@ export function NotificationBell() {
       return;
     }
 
-    fetchNotifications();
-
-    // Tự động kiểm tra thông báo mới mỗi 3 phút hoặc khi người dùng quay lại tab
-    const interval = setInterval(fetchNotifications, 180000);
-    const handleFocus = () => fetchNotifications();
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", handleFocus);
-    };
+    // Kiểm tra thông báo mới mỗi 3 phút hoặc khi người dùng quay lại tab; tạm dừng khi tab bị ẩn
+    return startVisiblePolling(fetchNotifications, 180000, { refetchOnFocus: true });
   }, [user]);
 
   // Đóng dropdown khi bấm ra ngoài

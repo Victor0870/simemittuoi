@@ -231,7 +231,6 @@ export function PollVotingSection({ poll, initialNow }: Props) {
       setSelectedOptionIds([]);
       setPredictedCount("");
       setEmployeeCode("");
-      router.refresh();
     } catch (err: any) {
       setErrorMessage(err?.message || "Đã xảy ra lỗi khi gửi bình chọn.");
     } finally {

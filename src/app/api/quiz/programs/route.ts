@@ -143,6 +143,10 @@ export async function DELETE(request: NextRequest) {
     if (delErr) throw delErr;
 
     revalidateQuizPages(program.id);
+    if (postIds.length > 0) {
+      revalidatePath("/");
+      revalidatePath("/posts");
+    }
     return NextResponse.json({ success: true, message: `Đã xóa chương trình "${program.name}".` });
   } catch (err: any) {
     console.error("[api/quiz/programs] DELETE error:", err);
