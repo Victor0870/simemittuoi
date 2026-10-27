@@ -4,9 +4,8 @@
  * (giới hạn thân request của máy chủ) và chỉ xem qua link ký hạn ngắn do API cấp.
  */
 
-import { isValidDateValue, layoutDocument, lineText, type DocumentLayout, type FieldValues } from "./compose";
-import type { DocumentOrgSettings } from "./settings";
-import type { DocumentTemplate, DocumentType } from "./templates";
+import { isValidDateValue, type FieldValues } from "./compose";
+import type { DocumentType } from "./templates";
 
 export const SCAN_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"] as const;
 export type ScanMimeType = (typeof SCAN_MIME_TYPES)[number];
@@ -43,24 +42,11 @@ export function isScanMimeType(value: unknown): value is ScanMimeType {
   return typeof value === "string" && (SCAN_MIME_TYPES as readonly string[]).includes(value);
 }
 
-/** Số gợi ý khi ban hành: phần sau "Số:" của tiêu đề văn bản, bỏ trống nếu còn chỗ trống chưa nhập. */
-export function suggestIssueNumber(layout: DocumentLayout): string {
-  const line = layout.numberLine;
-  if (!line || line.some((r) => r.placeholder?.empty)) return "";
-  return lineText(line).replace(/^Số\s*:\s*/i, "").trim().slice(0, SCAN_LIMITS.number);
-}
-
 export function todayInVietnam(): string {
   return new Date(Date.now() + 7 * 3600 * 1000).toISOString().slice(0, 10);
 }
 
-/** Giá trị gợi ý cho hộp thoại ban hành: số theo tiêu đề văn bản, ngày theo trường "ngay" (hoặc hôm nay). */
-export function issueDefaults(
-  template: DocumentTemplate | undefined,
-  values: FieldValues,
-  settings: DocumentOrgSettings,
-): { number: string; date: string } {
-  const date = values.ngay && isValidDateValue(values.ngay) ? values.ngay : todayInVietnam();
-  if (!template) return { number: "", date };
-  return { number: suggestIssueNumber(layoutDocument(template.body, template.fields, values, settings)), date };
+/** Ngày gợi ý cho hộp thoại ban hành: theo trường "ngay" của bản nháp (hoặc hôm nay). Số văn bản cấp tự động. */
+export function issueDefaultDate(values: FieldValues): string {
+  return values.ngay && isValidDateValue(values.ngay) ? values.ngay : todayInVietnam();
 }

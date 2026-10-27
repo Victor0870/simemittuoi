@@ -116,9 +116,14 @@ export const SYSTEM_SETTING_KEYS = new Set(
   SYSTEM_SETTING_TOKENS.map((t) => t.token.replace(/^\{\{|\}\}$/g, "")),
 );
 
+/**
+ * Chỗ trống {{so_van_ban}}: số do máy chủ cấp lúc ban hành theo Cấu hình số văn bản (xem numbering.ts),
+ * không phải ô nhập khi soạn. Trường cùng khóa trong mẫu cũ bị bỏ qua khi đọc / lưu mẫu.
+ */
+export const AUTO_NUMBER_KEY = "so_van_ban";
+
 /** Các trường dùng chung cho Quyết định / văn bản công đoàn. */
 export const STANDARD_TEMPLATE_FIELDS: TemplateField[] = [
-  { key: "so_van_ban", label: "Số văn bản (VD: 01-26)", type: "text", required: true },
   { key: "ngay", label: "Ngày ban hành", type: "date", required: true },
   { key: "nguoi_ky", label: "Người ký", type: "text", required: false },
 ];
@@ -158,12 +163,12 @@ export function placeholderToken(key: string): string {
   return `{{${key}}}`;
 }
 
-/** Các khóa {{...}} xuất hiện trong body (không trùng, bỏ qua các biến cố định từ Cài đặt đơn vị). */
+/** Các khóa {{...}} xuất hiện trong body (không trùng, bỏ qua các biến cố định từ Cài đặt đơn vị và số văn bản tự động). */
 export function extractPlaceholders(body: string): string[] {
   const keys = new Set<string>();
   for (const match of body.matchAll(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g)) {
     const k = match[1];
-    if (!SYSTEM_SETTING_KEYS.has(k)) keys.add(k);
+    if (!SYSTEM_SETTING_KEYS.has(k) && k !== AUTO_NUMBER_KEY) keys.add(k);
   }
   return [...keys];
 }
@@ -198,6 +203,7 @@ export function parseTemplateFields(raw: unknown): { fields: TemplateField[]; er
     const label = typeof o.label === "string" ? o.label.trim().replace(/\s+/g, " ") : "";
     const type = (TEMPLATE_FIELD_TYPES as readonly unknown[]).includes(o.type) ? (o.type as TemplateFieldType) : "text";
     const n = index + 1;
+    if (key === AUTO_NUMBER_KEY) continue;
     if (!TEMPLATE_FIELD_KEY_PATTERN.test(key)) {
       return { fields: [], error: `Trường ${n}: khóa "${key}" không hợp lệ (chữ thường không dấu, số, gạch dưới).` };
     }

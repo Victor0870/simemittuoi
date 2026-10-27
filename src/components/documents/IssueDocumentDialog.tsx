@@ -18,21 +18,19 @@ function formatSize(bytes: number): string {
  */
 export function IssueDocumentDialog({
   document: doc,
-  defaultNumber,
   defaultDate,
   canOverride,
   onClose,
   onIssued,
 }: {
   document: { id: string; title: string; type: DocumentType };
-  defaultNumber: string;
   defaultDate: string;
   canOverride: boolean;
   onClose: () => void;
   onIssued: (issued: IssuedDocument) => void;
 }) {
   const [manual, setManual] = useState(false);
-  const [soVanBan, setSoVanBan] = useState(defaultNumber);
+  const [soVanBan, setSoVanBan] = useState("");
   const [ngayBanHanh, setNgayBanHanh] = useState(defaultDate);
   const [preview, setPreview] = useState<{ key: string; number: string | null }>({ key: "", number: null });
   const [file, setFile] = useState<File | null>(null);

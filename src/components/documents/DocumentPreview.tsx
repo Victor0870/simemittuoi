@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import type { BodyLine, DocLine, DocumentLayout } from "@/lib/documents/compose";
+import { AUTO_NUMBER_KEY } from "@/lib/documents/templates";
 
 /** Cỡ chữ tính theo bề rộng trang (14pt trên khổ 210 mm), để bản xem trước giữ tỉ lệ A4 ở mọi màn hình. */
 const PAPER_STYLE: CSSProperties = {
@@ -18,6 +19,17 @@ function Runs({ line, onPick }: { line: DocLine; onPick: (key: string) => void }
       {line.map((run, index) => {
         const p = run.placeholder;
         if (!p) return <span key={index}>{run.text}</span>;
+        if (p.key === AUTO_NUMBER_KEY) {
+          return (
+            <span
+              key={index}
+              className="mx-px rounded-sm bg-slate-100 px-0.5 font-sans text-[0.8em] font-semibold text-slate-600 ring-1 ring-slate-300"
+              title="Số văn bản do hệ thống cấp tự động lúc ban hành theo Cấu hình số văn bản"
+            >
+              [{p.label}]
+            </span>
+          );
+        }
         if (p.empty) {
           return (
             <button

@@ -13,7 +13,7 @@ import {
   type DocumentDraft,
   type FieldValues,
 } from "@/lib/documents/compose";
-import { issueDefaults, type IssuedDocument } from "@/lib/documents/registry";
+import { issueDefaultDate, type IssuedDocument } from "@/lib/documents/registry";
 import type { DocumentOrgSettings } from "@/lib/documents/settings";
 import {
   DOCUMENT_TYPES,
@@ -501,9 +501,6 @@ export function DocumentComposer({
   }
 
   const templateName = (id: string) => templates.find((t) => t.id === id)?.name ?? "";
-  const issuingDefaults = issuing
-    ? issueDefaults(templates.find((t) => t.id === issuing.templateId), issuing.fieldValues, settings)
-    : null;
 
   const columns: DataTableColumn<DocumentDraft>[] = [
     {
@@ -569,7 +566,7 @@ export function DocumentComposer({
           <button
             aria-label={`Đánh dấu đã ban hành ${d.title}`}
             className="inline-flex h-7 items-center gap-1 rounded-lg border border-emerald-300 px-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
-            title="Đánh dấu đã ban hành (nhập số, ngày, bản scan đã ký)"
+            title="Đánh dấu đã ban hành (số cấp tự động; nhập ngày, bản scan đã ký)"
             type="button"
             onClick={() => startIssue(d)}
           >
@@ -801,11 +798,10 @@ export function DocumentComposer({
         </div>
       )}
 
-      {issuing && issuingDefaults ? (
+      {issuing ? (
         <IssueDocumentDialog
           canOverride={isAdmin}
-          defaultDate={issuingDefaults.date}
-          defaultNumber={issuingDefaults.number}
+          defaultDate={issueDefaultDate(issuing.fieldValues)}
           document={issuing}
           onClose={() => setIssuing(null)}
           onIssued={afterIssued}

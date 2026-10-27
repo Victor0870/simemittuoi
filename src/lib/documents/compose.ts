@@ -4,7 +4,7 @@
  */
 
 import { SYSTEM_SETTING_TOKENS, type DocumentOrgSettings } from "./settings";
-import { DOCUMENT_TYPE_LABEL, type DocumentType, type TemplateField } from "./templates";
+import { AUTO_NUMBER_KEY, DOCUMENT_TYPE_LABEL, type DocumentType, type TemplateField } from "./templates";
 
 export const DOCUMENT_STATUSES = ["nhap", "da_ban_hanh"] as const;
 export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
@@ -57,6 +57,12 @@ const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SYSTEM_VALUES = new Map(
   SYSTEM_SETTING_TOKENS.map((t) => [t.token.replace(/^\{\{|\}\}$/g, ""), t.getValue] as const),
 );
+
+const AUTO_NUMBER_RE = new RegExp(`\\{\\{\\s*${AUTO_NUMBER_KEY}\\s*\\}\\}`);
+
+function autoNumberRun(): DocRun {
+  return { text: "", placeholder: { key: AUTO_NUMBER_KEY, label: "Số cấp khi ban hành", required: false, empty: true } };
+}
 
 /** Trường để trống thì lấy giá trị mặc định từ Cài đặt đơn vị. */
 const SETTING_FALLBACKS: Record<string, (s: DocumentOrgSettings) => string> = {
@@ -146,6 +152,10 @@ function fillLine(
     if (index > last) runs.push({ text: line.slice(last, index) });
     last = index + match[0].length;
     const key = match[1];
+    if (key === AUTO_NUMBER_KEY) {
+      runs.push(autoNumberRun());
+      continue;
+    }
     const field = fieldMap.get(key);
     if (!field) {
       const system = SYSTEM_VALUES.get(key);
@@ -235,7 +245,8 @@ export function layoutDocument(
   );
   if (isHeader) {
     for (const raw of headBlock) {
-      if (/^Số\s*:/i.test(raw)) layout.numberLine = fill(raw);
+      // Số cấp tự động đã gồm ký hiệu (mẫu số), nên bỏ phần đuôi như {{ky_hieu_qd}} sau chỗ trống số.
+      if (/^Số\s*:/i.test(raw)) layout.numberLine = AUTO_NUMBER_RE.test(raw) ? [{ text: "Số: " }, autoNumberRun()] : fill(raw);
       else if (/CỘNG HÒA XÃ HỘI/i.test(raw)) layout.nationalHeader = lineText(fill(raw)).trim() || layout.nationalHeader;
       else if (/Độc lập\s*[-–]\s*Tự do/i.test(raw)) layout.nationalMotto = lineText(fill(raw)).trim() || layout.nationalMotto;
       else if (/\bngày\b/i.test(raw) && !layout.placeDateLine) layout.placeDateLine = fill(raw);

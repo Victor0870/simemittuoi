@@ -534,7 +534,7 @@ export function DocumentTemplateEditor({
                           • Quốc hiệu & Địa danh: <strong>{orgSettings.defaultLocation}, ngày {"{{ngay}}"}</strong>
                         </span>
                         <span>
-                          • Số hiệu: <strong>Số: {"{{so_van_ban}}"}{orgSettings.decisionCodeSuffix}</strong>
+                          • Số hiệu: <strong>cấp tự động khi ban hành (theo Cấu hình số văn bản ở Sổ văn bản)</strong>
                         </span>
                         <span>
                           • Ký tên: <strong>{orgSettings.signAuthority} — {orgSettings.signerTitle}</strong>
@@ -815,8 +815,7 @@ export function DocumentTemplateEditor({
                         {orgSettings.unionHeaderName}
                       </p>
                       <p className="mt-2 text-[13px]">
-                        Số: <span className="rounded bg-amber-100 px-1 font-mono text-xs">{"{{so_van_ban}}"}</span>
-                        {orgSettings.decisionCodeSuffix}
+                        Số: <span className="rounded bg-slate-100 px-1 font-sans text-xs">[cấp tự động khi ban hành]</span>
                       </p>
                     </div>
                     <div>
@@ -889,7 +888,7 @@ export function DocumentTemplateEditor({
               <div className="ml-auto flex items-center gap-1.5">
                 <button
                   className="inline-flex items-center gap-1 rounded-lg border border-outline-variant px-2 py-1 text-xs font-semibold text-[#173A67] hover:border-[#173A67]"
-                  title="Thêm các trường chuẩn: Số văn bản, Ngày ban hành, Người ký"
+                  title="Thêm các trường chuẩn: Ngày ban hành, Người ký (số văn bản cấp tự động khi ban hành)"
                   type="button"
                   onClick={addStandardFields}
                 >
@@ -908,7 +907,7 @@ export function DocumentTemplateEditor({
               </div>
             </div>
             <p className="text-[11px] text-on-surface-variant">
-              Mỗi trường ở đây sẽ tạo thành một ô nhập liệu khi soạn văn bản (VD: Số văn bản, Ngày ban hành, Số tiền hỗ trợ, Thời gian tổ chức...).
+              Mỗi trường ở đây sẽ tạo thành một ô nhập liệu khi soạn văn bản (VD: Ngày ban hành, Số tiền hỗ trợ, Thời gian tổ chức...). Chỗ trống {"{{so_van_ban}}"} không cần trường – số cấp tự động khi ban hành.
             </p>
 
             {draft.fields.length === 0 ? (

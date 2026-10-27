@@ -4,8 +4,6 @@ import { getCurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { loadDocumentDrafts } from "@/lib/documents/drafts-server";
 import { loadIssuedDocuments } from "@/lib/documents/registry-server";
-import { loadDocumentOrgSettings } from "@/lib/documents/settings-server";
-import { loadDocumentTemplates } from "@/lib/documents/templates-server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
@@ -17,19 +15,6 @@ export default async function DocumentRegistryPage() {
   if (!hasPermission(access, PERMISSIONS.postsManage)) redirect("/");
 
   const db = createServiceClient();
-  const [documents, drafts, templates, settings] = await Promise.all([
-    loadIssuedDocuments(db),
-    loadDocumentDrafts(db),
-    loadDocumentTemplates(db),
-    loadDocumentOrgSettings(db),
-  ]);
-  return (
-    <DocumentRegistry
-      initialDocuments={documents}
-      initialDrafts={drafts}
-      isAdmin={access.isAdmin}
-      settings={settings}
-      templates={templates}
-    />
-  );
+  const [documents, drafts] = await Promise.all([loadIssuedDocuments(db), loadDocumentDrafts(db)]);
+  return <DocumentRegistry initialDocuments={documents} initialDrafts={drafts} isAdmin={access.isAdmin} />;
 }

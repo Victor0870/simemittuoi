@@ -7,9 +7,8 @@ import { DocumentNumberingDialog } from "@/components/documents/DocumentNumberin
 import { IssueDocumentDialog } from "@/components/documents/IssueDocumentDialog";
 import { MaterialIcon } from "@/components/ui/MaterialIcon";
 import type { DocumentDraft } from "@/lib/documents/compose";
-import { issueDefaults, type IssuedDocument } from "@/lib/documents/registry";
-import type { DocumentOrgSettings } from "@/lib/documents/settings";
-import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL, type DocumentTemplate, type DocumentType } from "@/lib/documents/templates";
+import { issueDefaultDate, type IssuedDocument } from "@/lib/documents/registry";
+import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL, type DocumentType } from "@/lib/documents/templates";
 
 type Tab = "issued" | "pending";
 
@@ -36,14 +35,10 @@ function sortIssued(list: IssuedDocument[]): IssuedDocument[] {
 export function DocumentRegistry({
   initialDocuments,
   initialDrafts,
-  templates,
-  settings,
   isAdmin,
 }: {
   initialDocuments: IssuedDocument[];
   initialDrafts: DocumentDraft[];
-  templates: DocumentTemplate[];
-  settings: DocumentOrgSettings;
   isAdmin: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("issued");
@@ -308,9 +303,6 @@ export function DocumentRegistry({
       active ? "bg-[#173A67] text-white" : "text-[#173A67] hover:bg-[#ecf4ff]"
     }`;
   const filtered = query || typeFilter || year;
-  const issuingDefaults = issuing
-    ? issueDefaults(templates.find((t) => t.id === issuing.templateId), issuing.fieldValues, settings)
-    : null;
 
   return (
     <div className="flex flex-col gap-2 lg:h-[calc(100dvh-120px)] lg:min-h-0 lg:overflow-hidden">
@@ -435,11 +427,10 @@ export function DocumentRegistry({
         )}
       </div>
 
-      {issuing && issuingDefaults ? (
+      {issuing ? (
         <IssueDocumentDialog
           canOverride={isAdmin}
-          defaultDate={issuingDefaults.date}
-          defaultNumber={issuingDefaults.number}
+          defaultDate={issueDefaultDate(issuing.fieldValues)}
           document={issuing}
           onClose={() => setIssuing(null)}
           onIssued={afterIssued}
