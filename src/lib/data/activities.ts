@@ -68,7 +68,7 @@ export async function getActivities(
   userId?: string,
   options?: ActivityQueryOptions,
 ): Promise<ActivityDetail[]> {
-  const db = options?.includeHidden ? createServiceClient() : createPublicClient();
+  const db = createServiceClient();
 
   let activitiesQuery = db
     .from(CDILV_TABLE.activities)
@@ -139,7 +139,7 @@ export async function getActivityById(
   userId?: string,
   options?: ActivityQueryOptions,
 ): Promise<ActivityDetail | null> {
-  const db = options?.includeHidden ? createServiceClient() : createPublicClient();
+  const db = createServiceClient();
 
   let activityQuery = db.from(CDILV_TABLE.activities).select(ACTIVITY_COLUMNS).eq("id", id);
   if (!options?.includeHidden) {

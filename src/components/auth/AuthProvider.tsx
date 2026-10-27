@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
     const supabase = createClient();
     try {
-      const [{ data }, { data: accessData }] = await Promise.all([
+      const [{ data, error: profileError }, { data: accessData }] = await Promise.all([
         supabase
           .from(CDILV_TABLE.profiles)
           .select("id, full_name, employee_code, department, role, approval_status, avatar_url, total_score, rank")
@@ -94,8 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.rpc(CDILV_RPC.myPermissions),
       ]);
 
-      setProfile(data as UserProfile | null);
-      setAccess(parseAccess(accessData));
+      if (!profileError) {
+        setProfile(data as UserProfile | null);
+      }
+      if (accessData) {
+        setAccess(parseAccess(accessData));
+      }
     } catch {
       // ignore
     } finally {
@@ -129,8 +133,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextType>(() => {
-    const isApproved = profile?.approval_status === "approved";
-    const isAdmin = isApproved && profile?.role === "admin";
+    const isApproved = profile
+      ? profile.approval_status === "approved"
+      : Boolean(user && access.isApproved);
+    const isAdmin = profile
+      ? isApproved && profile.role === "admin"
+      : Boolean(user && isApproved && access.isAdmin);
     const isGuest = !user || !isApproved;
     const effectiveAccess: AccessInfo = { ...access, isAdmin, isApproved };
 

@@ -8,7 +8,8 @@ import { normalizeEmail, translateAuthError } from "@/lib/auth-errors";
 import { CHANGE_PASSWORD_PATH, mustChangePassword } from "@/lib/auth/password";
 import { BRAND } from "@/lib/brand";
 import { createClient } from "@/lib/supabase/client";
-import { CDILV_TABLE } from "@/lib/supabase/tables";
+import { CDILV_RPC } from "@/lib/supabase/tables";
+import { parseAccess } from "@/lib/auth/permissions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,57 +24,65 @@ export default function LoginPage() {
     setError(null);
 
     const supabase = createClient();
-    const normalizedEmail = normalizeEmail(email);
-    let { data, error: signInError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-
-    // Bàn phím điện thoại hay tự chèn dấu cách vào cuối (gợi ý từ / dán)
-    const trimmedPassword = password.trim();
-    if (signInError?.code === "invalid_credentials" && trimmedPassword && trimmedPassword !== password) {
-      ({ data, error: signInError } = await supabase.auth.signInWithPassword({
+    try {
+      const normalizedEmail = normalizeEmail(email);
+      let { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
-        password: trimmedPassword,
-      }));
-    }
+        password,
+      });
 
-    if (signInError) {
-      setLoading(false);
-      setError(translateAuthError(signInError));
-      return;
-    }
+      // Bàn phím điện thoại hay tự chèn dấu cách vào cuối (gợi ý từ / dán)
+      const trimmedPassword = password.trim();
+      if (signInError?.code === "invalid_credentials" && trimmedPassword && trimmedPassword !== password) {
+        ({ data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password: trimmedPassword,
+        }));
+      }
 
-    const userId = data.user?.id;
-    let nextPath = "/";
+      if (signInError) {
+        setError(translateAuthError(signInError));
+        return;
+      }
 
-    if (mustChangePassword(data.user?.app_metadata)) {
-      nextPath = CHANGE_PASSWORD_PATH;
-    } else if (userId) {
-      const { data: profile } = await supabase
-        .from(CDILV_TABLE.profiles)
-        .select("approval_status, role")
-        .eq("id", userId)
-        .maybeSingle();
+      const userId = data.user?.id;
+      let nextPath = "/";
 
-      if (profile?.approval_status !== "approved") {
-        nextPath =
-          profile?.approval_status === "rejected"
-            ? "/pending?status=rejected"
-            : "/pending";
-      } else {
-        nextPath = "/";
+      if (mustChangePassword(data.user?.app_metadata)) {
+        nextPath = CHANGE_PASSWORD_PATH;
+      } else if (userId) {
         try {
-          sessionStorage.setItem("smm_approval_ok", "1");
+          const { data: rawAccess, error: accessError } = await supabase.rpc(
+            CDILV_RPC.myPermissions,
+          );
+
+          if (accessError || !rawAccess) {
+            // on error go to home
+            nextPath = "/";
+          } else {
+            const access = parseAccess(rawAccess);
+            if (!access.isApproved) {
+              nextPath = "/pending";
+            } else {
+              nextPath = "/";
+              try {
+                sessionStorage.setItem("smm_approval_ok", "1");
+              } catch {
+                // ignore
+              }
+            }
+          }
         } catch {
-          // ignore
+          // on error go to home
+          nextPath = "/";
         }
       }
-    }
 
-    setLoading(false);
-    router.push(nextPath);
-    router.refresh();
+      router.push(nextPath);
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

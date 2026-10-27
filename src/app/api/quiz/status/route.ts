@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const [program, profileResult] = await Promise.all([
       resolveQuizProgram(db, request.nextUrl.searchParams.get("programId")),
       userId
-        ? supabase.from(CDILV_TABLE.profiles).select("role, approval_status").eq("id", userId).maybeSingle()
+        ? db.from(CDILV_TABLE.profiles).select("role, approval_status").eq("id", userId).maybeSingle()
         : null,
     ]);
     if (profileResult?.error) throw profileResult.error;

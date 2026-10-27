@@ -9,24 +9,29 @@ const EXEMPT = new Set(["/login", "/register", "/pending"]);
 export function ApprovalGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, profile, loading } = useAuth();
+  const { user, profile, isApproved, loading } = useAuth();
 
   useEffect(() => {
     if (loading || pathname.startsWith("/auth/")) return;
 
     if (!user) return;
 
-    const status = profile?.approval_status ?? "pending";
-    if (status !== "approved") {
+    if (isApproved) {
+      if (EXEMPT.has(pathname)) {
+        router.replace("/");
+      }
+      return;
+    }
+
+    // Chỉ chuyển sang /pending khi biết chắc chắn chưa duyệt (hồ sơ có giá trị và không phải approved)
+    if (profile && profile.approval_status !== "approved") {
       if (!EXEMPT.has(pathname)) {
         router.replace(
-          status === "rejected" ? "/pending?status=rejected" : "/pending",
+          profile.approval_status === "rejected" ? "/pending?status=rejected" : "/pending",
         );
       }
-    } else if (EXEMPT.has(pathname)) {
-      router.replace("/");
     }
-  }, [loading, user, profile, pathname, router]);
+  }, [loading, user, profile, isApproved, pathname, router]);
 
   return <>{children}</>;
 }

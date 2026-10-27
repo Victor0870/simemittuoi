@@ -183,7 +183,7 @@ export type PostComment = {
 };
 
 export async function getPostComments(postId: string): Promise<PostComment[]> {
-  const db = createPublicClient();
+  const db = createServiceClient();
   const { data, error } = await db
     .from(CDILV_TABLE.postComments)
     .select(`
