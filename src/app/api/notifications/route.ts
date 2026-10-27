@@ -101,10 +101,19 @@ export async function GET(request: NextRequest) {
       timeAgo: formatTimeAgo(n.created_at),
     }));
 
-    return NextResponse.json({
-      notifications,
-      unreadCount: countResult.count ?? 0,
-    });
+    // Số chưa đọc phải khớp danh sách trả về: danh sách rỗng thì không có gì chưa đọc,
+    // và không bao giờ nhỏ hơn số mục chưa đọc đang có trong danh sách.
+    if (countResult.error) {
+      console.error("[api/notifications] unread count:", countResult.error.message);
+    }
+    const unreadInList = notifications.filter((n) => !n.is_read).length;
+    const unreadCount =
+      notifications.length === 0 ? 0 : Math.max(countResult.count ?? 0, unreadInList);
+
+    return NextResponse.json(
+      { notifications, unreadCount },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
 
   } catch (err: any) {
     console.error("[api/notifications] GET fatal:", err);

@@ -44,28 +44,44 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Chỉ áp dụng phản hồi của lần tải mới nhất (poll, focus và mở chuông có thể chồng nhau khi mạng chậm)
+  const requestSeq = useRef(0);
 
-  // Tải danh sách thông báo
+  // Tải danh sách thông báo; số chưa đọc luôn tính cùng danh sách trong một phản hồi
   async function fetchNotifications() {
     if (!user) return;
+    const seq = ++requestSeq.current;
+    setFetching(true);
     try {
-      const res = await fetch("/api/notifications");
-      if (res.ok) {
-        const data = await res.json();
-        setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
-      }
+      const res = await fetch("/api/notifications", { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!Array.isArray(data?.notifications)) throw new Error("Phản hồi thông báo không hợp lệ");
+      if (seq !== requestSeq.current) return;
+      const list = data.notifications as NotificationItem[];
+      const unreadInList = list.filter((n) => !n.is_read).length;
+      setNotifications(list);
+      setUnreadCount(list.length === 0 ? 0 : Math.max(Number(data.unreadCount) || 0, unreadInList));
+      setLoadError(false);
     } catch (err) {
+      if (seq !== requestSeq.current) return;
       console.error("Lỗi khi tải thông báo:", err);
+      setLoadError(true);
+    } finally {
+      if (seq === requestSeq.current) setFetching(false);
     }
   }
 
   useEffect(() => {
     if (!user) {
+      requestSeq.current++;
       setNotifications([]);
       setUnreadCount(0);
+      setFetching(false);
+      setLoadError(false);
       return;
     }
 
@@ -92,7 +108,9 @@ export function NotificationBell() {
   async function markAllAsRead() {
     if (unreadCount === 0) return;
 
-    // Optimistic update
+    // Optimistic update; bỏ qua phản hồi tải cũ đang chờ để không hiện lại trạng thái chưa đọc
+    requestSeq.current++;
+    setFetching(false);
     setUnreadCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
 
@@ -110,6 +128,8 @@ export function NotificationBell() {
   // Đánh dấu 1 thông báo là đã đọc và điều hướng
   async function handleNotificationClick(item: NotificationItem) {
     if (!item.is_read) {
+      requestSeq.current++;
+      setFetching(false);
       setUnreadCount((c) => Math.max(0, c - 1));
       setNotifications((prev) =>
         prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n)),
@@ -273,7 +293,39 @@ export function NotificationBell() {
 
           {/* Danh sách thông báo */}
           <div className="max-h-[380px] divide-y divide-dusty-border/40 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {loadError && notifications.length > 0 && !fetching ? (
+              <div className="flex items-center justify-between gap-2 bg-amber-50 px-4 py-2 text-[12px] text-amber-900">
+                <span>Không tải được thông báo mới nhất.</span>
+                <button
+                  type="button"
+                  onClick={() => fetchNotifications()}
+                  className="font-semibold text-primary hover:text-dusty-dark"
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : null}
+            {notifications.length === 0 && fetching ? (
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center" role="status">
+                <span className="mb-2.5 h-8 w-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" />
+                <p className="text-body-sm font-semibold text-on-surface">Đang tải thông báo…</p>
+              </div>
+            ) : notifications.length === 0 && loadError ? (
+              <div className="flex flex-col items-center justify-center py-10 px-4 text-center" role="alert">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-700 mb-2.5">
+                  <MaterialIcon className="text-[26px]" name="error" />
+                </div>
+                <p className="text-body-sm font-semibold text-on-surface">Không tải được thông báo</p>
+                <p className="text-label-xs text-on-surface-variant mt-0.5">Kết nối chậm hoặc bị gián đoạn.</p>
+                <button
+                  type="button"
+                  onClick={() => fetchNotifications()}
+                  className="mt-3 rounded-full border border-primary/30 px-3 py-1 text-[12px] font-semibold text-primary hover:bg-primary/5"
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-dusty-light text-primary mb-2.5">
                   <MaterialIcon className="text-[26px]" name="notifications_off" />
