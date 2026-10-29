@@ -68,3 +68,5 @@ drop policy if exists cdilv_savings_monthly_rates_delete on public.cdilv_savings
 create policy cdilv_savings_monthly_rates_delete on public.cdilv_savings_monthly_rates
   for delete to authenticated
   using (public.cdilv_has_permission('finance.manage'));
+
+grant select, insert, update, delete on public.cdilv_savings_monthly_rates to authenticated, service_role;
