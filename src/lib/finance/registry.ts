@@ -158,18 +158,54 @@ export const FINANCE_LIMITS = {
   maxAmount: 100_000_000_000,
 } as const;
 
-export type Fund = {
-  id: string;
-  kind: FundKind;
-  name: string;
-  bank_account_no: string | null;
-  bank_name: string | null;
-  interest_rate: number | null;
-  maturity_date: string | null;
-  opening_balance: number;
-  opening_date: string;
-  is_active: boolean;
-  sort_order: number;
+export type InterestRateType = "fixed" | "floating";
+export const INTEREST_RATE_TYPE_LABEL: Record<InterestRateType, string> = {
+  fixed: "Lãi suất cố định",
+  floating: "Lãi suất thả nổi",
+};
+
+export type InterestPeriod = "monthly" | "end_of_term" | "quarterly" | "yearly";
+export const INTEREST_PERIOD_LABEL: Record<InterestPeriod, string> = {
+  monthly: "Lĩnh lãi hàng tháng",
+  end_of_term: "Lĩnh lãi cuối kỳ",
+  quarterly: "Lĩnh lãi hàng quý",
+  yearly: "Lĩnh lãi hàng năm",
+};
+
+export type SavingsMonthlyRate = {
+  id: string;
+  fund_id: string;
+  period_month: string;
+  interest_rate: number;
+  principal_amount: number;
+  interest_amount: number;
+  days_in_month?: number | null;
+  calculation_formula?: string | null;
+  is_collected: boolean;
+  collected_entry_id?: string | null;
+  collected_at?: string | null;
+  note?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Fund = {
+  id: string;
+  kind: FundKind;
+  name: string;
+  bank_account_no: string | null;
+  bank_name: string | null;
+  interest_rate: number | null;
+  maturity_date: string | null;
+  opening_balance: number;
+  opening_date: string;
+  is_active: boolean;
+  sort_order: number;
+  interest_rate_type?: InterestRateType | null;
+  term_months?: number | null;
+  interest_period?: InterestPeriod | null;
+  deposit_date?: string | null;
+  notes?: string | null;
 };
 
 export type FundCategory = {
@@ -324,4 +360,37 @@ export function endOfPreviousMonth(isoDate: string): string {
   const [y, m] = isoDate.split("-").map(Number);
   const d = new Date(Date.UTC(y, m - 1, 0));
   return d.toISOString().slice(0, 10);
+}
+
+/** Tính tiền lãi tháng: Gốc * (Lãi suất %/năm) / 100 / 12 */
+export function calculateMonthlyInterest(principal: number, annualRatePercent: number): number {
+  if (principal <= 0 || annualRatePercent <= 0) return 0;
+  return Math.round((principal * annualRatePercent) / 100 / 12);
+}
+
+/** Tính tiền lãi theo số ngày thực tế trong tháng: Gốc * (Lãi suất %/năm / 100) * days / 365 */
+export function calculateDailyInterest(principal: number, annualRatePercent: number, daysInMonth: number): number {
+  if (principal <= 0 || annualRatePercent <= 0 || daysInMonth <= 0) return 0;
+  return Math.round((principal * (annualRatePercent / 100) * daysInMonth) / 365);
+}
+
+/** Số ngày trong tháng của kỳ YYYY-MM */
+export function daysInPeriodMonth(periodMonth: string): number {
+  const [y, m] = periodMonth.split("-").map(Number);
+  return new Date(y, m, 0).getDate();
+}
+
+/** Định dạng chu kỳ tháng YYYY-MM sang Tiếng Việt "Tháng MM/YYYY" */
+export function formatPeriodMonthVi(periodMonth: string): string {
+  const [y, m] = periodMonth.split("-");
+  return `Tháng ${m}/${y}`;
+}
+
+/** Lấy tháng trước của một ngày YYYY-MM-DD dạng "YYYY-MM" */
+export function getPreviousPeriodMonth(isoDate: string): string {
+  const [y, m] = isoDate.split("-").map(Number);
+  const prevDate = new Date(Date.UTC(y, m - 2, 1));
+  const prevYear = prevDate.getUTCFullYear();
+  const prevMonth = String(prevDate.getUTCMonth() + 1).padStart(2, "0");
+  return `${prevYear}-${prevMonth}`;
 }

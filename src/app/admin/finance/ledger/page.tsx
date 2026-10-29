@@ -57,6 +57,10 @@ export default async function OfficeFinancePage({ searchParams }: { searchParams
                 <MaterialIcon className="text-[18px]" name="north_east" />
                 Ghi chi
               </Link>
+              <Link prefetch={false} className={buttonClass} href="/admin/finance/savings">
+                <MaterialIcon className="text-[18px]" name="savings" />
+                Sổ tiết kiệm
+              </Link>
               <Link prefetch={false} className={buttonClass} href="/admin/finance/ledger/new?kind=transfer">
                 <MaterialIcon className="text-[18px]" name="swap_horiz" />
                 Chuyển quỹ

@@ -73,6 +73,14 @@ export default async function FinanceHubPage() {
       allowed: canFinance,
     },
     {
+      href: "/admin/finance/savings",
+      title: "Sổ tiết kiệm",
+      description: "Quản lý danh sách sổ tiết kiệm, lãi suất cố định và thả nổi, cập nhật lãi suất hàng tháng và tự động tính tiền lãi.",
+      icon: "savings",
+      tint: "dusty",
+      allowed: canFinance,
+    },
+    {
       href: "/admin/finance/reports",
       title: "Báo cáo tổng hợp",
       description: "Thu – chi theo danh mục, số dư quỹ, thăm hỏi và đề nghị thanh toán theo tháng / quý / năm, xuất Excel.",

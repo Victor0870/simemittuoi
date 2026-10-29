@@ -59,6 +59,7 @@ export const CDILV_TABLE = {
   paymentRequestItems: "cdilv_payment_request_items",
   paymentRequestLogs: "cdilv_payment_request_logs",
   funds: "cdilv_funds",
+  savingsMonthlyRates: "cdilv_savings_monthly_rates",
   reportTemplates: "cdilv_report_templates",
   reportTemplateVersions: "cdilv_report_template_versions",
   reportTemplateLines: "cdilv_report_template_lines",

@@ -3,10 +3,10 @@ import type { CurrentAccess } from "@/lib/auth/guard";
 import { PERMISSIONS, hasPermission } from "@/lib/auth/permissions";
 import { CDILV_TABLE } from "@/lib/supabase/tables";
 import { loadNames } from "@/lib/visits/server";
-import type { Fund, FundCategory, FundEntry } from "./registry";
+import type { Fund, FundCategory, FundEntry, SavingsMonthlyRate } from "./registry";
 
 const FUND_COLUMNS =
-  "id, kind, name, bank_account_no, bank_name, interest_rate, maturity_date, opening_balance, opening_date, is_active, sort_order";
+  "id, kind, name, bank_account_no, bank_name, interest_rate, maturity_date, opening_balance, opening_date, is_active, sort_order, interest_rate_type, term_months, interest_period, deposit_date, notes";
 const CATEGORY_COLUMNS = "id, kind, code, name, system_key, report_group, sort_order, is_active";
 const ENTRY_COLUMNS =
   "id, code, entry_date, kind, fund_id, to_fund_id, category_id, amount, description, counterparty, document_no, payment_request_id, status, void_reason, created_at";
@@ -54,6 +54,11 @@ export async function loadFunds(db: SupabaseClient): Promise<Fund[]> {
     ...f,
     opening_balance: Number(f.opening_balance),
     interest_rate: f.interest_rate === null ? null : Number(f.interest_rate),
+    interest_rate_type: f.interest_rate_type ?? (f.kind === "savings" ? "fixed" : null),
+    term_months: f.term_months ? Number(f.term_months) : null,
+    interest_period: f.interest_period ?? (f.kind === "savings" ? "monthly" : null),
+    deposit_date: f.deposit_date ?? null,
+    notes: f.notes ?? null,
   }));
 }
 
@@ -133,4 +138,33 @@ export async function loadEntryDetail(db: SupabaseClient, id: string): Promise<F
       actor_name: name(l.actor_id),
     })),
   };
+}
+
+export async function loadSavingsMonthlyRates(
+  db: SupabaseClient,
+  periodMonth?: string,
+  fundId?: string,
+): Promise<SavingsMonthlyRate[]> {
+  let query = db
+    .from(CDILV_TABLE.savingsMonthlyRates)
+    .select("*")
+    .order("period_month", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (periodMonth) {
+    query = query.eq("period_month", periodMonth);
+  }
+  if (fundId) {
+    query = query.eq("fund_id", fundId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Không tải được bảng lãi suất tháng: ${error.message}`);
+  return ((data ?? []) as SavingsMonthlyRate[]).map((r) => ({
+    ...r,
+    interest_rate: Number(r.interest_rate),
+    principal_amount: Number(r.principal_amount),
+    interest_amount: Number(r.interest_amount),
+    days_in_month: r.days_in_month ? Number(r.days_in_month) : null,
+  }));
 }

@@ -41,6 +41,11 @@ export async function POST(request: NextRequest) {
       const rateText = text(raw.interestRate).replace(",", ".");
       const interestRate = kind === "savings" && rateText ? Math.round(Number(rateText) * 100) / 100 : null;
       const maturityDate = kind === "savings" ? text(raw.maturityDate) || null : null;
+      const interestRateType = kind === "savings" ? (raw.interestRateType === "floating" ? "floating" : "fixed") : null;
+      const termMonths = kind === "savings" && Number(raw.termMonths) > 0 ? Math.round(Number(raw.termMonths)) : null;
+      const interestPeriod = kind === "savings" && typeof raw.interestPeriod === "string" ? text(raw.interestPeriod) : (kind === "savings" ? "monthly" : null);
+      const depositDate = kind === "savings" && text(raw.depositDate) && isValidDate(text(raw.depositDate)) ? text(raw.depositDate) : null;
+      const notes = kind === "savings" && text(raw.notes) ? text(raw.notes) : null;
       if (interestRate !== null && (!Number.isFinite(interestRate) || interestRate < 0 || interestRate > 100)) {
         return bad("Lãi suất không hợp lệ.");
       }
@@ -63,6 +68,11 @@ export async function POST(request: NextRequest) {
         bank_name: isBank ? bankName : null,
         interest_rate: interestRate,
         maturity_date: maturityDate,
+        interest_rate_type: interestRateType,
+        term_months: termMonths,
+        interest_period: interestPeriod,
+        deposit_date: depositDate,
+        notes,
         opening_balance: openingBalance,
         opening_date: openingDate,
         is_active: raw.isActive !== false,

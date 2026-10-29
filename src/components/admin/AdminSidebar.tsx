@@ -116,6 +116,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/finance/income", label: "Tổng hợp thu" },
     { href: "/admin/finance/expense", label: "Tổng hợp chi" },
     { href: "/admin/finance/ledger", label: "Sổ quỹ" },
+    { href: "/admin/finance/savings", label: "Sổ tiết kiệm" },
     { href: "/admin/finance/settings", label: "Quỹ & khóa sổ" },
     { href: "/admin/finance/reports", label: "Báo cáo tổng hợp" },
     { href: "/admin/finance/catalogs", label: "Danh mục thu chi" },

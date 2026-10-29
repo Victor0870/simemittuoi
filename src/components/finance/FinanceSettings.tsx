@@ -314,8 +314,19 @@ export function FinanceSettings({ funds, lockedThrough, today, canManageCatalogs
           Tiền gửi tiết kiệm: mỗi sổ tiết kiệm là một quỹ riêng, không chi trực tiếp được. Gửi tiết kiệm ghi bằng phiếu <b>Chuyển quỹ</b> từ
           tài khoản thanh toán sang sổ. Khi sổ đến hạn, Chủ tịch và Kế toán (theo Cài đặt công đoàn) nhận thông báo trước 7 ngày và đúng ngày
           đáo hạn; ở Sổ quỹ bấm <b>Tất toán / Tái tục</b> để tự ghi phiếu thu lãi (danh mục &quot;Lãi tiền gửi ngân hàng&quot;), chuyển gốc + lãi về
-          tài khoản và ngừng dùng sổ, hoặc đặt ngày đáo hạn / lãi suất mới khi gửi tiếp.
-        </p>
+          tài khoản và ngừng dùng sổ, hoặc đặt ngày đáo hạn / lãi suất mới khi gửi tiếp.
+        </p>
+        <div className="pt-2">
+          <Link
+            prefetch={false}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-outline-variant bg-white px-3.5 py-1.5 text-xs font-bold text-[#173A67] hover:border-[#173A67] hover:bg-surface-container transition"
+            href="/admin/finance/savings"
+          >
+            <MaterialIcon className="text-[16px]" name="savings" />
+            Mở trang Quản lý sổ tiết kiệm (Lãi suất cố định & thả nổi)
+            <MaterialIcon className="text-[16px]" name="chevron_right" />
+          </Link>
+        </div>
       </section>
 
       <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-outline-variant bg-surface-container-lowest p-4 sm:p-5">
