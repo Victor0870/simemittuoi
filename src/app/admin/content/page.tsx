@@ -28,14 +28,6 @@ export default async function ContentHubPage() {
       allowed: hasPermission(access, PERMISSIONS.postsManage),
     },
     {
-      href: "/admin/activities",
-      title: "Hoạt động & phong trào",
-      description: "Tạo hoạt động, phát động phong trào, mở / dừng nhận đăng ký và theo dõi danh sách tham gia.",
-      icon: "event_available",
-      tint: "surface",
-      allowed: access.isAdmin,
-    },
-    {
       href: "/admin/content/albums",
       title: "Album ảnh",
       description: "Tạo album, cài đặt thời gian và điểm thưởng đăng ảnh, kiểm duyệt ảnh và bình luận.",
@@ -56,7 +48,7 @@ export default async function ContentHubPage() {
   return (
     <HubPage
       hubKey="content"
-      subtitle="Bài viết, hoạt động, album ảnh và thông báo"
+      subtitle="Bài viết, hướng dẫn, album ảnh và thông báo"
       tiles={visibleAdminLinks(access, tiles)}
       title="Quản lý nội dung"
     />

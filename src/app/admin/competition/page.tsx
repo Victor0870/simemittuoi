@@ -24,6 +24,14 @@ export default async function CompetitionHubPage() {
 
   const tiles: (HubTile & { allowed: boolean })[] = [
     {
+      href: "/admin/activities",
+      title: "Tổ chức hoạt động",
+      description: "Tạo hoạt động, phát động phong trào, mở / dừng nhận đăng ký và theo dõi danh sách tham gia.",
+      icon: "event_available",
+      tint: "surface",
+      allowed: access.isAdmin,
+    },
+    {
       href: "/admin/scores",
       title: "Cộng điểm",
       description: "Cộng / trừ điểm phong trào cho đoàn viên, nhập theo file hoặc mã nhân viên, cập nhật bảng xếp hạng.",
@@ -85,7 +93,7 @@ export default async function CompetitionHubPage() {
   return (
     <HubPage
       hubKey="competition"
-      subtitle="Điểm thi đua, bình chọn và trắc nghiệm"
+      subtitle="Tổ chức hoạt động, điểm thi đua, bình chọn và trắc nghiệm"
       tiles={visibleAdminLinks(access, tiles)}
       title="Hoạt động thi đua"
     />

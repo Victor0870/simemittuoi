@@ -32,14 +32,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: "Hoạt động thi đua",
     icon: "military_tech",
     href: "/admin/competition",
-    prefixes: ["/admin/competition", "/admin/scores", "/admin/quiz", "/admin/polls"],
+    prefixes: ["/admin/competition", "/admin/scores", "/admin/quiz", "/admin/polls", "/admin/activities"],
   },
   {
     key: "content",
     label: "Quản lý nội dung",
     icon: "article",
     href: "/admin/content",
-    prefixes: ["/admin/content", "/admin/popups", "/admin/activities"],
+    prefixes: ["/admin/content", "/admin/popups"],
   },
   {
     key: "administration",
@@ -86,6 +86,7 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     { href: "/admin/employees", label: "DS nhân viên được đăng ký" },
   ],
   competition: [
+    { href: "/admin/activities", label: "Tổ chức hoạt động" },
     { href: "/admin/scores", label: "Cộng điểm" },
     { href: "/admin/scores/history", label: "Lịch sử cộng điểm" },
     { href: "/admin/scores/members", label: "Bảng điểm đoàn viên" },
@@ -101,7 +102,6 @@ export const ADMIN_CHILD_PAGES: Record<string, AdminChildPage[]> = {
     },
     { href: "/admin/content/guides", label: "Hướng dẫn sử dụng" },
     { href: "/admin/content/albums", label: "Album ảnh" },
-    { href: "/admin/activities", label: "Hoạt động & phong trào" },
     { href: "/admin/popups", label: "Popup thông báo" },
   ],
   administration: [

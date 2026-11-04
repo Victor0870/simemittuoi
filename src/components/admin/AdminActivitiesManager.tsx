@@ -115,7 +115,7 @@ export function AdminActivitiesManager({ activities }: Props) {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-outline-variant pb-6">
         <div>
           <h1 className="text-headline-md font-extrabold text-[#173A67]">
-            Quản Lý Hoạt Động & Phong Trào
+            Tổ Chức Hoạt Động
           </h1>
           <p className="text-body-md text-[#27496D]">
             Tạo hoạt động mới, phát động phong trào, cập nhật thể lệ, quản lý đăng ký và kiểm tra danh sách đoàn viên tham gia.
