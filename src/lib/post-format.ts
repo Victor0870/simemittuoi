@@ -4,5 +4,8 @@ import { POST_INLINE_IMAGE_PATTERN } from "@/lib/post-images";
 export const POST_BOLD_PATTERN = /\*\*([^\n]+?)\*\*/g;
 
 export function stripPostFormatting(text: string): string {
-  return text.replace(POST_INLINE_IMAGE_PATTERN, " ").replace(POST_BOLD_PATTERN, "$1");
+  return text
+    .replace(POST_INLINE_IMAGE_PATTERN, " ")
+    .replace(/\[([^\]\n]+)\]\([^\s)]+\)/g, "$1")
+    .replace(POST_BOLD_PATTERN, "$1");
 }
